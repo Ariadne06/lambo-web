@@ -25,9 +25,6 @@ urlpatterns = [
     
     # Personnels Module URLs
     path('personnels/', include('personnels_module.urls')),
-    
-    # Resident Profiling Module URLs
-    path('resident_profiling/', include('resident_profiling_module.urls')),
 
     # Browser Reload URLs
     path('__reload__', include('django_browser_reload.urls')),
