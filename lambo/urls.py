@@ -31,4 +31,7 @@ urlpatterns = [
 
     # Browser Reload URLs
     path('__reload__', include('django_browser_reload.urls')),
+
+    # Resident API URLs
+    path('api/', include('resident_api.urls')),
 ]

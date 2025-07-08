@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-pmxq2n=0rxlqw^k4cvqlz!uc*!+9(epm$y_gl=-r-4lzzldo*s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -46,7 +46,16 @@ INSTALLED_APPS = [
     'resident_profiling_module', # Resident Profiling Module
 
     'django_browser_reload', # Browser Reload
+
+    'rest_framework', # Django REST Framework
+    'corsheaders', # CORS Headers
+    'resident_api', # Resident API
 ]
+
+# Django REST API
+# MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Tailwind CSS
 TAILWIND_APP_NAME = 'theme'
@@ -70,6 +79,8 @@ MIDDLEWARE = [
     
     
 ]
+
+MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 
 ROOT_URLCONF = 'lambo.urls'
 
@@ -95,12 +106,35 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+if 'CI' in os.environ:  # Check if running in CI environment
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',  # Use SQLite for CI tests
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'temp_lambo_db'),
+            'USER': os.getenv('POSTGRES_USER', 'postgres'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'addymedalla032603'),
+
+            'HOST': os.getenv('POSTGRES_HOST', '127.0.0.1'),  # Or use 'localhost' in some cases
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'OPTIONS': {
+                'client_encoding': 'UTF8',
+                'sslmode': 'disable',
+            },
+        }
+    }
 
 
 # Password validation
