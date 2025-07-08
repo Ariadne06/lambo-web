@@ -43,6 +43,8 @@ INSTALLED_APPS = [
 
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
+    'admin_module',
+    'captain_module',
 
     'django_browser_reload', # Browser Reload
 ]

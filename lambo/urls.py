@@ -24,8 +24,12 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     
     # Personnels Module URLs
-    path('personnels/', include('personnels_module.urls')),
+    path('personnels_module/', include('personnels_module.urls')),
 
     # Browser Reload URLs
     path('__reload__', include('django_browser_reload.urls')),
+
+    path('admin_module/', include('admin_module.urls')),
+
+    path('captain_module/', include('captain_module.urls')),
 ]

@@ -1,0 +1,89 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Captain
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col min-h-screen bg-gray-100 p-6">
+
+    <!-- Profile Container -->
+    <div class="bg-white shadow-md rounded-lg p-8 max-w-7xl mx-auto">
+
+        <!-- Profile Section -->
+        <div class="flex flex-col md:flex-row gap-10 items-start">
+            
+            <!-- Profile Image -->
+            <div class="w-40 h-40 border-4 border-blue-500 rounded-md overflow-hidden flex-shrink-0">
+                <img src="/static/images/avatar.png" alt="Profile Picture" class="object-cover w-full h-full">
+            </div>
+
+            <!-- Info Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5 w-full">
+                
+                <!-- Personal Details -->
+                <div>
+                    <label class="text-sm font-medium text-gray-700">First Name</label>
+                    <input type="text" value="Adriane" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">House Number</label>
+                    <input type="text" value="Block 5 Lot 11" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Middle Name</label>
+                    <input type="text" value="Medalla" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Street</label>
+                    <input type="text" value="Washington Street" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Last Name</label>
+                    <input type="text" value="Villarta" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Barangay</label>
+                    <input type="text" value="Cansaga" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Date of Birth</label>
+                    <input type="text" value="01/01/2000" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Resident Status</label>
+                    <input type="text" value="Permanent" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Sex</label>
+                    <input type="text" value="Male" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Religion</label>
+                    <input type="text" value="Catholic" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Educational Attainment</label>
+                    <input type="text" value="College Graduate" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Civil Status</label>
+                    <input type="text" value="Married" disabled class="w-full bg-gray-100 border rounded px-3 py-2 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="flex justify-end mt-10">
+            <a href="#" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 text-sm font-medium">Back</a>
+        </div>
+    </div>
+</div>
+
+ 
+{% endblock %}
