@@ -43,7 +43,6 @@ INSTALLED_APPS = [
 
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
-    'resident_profiling_module', # Resident Profiling Module
 
     'django_browser_reload', # Browser Reload
 ]
