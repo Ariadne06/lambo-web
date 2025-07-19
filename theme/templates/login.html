@@ -1,0 +1,64 @@
+{% block title %}
+  Login
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-lg overflow-hidden shadow-lg">
+
+    <!-- Left: Logo Section -->
+    <div class="md:w-1/2 bg-red-700 flex items-center justify-center p-8">
+      <img src="{% static 'images/brgylogo.jpg' %}" alt="Cansaga Logo" class="w-60 h-60 object-contain" />
+    </div>
+
+    <!-- Right: Login Form Section -->
+    <div class="md:w-1/2 p-8 bg-white">
+      <h2 class="text-lg font-semibold mb-6">Login</h2>
+      <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Username</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M5.121 17.804A10.947 10.947 0 0112 15c2.24 0 4.3.655 6.006 1.781M15 10a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <input type="text" name="username" placeholder="Username" required
+              class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <label class="block text-sm font-medium mb-1">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 11c1.657 0 3 1.343 3 3v1H9v-1c0-1.657 1.343-3 3-3zm6 0V9a6 6 0 00-12 0v2m2 4h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <input type="password" name="password" placeholder="Password" required
+              class="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3">
+              <svg class="h-5 w-5 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="text-sm text-gray-500 mb-4 mt-1">
+          <a href="{% url 'password_reset' %}" class="hover:underline">Forgot Password?</a>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded-md transition duration-200">
+          Login
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
