@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, VerifyIdFieldsView)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -14,5 +14,8 @@ router.register(r'religion-categories', ReligionCategoryViewSet)
 urlpatterns = router.urls
 
 urlpatterns += [
+    path('verify-id-fields/', VerifyIdFieldsView.as_view(), name='verify-id-fields'),
     path('register/', ResidentRegistrationView.as_view(), name='resident-register'),
+    # path('id-document/upload/', ResidentIdDocumentUploadView.as_view(), name='id-document-upload'),
+    path('id-document/<int:pk>/ocr/', ResidentIdDocumentOCRView.as_view(), name='id-document-ocr'),
 ]

@@ -233,7 +233,7 @@ class Resident(models.Model):
 
 class ResidentBirthCertificate(models.Model):
     birth_cert_id = models.AutoField(primary_key=True)
-    resident = models.ForeignKey(Resident, models.DO_NOTHING)
+    resident = models.ForeignKey(Resident, models.DO_NOTHING, null=True, blank=True)
     image_data = models.BinaryField()
     date_uploaded = models.DateTimeField(blank=True, null=True)
     uploaded_by = models.IntegerField(blank=True, null=True)
@@ -263,7 +263,7 @@ class ResidentCredentials(models.Model):
 
 class ResidentIdDocument(models.Model):
     id_doc_id = models.AutoField(primary_key=True)
-    resident = models.ForeignKey(Resident, models.DO_NOTHING)
+    resident = models.ForeignKey(Resident, models.DO_NOTHING, null=True, blank=True)
     document_type = models.CharField(max_length=50)
     document_number = models.CharField(max_length=50, blank=True, null=True)
     image_data = models.BinaryField()
