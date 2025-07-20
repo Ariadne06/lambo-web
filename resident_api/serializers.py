@@ -2,6 +2,7 @@ from rest_framework import serializers
 from resident_profiling_module.models import Resident, Religion, CivilStatus, EducationalAttainment, Sitio, ResidentStatus, ReligionCategory, Address
 from django.db import connection
 import hashlib
+import base64
 
 class ReligionSerializer(serializers.ModelSerializer):
     religion_name = serializers.SerializerMethodField()
@@ -56,6 +57,7 @@ class ResidentStatusSerializer(serializers.ModelSerializer):
 
 class ResidentRegistrationSerializer(serializers.ModelSerializer):
     religion_cat_id = serializers.IntegerField(write_only=True)
+    status_id = serializers.IntegerField(write_only=True, required=True)
     # Address fields
     house_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
     street = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -63,6 +65,11 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
     sitio_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     city_municipality = serializers.CharField(write_only=True)
     country = serializers.CharField(write_only=True)
+    id_image = serializers.ImageField(write_only=True, required=True)  # <-- Add this line
+    password = serializers.CharField(write_only=True, required=True)  # <-- Add this if not present
+    username = serializers.CharField(write_only=True, required=True)
+
+    
     
     # Nested serializers for response
     religion = ReligionSerializer(read_only=True)
@@ -78,47 +85,58 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
             'is_voter', 'email', 'phone_number', 'date_recorded',
             'civil_status', 'educational_attainment', 'status', 'address', 'religion',
             'religion_cat_id', 'house_number', 'street', 'barangay', 'sitio_id', 'city_municipality', 'country',
+            'status_id', 'id_image', 'password', 'username'
         ]
 
     def create(self, validated_data):
         
         data = self.context['request'].data
          
-        plain_password = data.get('password', '')
+        plain_password = validated_data.get('password', '')
         password_hashed = hashlib.sha256(plain_password.encode()).hexdigest()
         
+        id_image_file = validated_data.get('id_image')
+        if id_image_file:
+            image_base64 = base64.b64encode(id_image_file.read()).decode('utf-8')
+        else:
+            image_base64 = None
+
         params = [
-            data.get('last_name'),
-            data.get('first_name'),
-            data.get('dob'),
-            data.get('sex'),
-            data.get('barangay'),
-            data.get('city_municipality'),
-            data.get('status'),  
-            data.get('username'),
-            password_hashed,  
-            data.get('doc_type', 'ID'),  
-            data.get('image_base64', ''),  
-            data.get('middle_name', ''),  
-            data.get('suffix', ''),  
-            data.get('gender', ''),  
-            data.get('is_voter', False),
-            data.get('email', ''), 
-            data.get('phone_number', ''),  
-            data.get('religion_cat_id'),
-            data.get('other_religion', ''), 
-            data.get('civil_status'),  
-            data.get('educational_attainment'), 
-            data.get('house_number', ''),  
-            data.get('street', ''),  
-            data.get('sitio_id'),
-            data.get('country', 'Philippines'),
-            data.get('req_pass_change', False),
-            data.get('document_type', ''),  
-            data.get('document_number', ''),  
-            data.get('uploaded_by', 1),  
+            validated_data.get('last_name'),
+            validated_data.get('first_name'),
+            validated_data.get('dob'),
+            validated_data.get('sex'),
+            validated_data.get('barangay'),
+            validated_data.get('city_municipality'),
+            validated_data.get('status_id'),
+            validated_data.get('username'),
+            password_hashed,  # This is fine, as you compute it above
+            validated_data.get('doc_type', 'ID'),  # If this is not in validated_data, get from data/context
+            image_base64,  # <-- This is the base64 string of the image
+            validated_data.get('middle_name'),
+            validated_data.get('suffix'),
+            validated_data.get('gender'),
+            validated_data.get('is_voter', False),
+            validated_data.get('email'),
+            validated_data.get('phone_number'),
+            validated_data.get('religion_cat_id'),
+            validated_data.get('other_religion'),
+            validated_data.get('civil_status'),
+            validated_data.get('educational_attainment'),
+            validated_data.get('house_number'),
+            validated_data.get('street'),
+            validated_data.get('sitio_id'),
+            validated_data.get('country', 'Philippines'),
+            validated_data.get('req_pass_change', False),
+            data.get('document_type', None),  # If this is not in validated_data, get from data/context
+            validated_data.get('document_number'),
+            validated_data.get('uploaded_by', 1),
         ]
 
+        print("Username:", validated_data.get('username'))
+        print("Password (plain):", validated_data.get('password'))
+        print("Password (hashed):", password_hashed)
+        print("PARAMS SENT TO DB:", params)
     
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -141,6 +159,22 @@ class ReligionCategorySerializer(serializers.ModelSerializer):
         fields = ['religion_cat_id', 'religion_name']
 
 
+# class ResidentIdDocumentSerializer(serializers.ModelSerializer):
+#     document_image = serializers.ImageField(write_only=True)
+#     resident = serializers.PrimaryKeyRelatedField(queryset=Resident.objects.all())  # required by default
+
+#     class Meta:
+#         model = ResidentIdDocument
+#         fields = [
+#             'id_doc_id', 'resident', 'document_type', 'document_number',
+#             'document_image', 'date_uploaded', 'uploaded_by', 'verified', 'verification_date'
+#         ]
+
+#     def create(self, validated_data):
+#         image = validated_data.pop('document_image')
+#         image_bytes = image.read()
+#         instance = ResidentIdDocument.objects.create(image_data=image_bytes, **validated_data)
+#         return instance
 
 class ResidentSerializer(serializers.ModelSerializer):
 
