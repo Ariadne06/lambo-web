@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "expo-image-picker": "^16.1.4"
+    "expo-image-picker": "^16.1.4",
+    "react-native-svg": "^15.12.0"
   }
 }
