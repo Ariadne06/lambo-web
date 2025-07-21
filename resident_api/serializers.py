@@ -65,9 +65,11 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
     sitio_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     city_municipality = serializers.CharField(write_only=True)
     country = serializers.CharField(write_only=True)
-    id_image = serializers.ImageField(write_only=True, required=True)  # <-- Add this line
-    password = serializers.CharField(write_only=True, required=True)  # <-- Add this if not present
+    id_image = serializers.ImageField(write_only=True, required=True) 
+    password = serializers.CharField(write_only=True, required=True)  
     username = serializers.CharField(write_only=True, required=True)
+    civil_status_id = serializers.IntegerField(write_only=True, required=True)
+    educational_attainment_id = serializers.IntegerField(write_only=True, required=True)
 
     
     
@@ -85,7 +87,7 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
             'is_voter', 'email', 'phone_number', 'date_recorded',
             'civil_status', 'educational_attainment', 'status', 'address', 'religion',
             'religion_cat_id', 'house_number', 'street', 'barangay', 'sitio_id', 'city_municipality', 'country',
-            'status_id', 'id_image', 'password', 'username'
+            'status_id', 'id_image', 'password', 'username', 'civil_status_id', 'educational_attainment_id'
         ]
 
     def create(self, validated_data):
@@ -121,8 +123,8 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
             validated_data.get('phone_number'),
             validated_data.get('religion_cat_id'),
             validated_data.get('other_religion'),
-            validated_data.get('civil_status'),
-            validated_data.get('educational_attainment'),
+            validated_data.get('civil_status_id'),
+            validated_data.get('educational_attainment_id'),
             validated_data.get('house_number'),
             validated_data.get('street'),
             validated_data.get('sitio_id'),
@@ -130,7 +132,7 @@ class ResidentRegistrationSerializer(serializers.ModelSerializer):
             validated_data.get('req_pass_change', False),
             data.get('document_type', None),  # If this is not in validated_data, get from data/context
             validated_data.get('document_number'),
-            validated_data.get('uploaded_by', 1),
+            validated_data.get('uploaded_by', None),
         ]
 
         print("Username:", validated_data.get('username'))

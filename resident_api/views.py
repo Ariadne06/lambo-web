@@ -10,6 +10,8 @@ import pytesseract
 import json
 import base64
 import re
+import requests
+from django.conf import settings
 
 
 
@@ -558,6 +560,77 @@ def run_ocr_and_extract_fields(id_image_file, doc_type=None, registration_data=N
     print('DEBUG: Cleaned OCR text:', repr(ocr_text))
     return extract_fields(ocr_text, doc_type, registration_data)
 
+def id_analyzer_scan(image_file):
+    api_key = getattr(settings, 'ID_ANALYZER_API_KEY', None)
+    if not api_key:
+        raise Exception("ID Analyzer API key not set in settings.")
+    files = {'file': image_file}
+    data = {'apikey': api_key}
+    response = requests.post('https://api.idanalyzer.com', files=files, data=data)
+    print("ID Analyzer raw response:", response.text)
+    return response.json()
+
+def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registration_data=None):
+    ocr_backend = getattr(settings, 'OCR_BACKEND', 'tesseract')
+    if ocr_backend == 'idanalyzer':
+        try:
+            idanalyzer_result = id_analyzer_scan(id_image_file)
+            result = idanalyzer_result.get('result', {})
+            first_name = result.get('firstName', '')
+            middle_name = result.get('middleName', '')
+            last_name = result.get('lastName', '')
+            full_name = result.get('fullName', '')
+            dob = result.get('dob', '')
+
+            # Improved: Extract all given names, and assign middle name if present
+            if full_name and last_name and full_name.endswith(last_name):
+                # Remove last name from full name
+                names_part = full_name[:-(len(last_name))].strip()
+                # If middle name is present and at the end, remove it from given names
+                if middle_name and names_part.endswith(middle_name):
+                    given_names = names_part[:-(len(middle_name))].strip()
+                    first_name = given_names if given_names else first_name
+                else:
+                    first_name = names_part if names_part else first_name
+
+            # Format DOB to use dashes (YYYY-MM-DD)
+            if dob and '/' in dob:
+                dob = dob.replace('/', '-')
+
+            fields = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'middle_name': middle_name,
+                'dob': dob,
+            }
+
+            # Only fallback if fullName minus middleName and lastName has more than one word
+            if full_name and last_name and full_name.endswith(last_name):
+                names_part = full_name[:-(len(last_name))].strip()
+                # Remove middle name if present
+                if middle_name and names_part.endswith(middle_name):
+                    given_names = names_part[:-(len(middle_name))].strip()
+                else:
+                    given_names = names_part
+
+                # If given_names has more than one word, but first_name is only one word, fallback
+                if len(given_names.split()) > 1 and len(first_name.split()) < 2 and doc_type == "Philippine National ID":
+                    print("ID Analyzer result seems incomplete, falling back to Tesseract for given names.")
+                    id_image_file.seek(0)  # Reset file pointer
+                    tesseract_fields = run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
+                    if len(tesseract_fields.get('first_name', '').split()) >= 2:
+                        print(f"Using Tesseract's first_name: {tesseract_fields['first_name']}")
+                        fields['first_name'] = tesseract_fields['first_name']
+
+            return fields
+        except Exception as e:
+            print("ID Analyzer failed, falling back to Tesseract:", e)
+            id_image_file.seek(0)  # Reset file pointer
+            return run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
+    else:
+        return run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
+
+
 class VerifyIdFieldsView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -568,7 +641,7 @@ class VerifyIdFieldsView(APIView):
         doc_type = registration_data.get('document_type', None)
         
         # Pass registration data to the extraction function for better name detection
-        ocr_fields = run_ocr_and_extract_fields(id_image, doc_type, registration_data)
+        ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
         
         print('DEBUG: registration_data:', registration_data)
         print('DEBUG: ocr_fields:', ocr_fields)
@@ -622,7 +695,7 @@ class VerifyIdFieldsView(APIView):
                         'ocr': ocr_val
                     }
             else:
-                # For non-name fields (like DOB), use exact comparison
+                    # For non-name fields (like DOB), use exact comparison
                 if normalize(reg_val) != normalize(ocr_val):
                     mismatches[key] = {
                         'user': reg_val,
