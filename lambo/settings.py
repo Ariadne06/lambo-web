@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
+    'resident_profiling_module', # Resident Profiling Module
 
     'django_browser_reload', # Browser Reload
 
@@ -122,9 +123,9 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'temp_lambo_db'),
+            'NAME': os.getenv('POSTGRES_DB', 'test3'),
             'USER': os.getenv('POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'addymedalla032603'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '1234'),
 
             'HOST': os.getenv('POSTGRES_HOST', '127.0.0.1'),  # Or use 'localhost' in some cases
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
