@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-pmxq2n=0rxlqw^k4cvqlz!uc*!+9(epm$y_gl=-r-4lzzldo*s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,9 +43,21 @@ INSTALLED_APPS = [
 
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
+    'resident_profiling_module', # Resident Profiling Module
+    'admin_module',
+    'captain_module',
 
     'django_browser_reload', # Browser Reload
+
+    'rest_framework', # Django REST Framework
+    'corsheaders', # CORS Headers
+    'resident_api', # Resident API
 ]
+
+# Django REST API
+# MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Tailwind CSS
 TAILWIND_APP_NAME = 'theme'
@@ -69,6 +81,8 @@ MIDDLEWARE = [
     
     
 ]
+
+MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 
 ROOT_URLCONF = 'lambo.urls'
 
@@ -94,12 +108,35 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+if 'CI' in os.environ:  # Check if running in CI environment
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',  # Use SQLite for CI tests
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'test3'),
+            'USER': os.getenv('POSTGRES_USER', 'postgres'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '1234'),
+
+            'HOST': os.getenv('POSTGRES_HOST', '127.0.0.1'),  # Or use 'localhost' in some cases
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'OPTIONS': {
+                'client_encoding': 'UTF8',
+                'sslmode': 'disable',
+            },
+        }
+    }
 
 
 # Password validation
@@ -148,3 +185,7 @@ STATICFILES_DIRS = (
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Add at the end of your settings.py
+ID_ANALYZER_API_KEY = 'j4AgKOXqx6Xj3IMmUFdUNvwGHQoKYE8Q'  # Replace with your real key
+OCR_BACKEND = 'idanalyzer' 
