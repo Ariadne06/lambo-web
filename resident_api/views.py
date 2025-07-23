@@ -582,16 +582,19 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
             full_name = result.get('fullName', '')
             dob = result.get('dob', '')
 
-            # Improved: Extract all given names, and assign middle name if present
-            if full_name and last_name and full_name.endswith(last_name):
-                # Remove last name from full name
+            # --- IMPROVED LOGIC STARTS HERE ---
+            # If full_name and last_name are present, extract all given names
+            if full_name and last_name and full_name.upper().endswith(last_name.upper()):
                 names_part = full_name[:-(len(last_name))].strip()
-                # If middle name is present and at the end, remove it from given names
-                if middle_name and names_part.endswith(middle_name):
+                # Remove middle name if present and at the end
+                if middle_name and names_part.upper().endswith(middle_name.upper()):
                     given_names = names_part[:-(len(middle_name))].strip()
-                    first_name = given_names if given_names else first_name
                 else:
-                    first_name = names_part if names_part else first_name
+                    given_names = names_part
+                # Use all given names as first_name
+                if given_names:
+                    first_name = given_names
+            # --- IMPROVED LOGIC ENDS HERE ---
 
             # Format DOB to use dashes (YYYY-MM-DD)
             if dob and '/' in dob:
@@ -604,23 +607,28 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
                 'dob': dob,
             }
 
-            # Only fallback if fullName minus middleName and lastName has more than one word
-            if full_name and last_name and full_name.endswith(last_name):
+            # Fallback: If first_name is only one word, but full_name minus last_name has more, use that
+            if full_name and last_name and full_name.upper().endswith(last_name.upper()):
                 names_part = full_name[:-(len(last_name))].strip()
-                # Remove middle name if present
-                if middle_name and names_part.endswith(middle_name):
+                if middle_name and names_part.upper().endswith(middle_name.upper()):
                     given_names = names_part[:-(len(middle_name))].strip()
                 else:
                     given_names = names_part
-
-                # If given_names has more than one word, but first_name is only one word, fallback
                 if len(given_names.split()) > 1 and len(first_name.split()) < 2 and doc_type == "Philippine National ID":
-                    print("ID Analyzer result seems incomplete, falling back to Tesseract for given names.")
-                    id_image_file.seek(0)  # Reset file pointer
-                    tesseract_fields = run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
-                    if len(tesseract_fields.get('first_name', '').split()) >= 2:
-                        print(f"Using Tesseract's first_name: {tesseract_fields['first_name']}")
-                        fields['first_name'] = tesseract_fields['first_name']
+                    print("ID Analyzer result seems incomplete, using all given names from fullName.")
+                    fields['first_name'] = given_names
+
+            if (
+                len(registration_data.get('first_name', '').split()) > 1 and
+                len(first_name.split()) < 2 and
+                doc_type == "Philippine National ID"
+            ):
+                print("ID Analyzer result seems incomplete, falling back to Tesseract for given names.")
+                id_image_file.seek(0)
+                tesseract_fields = run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
+                if len(tesseract_fields.get('first_name', '').split()) >= 2:
+                    print(f"Using Tesseract's first_name: {tesseract_fields['first_name']}")
+                    fields['first_name'] = tesseract_fields['first_name']
 
             return fields
         except Exception as e:
