@@ -1,0 +1,107 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}
+    Admin
+{% endblock %}
+
+{% block content %}
+
+<script>
+    function showSuccessMessage() {
+        alert("Successfully Updated");
+    }
+</script>
+
+<div class="flex flex-col min-h-screen bg-gray-100 p-6">
+
+    <!-- Page Title -->
+    <h1 class="text-2xl font-bold text-red-700 mb-6">Update Personnel</h1>
+
+    <!-- Form Container -->
+    <div class="w-full max-w-screen-2xl mx-auto bg-white shadow-md rounded-lg p-10">
+
+        <!-- Form -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Profile Picture Column -->
+                <div class="flex flex-col items-center">
+                    <img src="https://via.placeholder.com/150" alt="Profile Picture"
+                         class="w-40 h-40 rounded-full border-4 border-blue-500 mb-4">
+                    <button type="button" class="bg-red-700 text-white text-sm px-4 py-2 rounded hover:bg-red-800 mb-2">Change Profile Picture</button>
+                    <button type="button" class="bg-gray-200 text-red-500 text-sm px-4 py-2 rounded">Delete Profile Picture</button>
+                </div>
+
+                <!-- Form Fields (Two-Column Grid inside 2/3 width) -->
+                <div class="md:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">First Name</label>
+                            <input type="text" value="Adriane" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">House Number</label>
+                            <input type="text" value="Block 5 Lot 11" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Middle Name</label>
+                            <input type="text" value="Medalla" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Street</label>
+                            <input type="text" value="Washington Street" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Last Name</label>
+                            <input type="text" value="Villarta" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Barangay</label>
+                            <input type="text" value="Cansaga" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Date of Birth</label>
+                            <input type="date" value="2000-01-01" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Role / Position</label>
+                            <select class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <option selected>Admin</option>
+                                <option>Secretary</option>
+                                <option>Treasurer</option>
+                                <option>Kagawad</option>
+                                <option>Barangay Captain</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Sex</label>
+                            <select class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <option selected>Male</option>
+                                <option>Female</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Username</label>
+                            <input type="email" value="villarta@gmail.com" class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-between mt-10">
+                <button type="button" class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition">Cancel</button>
+                <button type="button" onclick="showSuccessMessage()" class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition">
+                    Update
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
