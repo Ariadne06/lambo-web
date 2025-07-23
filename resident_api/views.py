@@ -582,7 +582,7 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
             full_name = result.get('fullName', '')
             dob = result.get('dob', '')
 
-            # --- IMPROVED LOGIC STARTS HERE ---
+        
             # If full_name and last_name are present, extract all given names
             if full_name and last_name and full_name.upper().endswith(last_name.upper()):
                 names_part = full_name[:-(len(last_name))].strip()
@@ -594,7 +594,7 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
                 # Use all given names as first_name
                 if given_names:
                     first_name = given_names
-            # --- IMPROVED LOGIC ENDS HERE ---
+      
 
             # Format DOB to use dashes (YYYY-MM-DD)
             if dob and '/' in dob:
