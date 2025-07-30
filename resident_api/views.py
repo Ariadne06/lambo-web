@@ -12,6 +12,9 @@ import base64
 import re
 import requests
 from django.conf import settings
+import numpy as np
+import cv2
+import difflib
 
 
 
@@ -65,7 +68,6 @@ class ResidentRegistrationView(APIView):
 #     serializer_class = ResidentIdDocumentSerializer
 
 def extract_fields(ocr_text, doc_type, registration_data=None):
-    import re
     text = ocr_text
     lines = [l.strip() for l in text.split('\n') if l.strip()]
 
@@ -327,7 +329,6 @@ def extract_fields(ocr_text, doc_type, registration_data=None):
         }
     elif doc_type == 'Birth Certificate':
         # Philippine Birth Certificate specific labels
-        # Looking at the OCR output, we need to find the child's name and date of birth
         
         # Child name labels - look for the actual name fields in the birth certificate
         child_name_labels = [
@@ -520,8 +521,7 @@ class ResidentIdDocumentOCRView(APIView):
 
 
 def preprocess_image_for_ocr(pil_image):
-    import numpy as np
-    import cv2
+    
     # 1. Convert to grayscale
     gray = pil_image.convert('L')
     image = np.array(gray)
@@ -570,6 +570,44 @@ def id_analyzer_scan(image_file):
     print("ID Analyzer raw response:", response.text)
     return response.json()
 
+def remap_names_from_fullname(full_name, user_first, user_last, user_middle):
+
+    # Split and lower for comparison
+    full_parts = [p.strip().lower() for p in full_name.split() if p.strip()]
+    user_first = user_first.lower()
+    user_last = user_last.lower()
+    user_middle = user_middle.lower() if user_middle else ''
+
+    mapping = {'first_name': '', 'middle_name': '', 'last_name': ''}
+    for part in full_parts:
+        if part == user_first:
+            mapping['first_name'] = part
+        elif part == user_last:
+            mapping['last_name'] = part
+        elif user_middle and part == user_middle:
+            mapping['middle_name'] = part
+
+    # Try partial matches if not all mapped
+    for part in full_parts:
+        if not mapping['first_name'] and user_first in part:
+            mapping['first_name'] = part
+        if not mapping['last_name'] and user_last in part:
+            mapping['last_name'] = part
+        if user_middle and not mapping['middle_name'] and user_middle in part:
+            mapping['middle_name'] = part
+
+    # Fallback: assign by order (common for PH IDs: LAST FIRST MIDDLE)
+    if not mapping['last_name'] or not mapping['first_name']:
+        if len(full_parts) >= 2:
+            mapping['last_name'] = full_parts[0]
+            mapping['first_name'] = full_parts[1]
+            if len(full_parts) > 2:
+                mapping['middle_name'] = full_parts[2]
+    # Capitalize for output
+    for k in mapping:
+        mapping[k] = mapping[k].title()
+    return mapping
+
 def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registration_data=None):
     ocr_backend = getattr(settings, 'OCR_BACKEND', 'tesseract')
     if ocr_backend == 'idanalyzer':
@@ -582,18 +620,17 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
             full_name = result.get('fullName', '')
             dob = result.get('dob', '')
 
-            # --- IMPROVED LOGIC STARTS HERE ---
-            # If full_name and last_name are present, extract all given names
-            if full_name and last_name and full_name.upper().endswith(last_name.upper()):
-                names_part = full_name[:-(len(last_name))].strip()
-                # Remove middle name if present and at the end
-                if middle_name and names_part.upper().endswith(middle_name.upper()):
-                    given_names = names_part[:-(len(middle_name))].strip()
-                else:
-                    given_names = names_part
-                # Use all given names as first_name
-                if given_names:
-                    first_name = given_names
+            # If full_name and registration data are present, try to remap names
+            if full_name and registration_data:
+                user_first = registration_data.get('first_name', '')
+                user_last = registration_data.get('last_name', '')
+                user_middle = registration_data.get('middle_name', '')
+                mapped = remap_names_from_fullname(full_name, user_first, user_last, user_middle)
+                # Only override if mapping is confident (at least first and last found)
+                if mapped['first_name'] and mapped['last_name']:
+                    first_name = mapped['first_name']
+                    last_name = mapped['last_name']
+                    middle_name = mapped['middle_name']
             # --- IMPROVED LOGIC ENDS HERE ---
 
             # Format DOB to use dashes (YYYY-MM-DD)
@@ -643,7 +680,7 @@ class VerifyIdFieldsView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        import re
+        
         registration_data = json.loads(request.data.get('registrationData', '{}'))
         id_image = request.FILES.get('id_image')
         doc_type = registration_data.get('document_type', None)
@@ -717,7 +754,7 @@ class VerifyIdFieldsView(APIView):
 
 
 def correct_month_name(date_str):
-    import difflib
+   
     months = [
         "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
         "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
