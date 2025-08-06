@@ -337,6 +337,15 @@ class Sitio(models.Model):
         managed = False
         db_table = 'sitio'
 
+class IdentityDocType(models.Model):
+    identity_doc_type_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'identity_document_type'  
+
 
 class Subsystem(models.Model):
     subsystem_id = models.AutoField(primary_key=True)
