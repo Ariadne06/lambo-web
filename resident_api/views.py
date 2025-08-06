@@ -26,7 +26,7 @@ import difflib
 # Configure Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# --- HELPER FUNCTIONS (MOVED TO TOP LEVEL) ---
+# --- HELPER FUNCTIONS  ---
 
 def normalize_name_for_comparison(name):
     """Normalize names for comparison by removing special characters and extra spaces."""
