@@ -51,6 +51,36 @@ def normalize_for_comparison(val):
         return ''
     return re.sub(r'[^a-z0-9]', '', val.lower().strip())
 
+def are_names_equivalent(name1, name2):
+        """Check if two names are equivalent, handling multi-word names properly."""
+        if not name1 or not name2:
+            return False
+            
+        # Normalize both names
+        norm1 = normalize_name_for_comparison(name1)
+        norm2 = normalize_name_for_comparison(name2)
+        
+        # Exact match
+        if norm1 == norm2:
+            return True
+        
+        # Check if all words in one name are contained in the other
+        words1 = set(norm1.split())
+        words2 = set(norm2.split())
+        
+        # If one is subset of the other, consider them equivalent
+        if words1.issubset(words2) or words2.issubset(words1):
+            return True
+        
+        # Check for significant overlap (at least 70%)
+        if len(words1) > 0 and len(words2) > 0:
+            overlap = len(words1.intersection(words2))
+            total_unique = len(words1.union(words2))
+            similarity = overlap / total_unique
+            return similarity >= 0.7
+        
+        return False
+
 def correct_month_name(date_str):
     """Correct OCR month name errors using fuzzy matching."""
     months = [
@@ -385,29 +415,35 @@ def remap_names_from_fullname(full_name, user_first, user_last, user_middle):
     
     return mapping
 
+
 def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registration_data=None):
-    """IMPROVED: Main OCR function with better fallback logic."""
+    """IMPROVED: Main OCR function with better name handling for Philippine Driver's License."""
     ocr_backend = getattr(settings, 'OCR_BACKEND', 'tesseract')
     if ocr_backend == 'idanalyzer':
         try:
             idanalyzer_result = id_analyzer_scan(id_image_file)
             result = idanalyzer_result.get('result', {})
-            first_name = result.get('firstName', '')
-            middle_name = result.get('middleName', '')
-            last_name = result.get('lastName', '')
+            
+            # Get raw extracted data
+            raw_first_name = result.get('firstName', '')
+            raw_middle_name = result.get('middleName', '')
+            raw_last_name = result.get('lastName', '')
             full_name = result.get('fullName', '')
             dob = result.get('dob', '')
 
-            # Remap names if possible
-            if full_name and registration_data:
-                user_first = registration_data.get('first_name', '')
-                user_last = registration_data.get('last_name', '')
-                user_middle = registration_data.get('middle_name', '')
-                mapped = remap_names_from_fullname(full_name, user_first, user_last, user_middle)
-                if mapped['first_name'] and mapped['last_name']:
-                    first_name = mapped['first_name']
-                    last_name = mapped['last_name']
-                    middle_name = mapped['middle_name']
+            print(f"DEBUG: ID Analyzer raw extraction - First: '{raw_first_name}', Middle: '{raw_middle_name}', Last: '{raw_last_name}'")
+            print(f"DEBUG: Full name: '{full_name}'")
+
+            # Handle Philippine Driver's License specific format
+            if doc_type and 'driver' in doc_type.lower() and registration_data:
+                first_name, middle_name, last_name = handle_philippine_drivers_license(
+                    raw_first_name, raw_middle_name, raw_last_name, full_name, registration_data
+                )
+            else:
+                # For other document types, use raw extraction
+                first_name = raw_first_name
+                middle_name = raw_middle_name
+                last_name = raw_last_name
 
             # Format DOB
             if dob and '/' in dob:
@@ -419,56 +455,8 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
                 'middle_name': middle_name,
                 'dob': dob,
             }
-    
-            # IMPROVED: Only fallback for first name if truly incomplete
-            if (
-                registration_data and
-                len(registration_data.get('first_name', '').split()) > 1 and
-                len(first_name.split()) < 2 and
-                doc_type == "Philippine National ID"
-            ):
-                print("ID Analyzer result seems incomplete, falling back to Tesseract for given names.")
-                id_image_file.seek(0)
-                tesseract_fields = run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
-                if len(tesseract_fields.get('first_name', '').split()) >= 2:
-                    print(f"Using Tesseract's first_name: {tesseract_fields['first_name']}")
-                    fields['first_name'] = tesseract_fields['first_name']
 
-            # CRITICAL FIX: Only fallback for last name if ID Analyzer result is clearly wrong
-            reg_last = registration_data.get('last_name', '') if registration_data else ''
-            
-            # Only fallback if:
-            # 1. No last name from ID Analyzer, OR
-            # 2. Last name is same as first name, OR  
-            # 3. Last name is very different from registration data (not just case/format differences)
-            should_fallback_lastname = (
-                not last_name or
-                (first_name and last_name and normalize_name_for_comparison(first_name) == normalize_name_for_comparison(last_name)) or
-                (registration_data and last_name and reg_last and 
-                 normalize_name_for_comparison(reg_last) != normalize_name_for_comparison(last_name) and
-                 not names_are_similar(reg_last, last_name))
-            )
-
-            if should_fallback_lastname:
-                print("ID Analyzer last_name seems incomplete or mismatched, falling back to Tesseract for last_name.")
-                id_image_file.seek(0)
-                tesseract_fields = run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
-                tesseract_last = tesseract_fields.get('last_name', '')
-                
-                # Only use Tesseract last name if it's different from first name and matches registration
-                if (
-                    tesseract_last and
-                    normalize_name_for_comparison(tesseract_last) != normalize_name_for_comparison(fields['first_name']) and
-                    (not registration_data or names_are_similar(reg_last, tesseract_last))
-                ):
-                    print(f"Using Tesseract's last_name: {tesseract_last}")
-                    fields['last_name'] = tesseract_last
-                else:
-                    # If Tesseract also fails, keep ID Analyzer result if it's reasonable
-                    if last_name and normalize_name_for_comparison(last_name) != normalize_name_for_comparison(first_name):
-                        print(f"Keeping ID Analyzer's last_name: {last_name}")
-                        fields['last_name'] = last_name
-
+            print(f"DEBUG: Final extracted fields - First: '{first_name}', Middle: '{middle_name}', Last: '{last_name}'")
             return fields
 
         except Exception as e:
@@ -478,11 +466,73 @@ def run_ocr_and_extract_fields_switchable(id_image_file, doc_type=None, registra
     else:
         return run_ocr_and_extract_fields(id_image_file, doc_type, registration_data)
 
+def handle_philippine_drivers_license(raw_first, raw_middle, raw_last, full_name, registration_data):
+    """
+    Handle Philippine Driver's License name format specifically.
+    Driver's License format: Last Name, First Name Middle Name
+    """
+    user_first = registration_data.get('first_name', '').strip()
+    user_middle = registration_data.get('middle_name', '').strip()
+    user_last = registration_data.get('last_name', '').strip()
+    
+    print(f"DEBUG: User input - First: '{user_first}', Middle: '{user_middle}', Last: '{user_last}'")
+    print(f"DEBUG: ID Analyzer raw - First: '{raw_first}', Middle: '{raw_middle}', Last: '{raw_last}'")
+    
+    # Start with ID Analyzer results
+    first_name = raw_first
+    middle_name = raw_middle
+    last_name = raw_last
+    
+    # Case 1: Handle multi-word first names (like "Pierre Dwayne")
+    if user_first and ' ' in user_first:
+        user_first_parts = user_first.split()
+        
+        # Check if ID Analyzer split the first name incorrectly
+        # Example: User "Pierre Dwayne" -> ID Analyzer might give firstName="PIERRE", middleName="DWAYNE ARRANCHADO"
+        if raw_middle and raw_middle.startswith(user_first_parts[1].upper()):
+            # Reconstruct the first name
+            first_name = ' '.join(user_first_parts)
+            
+            # Extract the actual middle name from the raw middle name
+            # Remove the second part of first name from raw middle name
+            remaining_middle = raw_middle.replace(user_first_parts[1].upper(), '').strip()
+            if remaining_middle and user_middle and remaining_middle.upper() == user_middle.upper():
+                middle_name = user_middle
+            else:
+                middle_name = remaining_middle
+                
+            print(f"DEBUG: Reconstructed multi-word first name: '{first_name}', Middle: '{middle_name}'")
+    
+    # Case 2: Verify last name is correct
+    if user_last and raw_last:
+        if normalize_name_for_comparison(user_last) != normalize_name_for_comparison(raw_last):
+            # Check if they're similar enough
+            if not names_are_similar(user_last, raw_last):
+                print(f"DEBUG: Last name mismatch - User: '{user_last}', ID Analyzer: '{raw_last}'")
+                # In this case, trust ID Analyzer since it's usually more accurate for last names
+                last_name = raw_last
+    
+    # Case 3: Handle cases where middle name contains multiple parts
+    if user_middle and raw_middle:
+        # If user middle is single word but raw middle has multiple words
+        if ' ' not in user_middle and ' ' in raw_middle:
+            # Check if user middle is contained in raw middle
+            if user_middle.upper() in raw_middle.upper():
+                middle_name = user_middle
+                print(f"DEBUG: Used user's single-word middle name: '{middle_name}'")
+    
+    # Normalize case
+    first_name = normalize_name(first_name) if first_name else ''
+    middle_name = normalize_name(middle_name) if middle_name else ''
+    last_name = normalize_name(last_name) if last_name else ''
+    
+    return first_name, middle_name, last_name
+
 class VerifyIdFieldsView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        """IMPROVED: Main verification endpoint with better error handling."""
+   
         try:
             registration_data = json.loads(request.data.get('registrationData', '{}'))
             id_image = request.FILES.get('id_image')
@@ -506,24 +556,8 @@ class VerifyIdFieldsView(APIView):
                 print(f'DEBUG: Comparing field "{key}": user="{reg_val}" ocr="{ocr_val}"')
                 
                 if key in ['first_name', 'last_name']:
-                    # Use flexible name comparison
-                    reg_normalized = normalize_name_for_comparison(reg_val)
-                    ocr_normalized = normalize_name_for_comparison(ocr_val)
-                    
-                    if reg_normalized != ocr_normalized:
-                        # Check for significant overlap
-                        reg_words = set(reg_normalized.split())
-                        ocr_words = set(ocr_normalized.split())
-                        
-                        if len(reg_words) > 0 and len(ocr_words) > 0:
-                            overlap = len(reg_words.intersection(ocr_words))
-                            total_words = len(reg_words.union(ocr_words))
-                            similarity = overlap / total_words if total_words > 0 else 0
-                            
-                            if similarity >= 0.7:  # 70% similarity threshold
-                                print(f'DEBUG: Names are similar enough (similarity: {similarity:.2f}), treating as match')
-                                continue
-                        
+                    # Use improved name comparison
+                    if not are_names_equivalent(reg_val, ocr_val):
                         mismatches[key] = {
                             'user': reg_val,
                             'ocr': ocr_val
@@ -545,3 +579,4 @@ class VerifyIdFieldsView(APIView):
         except Exception as e:
             print(f"Verification failed with error: {e}")
             return Response({'status': 'error', 'message': str(e)}, status=500)
+
