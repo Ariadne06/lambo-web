@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, VerifyIdFieldsView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, VerifyIdFieldsView, IdentityDocTypeViewSet)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -10,6 +10,7 @@ router.register(r'sitios', SitioViewSet)
 router.register(r'religions', ReligionViewSet)
 router.register(r'resident-statuses', ResidentStatusViewSet)
 router.register(r'religion-categories', ReligionCategoryViewSet)
+router.register(r'identity-doc-types', IdentityDocTypeViewSet)
 
 urlpatterns = router.urls
 

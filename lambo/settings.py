@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+<<<<<<< HEAD
+=======
+from supabase import create_client, Client
+
+>>>>>>> c0b579d819685b2498324fbdede5ea90beb485ad
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -141,6 +146,21 @@ else:
             },
         }
     }
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
+
+# if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+#     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# else:
+#     supabase = None
+
+# Media files configuration for Supabase
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 
 
 # Password validation
