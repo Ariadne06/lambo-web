@@ -180,22 +180,7 @@ class ReligionCategorySerializer(serializers.ModelSerializer):
         fields = ['religion_cat_id', 'religion_name']
 
 
-# class ResidentIdDocumentSerializer(serializers.ModelSerializer):
-#     document_image = serializers.ImageField(write_only=True)
-#     resident = serializers.PrimaryKeyRelatedField(queryset=Resident.objects.all())  # required by default
 
-#     class Meta:
-#         model = ResidentIdDocument
-#         fields = [
-#             'id_doc_id', 'resident', 'document_type', 'document_number',
-#             'document_image', 'date_uploaded', 'uploaded_by', 'verified', 'verification_date'
-#         ]
-
-#     def create(self, validated_data):
-#         image = validated_data.pop('document_image')
-#         image_bytes = image.read()
-#         instance = ResidentIdDocument.objects.create(image_data=image_bytes, **validated_data)
-#         return instance
 
 class ResidentSerializer(serializers.ModelSerializer):
 
