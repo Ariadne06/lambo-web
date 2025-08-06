@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from .models import logging
+from django.contrib import messages
 
 # Create your views here.
 
@@ -16,6 +17,7 @@ def login_view(request):
                 request.session['user_id'] = result[0]
                 request.session['user_id'] = result[0]
                 request.session['user_id'] = result[0]
-        
+        except Exception as e:
+            messages.error(request, 'Login failed: Invalid credentials.')
         
     return render(request, 'authentication/login.html')
