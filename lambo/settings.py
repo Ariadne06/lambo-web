@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -112,6 +115,9 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+load_dotenv()
+
 if 'CI' in os.environ:  # Check if running in CI environment
     DATABASES = {
         'default': {
@@ -123,18 +129,33 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'temp_lambo_db'),
-            'USER': os.getenv('POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'addymedalla032603'),
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
 
-            'HOST': os.getenv('POSTGRES_HOST', '127.0.0.1'),  # Or use 'localhost' in some cases
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
             'OPTIONS': {
                 'client_encoding': 'UTF8',
-                'sslmode': 'disable',
-            },
+                'sslmode': 'require',
+            }, 
         }
     }
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
+
+# if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+#     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# else:
+#     supabase = None
+
+# Media files configuration for Supabase
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 
 
 # Password validation
