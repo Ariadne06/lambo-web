@@ -15,3 +15,17 @@ class logging(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_logout_user(session_token):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc(
+                    'logout_user', [
+                        session_token
+                    ]
+                )
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e

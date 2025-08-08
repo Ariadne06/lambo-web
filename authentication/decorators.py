@@ -10,7 +10,7 @@ def custom_login_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         # Check if user ID is stored in the session
-        if 'user_id' not in request.session:
+        if 'personnel_id' not in request.session:
             messages.error(request, 'You need to log in to access this page.')
             login_url = 'authentication:login'  # Replace with your login URL
             return redirect(login_url)
