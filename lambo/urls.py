@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
 
+app_name = 'lambo'
+
 def redirect_to_login(request):
     return redirect('authentication:login')
 
