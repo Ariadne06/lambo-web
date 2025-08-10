@@ -42,4 +42,9 @@ urlpatterns = [
     path('admin_module/', include('admin_module.urls')),
 
     path('captain_module/', include('captain_module.urls')),
+
+    path('treasurer_module/', include('treasurer_module.urls')),
+
+    path('nurse_module/', include('nurse_module.urls')),
 ]
+

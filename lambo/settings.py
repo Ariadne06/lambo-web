@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'resident_profiling_module', # Resident Profiling Module
     'admin_module',
     'captain_module',
+    'treasurer_module',
+    'nurse_module',
 
     'django_browser_reload', # Browser Reload
 
