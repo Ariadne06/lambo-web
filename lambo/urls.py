@@ -16,9 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
+
+app_name = 'lambo'
+
+def redirect_to_login(request):
+    return redirect('authentication:login')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', redirect_to_login, name='login_redirect'),
     
     # Authentication URLs
     path('authentication/', include('authentication.urls')),
