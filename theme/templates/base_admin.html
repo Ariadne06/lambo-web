@@ -88,6 +88,7 @@
                 font-family: 'Poppins', sans-serif;
             }
         </style>
+
     <script>
         const submenuToggle = document.getElementById('submenu-toggle');
         const submenu = document.getElementById('submenu');
@@ -102,6 +103,12 @@
 
         sidebarToggle?.addEventListener('click', () => {
             sidebar.classList.toggle('-translate-x-full');
+        });
+
+        window.addEventListener('unload', function () {
+            try {
+            navigator.sendBeacon("{% url 'authentication:silent_logout' %}");
+            } catch (e) {}
         });
     </script>
 </body>

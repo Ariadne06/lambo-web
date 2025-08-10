@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from .models import logging
 from django.contrib import messages
 from authentication.decorators import custom_login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
 
 def login_view(request):
     # If session expired or cookie is gone, flush it
@@ -83,3 +85,14 @@ def logout_view(request):
         messages.warning(request, 'You are not logged in.')
 
     return redirect('authentication:login')
+
+@csrf_exempt
+def silent_logout(request):
+    token = request.session.get('session_token')
+    if token:
+        try:
+            logging.sp_logout_user(token)
+        except Exception:
+            pass
+    # Do not flush here; let normal logout or session expiry handle it.
+    return HttpResponse(status=204)

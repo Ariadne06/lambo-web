@@ -142,6 +142,7 @@ else:
             'OPTIONS': {
                 'client_encoding': 'UTF8',
                 'sslmode': 'require',
+                'options': '-c timezone=Asia/Manila',
             },
         }
     }
@@ -186,7 +187,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
