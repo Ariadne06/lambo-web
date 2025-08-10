@@ -1,8 +1,10 @@
 from django.urls import path
 from . import views
 
+app_name = 'captain_module'
+
 urlpatterns = [
-     path('', views.captain_dashboard),
+     path('', views.captain_dashboard, name='captain_dashboard'),
      path('captain_viewResident', views.captain_viewResident),
      path('captain_viewMoreResident/', views.captain_viewMoreResident),
      path('captain_householdList/', views.captain_householdList),
