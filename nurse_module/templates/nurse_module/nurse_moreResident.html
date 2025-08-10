@@ -1,0 +1,103 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}
+    Nurse
+{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-10">
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+      <!-- Avatar -->
+      <div class="md:col-span-3 flex items-start justify-center">
+        <div class="w-40 h-40 md:w-48 md:h-48 rounded-full ring-2 ring-gray-300 overflow-hidden flex items-center justify-center">
+          <!-- placeholder avatar -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-28 h-28 md:w-32 md:h-32 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a5 5 0 0 0-5 5 5 5 0 1 0 10 0 5 5 0 0 0-5-5Zm0 12c-5.33 0-8 2.67-8 6v1h16v-1c0-3.33-2.67-6-8-6Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Form (read-only fields) -->
+      <div class="md:col-span-9 w-full">
+        <form class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+          <!-- Left column -->
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+              <input type="text" value="Adrianne" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+              <input type="text" value="Medalla" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+              <input type="text" value="Villarta" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+              <input type="text" value="01/01/2000" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+              <input type="text" value="Male" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Religion</label>
+              <input type="text" value="Catholic" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Educational Attainment</label>
+              <input type="text" value="College Graduate" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">House Number</label>
+              <input type="text" value="Block 5 Lot 11" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Street</label>
+              <input type="text" value="Washington Street" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Barangay</label>
+              <input type="text" value="Cansaga" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Resident Status</label>
+              <input type="text" value="Permanent" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Civil Status</label>
+              <input type="text" value="Married" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly>
+            </div>
+          </div>
+        </form>
+
+        <!-- Bottom actions -->
+        <div class="mt-8 flex justify-end">
+          <a href="#" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2.5 text-white text-sm font-medium shadow hover:bg-red-700">
+            Back
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
