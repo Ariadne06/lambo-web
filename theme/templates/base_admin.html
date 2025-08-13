@@ -114,8 +114,6 @@ const TAB_FLAG    = 'tabAuth';
 const CLOSED_KEY  = 'closed_session_token';
 const SESSION_TOKEN = "{{ request.session.session_token }}";
 
-alert('Session Token: ' + SESSION_TOKEN);
-
 // First load in this tab?
 if (!sessionStorage.getItem(TAB_FLAG)) {
   sessionStorage.setItem(TAB_FLAG, '1');
