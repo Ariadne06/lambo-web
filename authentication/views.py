@@ -4,13 +4,17 @@ from django.contrib import messages
 from authentication.decorators import custom_login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from datetime import datetime
+from django.utils.timezone import make_aware, get_current_timezone
 
 def login_view(request):
     # If session expired or cookie is gone, flush it
     if not request.session.session_key or 'session_token' not in request.session:
         request.session.flush()
-        
-    # Check if user is already logged in
+
+    # Already logged in?
     if request.session.get('session_token') and request.session.get('role_name'):
         role = request.session.get('role_name')
         if role == 'Secretary':
@@ -19,9 +23,8 @@ def login_view(request):
             return redirect('captain_module:dashboard_captain')
         elif role == 'Admin':
             return redirect('admin_module:admin_dashboard')
-        else:
-            messages.error(request, 'Access denied: Unrecognized role.')
-            return redirect('authentication:login')
+        messages.error(request, 'Access denied: Unrecognized role.')
+        return redirect('authentication:login')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -30,43 +33,64 @@ def login_view(request):
         try:
             result = logging.sp_login_personnel_web(username, password)
 
-            if result:
-                if result.get('status') == 'success':
-                    # Store session details
-                    request.session['account_type'] = result.get('account_type')
-                    request.session['personnel_id'] = result.get('personnel_id')
-                    request.session['username'] = result.get('username')
-                    request.session['role_id'] = result.get('role_id')
-                    request.session['role_name'] = result.get('role_name')
-                    request.session['session_token'] = result.get('session_token')
-
-                    messages.success(request, 'Login successful!')
-
-                    # Redirect based on role
-                    role = result.get('role_name')
-                    if role == 'Secretary':
-                        return redirect('personnels_module:secretary_dashboard')
-                    elif role == 'Captain':
-                        return redirect('captain_module:dashboard_captain')
-                    elif role == 'Admin':
-                        return redirect('admin_module:admin_dashboard')
-                    else:
-                        messages.error(request, 'Access denied: Unrecognized role.')
-                        return redirect('authentication:login')
-                else:
-                    messages.error(request, 'Login failed: Invalid credentials.')
-            else:
+            if not result:
                 messages.error(request, 'Login failed: No response from server.')
+                return render(request, 'authentication/login.html')
+
+            status = result.get('status')
+            token = result.get('session_token')
+
+            # Require both success and a valid token
+            if status == 'success' and token:
+                # Store session details
+                request.session['account_type'] = result.get('account_type')
+                request.session['personnel_id'] = result.get('personnel_id')
+                request.session['username'] = result.get('username')
+                request.session['role_id'] = result.get('role_id')
+                request.session['role_name'] = result.get('role_name')
+                request.session['session_token'] = token
+
+                role = request.session['role_name']
+                if role == 'Secretary':
+                    return redirect('personnels_module:secretary_dashboard')
+                elif role == 'Captain':
+                    return redirect('captain_module:dashboard_captain')
+                elif role == 'Admin':
+                    return redirect('admin_module:admin_dashboard')
+                messages.error(request, 'Access denied: Unrecognized role.')
+                return redirect('authentication:login')
+
+            elif status == 'success' and not token:
+                # Login success but no token returned
+                messages.error(request, 'Login failed: Missing session token.')
+                return render(request, 'authentication/login.html')
+
+            elif status == 'require_password_change':
+                request.session['pending_pwd_change'] = True
+                request.session['pending_personnel_id'] = result.get('personnel_id')
+                request.session['pending_username'] = result.get('username')
+                request.session['account_type'] = 'personnel'
+                messages.info(request, 'Please set a new password to continue.')
+                return redirect('authentication:force_change_password')
+
+            elif status == 'error':
+                msg = result.get('message', 'Login failed.')
+                messages.error(request, msg)
+                return render(request, 'authentication/login.html')
+
+            messages.error(request, 'Login failed.')
         except Exception as e:
             messages.error(request, f'Login failed: {str(e)}')
 
     return render(request, 'authentication/login.html')
 
+
 @custom_login_required
 def logout_view(request):
     # Check if user_id exists in the session
-    if 'session_token' in request.session:     
-        result = logging.sp_logout_user(request.session['session_token'])
+    if 'session_token' in request.session:
+        token = request.session.get('session_token')
+        result = logging.sp_logout_user(token) 
     
         storage = messages.get_messages(request)
         storage.used = True
@@ -86,13 +110,14 @@ def logout_view(request):
 
     return redirect('authentication:login')
 
+@require_POST
 @csrf_exempt
 def silent_logout(request):
-    token = request.session.get('session_token')
+    token = request.POST.get('session_token') or request.session.get('session_token')
     if token:
         try:
             logging.sp_logout_user(token)
+            request.session.flush()
         except Exception:
             pass
-    # Do not flush here; let normal logout or session expiry handle it.
     return HttpResponse(status=204)
