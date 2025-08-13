@@ -12,5 +12,5 @@ urlpatterns = [
      path('personnel_list/', views.personnel_list),
      path('update_personnel/', views.update_personnel),
      path('password_request/', views.password_request),
-     path('activityLogs/', views.activityLogs),
+     path('activityLogs/', views.activityLogs, name='activityLogs'),
 ]
