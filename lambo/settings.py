@@ -205,6 +205,6 @@ STATICFILES_DIRS = (
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Add at the end of your settings.py
-ID_ANALYZER_API_KEY = 'j4AgKOXqx6Xj3IMmUFdUNvwGHQoKYE8Q'  # Replace with your real key
-OCR_BACKEND = 'idanalyzer' 
+# ID ANALYZER API
+ID_ANALYZER_API_KEY = os.getenv('ID_ANALYZER_API_KEY')
+OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if not set

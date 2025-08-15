@@ -222,7 +222,7 @@ class Resident(models.Model):
     educational_attainment = models.ForeignKey('EducationalAttainment', on_delete=models.SET_NULL, blank=True, null=True, db_column='educational_attain_id')
     status = models.ForeignKey('ResidentStatus', on_delete=models.PROTECT, db_column='status_id')
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, blank=True, null=True, db_column='address_id')
-
+    is_verified = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.last_name}, {self.first_name}"
 
