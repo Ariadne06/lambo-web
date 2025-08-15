@@ -22,6 +22,7 @@ from django.conf import settings
 import numpy as np
 import cv2
 import difflib
+from django.db import connection
 
 # Configure Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -157,15 +158,45 @@ class ResidentRegistrationView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        print("POST /api/register/ called")
-        serializer = ResidentRegistrationSerializer(data=request.data, context={'request': request})
-        if not serializer.is_valid():
-            print("Serializer is not valid")
-            print(serializer.errors)
-            return Response(serializer.errors, status=400)
-        print("Serializer is valid")
-        resident = serializer.save()
-        return Response({'resident_id': resident.resident_id})
+        print(" POST /api/register/ called")
+        print(f"Request data keys: {list(request.data.keys())}")
+        
+        try:
+            serializer = ResidentRegistrationSerializer(data=request.data, context={'request': request})
+            
+            if not serializer.is_valid():
+                print(" Serializer is not valid")
+                print("Errors:", serializer.errors)
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=400)
+            
+            print(" Serializer is valid")
+            resident = serializer.save()
+            
+            print(f" Registration successful for resident_id: {resident.resident_id}")
+            
+            #  UPDATED RESPONSE FORMAT
+            return Response({
+                'success': True,
+                'resident_id': resident.resident_id,
+                'is_verified': resident.is_verified,  # Use the actual field
+                'verification_status': {
+                    'status': 'verified' if resident.is_verified else 'pending',
+                    'message': 'Your account has been successfully verified.' if resident.is_verified else 'Your account is pending verification. Please wait for approval.',
+                    'needs_wait': not resident.is_verified
+                }
+            }, status=201)
+            
+        except Exception as e:
+            print(f" Unexpected error in registration: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f'Registration failed: {str(e)}'
+            }, status=500)
+
 
 class ResidentIdDocumentOCRView(APIView):
     def get(self, request, pk):
@@ -483,12 +514,12 @@ def handle_philippine_drivers_license(raw_first, raw_middle, raw_last, full_name
     middle_name = raw_middle
     last_name = raw_last
     
-    # Case 1: Handle multi-word first names (like "Pierre Dwayne")
+   
     if user_first and ' ' in user_first:
         user_first_parts = user_first.split()
         
         # Check if ID Analyzer split the first name incorrectly
-        # Example: User "Pierre Dwayne" -> ID Analyzer might give firstName="PIERRE", middleName="DWAYNE ARRANCHADO"
+     
         if raw_middle and raw_middle.startswith(user_first_parts[1].upper()):
             # Reconstruct the first name
             first_name = ' '.join(user_first_parts)
@@ -544,6 +575,14 @@ class VerifyIdFieldsView(APIView):
             # Extract fields using improved logic
             ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
             
+            if doc_type and 'umid' in doc_type.lower():
+                # Simple UMID fix: swap first and last names
+                temp_first = ocr_fields.get('first_name', '')
+                temp_last = ocr_fields.get('last_name', '')
+                ocr_fields['first_name'] = temp_last
+                ocr_fields['last_name'] = temp_first
+                print(f"DEBUG: UMID name swap applied - First: '{temp_last}', Last: '{temp_first}'")
+
             print('DEBUG: registration_data:', registration_data)
             print('DEBUG: ocr_fields:', ocr_fields)
             
@@ -579,4 +618,228 @@ class VerifyIdFieldsView(APIView):
         except Exception as e:
             print(f"Verification failed with error: {e}")
             return Response({'status': 'error', 'message': str(e)}, status=500)
+
+class VerifyGuardianIdFieldsView(APIView):
+    """
+    Verify guardian ID fields by comparing OCR results with guardian's stored information
+    """
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        try:
+            registration_data = json.loads(request.data.get('registrationData', '{}'))
+            id_image = request.FILES.get('id_image')
+            doc_type = registration_data.get('document_type', None)
+            guardian_username = registration_data.get('guardian_username', '')
+            
+            if not id_image:
+                return Response({'error': 'No image provided'}, status=400)
+            
+            if not guardian_username:
+                return Response({'error': 'Guardian username not provided'}, status=400)
+
+            print(f"DEBUG: Verifying guardian ID for username: {guardian_username}")
+            print(f"DEBUG: Document type: {doc_type}")
+
+            # Get guardian information from database
+            guardian_info = None
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                        SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
+                        FROM get_guardian_identity_by_username(%s)
+                    """, [guardian_username])
+                    
+                    result = cursor.fetchone()
+                    if result:
+                        guardian_info = {
+                            'guardian_resident_id': result[0],
+                            'last_name': result[1],
+                            'first_name': result[2],
+                            'middle_name': result[3] or '',
+                            'suffix': result[4] or '',
+                            'dob': result[5].strftime('%Y-%m-%d') if result[5] else ''
+                        }
+                        print(f"DEBUG: Guardian info retrieved: {guardian_info}")
+                    else:
+                        return Response({
+                            'error': 'Guardian not found or not verified'
+                        }, status=400)
+                        
+                except Exception as db_error:
+                    print(f"DEBUG: Database error: {str(db_error)}")
+                    return Response({
+                        'error': 'Guardian verification failed'
+                    }, status=400)
+
+            # Extract fields from guardian's document using OCR
+            extracted_fields = run_ocr_and_extract_fields_switchable(
+                id_image, 
+                doc_type, 
+                guardian_info  # Pass guardian info for context
+            )
+
+            print(f"DEBUG: OCR extracted fields: {extracted_fields}")
+
+            # IMPORTANT: Remap OCR results to match guardian's stored information
+            # The OCR might have the names in wrong order, so we need to match them
+            ocr_first = extracted_fields.get('first_name', '').upper()
+            ocr_last = extracted_fields.get('last_name', '').upper()
+            ocr_middle = extracted_fields.get('middle_name', '').upper()
+            
+            guardian_first = guardian_info['first_name'].upper()
+            guardian_last = guardian_info['last_name'].upper()
+            guardian_middle = guardian_info['middle_name'].upper()
+
+            print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}', Middle: '{ocr_middle}'")
+            print(f"DEBUG: Guardian Names - First: '{guardian_first}', Last: '{guardian_last}', Middle: '{guardian_middle}'")
+
+            # Smart remapping: Check if OCR first/last are swapped
+            corrected_fields = {}
+            
+            # Check if OCR first name matches guardian's last name (indicating swap)
+            if ocr_first == guardian_last and ocr_last == guardian_first:
+                print("DEBUG: Detected name swap - correcting...")
+                corrected_fields = {
+                    'first_name': ocr_last,  # Swap: use OCR last as first
+                    'last_name': ocr_first,  # Swap: use OCR first as last
+                    'middle_name': ocr_middle,
+                    'dob': extracted_fields.get('dob', '')
+                }
+            else:
+                # No swap needed
+                corrected_fields = {
+                    'first_name': ocr_first,
+                    'last_name': ocr_last,
+                    'middle_name': ocr_middle,
+                    'dob': extracted_fields.get('dob', '')
+                }
+
+            print(f"DEBUG: Corrected fields: {corrected_fields}")
+
+            # Compare corrected fields with guardian's stored information
+            mismatches = {}
+
+            # Compare first name
+            if corrected_fields.get('first_name'):
+                if not are_names_equivalent(corrected_fields['first_name'], guardian_info['first_name']):
+                    mismatches['first_name'] = {
+                        'guardian': corrected_fields['first_name'],
+                        'expected': guardian_info['first_name']
+                    }
+
+            # Compare last name
+            if corrected_fields.get('last_name'):
+                if not are_names_equivalent(corrected_fields['last_name'], guardian_info['last_name']):
+                    mismatches['last_name'] = {
+                        'guardian': corrected_fields['last_name'],
+                        'expected': guardian_info['last_name']
+                    }
+
+            # Compare middle name
+            if corrected_fields.get('middle_name') and guardian_info['middle_name']:
+                if not are_names_equivalent(corrected_fields['middle_name'], guardian_info['middle_name']):
+                    mismatches['middle_name'] = {
+                        'guardian': corrected_fields['middle_name'],
+                        'expected': guardian_info['middle_name']
+                    }
+
+            # Compare date of birth
+            if corrected_fields.get('dob') and guardian_info['dob']:
+                ocr_dob = normalize_for_comparison(corrected_fields['dob'])
+                guardian_dob = normalize_for_comparison(guardian_info['dob'])
+                if ocr_dob != guardian_dob:
+                    mismatches['dob'] = {
+                        'guardian': corrected_fields['dob'],
+                        'expected': guardian_info['dob']
+                    }
+
+            print(f"DEBUG: Comparison mismatches after correction: {mismatches}")
+
+            if mismatches:
+                return Response({
+                    'status': 'mismatch',
+                    'message': 'Guardian document details do not match stored information',
+                    'mismatches': mismatches,
+                    'extracted_fields': corrected_fields,
+                    'guardian_stored_info': {
+                        'first_name': guardian_info['first_name'],
+                        'last_name': guardian_info['last_name'],
+                        'middle_name': guardian_info['middle_name'],
+                        'dob': guardian_info['dob']
+                    }
+                })
+            else:
+                return Response({
+                    'status': 'match',
+                    'message': 'Guardian document verified successfully',
+                    'extracted_fields': corrected_fields,
+                    'guardian_verified_info': {
+                        'first_name': guardian_info['first_name'],
+                        'last_name': guardian_info['last_name'],
+                        'middle_name': guardian_info['middle_name'],
+                        'dob': guardian_info['dob']
+                    }
+                })
+
+        except Exception as e:
+            print(f"Guardian ID verification error: {str(e)}")
+            return Response({
+                'error': f'Verification failed: {str(e)}'
+            }, status=500)
+        
+# Update existing VerifyGuardianView
+class VerifyGuardianView(APIView):
+    """
+    Verify if a guardian username exists in the system and is verified
+    Uses the database function get_guardian_identity_by_username
+    """
+    def post(self, request):
+        try:
+            guardian_username = request.data.get('guardian_username', '').strip()
+            
+            if not guardian_username:
+                return Response({
+                    'exists': False,
+                    'message': 'Guardian username is required'
+                }, status=400)
+            
+            # Use the database function to check guardian
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                        SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
+                        FROM get_guardian_identity_by_username(%s)
+                    """, [guardian_username])
+                    
+                    guardian_data = cursor.fetchone()
+                    
+                    if guardian_data:
+                        # Guardian exists and is verified
+                        return Response({
+                            'exists': True,
+                            'message': 'Guardian found and verified',
+                            'guardian_verified': True
+                        }, status=200)
+                    else:
+                        return Response({
+                            'exists': False,
+                            'message': 'Guardian username not found or guardian is not verified'
+                        }, status=200)
+                        
+                except Exception as db_error:
+                    # Database function raises exception if guardian not found or not verified
+                    error_message = str(db_error)
+                    print(f"Database error: {error_message}")
+                    return Response({
+                        'exists': False,
+                        'message': 'Guardian username not found or guardian is not verified'
+                    }, status=200)
+                        
+        except Exception as e:
+            print(f"Guardian verification error: {str(e)}")
+            return Response({
+                'exists': False,
+                'error': f'Verification failed: {str(e)}'
+            }, status=500)
 
