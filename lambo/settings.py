@@ -14,6 +14,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+# --- Sessions ---
+SESSION_COOKIE_AGE = 300
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,6 +52,10 @@ INSTALLED_APPS = [
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
     'resident_profiling_module', # Resident Profiling Module
+    'admin_module',
+    'captain_module',
+    'treasurer_module',
+    'nurse_module',
 
     'django_browser_reload', # Browser Reload
 
@@ -116,7 +125,7 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 #     }
 # }
 
-load_dotenv()
+load_dotenv()  
 
 if 'CI' in os.environ:  # Check if running in CI environment
     DATABASES = {
@@ -138,7 +147,8 @@ else:
             'OPTIONS': {
                 'client_encoding': 'UTF8',
                 'sslmode': 'require',
-            }, 
+                'options': '-c timezone=Asia/Manila',
+            },
         }
     }
 
@@ -182,7 +192,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 

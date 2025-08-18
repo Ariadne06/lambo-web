@@ -38,7 +38,6 @@ py -m venv .venv
 .venv\Scripts\activate
 
 # 3. Install Django and dependencies
-pip install Django
 pip install -r requirements.txt
 
 # 4. Install Tailwind CSS dependencies
