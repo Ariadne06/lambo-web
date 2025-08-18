@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class ResidentProfilingModuleConfig(AppConfig):
+class AdminModuleConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'resident_profiling_module'
+    name = 'admin_module'

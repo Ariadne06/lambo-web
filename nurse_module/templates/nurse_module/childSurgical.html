@@ -1,0 +1,68 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Nurse{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8 space-y-12">
+
+  <!-- Medical Conditions -->
+  <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
+    <h2 class="text-2xl font-semibold text-red-700 mb-6">Medical Conditions</h2>
+
+    <div class="max-w-3xl mx-auto overflow-x-auto">
+      <table class="min-w-full text-sm text-left text-gray-700">
+        <thead class="bg-gray-50 text-gray-800 border-b">
+          <tr>
+            <th class="px-6 py-3 font-semibold">Condition</th>
+            <th class="px-6 py-3 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3">Asthma</td>
+            <td class="px-6 py-3">Diagnosed 2019</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3">Allergy</td>
+            <td class="px-6 py-3">Penicillin</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Surgical History -->
+  <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
+    <h2 class="text-2xl font-semibold text-red-700 mb-6">Surgical History</h2>
+
+    <div class="max-w-3xl mx-auto overflow-x-auto">
+      <table class="min-w-full text-sm text-left text-gray-700">
+        <thead class="bg-gray-50 text-gray-800 border-b">
+          <tr>
+            <th class="px-6 py-3 font-semibold">Procedure</th>
+            <th class="px-6 py-3 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3">Appendectomy</td>
+            <td class="px-6 py-3">Done in 2018</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-6">&nbsp;</td>
+            <td class="px-6 py-6">&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Back -->
+  <div>
+    <a href="#"
+       class="inline-flex items-center justify-center rounded-full bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700 transition">
+      Back
+    </a>
+  </div>
+</div>
+{% endblock %}

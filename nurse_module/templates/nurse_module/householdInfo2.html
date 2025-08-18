@@ -1,0 +1,101 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Household Data{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <!-- red side bar like the first design -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-700 rounded-l-2xl"></div>
+
+    <!-- Step header (same style) -->
+    <div class="mb-6 flex items-center gap-8 text-sm font-medium">
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>1</span><span>Resident Data</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-red-700">2</span><span class="text-red-700">Household Data</span>
+      </div>
+    </div>
+
+    <!-- Form grid (three columns, compact spacing like the first) -->
+    <form class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4">
+      <!-- Column 1 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Relationship of the HH Head</label>
+          <input type="text" value="Brother" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">PhilHealth ID Number</label>
+          <input type="text" value="0000000" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Membership Type</label>
+          <input type="text" value="Member" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+          <input type="text" value="Vaccinated" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <input type="text" value="None" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+      </div>
+
+      <!-- Column 2 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
+          <!-- No highlight; same neutral inputs as others -->
+          <div class="space-y-2">
+            <input type="text" value="Diabetes" class="w-full rounded-md border border-gray-300 px-3 py-2">
+            <input type="text" value="Hypertension" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Smoker</label>
+          <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Alcohol Beverage Drinker</label>
+          <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Sexually Active</label>
+          <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Last Menstrual Period</label>
+          <input type="text" placeholder="Select Date" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+      </div>
+
+      <!-- Column 3 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Age of MENARCHE</label>
+          <input type="text" placeholder="Enter Age" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">FP Use</label>
+          <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Classification by Age/Health Risk Group</label>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" value="25" class="rounded-md border border-gray-300 px-3 py-2">
+            <input type="text" value="2nd Quarter" class="rounded-md border border-gray-300 px-3 py-2">
+            <input type="text" value="AB" class="rounded-md border border-gray-300 px-3 py-2">
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- Back button -->
+    <div class="mt-6">
+      <a href="#" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
