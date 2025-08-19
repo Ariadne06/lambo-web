@@ -22,6 +22,7 @@ from django.conf import settings
 import numpy as np
 import cv2
 import difflib
+import uuid
 from django.db import connection
 
 # Configure Tesseract path
@@ -843,3 +844,77 @@ class VerifyGuardianView(APIView):
                 'error': f'Verification failed: {str(e)}'
             }, status=500)
 
+
+# MOBILE LOGIN
+
+class MobileLoginView(APIView):
+    """
+    Handle login for mobile app (both personnel and residents)
+    Uses the login_user_mobile database function
+    """
+    
+    def post(self, request):
+        print("📱 Mobile login attempt")
+        
+        try:
+            # Get credentials from request
+            username = request.data.get('username', '').strip()
+            password = request.data.get('password', '')
+            
+            if not username or not password:
+                return Response({
+                    'success': False,
+                    'status': 'error',
+                    'message': 'Username and password are required'
+                }, status=400)
+            
+            print(f"📱 Login attempt for username: {username}")
+            
+            # Call the database function
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT login_user_mobile(%s, %s)
+                """, [username, password])
+                
+                result = cursor.fetchone()[0]  # Get the JSON result
+                
+            print(f"📱 Database response: {result}")
+            
+            # Parse the JSON response from the database function
+            if result['status'] == 'success':
+                return Response({
+                    'success': True,
+                    'status': 'success',
+                    'account_type': result['account_type'],
+                    'user_id': result.get('personnel_id') or result.get('resident_id'),
+                    'username': result['username'],
+                    'role_name': result.get('role_name'),  # Only for personnel
+                    'role_id': result.get('role_id'),      # Only for personnel
+                    'session_token': result['session_token'],
+                    'message': 'Login successful'
+                }, status=200)
+                
+            elif result['status'] == 'require_password_change':
+                return Response({
+                    'success': False,
+                    'status': 'require_password_change',
+                    'account_type': result['account_type'],
+                    'user_id': result.get('personnel_id') or result.get('resident_id'),
+                    'username': result['username'],
+                    'message': result['message']
+                }, status=200)
+                
+            else:
+                return Response({
+                    'success': False,
+                    'status': 'error',
+                    'message': result['message']
+                }, status=401)
+                
+        except Exception as e:
+            print(f"📱 Mobile login error: {str(e)}")
+            return Response({
+                'success': False,
+                'status': 'error',
+                'message': 'Login failed due to server error'
+            }, status=500)
