@@ -1,0 +1,191 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Nurse{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8">
+  <!-- Page title -->
+  <h1 class="text-2xl font-semibold text-red-700 mb-6">List of Maternal Health Record</h1>
+
+  <div class="bg-white shadow-sm rounded-2xl border border-gray-200">
+    <!-- Top controls -->
+    <div class="px-6 pt-5">
+      <div class="flex items-center justify-end gap-3">
+        <!-- Search -->
+        <div class="w-80">
+          <div class="relative">
+            <input type="text" placeholder="Search Maternal"
+                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:border-gray-400" />
+            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Advanced Filters -->
+        <details class="group">
+          <summary class="flex cursor-pointer select-none items-center gap-2 text-sm text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M6 12h12M10 18h4"/>
+            </svg>
+            Advanced Filters
+          </summary>
+          <div class="mt-3 mb-4 rounded-xl border border-gray-200 bg-white p-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Registered From</label>
+                <input type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Registered To</label>
+                <input type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">NHTS Status</label>
+                <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                  <option value="">Any</option>
+                  <option>NHTS</option>
+                  <option>Non-NHTS</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">Reset</button>
+              <button class="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white shadow hover:bg-black">Apply Filters</button>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto px-6 pb-4">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr class="text-left text-gray-600">
+            <th class="px-6 py-3 font-semibold">Resident ID</th>
+            <th class="px-6 py-3 font-semibold">Full Name</th>
+            <th class="px-6 py-3 font-semibold">Registered Date</th>
+            <th class="px-6 py-3 font-semibold">NHTS Status</th>
+            <th class="px-6 py-3 font-semibold text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1000</td>
+            <td class="px-6 py-4">Adrianne Villarta</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1001</td>
+            <td class="px-6 py-4">Adrian Medalla</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">Non-NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1002</td>
+            <td class="px-6 py-4">Prescious Bugtai</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1003</td>
+            <td class="px-6 py-4">Charlz Arranchado</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">Non-NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1004</td>
+            <td class="px-6 py-4">Miles Majarocon</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1005</td>
+            <td class="px-6 py-4">Gwen Doong</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">Non-NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">1006</td>
+            <td class="px-6 py-4">Jude Delo Santos</td>
+            <td class="px-6 py-4">01/02/2020</td>
+            <td class="px-6 py-4">Non-NHTS</td>
+            <td class="px-6 py-4">
+              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
+      <a class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400 cursor-not-allowed">Prev</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">1</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">4</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">5</a>
+      <span class="px-3 py-1.5">…</span>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
+      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

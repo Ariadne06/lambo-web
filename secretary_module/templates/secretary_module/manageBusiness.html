@@ -1,0 +1,91 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Business List{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <h1 class="text-lg font-semibold text-red-700 mb-4">Business List</h1>
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 relative">
+    <!-- Search -->
+    <div class="flex justify-end mb-4">
+      <input type="text" placeholder="Search Business"
+             class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600">
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-gray-700 font-medium">
+            <th class="px-4 py-2 border border-gray-200 text-left">Business ID.</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Business Name</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Address</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Status</th>
+            <th class="px-4 py-2 border border-gray-200 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">1000</td>
+            <td class="px-4 py-2 border border-gray-200">Adrianne Store</td>
+            <td class="px-4 py-2 border border-gray-200">Purok 3, Cansaga, Consolacion</td>
+            <td class="px-4 py-2 border border-gray-200 text-green-600 font-medium">Active</td>
+            <td class="px-4 py-2 border border-gray-200 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <!-- More (3-dots) -->
+                <button class="p-1 rounded hover:bg-gray-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                  </svg>
+                </button>
+                <!-- Edit (pencil) -->
+                <button class="p-1 rounded hover:bg-gray-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 21v-3.586l11.293-11.293 3.586 3.586L7.586 21H4Zm15.707-12.707-3.586-3.586L17.586 3l3.586 3.586-1.465 1.465Z"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Sample row -->
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">1001</td>
+            <td class="px-4 py-2 border border-gray-200">Medalla Barber Shop</td>
+            <td class="px-4 py-2 border border-gray-200">Purok 3, Cansaga, Consolacion</td>
+            <td class="px-4 py-2 border border-gray-200 text-green-600 font-medium">Active</td>
+            <td class="px-4 py-2 border border-gray-200 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button class="p-1 rounded hover:bg-gray-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                  </svg>
+                </button>
+                <button class="p-1 rounded hover:bg-gray-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 21v-3.586l11.293-11.293 3.586 3.586L7.586 21H4Zm15.707-12.707-3.586-3.586L17.586 3l3.586 3.586-1.465 1.465Z"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Repeat rows dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center mt-4 text-sm text-gray-600">
+      <nav class="flex items-center gap-2">
+        <a href="#" class="px-2 py-1 hover:text-red-700">1</a>
+        <a href="#" class="px-2 py-1 hover:text-red-700">2</a>
+        <a href="#" class="px-2 py-1 hover:text-red-700">3</a>
+        <span>…</span>
+        <a href="#" class="px-2 py-1 hover:text-red-700">60</a>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}
