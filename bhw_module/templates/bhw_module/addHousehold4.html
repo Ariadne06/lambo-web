@@ -1,0 +1,103 @@
+{% extends 'base_admin.html' %}
+{% block title %}Household Profiling — Socio Economic{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8">
+  <div class="relative max-w-5xl mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+    <!-- Thin left accent -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-700 rounded-l-2xl"></div>
+
+    <!-- Step header (step 3 active) -->
+    <div class="flex items-center gap-10 text-sm font-medium mb-8">
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>1</span><span>Household Data</span>
+      </div>
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>2</span><span>Respondent</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-red-700">3</span><span class="text-red-700">Socio Economic</span>
+      </div>
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>4</span><span>Household Members</span>
+      </div>
+    </div>
+
+    <h3 class="text-sm font-semibold text-gray-800 mb-4">Socio Economic</h3>
+
+    <!-- Form -->
+    <form class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5 text-sm">
+      <!-- Left column -->
+      <div>
+        <label class="block text-gray-700 mb-1">Select One</label>
+        <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+          <option selected disabled>Select One</option>
+          <option>Owner</option>
+          <option>Sharer</option>
+          <option>Care Taker</option>
+          <option>Informal Settler</option>
+        </select>
+      </div>
+
+      <!-- Right column -->
+      <div>
+        <label class="block text-gray-700 mb-1">With blinc drainage?</label>
+        <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+          <option selected disabled>Select One</option>
+          <option>Yes</option>
+          <option>No</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-gray-700 mb-1">Select Type of Water Source</label>
+        <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+          <option selected disabled>Select one or more</option>
+          <option>Level I — Point Source</option>
+          <option>Level II — Communal Faucet</option>
+          <option>Level III — Piped Distribution</option>
+          <option>Private Well</option>
+          <option>Water Delivery</option>
+          <option>Others</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-gray-700 mb-1">Select Toilet Facility</label>
+        <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+          <option selected disabled>Select One</option>
+          <option>Water-sealed (Own)</option>
+          <option>Water-sealed (Shared)</option>
+          <option>Antipolo Type</option>
+          <option>Open Pit</option>
+          <option>None</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-gray-700 mb-1">Select Type of Waste Management</label>
+        <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+          <option selected disabled>Select One</option>
+          <option>Collected by LGU</option>
+          <option>Self-disposal / Burn</option>
+          <option>Segregated & Recycled</option>
+          <option>Dumped in Open Area</option>
+          <option>Others</option>
+        </select>
+      </div>
+    </form>
+
+    <!-- Actions -->
+    <div class="mt-10 flex items-center justify-between">
+      <a href="#"
+         class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+        Back
+      </a>
+      <a href="#"
+         class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+        Next Page
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

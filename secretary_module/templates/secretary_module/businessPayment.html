@@ -1,0 +1,86 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Payment History{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <!-- Page title -->
+  <h1 class="text-lg font-semibold text-red-700 mb-4">Payment History</h1>
+
+  <!-- Card -->
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 max-w-5xl mx-auto">
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-gray-700 font-medium">
+            <th class="px-4 py-2 border border-gray-200 text-left w-40">Date</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Transaction</th>
+            <th class="px-4 py-2 border border-gray-200 text-left w-40">Amount</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
+            <td class="px-4 py-2 border border-gray-200">330 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Business Clearance</td>
+            <td class="px-4 py-2 border border-gray-200">300 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
+            <td class="px-4 py-2 border border-gray-200">200 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Certificate of Residency</td>
+            <td class="px-4 py-2 border border-gray-200">200 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
+            <td class="px-4 py-2 border border-gray-200">200 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
+            <td class="px-4 py-2 border border-gray-200">200 Php</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
+            <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
+            <td class="px-4 py-2 border border-gray-200">330 Php</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer: Back + Pagination (centered) -->
+    <div class="mt-4 flex items-center">
+      <!-- Back -->
+      <a href="#"
+         class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+        Back
+      </a>
+
+      <!-- Pagination centered -->
+      <nav class="mx-auto text-sm text-gray-600">
+        <ul class="flex items-center gap-2">
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">1</a></li>
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">2</a></li>
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">3</a></li>
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">4</a></li>
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">5</a></li>
+          <li><span class="px-2 py-1">…</span></li>
+          <li><a href="#" class="px-2 py-1 hover:text-red-700">60</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base_admin.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+    <!-- Header -->
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h2 class="text-xl font-bold text-red-600 flex items-center">
+            🏠 Household Profile
+        </h2>
+        <button class="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2V7a2 2 0 012-2h16a2 2 0 012 2v9a2 2 0 01-2 2h-2m-4 0h-4"/>
+            </svg>
+            Print
+        </button>
+    </div>
+
+    <!-- Household Info -->
+    <div class="grid grid-cols-3 gap-6 mb-8">
+        <div>
+            <label class="text-sm text-gray-500">Household ID</label>
+            <input type="text" value="10000" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Sitio/Purok</label>
+            <input type="text" value="Purok 5" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Category</label>
+            <input type="text" value="Non-NHTS" class="w-full p-2 border rounded-lg">
+        </div>
+
+        <div>
+            <label class="text-sm text-gray-500">Household No.</label>
+            <input type="text" value="0001" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Barangay</label>
+            <input type="text" value="Cansaga" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Water Source</label>
+            <input type="text" value="Point Source" class="w-full p-2 border rounded-lg">
+        </div>
+
+        <div>
+            <label class="text-sm text-gray-500">Family No.</label>
+            <input type="text" value="0001-001" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Household Head</label>
+            <input type="text" value="Adrianne Villarta" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Toilet Facility</label>
+            <input type="text" value="Connected to Septic Tank" class="w-full p-2 border rounded-lg">
+        </div>
+
+        <div>
+            <label class="text-sm text-gray-500">Renter (Y/N)</label>
+            <input type="text" value="No" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">Waste Management</label>
+            <input type="text" value="Waste Segregation" class="w-full p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm text-gray-500">With Drainage?</label>
+            <input type="text" value="No" class="w-full p-2 border rounded-lg">
+        </div>
+
+        <div>
+            <label class="text-sm text-gray-500">Date of Visit</label>
+            <input type="text" value="01/01/2020" class="w-full p-2 border rounded-lg">
+        </div>
+    </div>
+
+    <!-- Household Members Table -->
+    <h3 class="text-lg font-bold text-red-600 mb-3">👥 Household Members</h3>
+    <div class="overflow-x-auto bg-gray-50 rounded-xl shadow-inner">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-red-600 text-white">
+                <tr>
+                    <th class="px-4 py-3">Resident ID</th>
+                    <th class="px-4 py-3">First Name</th>
+                    <th class="px-4 py-3">M.I</th>
+                    <th class="px-4 py-3">Last Name</th>
+                    <th class="px-4 py-3">Date of Birth</th>
+                    <th class="px-4 py-3">Sex</th>
+                    <th class="px-4 py-3">Religion</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3 text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <tr class="hover:bg-red-50 transition">
+                    <td class="px-4 py-2">1000</td>
+                    <td class="px-4 py-2">Adrianne</td>
+                    <td class="px-4 py-2">C.</td>
+                    <td class="px-4 py-2">Villarta</td>
+                    <td class="px-4 py-2">08/08/2028</td>
+                    <td class="px-4 py-2">Male</td>
+                    <td class="px-4 py-2">Catholic</td>
+                    <td class="px-4 py-2">Single</td>
+                    <td class="px-4 py-2 text-center">•••</td>
+                </tr>
+                <!-- Repeat rows -->
+            </tbody>
+        </table>
+    </div>
+
+   <!-- Footer -->
+<div class="flex justify-end mt-6">
+    <button class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">
+        ⬅ Back
+    </button>
+</div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+
+<!-- Header strip -->
+<div class="bg-red-600 text-white px-6 py-4 rounded-t-2xl">
+  <h2 class="text-base font-semibold">Household Enrollment · Family Position</h2>
+</div>
+
+<!-- Wrapper (top padding only, not full screen center) -->
+<div class="flex justify-center px-8 mt-10">
+  <div class="w-full max-w-4xl bg-white rounded-xl shadow-md p-8">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">
+      Which family are you in within this household?
+    </h2>
+    <p class="text-gray-600 mb-6">
+      Please select your family's position in this household
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <label class="flex items-center border rounded-xl p-4 hover:shadow-lg transition cursor-pointer">
+        <input type="radio" name="family" class="mr-3" />
+        <div>
+          <span class="font-semibold">First Family</span>
+          <p class="text-sm text-gray-500">Primary/Original family in the household</p>
+        </div>
+      </label>
+
+      <label class="flex items-center border rounded-xl p-4 hover:shadow-lg transition cursor-pointer">
+        <input type="radio" name="family" class="mr-3" />
+        <div>
+          <span class="font-semibold">Second Family</span>
+          <p class="text-sm text-gray-500">Another family sharing the same address</p>
+        </div>
+      </label>
+
+      <label class="flex items-center border rounded-xl p-4 hover:shadow-lg transition cursor-pointer">
+        <input type="radio" name="family" class="mr-3" />
+        <div>
+          <span class="font-semibold">Third Family</span>
+          <p class="text-sm text-gray-500">A third family unit at this residence</p>
+        </div>
+      </label>
+
+      <label class="flex items-center border rounded-xl p-4 hover:shadow-lg transition cursor-pointer">
+        <input type="radio" name="family" class="mr-3" />
+        <div>
+          <span class="font-semibold">Other</span>
+          <p class="text-sm text-gray-500">Another arrangement (guardian, boarder, etc.)</p>
+        </div>
+      </label>
+    </div>
+
+    <div class="flex justify-between mt-8">
+      <button class="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">
+        ← Back
+      </button>
+      <button class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium">
+        Next →
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
