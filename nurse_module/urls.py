@@ -16,7 +16,21 @@ urlpatterns = [
      path('childImmunization', views.childImmunization),
      path('childSupplements', views.childSupplements),
      path('childGrowth', views.childGrowth),
-     path('childSurgical', views.childSurgical),
+     path('maternalrecord', views.maternalrecord),
+     path('Morematernalrecord', views.Morematernalrecord),
+     path('maternalObstetrical', views.maternalObstetrical),
+     path('maternalCheckUp', views.maternalCheckUp),
+     path('maternalImmunization', views.maternalImmunization),
+     path('maternalScreening', views.maternalScreening),
+     path('maternalLabScreening', views.maternalLabScreening),
+     path('maternalSupplement', views.maternalSupplement),
+     path('maternalIron', views.maternalIron),
+     path('maternalOutcome', views.maternalOutcome),
+     path('maternalPostpartum', views.maternalPostpartum),
+     path('maternalSurgical', views.maternalSurgical),
+     path('nurseGeneralInfo', views.nurseGeneralInfo),
+     path('moreGenInfo', views.moreGenInfo),
+     path('ImmunizationStatus', views.ImmunizationStatus),
 
     
 ]

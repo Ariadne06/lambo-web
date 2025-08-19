@@ -1,0 +1,64 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Nurse{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8 space-y-10">
+
+  <!-- Medical Conditions -->
+  <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Medical Conditions</h2>
+
+    <div class="max-w-md overflow-x-auto">
+      <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 border border-gray-200">
+        <thead class="bg-gray-50 text-gray-800">
+          <tr>
+            <th class="px-4 py-2 border border-gray-200 font-semibold">Condition</th>
+            <th class="px-4 py-2 border border-gray-200 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border border-gray-200">Asthma</td>
+            <td class="px-4 py-2 border border-gray-200">Diagnosed 2019</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border border-gray-200">Allergy</td>
+            <td class="px-4 py-2 border border-gray-200">Penicillin</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Surgical History -->
+  <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Surgical History</h2>
+
+    <div class="max-w-md overflow-x-auto">
+      <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 border border-gray-200">
+        <thead class="bg-gray-50 text-gray-800">
+          <tr>
+            <th class="px-4 py-2 border border-gray-200 font-semibold">Procedure</th>
+            <th class="px-4 py-2 border border-gray-200 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border border-gray-200">Appendectomy</td>
+            <td class="px-4 py-2 border border-gray-200">Done in 2018</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Back -->
+  <div>
+    <a href="#"
+       class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 text-white text-xs sm:text-sm font-medium shadow hover:from-red-500 hover:to-red-400 transition">
+      Back
+    </a>
+  </div>
+</div>
+{% endblock %}

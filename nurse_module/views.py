@@ -39,3 +39,48 @@ def childGrowth(request):
 
 def childSurgical(request):
     return render(request, 'nurse_module/childSurgical.html')
+
+def maternalrecord(request):
+    return render(request, 'nurse_module/maternalrecord.html')
+
+def Morematernalrecord(request):
+    return render(request, 'nurse_module/Morematernalrecord.html')
+
+def maternalObstetrical(request):
+    return render(request, 'nurse_module/maternalObstetrical.html')
+
+def maternalCheckUp(request):
+    return render(request, 'nurse_module/maternalCheckUp.html')
+
+def maternalImmunization(request):
+    return render(request, 'nurse_module/maternalImmunization.html')
+
+def maternalScreening(request):
+    return render(request, 'nurse_module/maternalScreening.html')
+
+def maternalLabScreening(request):
+    return render(request, 'nurse_module/maternalLabScreening.html')
+
+def maternalSupplement(request):
+    return render(request, 'nurse_module/maternalSupplement.html')
+
+def maternalIron(request):
+    return render(request, 'nurse_module/maternalIron.html')
+
+def maternalOutcome(request):
+    return render(request, 'nurse_module/maternalOutcome.html')
+
+def maternalPostpartum(request):
+    return render(request, 'nurse_module/maternalPostpartum.html')
+
+def maternalSurgical(request):
+    return render(request, 'nurse_module/maternalSurgical.html')
+
+def nurseGeneralInfo(request):
+    return render(request, 'nurse_module/nurseGeneralInfo.html')
+
+def moreGenInfo(request):
+    return render(request, 'nurse_module/moreGenInfo.html')
+
+def ImmunizationStatus(request):
+    return render(request, 'nurse_module/ImmunizationStatus.html')

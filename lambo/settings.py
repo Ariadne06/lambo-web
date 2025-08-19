@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'captain_module',
     'treasurer_module',
     'nurse_module',
+    'secretary_module',
+    'bhw_module',
 
     'django_browser_reload', # Browser Reload
 
