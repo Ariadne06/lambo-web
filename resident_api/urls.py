@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -21,5 +21,6 @@ urlpatterns += [
     path('id-document/<int:pk>/ocr/', ResidentIdDocumentOCRView.as_view(), name='id-document-ocr'),
     path('verify-guardian/', VerifyGuardianView.as_view(), name='verify-guardian'),
     path('verify-guardian-id-fields/', VerifyGuardianIdFieldsView.as_view(), name='verify-guardian-id-fields'),
+    path('mobile-login/', MobileLoginView.as_view(), name='mobile-login'),
 
 ]
