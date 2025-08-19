@@ -1,0 +1,131 @@
+{% extends 'base_admin.html' %}
+{% block title %}Resident — Health{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <!-- CARD -->
+  <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm p-6 max-w-5xl mx-auto">
+    <!-- thin red strip -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-700 rounded-l-2xl"></div>
+
+    <!-- Top: avatar + steps -->
+    <div class="flex items-start gap-8 mb-6">
+      <!-- Avatar -->
+      <div class="shrink-0">
+        <div class="w-32 h-32 rounded-full ring-2 ring-gray-200 overflow-hidden grid place-items-center bg-gray-50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 12c-5.33 0-8 2.67-8 6v2h16v-2c0-3.33-2.67-6-8-6Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div class="grow">
+        <div class="flex items-center gap-8 text-sm font-medium mb-4">
+          <div class="flex items-center gap-2 text-gray-400">
+            <span>1</span><span>Personal</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-red-700">2</span><span class="text-red-700">Health</span>
+          </div>
+        </div>
+
+        <!-- FORM -->
+        <form class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+          <!-- LEFT COLUMN -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Medical History</label>
+            <input type="text" value="Diabetes" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">FP Use</label>
+            <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option selected>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Smoker</label>
+            <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option selected>Yes</option>
+              <option>No</option>
+              <option>Former</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Education Attainment</label>
+            <input type="text" value="College Degree" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Alcohol Beverage Drinker</label>
+            <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option selected>Yes</option>
+              <option>No</option>
+              <option>Occasional</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">Age (Risk Group)</label>
+              <input type="number" value="25" class="w-full rounded-md border border-gray-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">Quarter</label>
+              <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+                <option>1st Quarter</option>
+                <option selected>2nd Quarter</option>
+                <option>3rd Quarter</option>
+                <option>4th Quarter</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Sexually Active</label>
+            <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option>No</option>
+              <option>Yes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Health Risk Classification</label>
+            <input type="text" value="AB" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Last Menstrual Period</label>
+            <input type="date" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Remarks</label>
+            <input type="text" value="Vaccinated" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Age of MENARCHE</label>
+            <input type="number" placeholder="Enter Age" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Other Conditions</label>
+            <input type="text" value="None" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+        </form>
+
+        <!-- Actions -->
+        <div class="mt-6 flex items-center justify-between">
+          <a href="#"
+             class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+            Back
+          </a>
+          <button type="submit"
+             class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+            Update
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

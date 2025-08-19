@@ -46,5 +46,10 @@ urlpatterns = [
     path('treasurer_module/', include('treasurer_module.urls')),
 
     path('nurse_module/', include('nurse_module.urls')),
+
+    path('secretary_module/', include('secretary_module.urls')),
+
+    path('bhw_module/', include('bhw_module.urls')),
 ]
+
 
