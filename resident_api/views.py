@@ -17,6 +17,7 @@ import pytesseract
 import json
 import base64
 import re
+import os
 import requests
 from django.conf import settings
 import numpy as np
@@ -24,6 +25,7 @@ import cv2
 import difflib
 import uuid
 from django.db import connection
+from .supabase_storage import upload_file_to_supabase
 
 # Configure Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -854,7 +856,7 @@ class MobileLoginView(APIView):
     """
     
     def post(self, request):
-        print("📱 Mobile login attempt")
+        print("Mobile login attempt")
         
         try:
             # Get credentials from request
@@ -868,7 +870,7 @@ class MobileLoginView(APIView):
                     'message': 'Username and password are required'
                 }, status=400)
             
-            print(f"📱 Login attempt for username: {username}")
+            print(f"Login attempt for username: {username}")
             
             # Call the database function
             with connection.cursor() as cursor:
@@ -878,7 +880,7 @@ class MobileLoginView(APIView):
                 
                 result = cursor.fetchone()[0]  # Get the JSON result
                 
-            print(f"📱 Database response: {result}")
+            print(f"Database response: {result}")
             
             # Parse the JSON response from the database function
             if result['status'] == 'success':
@@ -912,9 +914,273 @@ class MobileLoginView(APIView):
                 }, status=401)
                 
         except Exception as e:
-            print(f"📱 Mobile login error: {str(e)}")
+            print(f"Mobile login error: {str(e)}")
             return Response({
                 'success': False,
                 'status': 'error',
                 'message': 'Login failed due to server error'
             }, status=500)
+        
+
+# MOBILE RESIDENT USER PROFILE
+
+class ResidentProfileView(APIView):
+    """
+    Get resident profile using the get_resident_profile database function
+    """
+
+    def get(self, request, resident_id):
+        print(f"Fetching profile for resident_id: {resident_id}")
+
+        try:
+            # call db function
+            with connection.cursor() as cursor:
+                cursor.execute(""" SELECT get_resident_profile(%s) """, [resident_id])
+                result = cursor.fetchone()[0] # get json result
+
+            print(f"Profile data retrieved: {result}")
+
+            if result:
+                return Response({
+                    'success': True,
+                    'profile': result
+                }, status=200)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Profile not found'
+                }, status=404)
+
+        except Exception as e:
+            print(f"Profile fetch error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to fetch profile'
+            }, status=500)
+        
+# MOBILE UPDATE PROFILE
+
+class UpdateResidentProfileView(APIView):
+    """
+    Update resident profile using update_resident or update_business_owner database functions
+    """
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def post(self, request, resident_id):
+        print(f"Updating profile for resident_id: {resident_id}")
+        
+        try:
+            # Get current user session to use as request_by
+            request_by = resident_id  # For now, user updates their own profile
+            
+            # Get the current resident's status to determine which function to use
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT rs.status_name 
+                    FROM Resident r 
+                    JOIN Resident_Status rs ON r.status_id = rs.status_id 
+                    WHERE r.resident_id = %s
+                """, [resident_id])
+                
+                result = cursor.fetchone()
+                if not result:
+                    return Response({
+                        'success': False,
+                        'message': 'Resident not found'
+                    }, status=404)
+                
+                status_name = result[0].lower()
+                print(f"Resident status: {status_name}")
+            
+            # Extract form data
+            data = request.data
+            print(f"Update data received: {list(data.keys())}")
+            
+            # Handle profile image upload if provided
+            profile_image_path = None
+            if 'profile_image' in request.FILES:
+                print("Profile image detected, uploading to Supabase...")
+                profile_image_path = self.upload_profile_image(request.FILES['profile_image'], resident_id)
+                print(f"Profile image uploaded: {profile_image_path}")
+            
+            # Get current resident data for required fields
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT r.first_name, r.last_name, r.dob, r.sex, a.barangay, a.city_municipality
+                    FROM Resident r 
+                    LEFT JOIN Address a ON r.address_id = a.address_id
+                    WHERE r.resident_id = %s
+                """, [resident_id])
+                
+                current_data = cursor.fetchone()
+                if not current_data:
+                    return Response({
+                        'success': False,
+                        'message': 'Resident data not found'
+                    }, status=404)
+                
+                current_first_name, current_last_name, current_dob, current_sex, current_barangay, current_city = current_data
+            
+            # Prepare parameters based on resident type
+            if status_name == 'non-resident':
+                # Use update_business_owner function for non-residents
+                print("Using update_business_owner function for non-resident")
+                
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT update_business_owner(
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s
+                        )
+                    """, [
+                        resident_id,                           # p_resident_id
+                        request_by,                            # p_request_by
+                        current_last_name,                     # p_last_name (unchanged)
+                        current_first_name,                    # p_first_name (unchanged)
+                        current_dob,                           # p_dob (unchanged)
+                        current_sex,                           # p_sex (unchanged)
+                        data.get('barangay', current_barangay),                # p_barangay
+                        data.get('city_municipality', current_city),           # p_city_municipality
+                        None,                                  # p_middle_name (unchanged for non-residents)
+                        None,                                  # p_suffix (unchanged for non-residents)
+                        data.get('email'),                     # p_email
+                        data.get('phone_number'),              # p_phone_number
+                        data.get('house_number'),              # p_house_number
+                        data.get('street'),                    # p_street
+                        data.get('country', 'Philippines'),    # p_country
+                        profile_image_path                     # p_profile_image_path
+                    ])
+            else:
+                # Use update_resident function for residents (REMOVED is_voter parameter)
+                print("Using update_resident function for resident")
+                
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT update_resident(
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        )
+                    """, [
+                        resident_id,                           # p_resident_id
+                        request_by,                            # p_request_by
+                        current_last_name,                     # p_last_name (unchanged)
+                        current_first_name,                    # p_first_name (unchanged)
+                        current_dob,                           # p_dob (unchanged)
+                        current_sex,                           # p_sex (unchanged)
+                        current_barangay,                      # p_barangay (unchanged for residents)
+                        current_city,                          # p_city_municipality (unchanged for residents)
+                        None,                                  # p_middle_name (unchanged)
+                        None,                                  # p_suffix (unchanged)
+                        data.get('gender'),                    # p_gender
+                        False,                                 # p_is_voter (HIDDEN: default to False)
+                        data.get('email'),                     # p_email
+                        data.get('phone_number'),              # p_phone_number
+                        data.get('religion_cat_id'),           # p_religion_cat_id
+                        data.get('other_religion'),            # p_other_religion
+                        data.get('civil_stat_id'),             # p_civil_stat_id
+                        data.get('educational_attain_id'),     # p_educational_attain_id
+                        data.get('house_number'),              # p_house_number
+                        data.get('street'),                    # p_street
+                        None,                                  # p_sitio_id (unchanged)
+                        'Philippines',                         # p_country (unchanged)
+                        profile_image_path                     # p_profile_image_path
+                    ])
+            
+            print("Profile update successful")
+            return Response({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'profile_image_url': profile_image_path if profile_image_path else None
+            }, status=200)
+            
+        except Exception as e:
+            print(f" Profile update error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Failed to update profile: {str(e)}'
+            }, status=500)
+    
+    def upload_profile_image(self, image_file, resident_id):
+        """
+        Upload profile image to Supabase Storage using existing upload_file_to_supabase function
+        """
+        try:
+            # print(f" Starting profile image upload for resident {resident_id}")
+            
+          
+            supabase_path = upload_file_to_supabase(
+                file=image_file,
+                bucket_name='profile-images',  
+                folder='profile_images'       
+            )
+            
+            # print(f"Supabase upload returned: {supabase_path}")
+            # print(f"Upload result type: {type(supabase_path)}")
+            
+            if supabase_path:
+                # Check if it's already a full URL or just a path
+                if supabase_path.startswith('http'):
+                    # Already a full URL
+                    public_url = supabase_path
+                else:
+                    # Construct the public URL
+                    base_url = os.getenv('SUPABASE_URL')
+                    public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
+                
+                print(f"Final public URL: {public_url}")
+                return public_url
+            else:
+                raise Exception("Upload failed - no path returned from Supabase")
+                
+        except ImportError as ie:
+            print(f"Import error: {str(ie)}")
+            raise Exception("Supabase storage function not available")
+        except Exception as e:
+            print(f"Image upload error: {str(e)}")
+            raise Exception(f"Failed to upload profile image: {str(e)}")
+   
+    # def upload_profile_image(self, image_file, resident_id):
+    #     """
+    #     Upload profile image to Supabase Storage using existing upload_file_to_supabase function
+    #     """
+    #     try:
+    #         supabase_path = upload_file_to_supabase(
+    #             file=image_file,
+    #             bucket_name='profile-images',  
+    #             folder='profile_images'       
+    #         )
+            
+    #         print(f" Supabase upload returned: {supabase_path}")
+    #         print(f" Upload result type: {type(supabase_path)}")
+            
+    #         if supabase_path:
+    #             # FIX: Check if it's the dashboard URL and correct it
+    #             if 'supabase.com/dashboard/project/' in supabase_path:
+    #                 # Extract the file path and construct correct URL
+    #                 # From: https://supabase.com/dashboard/project/gdtrjxwtoupmwerxtpoo/storage/v1/object/public/profile-images/profile_images/filename.jpg
+    #                 # To: https://gdtrjxwtoupmwerxtpoo.supabase.co/storage/v1/object/public/profile-images/profile_images/filename.jpg
+                    
+    #                 # Extract the path after 'public/'
+    #                 path_parts = supabase_path.split('/storage/v1/object/public/')
+    #                 if len(path_parts) == 2:
+    #                     file_path = path_parts[1]
+    #                     base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
+    #                     public_url = f"{base_url}/storage/v1/object/public/{file_path}"
+    #                 else:
+    #                     public_url = supabase_path
+    #             elif supabase_path.startswith('http'):
+    #                 # Already a correct full URL
+    #                 public_url = supabase_path
+    #             else:
+    #                 # Construct the public URL from path
+    #                 base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
+    #                 public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
+                
+    #             print(f" Final corrected public URL: {public_url}")
+    #             return public_url
+    #         else:
+    #             raise Exception("Upload failed - no path returned from Supabase")
+                
+    #     except Exception as e:
+    #         print(f" Image upload error: {str(e)}")
+    #         raise Exception(f"Failed to upload profile image: {str(e)}")
