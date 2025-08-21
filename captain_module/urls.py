@@ -11,6 +11,7 @@ urlpatterns = [
      path('captain_moreHousehold/', views.captain_moreHousehold),
      path('captain_businessList/', views.captain_businessList),
      path('captain_moreBusinessInfo/', views.captain_moreBusinessInfo),
+     path('personnelRequest/', views.personnelRequest),
 
     
 ]

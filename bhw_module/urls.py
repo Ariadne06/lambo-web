@@ -22,6 +22,12 @@ urlpatterns = [
      path('residentAdd2', views.residentAdd2),
      path('residentAdd3', views.residentAdd3),
      path('residentAdd4', views.residentAdd4),
+     path('childList', views.childList),
+     path('addchild1', views.addchild1),
+     path('addchild2', views.addchild2),
+     path('addchild3', views.addchild3),
+     path('childView', views.childView),
+     path('childUpdate', views.childUpdate),
         
     
 ]
