@@ -29,3 +29,17 @@ class logging(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_change_personnel_default_pwd(pid, new_password, confirm_password):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc(
+                    'change_personnel_default_password', [
+                        pid, new_password, confirm_password
+                    ]
+                )
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e
