@@ -2,14 +2,10 @@ from django.shortcuts import render, redirect
 from .models import logging
 from django.contrib import messages
 from authentication.decorators import custom_login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
-from django.utils import timezone
-from django.views.decorators.http import require_POST
-from datetime import datetime
-from django.utils.timezone import make_aware, get_current_timezone
 
 def login_view(request):
+    
     # If session expired or cookie is gone, flush it
     if not request.session.session_key or 'session_token' not in request.session:
         request.session.flush()
@@ -17,10 +13,10 @@ def login_view(request):
     # Already logged in?
     if request.session.get('session_token') and request.session.get('role_name'):
         role = request.session.get('role_name')
-        if role == 'Secretary':
+        if role == 'Barangay Secretary':
             return redirect('personnels_module:secretary_dashboard')
-        elif role == 'Captain':
-            return redirect('captain_module:dashboard_captain')
+        elif role == 'Barangay Captain':
+            return redirect('captain_module:captain_dashboard')
         elif role == 'Admin':
             return redirect('admin_module:admin_dashboard')
         messages.error(request, 'Access denied: Unrecognized role.')
@@ -51,10 +47,10 @@ def login_view(request):
                 request.session['session_token'] = token
 
                 role = request.session['role_name']
-                if role == 'Secretary':
+                if role == 'Barangay Secretary':
                     return redirect('personnels_module:secretary_dashboard')
-                elif role == 'Captain':
-                    return redirect('captain_module:dashboard_captain')
+                elif role == 'Barangay Captain':
+                    return redirect('captain_module:captain_dashboard')
                 elif role == 'Admin':
                     return redirect('admin_module:admin_dashboard')
                 messages.error(request, 'Access denied: Unrecognized role.')
@@ -71,7 +67,7 @@ def login_view(request):
                 request.session['pending_username'] = result.get('username')
                 request.session['account_type'] = 'personnel'
                 messages.info(request, 'Please set a new password to continue.')
-                return redirect('authentication:force_change_password')
+                return redirect('authentication:req_pwd_change')
 
             elif status == 'error':
                 msg = result.get('message', 'Login failed.')
@@ -87,6 +83,10 @@ def login_view(request):
 
 @custom_login_required
 def logout_view(request):
+    # Before adding a new message, clear old ones
+    storage = messages.get_messages(request)
+    storage.used = True
+    
     # Check if user_id exists in the session
     if 'session_token' in request.session:
         token = request.session.get('session_token')
@@ -110,9 +110,8 @@ def logout_view(request):
 
     return redirect('authentication:login')
 
-@require_POST
-@csrf_exempt
 def silent_logout(request):
+    
     token = request.POST.get('session_token') or request.session.get('session_token')
     if token:
         try:
@@ -121,3 +120,31 @@ def silent_logout(request):
         except Exception:
             pass
     return HttpResponse(status=204)
+
+def req_pwd_change(request):
+    
+    if request.method == 'POST':
+        pid = request.session.get('pending_personnel_id')
+        old_password = request.POST.get('old_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if pid:
+            
+            try:
+                if new_password and new_password == confirm_password:
+                    # Call the stored procedure to change the password
+                    logging.sp_change_personnel_default_pwd(pid, old_password, confirm_password)
+                    messages.success(request, 'Password changed successfully.')
+                    request.session.flush()
+                    return redirect('authentication:login')
+                else:
+                    messages.error(request, 'Passwords do not match.')
+            except Exception as e:
+                messages.error(request, f'Password change failed: {str(e)}')
+                return render(request, 'authentication/forgotPassword.html')
+        else:
+            messages.error(request, 'No personnel ID found in session.')
+            return render(request, 'authentication/login.html')
+            
+    return render(request, 'authentication/forgotPassword.html')
