@@ -1,0 +1,134 @@
+{% extends "base_admin.html" %}
+
+{% block content %}
+<div class="px-6 py-10 bg-gradient-to-br from-rose-50 to-white">
+  <!-- Harden button colors locally -->
+  <style>
+    .btn-primary{
+      background:linear-gradient(90deg,#f43f5e,#dc2626) !important;
+      color:#fff !important;
+      border-radius:.5rem;font-weight:700;
+      box-shadow:0 6px 18px rgba(220,38,38,.25);
+    }
+    .btn-primary:hover{background:linear-gradient(90deg,#fb7185,#ef4444) !important; filter:brightness(.98)}
+    .btn-ghost{background:#f3f4f6 !important;color:#374151 !important;border-radius:.5rem;font-weight:700}
+    .btn-ghost:hover{background:#e5e7eb !important}
+  </style>
+
+  <!-- Height-capped card with comfy outside spacing -->
+  <div class="relative mx-auto my-6 max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden
+              max-h-[calc(100vh-6rem)]">
+
+    <!-- Accent rail -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-600 rounded-l-2xl"></div>
+
+    <!-- Sticky header -->
+    <div class="sticky top-0 z-10 border-b bg-white/95 backdrop-blur px-6 py-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <span class="inline-block h-7 w-1.5 rounded-full bg-red-600"></span>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Add Child Health Record</h1>
+          </div>
+          <p class="mt-1 text-sm text-gray-500">Step 2 of 3 • Health information</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Body (scrolls) -->
+    <div class="h-full overflow-auto px-6 py-6">
+      <form class="space-y-8">
+
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <!-- LEFT: Personal recap fields -->
+          <div class="rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="mb-4 text-sm font-semibold text-gray-900">Child Health Record</p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Child Full Name</label>
+                <input type="text" value="Adrianne Medalla"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Mother’s Full Name</label>
+                <input type="text" value="Prescious Bugtai"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Father’s Full Name</label>
+                <input type="text" value="Miles Majarocon"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">PhilHealth ID Number</label>
+                <input type="text" placeholder="Enter ID Number"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Phone Number</label>
+                <input type="text" placeholder="Input Phone Number"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Health fields -->
+          <div class="rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Sex</label>
+                <select class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <option>Male</option>
+                  <option>Female</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Date of Birth</label>
+                <input type="text" value="01/01/2020"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Time of Birth</label>
+                <input type="text" placeholder="Input Time of Birth"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Birth Weight (Kg)</label>
+                <input type="text" placeholder="Input Birth Weight"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Birth Height (Cm)</label>
+                <input type="text" placeholder="Input Birth Height"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Place of Delivery</label>
+                <input type="text" placeholder="Input Place of Delivery"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="flex items-center justify-between">
+          <a href="#" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
+          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Next →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
