@@ -1,0 +1,130 @@
+{% extends "base_admin.html" %}
+
+{% block content %}
+<div class="px-6 py-10 bg-gradient-to-br from-rose-50 to-white">
+
+  <!-- Hardening button colors just for this page -->
+  <style>
+    .btn-primary{
+      background:linear-gradient(90deg,#f43f5e,#dc2626) !important;
+      color:#fff !important;border-radius:.6rem;font-weight:800;
+      box-shadow:0 8px 22px rgba(220,38,38,.25);
+    }
+    .btn-primary:hover{background:linear-gradient(90deg,#fb7185,#ef4444) !important; filter:brightness(.98)}
+    .btn-ghost{background:#f3f4f6 !important;color:#374151 !important;border-radius:.6rem;font-weight:700}
+    .btn-ghost:hover{background:#e5e7eb !important}
+    .pill{height:1.5rem;display:inline-flex;align-items:center;border-radius:9999px;padding:0 .6rem;font-weight:700}
+  </style>
+
+  <!-- Card (height capped) -->
+  <div class="relative mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden
+              max-h-[calc(100vh-6rem)]">
+
+    <!-- Accent rail -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-600 rounded-l-2xl"></div>
+
+    <!-- Sticky header -->
+    <div class="sticky top-0 z-10 border-b bg-white/95 backdrop-blur px-6 py-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <span class="inline-block h-7 w-1.5 rounded-full bg-red-600"></span>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+              Add Child Health Record
+            </h1>
+          </div>
+          <p class="mt-1 text-sm text-gray-500">Step 3 of 3 • Final health details</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Body (scrolls) -->
+    <div class="h-full overflow-auto px-6 py-6">
+      <form id="healthStep3" class="space-y-8">
+
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <!-- LEFT COLUMN -->
+          <div class="rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="mb-4 text-sm font-semibold text-gray-900">Child Health Record</p>
+
+            <div class="space-y-4">
+              <!-- TT Status of Mother -->
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">TT Status of Mother</label>
+                <input type="text" placeholder="Input Status"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <!-- Date TT status is assessed -->
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Date TT Status is Assessed</label>
+                <input type="date"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
+              <!-- Newborn screening -->
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Newborn Screening Status</label>
+                <select id="screenStatus"
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <option value="">Select Done/Not Done</option>
+                  <option value="done">Done</option>
+                  <option value="not">Not Done</option>
+                </select>
+              </div>
+
+              <!-- If Done, date -->
+              <div>
+                <label for="screenDate" class="block text-sm text-gray-600 mb-1">If Done, input Date</label>
+                <input id="screenDate" type="date" disabled
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400
+                              focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div class="rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="mb-4 text-sm font-semibold text-gray-900">Feeding Method</p>
+
+            <fieldset class="space-y-3">
+              <label class="flex items-center gap-3 text-sm text-gray-700">
+                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="breast">
+                Breastfeeding
+              </label>
+              <label class="flex items-center gap-3 text-sm text-gray-700">
+                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="bottle">
+                Bottle Feeding
+              </label>
+              <label class="flex items-center gap-3 text-sm text-gray-700">
+                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="mixed">
+                Mixed
+              </label>
+            </fieldset>
+
+            <!-- Note -->
+            <div class="mt-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+              <div class="flex items-start gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a10 10 0 1 0 10 10A10.012 10.012 0 0 0 12 2Zm1 14h-2v-2h2Zm0-4h-2V7h2Z"/>
+                </svg>
+                <p>
+                  <b>Note:</b> Please review the information before saving. Make sure all required fields are complete and accurate.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="flex items-center justify-between">
+          <a href="#" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
+          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Next →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
