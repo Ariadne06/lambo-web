@@ -58,3 +58,21 @@ def residentAdd3(request):
 
 def residentAdd4(request):
     return render(request, 'bhw_module/residentAdd4.html')
+
+def childList(request):
+    return render(request, 'bhw_module/childList.html')
+
+def addchild1(request):
+    return render(request, 'bhw_module/addchild1.html')
+
+def addchild2(request):
+    return render(request, 'bhw_module/addchild2.html')
+
+def addchild3(request):
+    return render(request, 'bhw_module/addchild3.html')
+
+def childView(request):
+    return render(request, 'bhw_module/childView.html')
+
+def childUpdate(request):
+    return render(request, 'bhw_module/childUpdate.html')

@@ -37,3 +37,8 @@ def captain_businessList(request):
 @role_required('Captain')
 def captain_moreBusinessInfo(request):
     return render(request, 'captain_module/captain_moreBusinessInfo.html')
+
+@custom_login_required
+@role_required('Captain')
+def personnelRequest(request):
+    return render(request, 'captain_module/personnelRequest.html')
