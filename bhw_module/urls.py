@@ -28,6 +28,15 @@ urlpatterns = [
      path('addchild3', views.addchild3),
      path('childView', views.childView),
      path('childUpdate', views.childUpdate),
-        
-    
+     path('childImmunization', views.childImmunization),
+     path('childImmunizationAdd', views.childImmunizationAdd),   
+     path('childSupplement', views.childSupplement),
+     path('childSupplementAdd', views.childSupplementAdd),
+     path('childGrowth', views.childGrowth),
+     path('childGrowthAdd', views.childGrowthAdd),
+     path('childSurgical', views.childSurgical),
+     path('childSurgicalAdd', views.childSurgicalAdd),
+     path('childMedicalAdd', views.childMedicalAdd),
+     path('genInfo', views.genInfo),
+     path('genInfoMore', views.genInfoMore),
 ]
