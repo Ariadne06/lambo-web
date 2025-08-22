@@ -16,40 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import redirect
-
-app_name = 'lambo'
-
-def redirect_to_login(request):
-    return redirect('authentication:login')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', redirect_to_login, name='login_redirect'),
     
     # Authentication URLs
     path('authentication/', include('authentication.urls')),
     
     # Personnels Module URLs
-    path('personnels_module/', include('personnels_module.urls')),
+    path('personnels/', include('personnels_module.urls')),
 
     # Browser Reload URLs
     path('__reload__', include('django_browser_reload.urls')),
-
-    # Resident API URLs
-    path('api/', include('resident_api.urls')),
-
-    path('admin_module/', include('admin_module.urls')),
-
-    path('captain_module/', include('captain_module.urls')),
-
-    path('treasurer_module/', include('treasurer_module.urls')),
-
-    path('nurse_module/', include('nurse_module.urls')),
-
-    path('secretary_module/', include('secretary_module.urls')),
-
-    path('bhw_module/', include('bhw_module.urls')),
 ]
-
-

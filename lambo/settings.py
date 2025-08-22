@@ -11,14 +11,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-from supabase import create_client, Client
-
-# --- Sessions ---
-SESSION_COOKIE_AGE = 300
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_SAVE_EVERY_REQUEST = True
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,7 +25,7 @@ SECRET_KEY = 'django-insecure-pmxq2n=0rxlqw^k4cvqlz!uc*!+9(epm$y_gl=-r-4lzzldo*s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -51,25 +43,9 @@ INSTALLED_APPS = [
 
     'authentication', # Authentication App
     'personnels_module', # Personnels Module
-    'resident_profiling_module', # Resident Profiling Module
-    'admin_module',
-    'captain_module',
-    'treasurer_module',
-    'nurse_module',
-    'secretary_module',
-    'bhw_module',
 
     'django_browser_reload', # Browser Reload
-
-    'rest_framework', # Django REST Framework
-    'corsheaders', # CORS Headers
-    'resident_api', # Resident API
 ]
-
-# Django REST API
-# MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 # Tailwind CSS
 TAILWIND_APP_NAME = 'theme'
@@ -93,8 +69,6 @@ MIDDLEWARE = [
     
     
 ]
-
-MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 
 ROOT_URLCONF = 'lambo.urls'
 
@@ -120,54 +94,12 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-load_dotenv()  
-
-if 'CI' in os.environ:  # Check if running in CI environment
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',  # Use SQLite for CI tests
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME'),
-            'USER': os.getenv('DB_USER'),
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-
-            'HOST': os.getenv('DB_HOST'),
-            'PORT': os.getenv('DB_PORT'),
-            'OPTIONS': {
-                'client_encoding': 'UTF8',
-                'sslmode': 'require',
-                'options': '-c timezone=Asia/Manila',
-            },
-        }
-    }
-
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
-SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
-
-# if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-#     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-# else:
-#     supabase = None
-
-# Media files configuration for Supabase
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
+}
 
 
 # Password validation
@@ -194,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Asia/Manila'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -216,7 +148,3 @@ STATICFILES_DIRS = (
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# ID ANALYZER API
-ID_ANALYZER_API_KEY = os.getenv('ID_ANALYZER_API_KEY')
-OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if not set
