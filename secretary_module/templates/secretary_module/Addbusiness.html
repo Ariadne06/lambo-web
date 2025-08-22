@@ -1,0 +1,80 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Resident List
+{% endblock %}
+
+{% block content %}
+<div class="p-6">
+  <h2 class="text-xl font-semibold text-red-600 mb-4">Resident List</h2>
+
+  <div class="bg-white rounded-lg shadow p-4">
+    <!-- Search and Filters -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <input type="text" placeholder="Search Resident"
+          class="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+        <button class="flex items-center gap-1 text-sm text-gray-600 hover:text-red-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
+            viewBox="0 0 24 24">
+            <path d="M3 4h18M3 12h18M3 20h18" />
+          </svg>
+          Advanced Filters
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full border border-gray-200 text-sm">
+        <thead class="bg-gray-100 text-left">
+          <tr>
+            <th class="px-4 py-2 border">Resident ID.</th>
+            <th class="px-4 py-2 border">First Name</th>
+            <th class="px-4 py-2 border">M.I</th>
+            <th class="px-4 py-2 border">Last Name</th>
+            <th class="px-4 py-2 border">Date of Birth</th>
+            <th class="px-4 py-2 border">Sex</th>
+            <th class="px-4 py-2 border">Religion</th>
+            <th class="px-4 py-2 border">Status</th>
+            <th class="px-4 py-2 border">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Example Row -->
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border">1000</td>
+            <td class="px-4 py-2 border">Adrianne</td>
+            <td class="px-4 py-2 border">C.</td>
+            <td class="px-4 py-2 border">Villarta</td>
+            <td class="px-4 py-2 border">08/08/2028</td>
+            <td class="px-4 py-2 border">Male</td>
+            <td class="px-4 py-2 border">Catholic</td>
+            <td class="px-4 py-2 border">Single</td>
+            <td class="px-4 py-2 border">
+              <!-- Fixed Button -->
+              <button
+                class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium hover:bg-gray-50">
+                <span
+                  class="grid h-5 w-5 place-items-center rounded-full border border-gray-400 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11 5h2v14h-2zM5 11h14v2H5z"/>
+                  </svg>
+                </span>
+                <span class="leading-none">Add Business</span>
+              </button>
+            </td>
+          </tr>
+
+          <!-- Duplicate above <tr> for each resident record -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center mt-4 text-sm text-gray-600">
+      <span>1 2 3 4 5 6 7 ... 60</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

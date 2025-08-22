@@ -1,0 +1,137 @@
+{% extends "base_admin.html" %}
+
+{% block content %}
+<div class="p-6 bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+      <span class="inline-block h-6 w-6 rounded-md bg-red-600"></span>
+      Child Health Record
+    </h1>
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white shadow-md rounded-xl p-6">
+    <form class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Column 1 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Child Full Name</label>
+          <input type="text" value="Adrianne Medalla" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Mother's Full Name</label>
+          <input type="text" value="Prescious Bugtai" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Father's Full Name</label>
+          <input type="text" value="Miles Majarocon" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth ID Number</label>
+          <input type="text" value="0000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+          <input type="text" value="09672667206" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+      </div>
+
+      <!-- Column 2 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Sex</label>
+          <input type="text" value="Male" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
+          <input type="text" value="02/02/2020" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Time of Birth</label>
+          <input type="text" value="11:20 PM" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Birth Weight (Kg)</label>
+          <input type="text" value="10 KG" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Birth Height (Cm)</label>
+          <input type="text" value="120 CM" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Place of Delivery</label>
+          <input type="text" value="Cansaga" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+      </div>
+
+      <!-- Column 3 -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">TT Status of Mother</label>
+          <input type="text" value="Active" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date TT Status is Assessed</label>
+          <input type="text" value="01/01/2020" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Newborn Screening Status</label>
+          <input type="text" value="Done" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date of Screening</label>
+          <input type="text" value="02/05/2023" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Feeding Method</label>
+          <div class="mt-2 space-y-2">
+            <label class="flex items-center"><input type="radio" name="feeding" class="text-red-600" /> <span class="ml-2">Breastfeeding</span></label>
+            <label class="flex items-center"><input type="radio" name="feeding" class="text-red-600" /> <span class="ml-2">Bottle Feeding</span></label>
+            <label class="flex items-center"><input type="radio" name="feeding" checked class="text-red-600" /> <span class="ml-2">Mixed</span></label>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Buttons -->
+  <div class="mt-8 flex flex-wrap justify-center gap-4">
+        <div class="flex justify-end mt-6">
+        <button class="px-6 py-2 bg-white-600 text-red-700 font-semibold rounded-lg shadow-md hover:bg-blend-darken transition">
+            ⬅ Back
+        </button>
+    </div>
+
+
+    <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6h6m-6 6h6m-6 6h6M4 6h.01M4 12h.01M4 18h.01"/>
+      </svg>
+      Medical/Surgical
+    </button>
+
+    <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m7-7v14"/>
+      </svg>
+      Immunization
+    </button>
+
+    <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3 0 2.5 3 6 3 6s3-3.5 3-6c0-1.657-1.343-3-3-3z"/>
+      </svg>
+      Supplements
+    </button>
+
+    <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 018 0v2m-6 4h6"/>
+      </svg>
+      Growth Monitoring
+    </button>
+  </div>
+</div>
+
+{% endblock %}

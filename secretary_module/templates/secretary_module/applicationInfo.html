@@ -1,0 +1,91 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Secretary
+{% endblock %}
+
+{% block content %}
+   <!-- Backdrop -->
+<div class="fixed inset-0 bg-black/40 z-40"></div>
+
+<!-- Modal -->
+<div class="fixed z-50 left-1/2 top-20 -translate-x-1/2 w-[520px] max-w-[92vw]">
+  <!-- Glow ring -->
+  <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-red-200/50 to-transparent blur opacity-60"></div>
+
+  <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden">
+    <!-- Header -->
+    <div class="bg-red-700 text-white px-5 py-3 flex items-center gap-3">
+      <!-- info icon -->
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
+      </svg>
+      <h3 class="text-base font-semibold tracking-wide">Document Details</h3>
+    </div>
+
+    <!-- Body -->
+    <div class="px-6 pt-5 pb-4">
+      <!-- Top summary row -->
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resident ID</span>
+        <span class="font-mono text-sm tracking-widest text-gray-900">00000</span>
+      </div>
+
+      <!-- Details grid -->
+      <div class="divide-y divide-gray-100 rounded-xl ring-1 ring-gray-100 overflow-hidden">
+        <!-- row -->
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+          <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
+          <dd class="col-span-3 text-sm font-medium text-gray-900">Adrianne Villarta</dd>
+        </div>
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+          <dt class="col-span-2 text-sm text-gray-600">Application</dt>
+          <dd class="col-span-3 text-sm font-medium text-gray-900">Brgy Clearance</dd>
+        </div>
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+          <dt class="col-span-2 text-sm text-gray-600">Purpose</dt>
+          <dd class="col-span-3 text-sm font-medium text-gray-900">Job Application</dd>
+        </div>
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+          <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
+          <dd class="col-span-3">
+            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+              300 Php
+            </span>
+          </dd>
+        </div>
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+          <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
+          <dd class="col-span-3 text-sm font-medium text-gray-900">0001</dd>
+        </div>
+        <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+          <dt class="col-span-2 text-sm text-gray-600">Status</dt>
+          <dd class="col-span-3">
+            <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[13px] font-semibold text-amber-800 ring-1 ring-amber-200">
+              <!-- printer icon -->
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/>
+              </svg>
+              For Printing
+            </span>
+          </dd>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 pb-5 flex justify-end">
+      <a href="#"
+         class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-white text-sm font-semibold shadow hover:bg-red-700">
+        <!-- x icon -->
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Close
+      </a>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
