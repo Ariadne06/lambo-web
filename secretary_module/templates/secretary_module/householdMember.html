@@ -1,0 +1,102 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Secretary
+{% endblock %}
+
+{% block content %}
+    <div class="px-6 py-8">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Avatar -->
+      <div class="lg:col-span-3 flex lg:block items-center justify-center">
+        <div class="h-40 w-40 rounded-full border-2 border-gray-300 flex items-center justify-center">
+          <!-- Simple avatar icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.239-8 5v1h16v-1c0-2.761-3.58-5-8-5Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Form columns -->
+      <div class="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Left column -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700">First Name</label>
+            <input type="text" value="Adrianne" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Middle Name</label>
+            <input type="text" value="Medalla" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Last Name</label>
+            <input type="text" value="Villarta" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Date of Birth</label>
+            <input type="text" value="01/01/2000" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Sex</label>
+            <select class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <option selected>Male</option>
+              <option>Female</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Religion</label>
+            <input type="text" value="Catholic" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Educational Attainment</label>
+            <input type="text" value="College Graduate" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700">House Number</label>
+            <input type="text" value="Block 5 Lot 11" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Street</label>
+            <input type="text" value="Washington Street" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Barangay</label>
+            <input type="text" value="Cansaga" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Resident Status</label>
+            <input type="text" value="Permanent" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700">Civil Status</label>
+            <input type="text" value="Married" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="mt-6 flex justify-end">
+      <button class="rounded-md bg-red-600 text-white px-4 py-2 text-sm hover:bg-red-500">Back</button>
+    </div>
+  </div>
+</div>
+
+ 
+{% endblock %}

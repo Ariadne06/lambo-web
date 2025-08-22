@@ -1,0 +1,193 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Nurse{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3">
+      <span class="h-8 w-1.5 rounded-full bg-red-600"></span>
+      <div>
+        <h1 class="text-2xl font-semibold text-red-700 leading-none">General Health Information</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card wrapper: fixed height, inner scroll -->
+  <div class="bg-white shadow-sm rounded-2xl border border-gray-200 flex flex-col h-[calc(100vh-8rem)] overflow-hidden">
+    <!-- Toolbar -->
+    <div class="px-4 md:px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <!-- Search -->
+        <div class="w-full md:w-80">
+          <div class="relative">
+            <input id="hh-search" type="text" placeholder="Search Household"
+                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400" />
+            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Advanced Filters -->
+        <details class="group">
+          <summary class="flex cursor-pointer select-none items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm shadow-sm hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M6 12h12M10 18h4"/>
+            </svg>
+            Advanced Filters
+            <svg xmlns="http://www.w3.org/2000/svg" class="ml-1 h-4 w-4 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"/>
+            </svg>
+          </summary>
+
+          <div class="mt-3 mb-1 rounded-xl border border-gray-200 bg-white p-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-600">Smoker</label>
+                <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
+                  <option value="">Any</option>
+                  <option>No</option>
+                  <option>Yes</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600">Resident Name</label>
+                <input type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100" placeholder="e.g. Adrian" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600">Household No.</label>
+                <input type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100" placeholder="e.g. 0001" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600">Verified</label>
+                <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
+                  <option value="">Any</option>
+                  <option>Verified</option>
+                  <option>Unverified</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <!-- Consistent filter buttons -->
+              <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h10M4 18h7"/>
+                </svg>
+                Reset
+              </button>
+              <button class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow hover:bg-red-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+                Apply
+              </button>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Table (scrolls) -->
+    <div class="flex-1 overflow-y-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 sticky top-[64px] z-10">
+          <tr class="text-left">
+            <th class="px-6 py-3 font-semibold">Resident ID</th>
+            <th class="px-6 py-3 font-semibold">Household No.</th>
+            <th class="px-6 py-3 font-semibold">Smoker</th>
+            <th class="px-6 py-3 font-semibold">Resident Full Name</th>
+            <th class="px-6 py-3 font-semibold text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <!-- Demo rows (replace with your loop) -->
+          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
+            <td class="px-6 py-4 font-medium text-gray-900">1000</td>
+            <td class="px-6 py-4">0001</td>
+            <td class="px-6 py-4">
+              <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">No</span>
+            </td>
+            <td class="px-6 py-4">
+              <a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Adrianne Villarta</a>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <!-- CONSISTENT VIEW BUTTON (icon + text on ALL rows) -->
+              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
+                </svg>
+                View
+              </a>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
+            <td class="px-6 py-4 font-medium text-gray-900">1001</td>
+            <td class="px-6 py-4">0002</td>
+            <td class="px-6 py-4">
+              <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">No</span>
+            </td>
+            <td class="px-6 py-4"><a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Adrian Medalla</a></td>
+            <td class="px-6 py-4 text-right">
+              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
+                </svg>
+                View
+              </a>
+            </td>
+          </tr>
+
+          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
+            <td class="px-6 py-4 font-medium text-gray-900">1002</td>
+            <td class="px-6 py-4">0003</td>
+            <td class="px-6 py-4">
+              <span class="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">Yes</span>
+            </td>
+            <td class="px-6 py-4"><a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Prescious Bugtai</a></td>
+            <td class="px-6 py-4 text-right">
+              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
+                </svg>
+                View
+              </a>
+            </td>
+          </tr>
+
+          <!-- Add more rows or your loop here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="px-4 md:px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm">
+      <span class="text-gray-500">Showing 1–10 of 420</span>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-gray-600">
+          <span>Rows</span>
+          <select class="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
+            <option>10</option><option selected>25</option><option>50</option>
+          </select>
+        </label>
+        <nav class="flex items-center gap-1" aria-label="Pagination">
+          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Prev</button>
+          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 bg-red-600 text-white">1</a>
+          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
+          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
+          <span class="px-3 py-1.5 text-gray-500">…</span>
+          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
+          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

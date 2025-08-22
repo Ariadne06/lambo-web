@@ -24,32 +24,50 @@
             <hr class="border-gray-300 my-4">
 
             <!-- Navigation Links -->
-            <a href="#" id="dashboard" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+            <a href="{% url 'admin_module:admin_dashboard' %}" id="dashboard" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/dashboard.svg' %}" alt="Dashboard Icon" class="h-5 w-5 mr-3">
                 <span class="truncate">Dashboard</span>
             </a>
 
-            
-            <a href="#" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+            <div>
+                <button id="submenu-toggle" class="flex items-center text-white px-4 py-3 w-full rounded-md hover:bg-[#B80000] transition-colors duration-300">
+                    <div class="flex items-center">
+                        <img src="{% static 'images/manage.svg' %}" alt="Manage Icon" class="h-5 w-5 mr-3">
+                        <span class="truncate">View Resident</span>
+                    </div>
+                </button>
+            </div>
+
+            <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
-                <span class="truncate">Logs</span>
+                <span class="truncate">View Household</span>
+            </a>
+
+             <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+                <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
+                <span class="truncate">View Business</span>
+            </a>
+
+            <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+                <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
+                <span class="truncate">Personnel Request</span>
             </a>
 
             <!-- Profile Section -->
             <div class="mt-auto flex items-center justify-between">
 
                 <!-- Logout Icon -->
-                <a href="#" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+                <a href="{% url 'authentication:logout' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                     <img src="{% static 'images/logout-white.svg' %}" alt="Logout Icon" class="h-5 w-5 mr-3">
                 </a>
                 <!-- Profile Section -->
                 <a href="#" class="flex flex-col items-center mx-auto mt-4 group">
                     <div class="flex flex-col items-center">
                         <span class="text-sm font-semibold truncate group-hover:underline">
-                            <!-- {{ request.session.first_name }} {{ request.session.last_name }} --> Juan Dela Cruz
+                            {{ request.session.username }}
                         </span>
                         <span class="text-xs text-gray-400 truncate group-hover:underline">
-                            <!-- {{ request.session.role_name }} --> Admin
+                            {{ request.session.role_name }}
                         </span>
                     </div>
                     <!-- <span class="bg-red-300 text-white w-10 h-10 flex items-center justify-center rounded-md shadow-lg">
@@ -72,6 +90,7 @@
                 font-family: 'Poppins', sans-serif;
             }
         </style>
+
     <script>
         const submenuToggle = document.getElementById('submenu-toggle');
         const submenu = document.getElementById('submenu');
@@ -87,6 +106,71 @@
         sidebarToggle?.addEventListener('click', () => {
             sidebar.classList.toggle('-translate-x-full');
         });
-    </script>
+
+       (function () {
+          const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+          const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+          const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+
+          const TAB_FLAG    = 'tabAuth';
+          const CLOSED_KEY  = 'closed_session_token';
+          const SESSION_TOKEN = "{{ request.session.session_token }}";
+
+          // First load in this tab?
+          if (!sessionStorage.getItem(TAB_FLAG)) {
+          sessionStorage.setItem(TAB_FLAG, '1');
+
+          // If a previous tab left a token, report it and logout now
+          const closedToken = localStorage.getItem(CLOSED_KEY);
+          if (closedToken) {
+              (async () => {
+              const body = new URLSearchParams();
+              body.set('session_token', closedToken);
+
+              try {
+                  await fetch(TAB_CLOSE_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body: body.toString(),
+                  credentials: 'same-origin',
+                  keepalive: true
+                  });
+              } catch (_) { /* ignore */ }
+
+              try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
+              window.location.replace(TAB_CLOSE_URL);
+              })();
+              return;
+          }
+          }
+
+          // On tab/browser close: record token and call silent_logout
+          addEventListener('pagehide', () => {
+          try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+          sendClosePing(SESSION_TOKEN);
+          });
+          addEventListener('beforeunload', () => {
+          try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+          sendClosePing(SESSION_TOKEN);
+          });
+
+              // Idle detection (unchanged)
+              let last = Date.now(), timer;
+              function arm() {
+              clearTimeout(timer);
+              if (document.visibilityState !== 'visible') return;
+              timer = setTimeout(() => {
+                  if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+                  window.location.replace(LOGOUT_URL);
+                  }
+              }, IDLE_LIMIT_MS + 100);
+              }
+              function bump(){ last = Date.now(); arm(); }
+              ['mousemove','keydown','click','wheel','scroll','touchstart']
+              .forEach(evt => addEventListener(evt, bump, { passive: true }));
+              addEventListener('visibilitychange', arm, { capture: true });
+              arm();
+          })();
+      </script>
 </body>
 </html>
