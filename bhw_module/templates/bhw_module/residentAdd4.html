@@ -1,0 +1,56 @@
+{% extends 'base_admin.html' %}
+{% block title %}Update Information — COMELEC{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <!-- Card wrapper -->
+  <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm p-6 max-w-5xl mx-auto">
+    <!-- thin red bar on the left -->
+    <div class="absolute left-0 top-0 h-full w-1 bg-red-700 rounded-l-2xl"></div>
+
+    <!-- Step header -->
+    <div class="flex items-center gap-10 text-sm font-medium mb-6">
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>1</span><span>Personal Data</span>
+      </div>
+      <div class="flex items-center gap-2 text-gray-400">
+        <span>2</span><span>Address</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-red-700">3</span><span class="text-red-700">COMELEC</span>
+      </div>
+    </div>
+
+    <h3 class="text-sm font-semibold text-gray-800 mb-4">COMELEC</h3>
+
+    <!-- Form -->
+    <form class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+      <div class="col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Registered Voter</label>
+        <div class="flex items-center gap-6">
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="voter" class="h-4 w-4 border-gray-300 text-red-600 focus:ring-red-600">
+            <span class="text-sm text-gray-700">Yes</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="voter" class="h-4 w-4 border-gray-300 text-red-600 focus:ring-red-600">
+            <span class="text-sm text-gray-700">No</span>
+          </label>
+        </div>
+      </div>
+    </form>
+
+    <!-- Actions -->
+    <div class="mt-8 flex items-center justify-between">
+      <a href="#"
+         class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+        Back Page
+      </a>
+      <button type="submit"
+         class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
+        Submit
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}

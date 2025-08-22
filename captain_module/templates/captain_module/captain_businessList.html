@@ -1,0 +1,94 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Business List
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 px-10 py-6">
+
+  <!-- Page Title -->
+  <h1 class="text-xl font-bold text-red-700 mb-4">Business List</h1>
+
+  <!-- Main Card -->
+  <div class="bg-white rounded-md shadow-md p-6">
+
+    <!-- Search and Filters -->
+    <div class="flex justify-end items-center mb-4 space-x-4">
+      <!-- Search Bar -->
+      <div class="relative w-1/4">
+        <input type="text" placeholder="Search Business"
+               class="w-full bg-gray-100 h-10 px-4 pr-10 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+        <span class="absolute right-3 top-2.5 text-gray-500">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387-1.414 1.414-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z"/>
+          </svg>
+        </span>
+      </div>
+
+      <!-- Advanced Filters -->
+      <button class="text-sm text-gray-600 hover:underline flex items-center gap-1">
+        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            d="M3 5h14a1 1 0 100-2H3a1 1 0 000 2zm0 6h10a1 1 0 100-2H3a1 1 0 000 2zm0 6h6a1 1 0 100-2H3a1 1 0 000 2z"/>
+        </svg>
+        Advanced Filters
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full table-fixed text-sm text-left border border-gray-300">
+        <thead class="bg-gray-100 text-gray-800 font-semibold">
+          <tr>
+            <th class="px-4 py-2 border w-[10%]">Business ID.</th>
+            <th class="px-4 py-2 border w-[25%]">Business Name</th>
+            <th class="px-4 py-2 border w-[35%]">Address</th>
+            <th class="px-4 py-2 border w-[10%]">Status</th>
+            <th class="px-4 py-2 border w-[10%] text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-700">
+          <!-- Static Sample Business Entry -->
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border">1000</td>
+            <td class="px-4 py-2 border">Adriane Store</td>
+            <td class="px-4 py-2 border">Purok 3, Cansaga, Consolacion</td>
+            <td class="px-4 py-2 border font-medium text-green-700">Active</td>
+            <td class="px-4 py-2 border text-center">
+              <button class="text-black hover:text-red-600">&#x22EE;</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-center text-sm text-gray-600 space-x-1">
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">1</a>
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">2</a>
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">3</a>
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">4</a>
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">5</a>
+      <span class="px-2 py-1">…</span>
+      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">60</a>
+    </div>
+
+    <!-- Bottom Right Red Button -->
+    <div class="mt-6 flex justify-end">
+      <button class="bg-red-600 text-white px-5 py-2 text-sm font-medium rounded hover:bg-red-700 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6 9V2h12v7h4v11h-4v3H6v-3H2V9h4zm2-5v5h8V4H8zm8 14v3H8v-3h8zm2-6a1 1 0 100 2 1 1 0 000-2z"/>
+        </svg>
+        Business List
+      </button>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+
+
+

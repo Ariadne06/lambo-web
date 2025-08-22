@@ -1,0 +1,113 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col min-h-screen bg-gray-100 p-6">
+
+  <h1 class="text-2xl font-bold text-red-700 mb-6">Add Personnel</h1>
+
+  <div class="w-full max-w-screen-2xl mx-auto bg-white shadow-md rounded-lg p-10">
+
+    <div class="flex justify-center mb-8 space-x-6 text-sm font-medium">
+      <span class="text-red-700 border-b-2 border-red-700 pb-1">1. Personal Data</span>
+      <span class="text-gray-400">2. Log In Details</span>
+    </div>
+
+    {% if results and results|length > 0 %}
+      {% with result=results.0 %}
+
+      <form method="post" action="{% url 'admin_module:add_personnel2' %}">
+        {% csrf_token %}
+
+        <!-- Only these will be submitted -->
+        <input type="hidden" name="resident_id" value="{{ result.resident_id }}">
+        <input type="hidden" name="email" value="{{ result.email|default_if_none:'' }}">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Left Column (display-only) -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">First Name</label>
+              <input type="text" value="{{ result.first_name }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Middle Name</label>
+              <input type="text" value="{{ result.middle_name|default_if_none:'' }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Last Name</label>
+              <input type="text" value="{{ result.last_name }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Date of Birth</label>
+              <input type="text" value="{{ result.dob }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Sex</label>
+              <select disabled class="w-full border rounded px-3 py-2 text-sm">
+                <option value="Male" {% if result.sex == "Male" %}selected{% endif %}>Male</option>
+                <option value="Female" {% if result.sex == "Female" %}selected{% endif %}>Female</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Right Column (display-only + role select) -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">House Number</label>
+              <input type="text" value="{{ result.house_number }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Street</label>
+              <input type="text" value="{{ result.street }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Barangay</label>
+              <input type="text" value="{{ result.barangay }}" disabled
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <!-- Role posts directly (NO JS) -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700">Role / Position</label>
+              <select name="role_id" class="w-full border rounded px-3 py-2 text-sm" required>
+                <option value="">-- Select Role --</option>
+                <option value="2">Barangay Captain</option>
+                <option value="3">Barangay Secretary</option>
+                <option value="4">Asst. Secretary</option>
+                <option value="5">Barangay Treasurer</option>
+                <option value="6">Barangay Health Worker</option>
+                <option value="7">Midwife</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-10">
+          <button type="button" onclick="window.history.back()"
+                  class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition">Back</button>
+          <button type="submit"
+                  class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition">Next</button>
+        </div>
+      </form>
+
+      {% endwith %}
+    {% else %}
+      <div class="text-center text-gray-600">
+        <p>No resident selected. Please go back and choose a resident.</p>
+        <a href="{% url 'admin_module:admin_Addpersonnel' %}" class="inline-block mt-4 text-red-700 underline">
+          Go to Resident List
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
