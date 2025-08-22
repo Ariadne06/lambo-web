@@ -11,10 +11,10 @@
 
     {% tailwind_css %}
 </head>
-<body class="bg-gray-100">
-    <div class="flex h-screen">
+<body class="bg-gray-100 min-h-screen">
+    
         <!-- Sidebar -->
-        <nav id="sidebar" class="bg-[#D10000] text-white w-64 p-4 flex flex-col h-full">
+        <nav id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-[#D10000] text-white p-4 flex flex-col overflow-y-auto">
             <!-- Centered Logo -->
             <div class="flex items-center justify-center mb-6">
                 <img src="{% static 'images/brgylogo.jpg' %}" alt="Logo" class="w-20 h-20 rounded-full shadow-lg border-4 border-white">
@@ -77,12 +77,14 @@
         </nav>
 
         <!-- Main Content -->
-        <div class="flex-1 bg-[#F1F1F1] p-6">
+        <div class="ml-64 min-h-screen bg-[#F1F1F1]">
+            <div class="p-6">
             {% block content %}
             <!-- Page-specific content goes here -->
             {% endblock %}
+            </div>
         </div>
-    </div>
+    
         <style>
             body {
                 font-family: 'Poppins', sans-serif;
