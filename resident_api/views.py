@@ -17,11 +17,15 @@ import pytesseract
 import json
 import base64
 import re
+import os
 import requests
 from django.conf import settings
 import numpy as np
 import cv2
 import difflib
+import uuid
+from django.db import connection
+from .supabase_storage import upload_file_to_supabase
 
 # Configure Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -157,15 +161,45 @@ class ResidentRegistrationView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        print("POST /api/register/ called")
-        serializer = ResidentRegistrationSerializer(data=request.data, context={'request': request})
-        if not serializer.is_valid():
-            print("Serializer is not valid")
-            print(serializer.errors)
-            return Response(serializer.errors, status=400)
-        print("Serializer is valid")
-        resident = serializer.save()
-        return Response({'resident_id': resident.resident_id})
+        print(" POST /api/register/ called")
+        print(f"Request data keys: {list(request.data.keys())}")
+        
+        try:
+            serializer = ResidentRegistrationSerializer(data=request.data, context={'request': request})
+            
+            if not serializer.is_valid():
+                print(" Serializer is not valid")
+                print("Errors:", serializer.errors)
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=400)
+            
+            print(" Serializer is valid")
+            resident = serializer.save()
+            
+            print(f" Registration successful for resident_id: {resident.resident_id}")
+            
+            #  UPDATED RESPONSE FORMAT
+            return Response({
+                'success': True,
+                'resident_id': resident.resident_id,
+                'is_verified': resident.is_verified,  # Use the actual field
+                'verification_status': {
+                    'status': 'verified' if resident.is_verified else 'pending',
+                    'message': 'Your account has been successfully verified.' if resident.is_verified else 'Your account is pending verification. Please wait for approval.',
+                    'needs_wait': not resident.is_verified
+                }
+            }, status=201)
+            
+        except Exception as e:
+            print(f" Unexpected error in registration: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f'Registration failed: {str(e)}'
+            }, status=500)
+
 
 class ResidentIdDocumentOCRView(APIView):
     def get(self, request, pk):
@@ -483,12 +517,12 @@ def handle_philippine_drivers_license(raw_first, raw_middle, raw_last, full_name
     middle_name = raw_middle
     last_name = raw_last
     
-    # Case 1: Handle multi-word first names (like "Pierre Dwayne")
+   
     if user_first and ' ' in user_first:
         user_first_parts = user_first.split()
         
         # Check if ID Analyzer split the first name incorrectly
-        # Example: User "Pierre Dwayne" -> ID Analyzer might give firstName="PIERRE", middleName="DWAYNE ARRANCHADO"
+     
         if raw_middle and raw_middle.startswith(user_first_parts[1].upper()):
             # Reconstruct the first name
             first_name = ' '.join(user_first_parts)
@@ -544,6 +578,14 @@ class VerifyIdFieldsView(APIView):
             # Extract fields using improved logic
             ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
             
+            if doc_type and 'umid' in doc_type.lower():
+                # Simple UMID fix: swap first and last names
+                temp_first = ocr_fields.get('first_name', '')
+                temp_last = ocr_fields.get('last_name', '')
+                ocr_fields['first_name'] = temp_last
+                ocr_fields['last_name'] = temp_first
+                print(f"DEBUG: UMID name swap applied - First: '{temp_last}', Last: '{temp_first}'")
+
             print('DEBUG: registration_data:', registration_data)
             print('DEBUG: ocr_fields:', ocr_fields)
             
@@ -580,3 +622,565 @@ class VerifyIdFieldsView(APIView):
             print(f"Verification failed with error: {e}")
             return Response({'status': 'error', 'message': str(e)}, status=500)
 
+class VerifyGuardianIdFieldsView(APIView):
+    """
+    Verify guardian ID fields by comparing OCR results with guardian's stored information
+    """
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        try:
+            registration_data = json.loads(request.data.get('registrationData', '{}'))
+            id_image = request.FILES.get('id_image')
+            doc_type = registration_data.get('document_type', None)
+            guardian_username = registration_data.get('guardian_username', '')
+            
+            if not id_image:
+                return Response({'error': 'No image provided'}, status=400)
+            
+            if not guardian_username:
+                return Response({'error': 'Guardian username not provided'}, status=400)
+
+            print(f"DEBUG: Verifying guardian ID for username: {guardian_username}")
+            print(f"DEBUG: Document type: {doc_type}")
+
+            # Get guardian information from database
+            guardian_info = None
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                        SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
+                        FROM get_guardian_identity_by_username(%s)
+                    """, [guardian_username])
+                    
+                    result = cursor.fetchone()
+                    if result:
+                        guardian_info = {
+                            'guardian_resident_id': result[0],
+                            'last_name': result[1],
+                            'first_name': result[2],
+                            'middle_name': result[3] or '',
+                            'suffix': result[4] or '',
+                            'dob': result[5].strftime('%Y-%m-%d') if result[5] else ''
+                        }
+                        print(f"DEBUG: Guardian info retrieved: {guardian_info}")
+                    else:
+                        return Response({
+                            'error': 'Guardian not found or not verified'
+                        }, status=400)
+                        
+                except Exception as db_error:
+                    print(f"DEBUG: Database error: {str(db_error)}")
+                    return Response({
+                        'error': 'Guardian verification failed'
+                    }, status=400)
+
+            # Extract fields from guardian's document using OCR
+            extracted_fields = run_ocr_and_extract_fields_switchable(
+                id_image, 
+                doc_type, 
+                guardian_info  # Pass guardian info for context
+            )
+
+            print(f"DEBUG: OCR extracted fields: {extracted_fields}")
+
+            # IMPORTANT: Remap OCR results to match guardian's stored information
+            # The OCR might have the names in wrong order, so we need to match them
+            ocr_first = extracted_fields.get('first_name', '').upper()
+            ocr_last = extracted_fields.get('last_name', '').upper()
+            ocr_middle = extracted_fields.get('middle_name', '').upper()
+            
+            guardian_first = guardian_info['first_name'].upper()
+            guardian_last = guardian_info['last_name'].upper()
+            guardian_middle = guardian_info['middle_name'].upper()
+
+            print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}', Middle: '{ocr_middle}'")
+            print(f"DEBUG: Guardian Names - First: '{guardian_first}', Last: '{guardian_last}', Middle: '{guardian_middle}'")
+
+            # Smart remapping: Check if OCR first/last are swapped
+            corrected_fields = {}
+            
+            # Check if OCR first name matches guardian's last name (indicating swap)
+            if ocr_first == guardian_last and ocr_last == guardian_first:
+                print("DEBUG: Detected name swap - correcting...")
+                corrected_fields = {
+                    'first_name': ocr_last,  # Swap: use OCR last as first
+                    'last_name': ocr_first,  # Swap: use OCR first as last
+                    'middle_name': ocr_middle,
+                    'dob': extracted_fields.get('dob', '')
+                }
+            else:
+                # No swap needed
+                corrected_fields = {
+                    'first_name': ocr_first,
+                    'last_name': ocr_last,
+                    'middle_name': ocr_middle,
+                    'dob': extracted_fields.get('dob', '')
+                }
+
+            print(f"DEBUG: Corrected fields: {corrected_fields}")
+
+            # Compare corrected fields with guardian's stored information
+            mismatches = {}
+
+            # Compare first name
+            if corrected_fields.get('first_name'):
+                if not are_names_equivalent(corrected_fields['first_name'], guardian_info['first_name']):
+                    mismatches['first_name'] = {
+                        'guardian': corrected_fields['first_name'],
+                        'expected': guardian_info['first_name']
+                    }
+
+            # Compare last name
+            if corrected_fields.get('last_name'):
+                if not are_names_equivalent(corrected_fields['last_name'], guardian_info['last_name']):
+                    mismatches['last_name'] = {
+                        'guardian': corrected_fields['last_name'],
+                        'expected': guardian_info['last_name']
+                    }
+
+            # Compare middle name
+            if corrected_fields.get('middle_name') and guardian_info['middle_name']:
+                if not are_names_equivalent(corrected_fields['middle_name'], guardian_info['middle_name']):
+                    mismatches['middle_name'] = {
+                        'guardian': corrected_fields['middle_name'],
+                        'expected': guardian_info['middle_name']
+                    }
+
+            # Compare date of birth
+            if corrected_fields.get('dob') and guardian_info['dob']:
+                ocr_dob = normalize_for_comparison(corrected_fields['dob'])
+                guardian_dob = normalize_for_comparison(guardian_info['dob'])
+                if ocr_dob != guardian_dob:
+                    mismatches['dob'] = {
+                        'guardian': corrected_fields['dob'],
+                        'expected': guardian_info['dob']
+                    }
+
+            print(f"DEBUG: Comparison mismatches after correction: {mismatches}")
+
+            if mismatches:
+                return Response({
+                    'status': 'mismatch',
+                    'message': 'Guardian document details do not match stored information',
+                    'mismatches': mismatches,
+                    'extracted_fields': corrected_fields,
+                    'guardian_stored_info': {
+                        'first_name': guardian_info['first_name'],
+                        'last_name': guardian_info['last_name'],
+                        'middle_name': guardian_info['middle_name'],
+                        'dob': guardian_info['dob']
+                    }
+                })
+            else:
+                return Response({
+                    'status': 'match',
+                    'message': 'Guardian document verified successfully',
+                    'extracted_fields': corrected_fields,
+                    'guardian_verified_info': {
+                        'first_name': guardian_info['first_name'],
+                        'last_name': guardian_info['last_name'],
+                        'middle_name': guardian_info['middle_name'],
+                        'dob': guardian_info['dob']
+                    }
+                })
+
+        except Exception as e:
+            print(f"Guardian ID verification error: {str(e)}")
+            return Response({
+                'error': f'Verification failed: {str(e)}'
+            }, status=500)
+        
+# Update existing VerifyGuardianView
+class VerifyGuardianView(APIView):
+    """
+    Verify if a guardian username exists in the system and is verified
+    Uses the database function get_guardian_identity_by_username
+    """
+    def post(self, request):
+        try:
+            guardian_username = request.data.get('guardian_username', '').strip()
+            
+            if not guardian_username:
+                return Response({
+                    'exists': False,
+                    'message': 'Guardian username is required'
+                }, status=400)
+            
+            # Use the database function to check guardian
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                        SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
+                        FROM get_guardian_identity_by_username(%s)
+                    """, [guardian_username])
+                    
+                    guardian_data = cursor.fetchone()
+                    
+                    if guardian_data:
+                        # Guardian exists and is verified
+                        return Response({
+                            'exists': True,
+                            'message': 'Guardian found and verified',
+                            'guardian_verified': True
+                        }, status=200)
+                    else:
+                        return Response({
+                            'exists': False,
+                            'message': 'Guardian username not found or guardian is not verified'
+                        }, status=200)
+                        
+                except Exception as db_error:
+                    # Database function raises exception if guardian not found or not verified
+                    error_message = str(db_error)
+                    print(f"Database error: {error_message}")
+                    return Response({
+                        'exists': False,
+                        'message': 'Guardian username not found or guardian is not verified'
+                    }, status=200)
+                        
+        except Exception as e:
+            print(f"Guardian verification error: {str(e)}")
+            return Response({
+                'exists': False,
+                'error': f'Verification failed: {str(e)}'
+            }, status=500)
+
+
+# MOBILE LOGIN
+
+class MobileLoginView(APIView):
+    """
+    Handle login for mobile app (both personnel and residents)
+    Uses the login_user_mobile database function
+    """
+    
+    def post(self, request):
+        print("Mobile login attempt")
+        
+        try:
+            # Get credentials from request
+            username = request.data.get('username', '').strip()
+            password = request.data.get('password', '')
+            
+            if not username or not password:
+                return Response({
+                    'success': False,
+                    'status': 'error',
+                    'message': 'Username and password are required'
+                }, status=400)
+            
+            print(f"Login attempt for username: {username}")
+            
+            # Call the database function
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT login_user_mobile(%s, %s)
+                """, [username, password])
+                
+                result = cursor.fetchone()[0]  # Get the JSON result
+                
+            print(f"Database response: {result}")
+            
+            # Parse the JSON response from the database function
+            if result['status'] == 'success':
+                return Response({
+                    'success': True,
+                    'status': 'success',
+                    'account_type': result['account_type'],
+                    'user_id': result.get('personnel_id') or result.get('resident_id'),
+                    'username': result['username'],
+                    'role_name': result.get('role_name'),  # Only for personnel
+                    'role_id': result.get('role_id'),      # Only for personnel
+                    'session_token': result['session_token'],
+                    'message': 'Login successful'
+                }, status=200)
+                
+            elif result['status'] == 'require_password_change':
+                return Response({
+                    'success': False,
+                    'status': 'require_password_change',
+                    'account_type': result['account_type'],
+                    'user_id': result.get('personnel_id') or result.get('resident_id'),
+                    'username': result['username'],
+                    'message': result['message']
+                }, status=200)
+                
+            else:
+                return Response({
+                    'success': False,
+                    'status': 'error',
+                    'message': result['message']
+                }, status=401)
+                
+        except Exception as e:
+            print(f"Mobile login error: {str(e)}")
+            return Response({
+                'success': False,
+                'status': 'error',
+                'message': 'Login failed due to server error'
+            }, status=500)
+        
+
+# MOBILE RESIDENT USER PROFILE
+
+class ResidentProfileView(APIView):
+    """
+    Get resident profile using the get_resident_profile database function
+    """
+
+    def get(self, request, resident_id):
+        print(f"Fetching profile for resident_id: {resident_id}")
+
+        try:
+            # call db function
+            with connection.cursor() as cursor:
+                cursor.execute(""" SELECT get_resident_profile(%s) """, [resident_id])
+                result = cursor.fetchone()[0] # get json result
+
+            print(f"Profile data retrieved: {result}")
+
+            if result:
+                return Response({
+                    'success': True,
+                    'profile': result
+                }, status=200)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Profile not found'
+                }, status=404)
+
+        except Exception as e:
+            print(f"Profile fetch error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to fetch profile'
+            }, status=500)
+        
+# MOBILE UPDATE PROFILE
+
+class UpdateResidentProfileView(APIView):
+    """
+    Update resident profile using update_resident or update_business_owner database functions
+    """
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def post(self, request, resident_id):
+        print(f"Updating profile for resident_id: {resident_id}")
+        
+        try:
+            # Get current user session to use as request_by
+            request_by = resident_id  # For now, user updates their own profile
+            
+            # Get the current resident's status to determine which function to use
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT rs.status_name 
+                    FROM Resident r 
+                    JOIN Resident_Status rs ON r.status_id = rs.status_id 
+                    WHERE r.resident_id = %s
+                """, [resident_id])
+                
+                result = cursor.fetchone()
+                if not result:
+                    return Response({
+                        'success': False,
+                        'message': 'Resident not found'
+                    }, status=404)
+                
+                status_name = result[0].lower()
+                print(f"Resident status: {status_name}")
+            
+            # Extract form data
+            data = request.data
+            print(f"Update data received: {list(data.keys())}")
+            
+            # Handle profile image upload if provided
+            profile_image_path = None
+            if 'profile_image' in request.FILES:
+                print("Profile image detected, uploading to Supabase...")
+                profile_image_path = self.upload_profile_image(request.FILES['profile_image'], resident_id)
+                print(f"Profile image uploaded: {profile_image_path}")
+            
+            # Get current resident data for required fields
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT r.first_name, r.last_name, r.dob, r.sex, a.barangay, a.city_municipality
+                    FROM Resident r 
+                    LEFT JOIN Address a ON r.address_id = a.address_id
+                    WHERE r.resident_id = %s
+                """, [resident_id])
+                
+                current_data = cursor.fetchone()
+                if not current_data:
+                    return Response({
+                        'success': False,
+                        'message': 'Resident data not found'
+                    }, status=404)
+                
+                current_first_name, current_last_name, current_dob, current_sex, current_barangay, current_city = current_data
+            
+            # Prepare parameters based on resident type
+            if status_name == 'non-resident':
+                # Use update_business_owner function for non-residents
+                print("Using update_business_owner function for non-resident")
+                
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT update_business_owner(
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s
+                        )
+                    """, [
+                        resident_id,                           # p_resident_id
+                        request_by,                            # p_request_by
+                        current_last_name,                     # p_last_name (unchanged)
+                        current_first_name,                    # p_first_name (unchanged)
+                        current_dob,                           # p_dob (unchanged)
+                        current_sex,                           # p_sex (unchanged)
+                        data.get('barangay', current_barangay),                # p_barangay
+                        data.get('city_municipality', current_city),           # p_city_municipality
+                        None,                                  # p_middle_name (unchanged for non-residents)
+                        None,                                  # p_suffix (unchanged for non-residents)
+                        data.get('email'),                     # p_email
+                        data.get('phone_number'),              # p_phone_number
+                        data.get('house_number'),              # p_house_number
+                        data.get('street'),                    # p_street
+                        data.get('country', 'Philippines'),    # p_country
+                        profile_image_path                     # p_profile_image_path
+                    ])
+            else:
+                # Use update_resident function for residents (REMOVED is_voter parameter)
+                print("Using update_resident function for resident")
+                
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT update_resident(
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        )
+                    """, [
+                        resident_id,                           # p_resident_id
+                        request_by,                            # p_request_by
+                        current_last_name,                     # p_last_name (unchanged)
+                        current_first_name,                    # p_first_name (unchanged)
+                        current_dob,                           # p_dob (unchanged)
+                        current_sex,                           # p_sex (unchanged)
+                        current_barangay,                      # p_barangay (unchanged for residents)
+                        current_city,                          # p_city_municipality (unchanged for residents)
+                        None,                                  # p_middle_name (unchanged)
+                        None,                                  # p_suffix (unchanged)
+                        data.get('gender'),                    # p_gender
+                        False,                                 # p_is_voter (HIDDEN: default to False)
+                        data.get('email'),                     # p_email
+                        data.get('phone_number'),              # p_phone_number
+                        data.get('religion_cat_id'),           # p_religion_cat_id
+                        data.get('other_religion'),            # p_other_religion
+                        data.get('civil_stat_id'),             # p_civil_stat_id
+                        data.get('educational_attain_id'),     # p_educational_attain_id
+                        data.get('house_number'),              # p_house_number
+                        data.get('street'),                    # p_street
+                        None,                                  # p_sitio_id (unchanged)
+                        'Philippines',                         # p_country (unchanged)
+                        profile_image_path                     # p_profile_image_path
+                    ])
+            
+            print("Profile update successful")
+            return Response({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'profile_image_url': profile_image_path if profile_image_path else None
+            }, status=200)
+            
+        except Exception as e:
+            print(f" Profile update error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Failed to update profile: {str(e)}'
+            }, status=500)
+    
+    def upload_profile_image(self, image_file, resident_id):
+        """
+        Upload profile image to Supabase Storage using existing upload_file_to_supabase function
+        """
+        try:
+            # print(f" Starting profile image upload for resident {resident_id}")
+            
+          
+            supabase_path = upload_file_to_supabase(
+                file=image_file,
+                bucket_name='profile-images',  
+                folder='profile_images'       
+            )
+            
+            # print(f"Supabase upload returned: {supabase_path}")
+            # print(f"Upload result type: {type(supabase_path)}")
+            
+            if supabase_path:
+                # Check if it's already a full URL or just a path
+                if supabase_path.startswith('http'):
+                    # Already a full URL
+                    public_url = supabase_path
+                else:
+                    # Construct the public URL
+                    base_url = os.getenv('SUPABASE_URL')
+                    public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
+                
+                print(f"Final public URL: {public_url}")
+                return public_url
+            else:
+                raise Exception("Upload failed - no path returned from Supabase")
+                
+        except ImportError as ie:
+            print(f"Import error: {str(ie)}")
+            raise Exception("Supabase storage function not available")
+        except Exception as e:
+            print(f"Image upload error: {str(e)}")
+            raise Exception(f"Failed to upload profile image: {str(e)}")
+   
+    # def upload_profile_image(self, image_file, resident_id):
+    #     """
+    #     Upload profile image to Supabase Storage using existing upload_file_to_supabase function
+    #     """
+    #     try:
+    #         supabase_path = upload_file_to_supabase(
+    #             file=image_file,
+    #             bucket_name='profile-images',  
+    #             folder='profile_images'       
+    #         )
+            
+    #         print(f" Supabase upload returned: {supabase_path}")
+    #         print(f" Upload result type: {type(supabase_path)}")
+            
+    #         if supabase_path:
+    #             # FIX: Check if it's the dashboard URL and correct it
+    #             if 'supabase.com/dashboard/project/' in supabase_path:
+    #                 # Extract the file path and construct correct URL
+    #                 # From: https://supabase.com/dashboard/project/gdtrjxwtoupmwerxtpoo/storage/v1/object/public/profile-images/profile_images/filename.jpg
+    #                 # To: https://gdtrjxwtoupmwerxtpoo.supabase.co/storage/v1/object/public/profile-images/profile_images/filename.jpg
+                    
+    #                 # Extract the path after 'public/'
+    #                 path_parts = supabase_path.split('/storage/v1/object/public/')
+    #                 if len(path_parts) == 2:
+    #                     file_path = path_parts[1]
+    #                     base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
+    #                     public_url = f"{base_url}/storage/v1/object/public/{file_path}"
+    #                 else:
+    #                     public_url = supabase_path
+    #             elif supabase_path.startswith('http'):
+    #                 # Already a correct full URL
+    #                 public_url = supabase_path
+    #             else:
+    #                 # Construct the public URL from path
+    #                 base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
+    #                 public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
+                
+    #             print(f" Final corrected public URL: {public_url}")
+    #             return public_url
+    #         else:
+    #             raise Exception("Upload failed - no path returned from Supabase")
+                
+    #     except Exception as e:
+    #         print(f" Image upload error: {str(e)}")
+    #         raise Exception(f"Failed to upload profile image: {str(e)}")
