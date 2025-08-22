@@ -1,0 +1,151 @@
+{% extends "base_admin.html" %}
+{% block content %}
+<!-- Container -->
+<div class="p-6 bg-gradient-to-br from-rose-50 to-white min-h-[calc(100vh-3rem)]">
+
+  <!-- Scoped button helpers so colors never get overridden -->
+  <style>
+    .imm-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:.75rem;
+      font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.08);white-space:nowrap}
+    .imm-btn--primary{background:linear-gradient(90deg,#ef4444,#dc2626) !important;color:#fff !important}
+    .imm-btn--primary:hover{filter:brightness(.98)}
+    .imm-btn--outline{background:#fff !important;color:#dc2626 !important;border:2px solid #fecaca !important}
+    .imm-btn--outline:hover{background:#fff5f5 !important}
+    .imm-btn--back{background:#4b5563 !important;color:#fff !important}
+    .imm-btn--back:hover{background:#374151 !important}
+    .chip{background:linear-gradient(90deg,#ef4444,#dc2626);color:#fff;display:inline-flex;align-items:center;gap:.5rem;
+      padding:.5rem 1rem;border-radius:9999px;box-shadow:0 4px 16px rgba(220,38,38,.25)}
+  </style>
+
+  <!-- Title chip + actions -->
+  <div class="flex items-center justify-between mb-5">
+    <div class="chip">
+      <!-- syringe icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M22 2l-2 2-.7-.7-1.6 1.6 1.4 1.4L18 7.9l-1.4-1.4L13.5 9.6l1.4 1.4-8.5 8.6c-.6.5-1.3.8-2.1.8H2v-2c0-.8.3-1.5.9-2.1l8.6-8.6 1.4 1.4L15.5 7 14 5.6l1.6-1.6L15 3l2-2 1.3 1.3L19.9 1 22 3.1 20.7 4.4 22 5.7 24 3.7 22 2z"/>
+      </svg>
+      <span class="font-semibold">Child Immunization Record</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Add Immunization -->
+      <button type="button" class="imm-btn imm-btn--primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
+        </svg>
+        Add Immunization
+      </button>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="px-5 py-3 border-b bg-gray-50/60 rounded-t-2xl">
+      <div class="flex items-center gap-2 text-gray-700 text-sm font-semibold">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 7H4a2 2 0 0 0-2 2v8h4v4h12v-4h4V9a2 2 0 0 0-2-2Zm-6 12H10v-4h4v4Zm6-6H4V9h16v4Z"/>
+        </svg>
+        Schedule by Vaccine & Dose
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-red-600 text-white">
+          <tr class="text-[13px]">
+            <th class="px-4 py-3">Vaccine</th>
+            <th class="px-4 py-3">At Birth</th>
+            <th class="px-4 py-3">1st Dose</th>
+            <th class="px-4 py-3">2nd Dose</th>
+            <th class="px-4 py-3">3rd Dose</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <!-- Repeat rows as needed -->
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">BCG</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">Hepa B</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">DPT‑HepB‑HiB</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">Oral Polio</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">IPV</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">MMR</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">PCV 13</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-4 py-3 font-medium text-gray-800">Vitamin K</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="flex flex-wrap items-center gap-3 px-5 py-4 text-xs text-gray-500">
+      <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Complete</span>
+      <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-400"></span>Due Soon</span>
+      <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-500"></span>Overdue</span>
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <div class="mt-6 flex items-center justify-between">
+    <button type="button" class="imm-btn imm-btn--back">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 11H7.8l5.6-5.6L12 4 4 12l8 8 1.4-1.4L7.8 13H20z"/>
+      </svg>
+      Back
+    </button>
+
+    <div class="flex items-center gap-2 text-xs text-gray-500">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11 2h2v2h-2zM11 20h2v2h-2zM4.22 5.64l1.42-1.42 1.41 1.42-1.41 1.41zM16.95 18.36l1.41-1.41 1.42 1.41-1.42 1.42zM2 11h2v2H2zM20 11h2v2h-2zM4.22 18.36l1.42-1.41 1.41 1.41-1.41 1.42zM16.95 5.64l1.41-1.42 1.42 1.42-1.42 1.41z"/>
+      </svg>
+      Keep records up‑to‑date for accurate reporting.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
