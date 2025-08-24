@@ -76,3 +76,36 @@ def childView(request):
 
 def childUpdate(request):
     return render(request, 'bhw_module/childUpdate.html')
+
+def childImmunization(request):
+    return render(request, 'bhw_module/childImmunization.html')
+
+def childImmunizationAdd(request):
+    return render(request, 'bhw_module/childImmunizationAdd.html')
+
+def childSupplement(request):
+    return render(request, 'bhw_module/childSupplement.html')
+
+def childSupplementAdd(request):
+    return render(request, 'bhw_module/childSupplementAdd.html')
+
+def childGrowth(request):
+    return render(request, 'bhw_module/childGrowth.html')
+
+def childGrowthAdd(request):
+    return render(request, 'bhw_module/childGrowthAdd.html')
+
+def childSurgical(request):
+    return render(request, 'bhw_module/childSurgical.html')
+
+def childSurgicalAdd(request):
+    return render(request, 'bhw_module/childSurgicalAdd.html')
+
+def childMedicalAdd(request):
+    return render(request, 'bhw_module/childMedicalAdd.html')
+
+def genInfo(request):
+    return render(request, 'bhw_module/genInfo.html')
+
+def genInfoMore(request):
+    return render(request, 'bhw_module/genInfoMore.html')
