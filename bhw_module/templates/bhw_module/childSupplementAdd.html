@@ -1,0 +1,131 @@
+{% extends "base_admin.html" %}
+{% block title %}Add Supplements{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+  <style>
+    /* Scoped, so global styles can't bleach our buttons */
+    .sup-btn-red{
+      background:linear-gradient(90deg,#f43f5e 0%,#dc2626 100%)!important;
+      color:#fff!important;
+      box-shadow:0 8px 22px rgba(220,38,38,.25);
+      border-radius:.75rem
+    }
+    .sup-btn-red:hover{background:linear-gradient(90deg,#fb7185 0%,#ef4444 100%)!important;}
+    .sup-btn-ghost{
+      background:#f3f4f6!important;color:#374151!important;border-radius:.75rem
+    }
+    .sup-chip{
+      background:linear-gradient(90deg,#ef4444,#dc2626,#b91c1c);
+      color:#fff;border-radius:1rem;box-shadow:0 6px 16px rgba(0,0,0,.08)
+    }
+  </style>
+
+  <!-- Title chip -->
+  <div class="max-w-3xl mx-auto mb-6 flex justify-center">
+    <div class="sup-chip inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold ring-1 ring-black/5">
+      <!-- pill icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4.222 4.222a6 6 0 0 1 8.485 0l7.071 7.071a6 6 0 1 1-8.485 8.485L4.222 12.707a6 6 0 0 1 0-8.485Zm9.192 1.414L5.636 13.414l4.95 4.95 7.778-7.778-4.95-4.95Z"/>
+      </svg>
+      Add Supplements
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="max-w-3xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <!-- subtle accent -->
+    <div class="h-1 w-full bg-gradient-to-r from-rose-500 via-red-600 to-rose-500"></div>
+
+    <form class="p-6 space-y-6">
+      <!-- Supplement Type -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Supplement Type</label>
+        <div class="relative">
+          <select class="w-full appearance-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+            <option value="">Select Supplement</option>
+            <option>Vitamin A</option>
+            <option>Vitamin C</option>
+            <option>Deworming</option>
+            <option>Iron</option>
+            <option>Multi‑vitamins</option>
+          </select>
+          <!-- caret -->
+          <span class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5H7z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Age in Month -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Age in Month</label>
+        <div class="relative">
+          <input type="number" min="0" placeholder="Input age in months"
+                 class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <span class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-gray-400">
+            <!-- calendar-like clock -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 8a1 1 0 0 1 1 1v2.586l1.707 1.707a1 1 0 1 1-1.414 1.414L11 12.414V9a1 1 0 0 1 1-1Z"/><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Date Given -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Date Given</label>
+        <div class="relative">
+          <input type="date"
+                 class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <span class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-gray-400">
+            <!-- calendar -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 2a1 1 0 0 1 1 1v1h10V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1Zm16 9v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8h20Z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Given By -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Given By</label>
+        <div class="relative">
+          <input type="text" placeholder="Input name of nurse"
+                 class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <span class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-gray-400">
+            <!-- user icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm-8 8a8 8 0 1 1 16 0H4Z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-xs flex items-start gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2 1 21h22L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V9h2v4Z"/>
+        </svg>
+        <p><b>Note:</b> Please review the information before saving. Make sure all fields are complete and accurate.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" class="sup-btn-ghost px-5 py-2 text-sm font-semibold shadow">
+          Cancel
+        </button>
+        <button type="submit" class="sup-btn-red px-5 py-2 text-sm font-semibold inline-flex items-center gap-2">
+          <!-- syringe icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.07 4.93 17.66 6.34l-1.41-1.41 1.41-1.41 1.41 1.41ZM7.05 14.95l7.9-7.9 1.41 1.41-7.9 7.9-1.41-1.41Zm-2.12 4.24 3.54-3.54-1.41-1.41-3.54 3.54v1.41h1.41Z"/>
+          </svg>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
