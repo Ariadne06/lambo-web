@@ -109,3 +109,39 @@ def genInfo(request):
 
 def genInfoMore(request):
     return render(request, 'bhw_module/genInfoMore.html')
+
+def maternalList(request):
+    return render(request, 'bhw_module/maternalList.html')
+
+def maternalAdd(request):
+    return render(request, 'bhw_module/maternalAdd.html')
+
+def maternalView(request):
+    return render(request, 'bhw_module/maternalView.html')
+
+def maternalUpdate(request):
+    return render(request, 'bhw_module/maternalUpdate.html')
+
+def obstetrical(request):
+    return render(request, 'bhw_module/obstetrical.html')
+
+def obstetricalAdd(request):
+    return render(request, 'bhw_module/obstetricalAdd.html')
+
+def checkUp(request):
+    return render(request, 'bhw_module/checkUp.html')
+
+def checkUpAdd(request):
+    return render(request, 'bhw_module/checkUpAdd.html')
+
+def immunizationMaternal(request):
+    return render(request, 'bhw_module/immunizationMaternal.html')
+
+def immunizationMaternalAdd(request):
+    return render(request, 'bhw_module/immunizationMaternalAdd.html')
+
+def screening(request):
+    return render(request, 'bhw_module/screening.html')
+
+def screeningAdd(request):
+    return render(request, 'bhw_module/screeningAdd.html')
