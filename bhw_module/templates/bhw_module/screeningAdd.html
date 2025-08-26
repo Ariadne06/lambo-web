@@ -1,0 +1,87 @@
+{% extends "base_admin.html" %}
+{% block title %}Add Infectious Disease{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8 bg-gradient-to-br from-rose-50 to-white">
+
+  <!-- Header -->
+  <div class="mb-6 inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
+       style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z"/>
+    </svg>
+    Add Infectious Disease
+  </div>
+
+  <!-- Form Card -->
+  <div class="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+    <form class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+      <!-- Disease Type -->
+      <div class="col-span-1">
+        <label class="text-sm font-medium text-gray-700">Disease Type</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-500">
+          <option>Select a Disease</option>
+          <option>Syphilis</option>
+          <option>Hepatitis B</option>
+          <option>HIV Screening</option>
+        </select>
+      </div>
+
+      <!-- Date Screened -->
+      <div class="col-span-1">
+        <label class="text-sm font-medium text-gray-700">Date Screened</label>
+        <input type="date" class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-500">
+      </div>
+
+      <!-- Result -->
+      <div class="col-span-1 md:col-span-2">
+        <label class="text-sm font-medium text-gray-700">Result</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-500">
+          <option>Select Result</option>
+          <option>Positive</option>
+          <option>Negative</option>
+          <option>Pending</option>
+        </select>
+      </div>
+
+      <!-- Note -->
+      <div class="col-span-1 md:col-span-2">
+        <p class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/>
+          </svg>
+          Note: Please review all fields before saving.
+        </p>
+      </div>
+
+      <!-- Actions -->
+      <div class="col-span-1 md:col-span-2 flex justify-end gap-3">
+        <a href="#"
+           class="btn-gray inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+          Cancel
+        </a>
+        <button type="submit"
+           class="btn-red inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Local Styles -->
+<style>
+  .btn-red {
+    background:linear-gradient(90deg,#f43f5e,#dc2626)!important;
+    color:#fff!important;
+  }
+  .btn-red:hover {filter:brightness(.95)}
+  .btn-gray {
+    background:#f3f4f6!important;
+    color:#111827!important;
+  }
+  .btn-gray:hover {background:#e5e7eb!important}
+</style>
+{% endblock %}

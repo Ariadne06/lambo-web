@@ -71,3 +71,6 @@ def residentInfo1(request):
 def residentInfo2(request):
     return render(request, 'secretary_module/residentInfo2.html')
 
+def approval(request):
+    return render(request, 'secretary_module/approval.html')
+

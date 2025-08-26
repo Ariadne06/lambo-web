@@ -39,4 +39,19 @@ urlpatterns = [
      path('childMedicalAdd', views.childMedicalAdd),
      path('genInfo', views.genInfo),
      path('genInfoMore', views.genInfoMore),
+     path('maternalList', views.maternalList),
+     path('maternalAdd', views.maternalAdd),
+     path('maternalView', views.maternalView),
+     path('maternalUpdate', views.maternalUpdate),
+     path('obstetrical', views.obstetrical),
+     path('obstetricalAdd', views.obstetricalAdd),
+     path('checkUp', views.checkUp),
+     path('checkUpAdd', views.checkUpAdd),
+     path('immunizationMaternal', views.immunizationMaternal),
+     path('immunizationMaternalAdd', views.immunizationMaternalAdd),
+     path('screening', views.screening),
+     path('screeningAdd', views.screeningAdd),
+     
+
 ]
+

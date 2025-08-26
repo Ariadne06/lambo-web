@@ -1,0 +1,118 @@
+{% extends "base_admin.html" %}
+{% block title %}Maternal Health Record{% endblock %}
+
+{% block content %}
+<style>
+  .btn-print {
+    background-color: #ef3f3f !important; /* gray-800 */
+    color: #fff !important;
+  }
+  .btn-print:hover {
+    background-color: #111827 !important; /* gray-900 */
+  }
+</style>
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 via-white to-rose-50/40">
+
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <!-- Title chip -->
+    <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5 bg-rose-600">
+      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+      List of Maternal Health Record
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="window.print()" 
+        class="btn-print inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 9V3h12v6h1.5A2.5 2.5 0 0 1 22 11.5v5A2.5 2.5 0 0 1 19.5 19H18v-4H6v4H4.5A2.5 2.5 0 0 1 2 16.5v-5A2.5 2.5 0 0 1 4.5 9H6Zm2 0h8V5H8v4Z"/>
+        </svg>
+        Print Report
+      </button>
+
+      <!-- Add Maternal Record -->
+      <a href="#"
+         class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow bg-rose-600 hover:bg-rose-700">
+        <!-- plus -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
+        </svg>
+        Add Maternal Record
+      </a>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white p-6 shadow-md">
+
+    <!-- Search & Filters -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <!-- Search -->
+      <div class="relative w-full sm:w-80">
+        <input type="text" placeholder="Search Maternal"
+               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-9 text-sm focus:border-rose-500 focus:ring focus:ring-rose-200" />
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M10 2a8 8 0 1 0 5.3 14.3l4.7 4.7 1.4-1.4-4.7-4.7A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+        </svg>
+      </div>
+
+      <!-- Filters -->
+      <button class="inline-flex items-center gap-1 text-sm font-semibold text-rose-700 hover:text-rose-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M4 6h16v2H4Zm4 5h8v2H8Zm-2 5h12v2H6Z"/>
+        </svg>
+        Advanced Filters
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-rose-600 text-white">
+          <tr>
+            <th class="px-4 py-2 font-semibold">Resident ID</th>
+            <th class="px-4 py-2 font-semibold">Full Name</th>
+            <th class="px-4 py-2 font-semibold">Registered Date</th>
+            <th class="px-4 py-2 font-semibold">NHTS Status</th>
+            <th class="px-4 py-2 text-center font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-800">
+          <!-- Example row -->
+          <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+            <td class="px-4 py-2">1000</td>
+            <td class="px-4 py-2 font-medium">Adrianne Villarta</td>
+            <td class="px-4 py-2">01/02/2020</td>
+            <td class="px-4 py-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">NHTS</span>
+            </td>
+            <td class="px-4 py-2">
+              <div class="flex items-center justify-center gap-2">
+                <!-- View -->
+                <button class="rounded-full bg-rose-100 p-2 text-rose-700 hover:bg-rose-200" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5c-7.63 0-12 7-12 7s4.37 7 12 7 12-7 12-7-4.37-7-12-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                  </svg>
+                </button>
+                <!-- Edit -->
+                <button class="rounded-full bg-blue-100 p-2 text-blue-700 hover:bg-blue-200" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11ZM20.7 7.04c.39-.39.39-1.02 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84Z"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Duplicate this <tr> for more rows -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-center text-sm text-gray-600">1 2 3 4 5 6 7 … 60</div>
+  </div>
+</div>
+{% endblock %}

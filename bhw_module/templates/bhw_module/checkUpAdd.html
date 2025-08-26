@@ -1,0 +1,128 @@
+{% extends "base_admin.html" %}
+{% block title %}Add Check Up{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8 bg-gradient-to-br from-rose-50 to-white">
+
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <div class="inline-flex items-center gap-2 rounded-2xl px-5 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
+         style="background-image:linear-gradient(90deg,#ef4444,#dc2626,#b91c1c);">
+      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+      Add a Check Up
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="mx-auto max-w-5xl rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <form class="p-6">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+        <!-- Left column -->
+        <div class="space-y-5">
+          <!-- Trimester -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Trimester</label>
+            <div class="relative mt-1">
+              <select class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <option value="">Select a Trimester</option>
+                <option>1st</option>
+                <option>2nd</option>
+                <option>3rd</option>
+              </select>
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="m7 10 5 5 5-5H7Z"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Date -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Date of Visit</label>
+            <div class="relative mt-1">
+              <input type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Weight -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Weight (kg)</label>
+            <input type="text" placeholder="Input weight"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <!-- Height -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Height (cm)</label>
+            <input type="text" placeholder="Input height"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <!-- AOG -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Age of Gestation (weeks)</label>
+            <input type="text" placeholder="Input AOG"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="space-y-5">
+          <!-- BP -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Blood Pressure</label>
+            <input type="text" placeholder="e.g., 110/70"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Note</label>
+            <textarea rows="7" placeholder="Add a note"
+                      class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notice -->
+      <div class="mt-6">
+        <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-[12px] text-rose-700">
+          <span class="mr-1 inline-block h-2 w-2 rounded-full bg-rose-600"></span>
+          Note: Please review the information before saving. Make sure all fields are complete and accurate.
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <a href="#" class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+          Cancel
+        </a>
+        <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+          <!-- save icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14l4-4h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/></svg>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Local styles so buttons never render white -->
+<style>
+  .btn-red{
+    background:linear-gradient(90deg,#f43f5e,#dc2626)!important;
+    color:#fff!important;
+  }
+  .btn-red:hover{filter:brightness(.97)}
+  .btn-gray{
+    background:#f3f4f6!important;
+    color:#111827!important;
+  }
+  .btn-gray:hover{background:#e5e7eb!important}
+</style>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base_admin.html" %}
+{% block title %}Obstetrical History{% endblock %}
+
+{% block content %}
+
+<div class="px-6 py-8 bg-gradient-to-br from-rose-50 to-white"> <!-- Page chip (top-right) --> <div class="mb-4 flex justify-end"> <span class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <!-- stethoscope --> <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3v6a5 5 0 1 0 10 0V3h-2v6a3 3 0 1 1-6 0V3H5Zm14 8a3 3 0 0 0-3 3 3 3 0 0 0 2 2.82V18a4 4 0 0 1-4 4h-2v-2h2a2 2 0 0 0 2-2v-1.18A3 3 0 1 0 19 11Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg> Edit Obstetrical History </span> </div> <!-- Card --> <div class="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <div class="border-b px-6 py-4"> <h1 class="text-lg font-semibold text-gray-900">Obstetrical History</h1> <p class="text-xs text-gray-500">Record gravidity, parity, and key pregnancy dates.</p> </div>
+<form class="px-6 py-6 space-y-6">
+
+  <!-- Row: G P A -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <!-- Gravida -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Gravida (Pregnancies)</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3 2 6 6 10 4-4 6-7 6-10a6 6 0 0 0-6-6Zm0 8a2 2 0 1 1 .001-3.999A2 2 0 0 1 12 10Z"/></svg>
+        </span>
+        <input type="number" min="0" value="1"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+
+    <!-- Para -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Para (Live Births)</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm-1-7h2v5h-2v-5Zm1-6a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 8Z"/></svg>
+        </span>
+        <input type="number" min="0" value="0"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+
+    <!-- Abortion -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Abortion (Miscarriages)</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C7 18 4 14 4 10a8 8 0 0 1 16 0c0 4-3 8-8 12Zm0-10a2 2 0 1 0-2-2 2 2 0 0 0 2 2Z"/></svg>
+        </span>
+        <input type="number" min="0" value="0"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+  </div>
+
+  <!-- Row: LMP & EDD -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <!-- LMP -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+        </span>
+        <input type="date" value="2020-01-01"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+
+    <!-- EDD -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Expected Delivery Date</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5v2h14V3Zm1 4H4v14h16V7ZM8 12h3v3H8v-3Z"/></svg>
+        </span>
+        <input type="date" value="2020-10-01"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <div class="flex items-center justify-between pt-2">
+    <a href="#"
+       class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/></svg>
+      Back
+    </a>
+  </div>
+</form>
+</div> </div> <!-- Local styles so buttons never appear white if global styles override anchors --> <style> .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important} .btn-red:hover{filter:brightness(.97)} .btn-gray{background:#f3f4f6!important;color:#111827!important} .btn-gray:hover{background:#e5e7eb!important} </style>
+
+{% endblock %}
