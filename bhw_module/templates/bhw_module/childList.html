@@ -3,15 +3,15 @@
 {% block content %}
 <div class="p-6">
 
-  <!-- Scoped overrides so buttons inside the table keep their colors -->
   <style>
-    /* Action buttons inside this page only */
+    /* Scoped overrides so buttons inside the table keep their colors */
     .ch-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.375rem .75rem;border-radius:.5rem;
       font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.15);color:#fff !important}
-    .ch-btn--green{background:#22c55e !important}   /* green-500 */
-    .ch-btn--blue {background:#3b82f6 !important}   /* blue-500  */
+    .ch-btn--green{background:#22c55e !important}
+    .ch-btn--blue {background:#3b82f6 !important}
     .ch-btn:hover{filter:brightness(.95)}
-    /* Top bar buttons fallback in case something forces background:transparent on links */
+
+    /* Top bar buttons fallback */
     .ch-topbtn{background:linear-gradient(90deg,#f43f5e,#dc2626) !important;color:#fff !important}
     .ch-topbtn:hover{background:linear-gradient(90deg,#fb7185,#ef4444) !important}
   </style>
@@ -20,42 +20,18 @@
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-red-700">Child Health List</h1>
     <div class="flex gap-3">
-      <!-- Add Child Record -->
       <a href="#"
          class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ch-topbtn">
         ➕ Add Child Record
       </a>
-      <!-- Print Report -->
       <button type="button" onclick="window.print()"
               class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ch-topbtn">
-        <!-- print icon -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M6 9V3h12v6h1a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-2v-4H8v4H6v-4H5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3h1Zm2 0h8V5H8v4Z"/>
         </svg>
         Print Report
       </button>
     </div>
-  </div>
-
-  <!-- Search & Filters -->
-  <div class="flex justify-between items-center mb-4">
-    <div class="relative w-full max-w-md">
-      <input type="text" placeholder="Search child..."
-             class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-red-400 focus:outline-none">
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-5 w-5 text-gray-400 absolute left-3 top-2.5"
-           fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"/>
-      </svg>
-    </div>
-    <button class="ml-4 flex items-center gap-2 text-gray-600 hover:text-red-600 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M3 4h18M4 8h16M6 12h12m-9 4h6"/>
-      </svg>
-      Advanced Filters
-    </button>
   </div>
 
   <!-- Table -->
@@ -81,13 +57,10 @@
           <td class="py-3 px-4 text-center">
             <div class="inline-flex gap-2">
               <a href="#" class="ch-btn ch-btn--green">View</a>
-              <a href="#" class="ch-btn ch-btn--blue">Edit</a>
+              <button onclick="toggleModal('editModal')" class="ch-btn ch-btn--blue">Edit</button>
             </div>
           </td>
         </tr>
-
-        <!-- more rows ... -->
-
       </tbody>
     </table>
   </div>
@@ -103,4 +76,187 @@
     </nav>
   </div>
 </div>
+<!-- ================== MODALS ================== -->
+
+<!-- Edit Modal (enhanced) -->
+<div id="editModal" class="hidden fixed inset-0 z-50">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="toggleModal('editModal')"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-4xl">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <!-- Top Accent -->
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 class="text-lg font-semibold tracking-wide">Update Child Health Record</h2>
+        <button type="button" onclick="toggleModal('editModal')" class="text-white/90 hover:text-white text-xl leading-none font-bold">
+          &times;
+        </button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="p-6 max-h-[75vh] overflow-y-auto bg-white">
+        <form class="grid grid-cols-1 md:grid-cols-2 gap-6" onsubmit="event.preventDefault(); /* TODO: submit via fetch/ajax */">
+          <!-- Left Side -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Child Full Name</label>
+              <input type="text" placeholder="Input Child Name"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Mother's Full Name</label>
+              <input type="text" placeholder="Input Mother's Name"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Father's Full Name</label>
+              <input type="text" placeholder="Input Father's Name"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">PhilHealth ID Number</label>
+              <input type="text" placeholder="Enter ID Number"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+              <input type="text" placeholder="Input Phone Number"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Feeding Method</label>
+              <div class="flex gap-6 mt-1 text-sm text-gray-700">
+                <label class="flex items-center"><input type="radio" name="feeding" class="text-red-600 focus:ring-red-500 mr-2">Breastfeeding</label>
+                <label class="flex items-center"><input type="radio" name="feeding" class="text-red-600 focus:ring-red-500 mr-2">Bottle</label>
+                <label class="flex items-center"><input type="radio" name="feeding" class="text-red-600 focus:ring-red-500 mr-2">Mixed</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Side -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Sex</label>
+              <select class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500">
+                <option>Select Sex</option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
+              <input type="date"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Time of Birth</label>
+              <input type="time"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Birth Weight (Kg)</label>
+              <input type="number" placeholder="Input Birth Weight"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Birth Height (Cm)</label>
+              <input type="number" placeholder="Input Birth Height"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Place of Delivery</label>
+              <input type="text" placeholder="Input Place of Delivery"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+          </div>
+
+          <!-- Bottom Section -->
+          <div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">TT Status of Mother</label>
+              <input type="text" placeholder="Input Status"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Date TT Status is Assessed</label>
+              <input type="date"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+          </div>
+
+          <div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Newborn Screening Status</label>
+              <select class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500">
+                <option>Select Done/Not Done</option>
+                <option>Done</option>
+                <option>Not Done</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">If Done, input Date</label>
+              <input type="date"
+                     class="mt-1 w-full rounded-lg border-gray-300 shadow-sm text-sm p-2 focus:border-red-500 focus:ring-red-500"/>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="col-span-2 flex justify-end gap-3 mt-6">
+            <button type="button"
+                    class="px-5 py-2.5 rounded-lg bg-gray-100 text-gray-700 font-medium shadow-sm hover:bg-gray-200 transition flex items-center gap-2"
+                    onclick="toggleModal('editModal')">
+              ✖ Cancel
+            </button>
+            <button type="submit"
+                    class="px-5 py-2.5 rounded-lg bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition flex items-center gap-2">
+              💾 Update
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+function toggleModal(id) {
+  const el = document.getElementById(id);
+  const isHidden = el.classList.contains('hidden');
+  el.classList.toggle('hidden');
+
+  // prevent body scroll when a modal is open
+  if (isHidden) {
+    document.body.classList.add('overflow-hidden');
+  } else {
+    document.body.classList.remove('overflow-hidden');
+  }
+}
+
+// close on ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modals = ['viewModal','editModal'];
+    for (const id of modals) {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains('hidden')) {
+        toggleModal(id);
+      }
+    }
+  }
+});
+</script>
+
 {% endblock %}
