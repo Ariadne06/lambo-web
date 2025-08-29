@@ -1139,48 +1139,60 @@ class UpdateResidentProfileView(APIView):
             print(f"Image upload error: {str(e)}")
             raise Exception(f"Failed to upload profile image: {str(e)}")
    
-    # def upload_profile_image(self, image_file, resident_id):
-    #     """
-    #     Upload profile image to Supabase Storage using existing upload_file_to_supabase function
-    #     """
-    #     try:
-    #         supabase_path = upload_file_to_supabase(
-    #             file=image_file,
-    #             bucket_name='profile-images',  
-    #             folder='profile_images'       
-    #         )
+# MOBILE DEFAULT PERSONNEL CHANGE PASSWORD
+
+class ChangePersonnelPasswordView(APIView):
+    """
+    Change personnel default password
+    """
+    def post(self, request):
+        print("Personnel password change attempt")
+
+        try:
+            # get request data
+            personnel_id = request.data.get('personnel_id')
+            old_password = request.data.get('old_password')
+            new_password = request.data.get('new_password')
+
+            print(f"Password change for personnel_id: {personnel_id}")
+
+            # validate required fields
+            if not all([personnel_id, old_password, new_password]):
+                return Response({
+                    'success': False,
+                    'message': 'Personnel ID, old password, and new password are required.'
+                }, status=400)
             
-    #         print(f" Supabase upload returned: {supabase_path}")
-    #         print(f" Upload result type: {type(supabase_path)}")
+            # call database function
+            with connection.cursor() as cursor:
+                cursor.execute(""" SELECT change_personnel_default_password (%s, %s, %s)""", [personnel_id, old_password, new_password])
+
+                result = cursor.fetchone()[0]
+                print(f"Password change result: {result}")
             
-    #         if supabase_path:
-    #             # FIX: Check if it's the dashboard URL and correct it
-    #             if 'supabase.com/dashboard/project/' in supabase_path:
-    #                 # Extract the file path and construct correct URL
-    #                 # From: https://supabase.com/dashboard/project/gdtrjxwtoupmwerxtpoo/storage/v1/object/public/profile-images/profile_images/filename.jpg
-    #                 # To: https://gdtrjxwtoupmwerxtpoo.supabase.co/storage/v1/object/public/profile-images/profile_images/filename.jpg
-                    
-    #                 # Extract the path after 'public/'
-    #                 path_parts = supabase_path.split('/storage/v1/object/public/')
-    #                 if len(path_parts) == 2:
-    #                     file_path = path_parts[1]
-    #                     base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
-    #                     public_url = f"{base_url}/storage/v1/object/public/{file_path}"
-    #                 else:
-    #                     public_url = supabase_path
-    #             elif supabase_path.startswith('http'):
-    #                 # Already a correct full URL
-    #                 public_url = supabase_path
-    #             else:
-    #                 # Construct the public URL from path
-    #                 base_url = "https://gdtrjxwtoupmwerxtpoo.supabase.co"
-    #                 public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
-                
-    #             print(f" Final corrected public URL: {public_url}")
-    #             return public_url
-    #         else:
-    #             raise Exception("Upload failed - no path returned from Supabase")
-                
-    #     except Exception as e:
-    #         print(f" Image upload error: {str(e)}")
-    #         raise Exception(f"Failed to upload profile image: {str(e)}")
+            return Response({
+                'success': True,
+                'message': result
+            }, status=200)
+
+
+        except Exception as e:
+            error_message = str(e)
+            print(f"Password change error: {error_message}")
+
+            # Handle specific database errors
+            if 'E6015' in error_message:
+                message = 'Personnel not found'
+            elif 'E6016' in error_message:
+                message = 'Incorrect current password'
+            elif 'E6017' in error_message:
+                message = 'New password must be at least 8 characters'
+            elif 'E6018' in error_message:
+                message = 'New password must be different from current password'
+            else:
+                message = 'Failed to change password. Please try again.'
+            
+            return Response({
+                'success': False,
+                'message': message
+            }, status=400)
