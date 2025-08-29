@@ -32,20 +32,8 @@ def householdView(request):
 def householdVisit(request):
     return render(request, 'bhw_module/householdVisit.html')
 
-def memberProfile1(request):
-    return render(request, 'bhw_module/memberProfile1.html')
-
-def memberProfile2(request):
-    return render(request, 'bhw_module/memberProfile2.html')
-
 def residentList(request):
     return render(request, 'bhw_module/residentList.html')
-
-def residentUpdate(request):
-    return render(request, 'bhw_module/residentUpdate.html')
-
-def residentUpdate1(request):
-    return render(request, 'bhw_module/residentUpdate1.html')
 
 def residentAdd1(request):
     return render(request, 'bhw_module/residentAdd1.html')
@@ -74,38 +62,14 @@ def addchild3(request):
 def childView(request):
     return render(request, 'bhw_module/childView.html')
 
-def childUpdate(request):
-    return render(request, 'bhw_module/childUpdate.html')
-
-def childImmunization(request):
-    return render(request, 'bhw_module/childImmunization.html')
-
-def childImmunizationAdd(request):
-    return render(request, 'bhw_module/childImmunizationAdd.html')
-
-def childSupplement(request):
-    return render(request, 'bhw_module/childSupplement.html')
-
-def childSupplementAdd(request):
-    return render(request, 'bhw_module/childSupplementAdd.html')
-
-def childGrowth(request):
-    return render(request, 'bhw_module/childGrowth.html')
-
-def childGrowthAdd(request):
-    return render(request, 'bhw_module/childGrowthAdd.html')
-
-def childSurgical(request):
-    return render(request, 'bhw_module/childSurgical.html')
-
-def childSurgicalAdd(request):
-    return render(request, 'bhw_module/childSurgicalAdd.html')
-
-def childMedicalAdd(request):
-    return render(request, 'bhw_module/childMedicalAdd.html')
-
 def genInfo(request):
     return render(request, 'bhw_module/genInfo.html')
 
-def genInfoMore(request):
-    return render(request, 'bhw_module/genInfoMore.html')
+def maternalList(request):
+    return render(request, 'bhw_module/maternalList.html')
+
+def maternalAdd(request):
+    return render(request, 'bhw_module/maternalAdd.html')
+
+def maternalView(request):
+    return render(request, 'bhw_module/maternalView.html')

@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -24,4 +24,5 @@ urlpatterns += [
     path('mobile-login/', MobileLoginView.as_view(), name='mobile-login'),
     path('resident-profile/<int:resident_id>/', ResidentProfileView.as_view(), name='resident-profile'),
     path('update-resident-profile/<int:resident_id>/', UpdateResidentProfileView.as_view(), name='update-resident-profile'),
+    path('change-personnel-password/', ChangePersonnelPasswordView.as_view(), name='change-personnel-password'),
 ]

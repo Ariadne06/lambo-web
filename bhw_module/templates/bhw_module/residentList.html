@@ -53,14 +53,25 @@
                     <td class="py-3 px-4">Male</td>
                     <td class="py-3 px-4">Catholic</td>
                     <td class="py-3 px-4">Single</td>
-                    <td style="text-align:center; padding:12px;">
-  <button 
-    style="background:#109fd3; color:#fff; padding:8px 16px; 
-           border-radius:6px; font-weight:600; border:none; 
-           cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
-    Update
-  </button>
-</td>
+                    <td class="py-3 px-4 text-center">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 text-xs font-semibold shadow"
+                        onclick="openResidentUpdateModal(this)"
+                        data-id="1000"
+                        data-name="Adrianne C. Villarta"
+                        data-dob="2028-08-08"
+                        data-sex="Male"
+                        data-religion="Catholic"
+                        data-status="Single"
+                    >
+                        <!-- pencil icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm14.71-9.21a1.003 1.003 0 0 0 0-1.42l-2.33-2.33a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>
+                        </svg>
+                        Update
+                    </button>
+                    </td>
 
                 </tr>
                 <!-- More rows here -->
@@ -78,5 +89,363 @@
             <a href="#" class="px-3 py-1 border rounded-md hover:bg-gray-200">60</a>
         </nav>
     </div>
+
+
+   <!-- =========================================
+     UPDATE RESIDENT MODAL (2 steps)
+     ========================================= -->
+<div id="residentUpdateModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="ru_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="ruClose()"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+      <!-- Thin red accent -->
+      <div class="absolute left-0 top-0 h-full w-1 bg-red-700"></div>
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 bg-white">
+        <h2 id="ru_title" class="text-lg font-semibold text-gray-800">Update Information</h2>
+        <button type="button" class="text-gray-500 hover:text-red-600 text-2xl leading-none" aria-label="Close" onclick="ruClose()">&times;</button>
+      </div>
+
+      <!-- Stepper -->
+      <div class="px-6 pb-2">
+        <div id="ru_stepper" class="flex items-center gap-10 text-sm font-medium">
+          <div class="flex items-center gap-2 ru-step-pill" data-step-pill="1">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-white text-xs font-bold bg-red-700">1</span>
+            <span class="ru-step-text text-red-700">Personal Data</span>
+          </div>
+          <div class="flex items-center gap-2 ru-step-pill opacity-60" data-step-pill="2">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-white text-xs font-bold bg-gray-400">2</span>
+            <span class="ru-step-text text-gray-500">Address</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <form id="ru_form" class="px-6 pb-6">
+        <!-- STEP 1: Personal Data -->
+        <section data-step="1" class="ru-step grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+          <!-- First Name -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">First Name</label>
+            <input id="ru_first" type="text" value=""
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+          </div>
+
+          <!-- Religion -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Religion</label>
+            <select id="ru_religion" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+              <option value="">Select religion</option>
+              <option>Catholic</option>
+              <option>Christian</option>
+              <option>Muslim</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <!-- Middle Name -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Middle Name</label>
+            <input id="ru_middle" type="text" value=""
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+          </div>
+
+          <!-- Civil Status -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Civil Status</label>
+            <select id="ru_civil" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+              <option value="">Select status</option>
+              <option>Single</option>
+              <option>Married</option>
+              <option>Widowed</option>
+              <option>Separated</option>
+            </select>
+          </div>
+
+          <!-- Last Name -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Last Name</label>
+            <input id="ru_last" type="text" value=""
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+          </div>
+
+          <!-- Educational Attainment -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Educational Attainment</label>
+            <select id="ru_educ" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+              <option value="">Select level</option>
+              <option>Elementary</option>
+              <option>High School</option>
+              <option>College Graduate</option>
+              <option>Post-graduate</option>
+            </select>
+          </div>
+
+          <!-- Date of Birth -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Date of Birth</label>
+            <div class="relative">
+              <input id="ru_dob" type="text" placeholder="MM/DD/YYYY"
+                     class="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-600">
+              <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                <!-- calendar -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1Zm13 9H4v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7Z"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Resident Status -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Resident Status</label>
+            <select id="ru_resident_status" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+              <option value="">Select</option>
+              <option>Permanent</option>
+              <option>Non-Resident</option>
+              <option>Temporary</option>
+            </select>
+          </div>
+
+          <!-- Sex -->
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Sex</label>
+            <select id="ru_sex" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+              <option value="">Select sex</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Prefer not to say</option>
+            </select>
+          </div>
+
+          <!-- Hidden: Resident ID -->
+          <input id="ru_id" type="hidden" />
+        </section>
+
+        <!-- STEP 2: Address -->
+<section data-step="2" class="ru-step hidden grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+  <div class="md:col-span-2">
+    <h3 class="text-sm font-semibold text-gray-800 mb-2">Address</h3>
+  </div>
+
+  <div>
+    <label class="block text-sm text-gray-700 mb-1">House Number</label>
+    <input id="ru_house_no" type="text" placeholder="Block 12 Lot 5"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+  </div>
+
+  <!-- Registered Voter (right column, stacked) -->
+  <div class="md:row-span-3">
+    <p class="block text-sm text-gray-700 mb-2">Registered Voter</p>
+    <label class="flex items-center gap-2 mb-2 cursor-pointer">
+      <input id="ru_voter_yes" type="radio" name="ru_voter" value="Yes"
+             class="h-4 w-4 text-red-600 focus:ring-red-600">
+      <span class="text-sm text-gray-700">Yes</span>
+    </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input id="ru_voter_no" type="radio" name="ru_voter" value="No"
+             class="h-4 w-4 text-red-600 focus:ring-red-600">
+      <span class="text-sm text-gray-700">No</span>
+    </label>
+  </div>
+
+  <div>
+    <label class="block text-sm text-gray-700 mb-1">Street</label>
+    <input id="ru_street" type="text" placeholder="12 Street"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+  </div>
+
+  <div>
+    <label class="block text-sm text-gray-700 mb-1">Barangay</label>
+    <input id="ru_barangay" type="text" placeholder="Cansaga"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+  </div>
+</section>
+
+          
+
+        <!-- Footer Actions -->
+        <div class="mt-6 flex items-center justify-between">
+          <button type="button"
+                  class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200"
+                  onclick="ruClose()">
+            <!-- back/cancel icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/></svg>
+            Cancel
+          </button>
+
+          <div class="flex items-center gap-3">
+            <button id="ru_back" type="button"
+                    class="hidden rounded-xl border border-gray-300 px-5 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                    onclick="ruGoto(1)">
+              Back
+            </button>
+
+            <button id="ru_next" type="button"
+                    class="rounded-xl bg-red-600 px-5 py-2 text-sm font-medium text-white shadow hover:bg-red-700"
+                    onclick="ruGoto(2)">
+              Next Page
+            </button>
+
+            <button id="ru_save" type="submit"
+                    class="hidden rounded-xl bg-red-600 px-5 py-2 text-sm font-medium text-white shadow hover:bg-red-700">
+              Save
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts for this modal -->
+<script>
+  let ruCurrent = 1;
+
+  function ruOpenFromButton(btn){
+    // Optional helper if you want to call ruOpenFromButton(this) directly from the button
+    openResidentUpdateModal(btn);
+  }
+
+  function openResidentUpdateModal(btn){
+    // Prefill from data-* on the clicked button
+    try {
+      const id   = btn?.dataset?.id || '';
+      const name = btn?.dataset?.name || '';
+      const dob  = btn?.dataset?.dob || ''; // expect YYYY-MM-DD
+      const sex  = btn?.dataset?.sex || '';
+      const religion = btn?.dataset?.religion || '';
+      const status   = btn?.dataset?.status || '';
+
+      // naive name split: First / Middle / Last
+      let first = '', middle = '', last = '';
+      if (name) {
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) { first = parts[0]; }
+        else if (parts.length === 2) { [first, last] = parts; }
+        else {
+          first = parts[0];
+          last  = parts[parts.length-1];
+          middle = parts.slice(1, -1).join(' ');
+        }
+      }
+
+      // Set fields
+      document.getElementById('ru_id').value = id;
+      document.getElementById('ru_first').value = first;
+      document.getElementById('ru_middle').value = middle;
+      document.getElementById('ru_last').value = last;
+
+      setSelectValue('ru_religion', religion);
+      setSelectValue('ru_sex', sex);
+      setSelectValue('ru_civil', status);
+
+      // Format DOB to MM/DD/YYYY if ISO provided
+      document.getElementById('ru_dob').value = formatDob(dob) || '';
+
+      // Reset step to 1
+      ruGoto(1);
+    } catch(e) { console.warn('Prefill failed:', e); }
+
+    // Show modal
+    const el = document.getElementById('residentUpdateModal');
+    el.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(() => {
+      const first = el.querySelector('input, select, textarea, button');
+      if (first) first.focus();
+    }, 0);
+  }
+
+  function ruClose(){
+    document.getElementById('residentUpdateModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  function ruGoto(step){
+    ruCurrent = step;
+
+    // Toggle step sections
+    document.querySelectorAll('#residentUpdateModal .ru-step').forEach(sec => {
+      sec.classList.toggle('hidden', Number(sec.dataset.step) !== step);
+    });
+
+    // Toggle buttons
+    const back = document.getElementById('ru_back');
+    const next = document.getElementById('ru_next');
+    const save = document.getElementById('ru_save');
+
+    if (step === 1) {
+    back.classList.add('hidden');
+    next.classList.remove('hidden');
+    save.classList.add('hidden');
+    next.textContent = 'Next Page';
+  } else {
+    back.classList.remove('hidden');
+    next.classList.add('hidden');
+    save.classList.remove('hidden');
+    back.textContent = 'Back Page';
+    save.textContent = 'Submit';
+  }
+
+    // Update stepper pills
+    document.querySelectorAll('#ru_stepper [data-step-pill]').forEach(p => {
+      const n = Number(p.getAttribute('data-step-pill'));
+      const dot = p.querySelector('span.inline-flex');
+      const text = p.querySelector('.ru-step-text');
+      if (n === step) {
+        p.classList.remove('opacity-60');
+        dot.classList.remove('bg-gray-400'); dot.classList.add('bg-red-700');
+        text.classList.remove('text-gray-500'); text.classList.add('text-red-700');
+      } else {
+        p.classList.add('opacity-60');
+        dot.classList.add('bg-gray-400'); dot.classList.remove('bg-red-700');
+        text.classList.add('text-gray-500'); text.classList.remove('text-red-700');
+      }
+    });
+  }
+
+  function setSelectValue(id, val){
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Try to match case-insensitively to an option's text
+    const v = (val || '').toLowerCase();
+    let matched = false;
+    Array.from(el.options).forEach(opt => {
+      if (opt.text.toLowerCase() === v) { el.value = opt.value; matched = true; }
+    });
+    if (!matched && el.querySelector('option[value="'+val+'"]')) el.value = val;
+  }
+
+  function formatDob(iso){
+    if (!iso) return '';
+    // Accept YYYY-MM-DD or already MM/DD/YYYY
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y,m,d] = iso.split('-');
+      return `${m}/${d}/${y}`;
+    }
+    return iso; // fallback (maybe already in correct format)
+  }
+
+  // ESC to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const el = document.getElementById('residentUpdateModal');
+      if (el && !el.classList.contains('hidden')) ruClose();
+    }
+  });
+
+  // Prevent default form submit (demo only)
+  document.getElementById('ru_form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    // TODO: handle save (AJAX/post)
+    ruClose();
+  });
+</script>
+ 
 </div>
 {% endblock %}
