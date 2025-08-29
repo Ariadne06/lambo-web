@@ -97,21 +97,17 @@ class Admin(models.Model):
     @staticmethod
     def get_personnel_by_id(pid: int):
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT personnel_id, username, email
-                FROM Personnel_Credentials
-                WHERE personnel_id = %s
-            """, [pid])
+            cursor.callproc('get_personnel_by_id', [pid])
             row = cursor.fetchone()
             if not row:
                 return None
-            return {"pid": row[0], "username": row[1] or "", "email": row[2] or ""}
+            return {"pid": row[0], "username": row[5] or "", "email": row[6] or "", "role_id": row[4] or ""}
         
     @staticmethod
-    def sp_update_personnel_credentials(id, username, email):
+    def sp_update_personnel_credentials(id, username, email, role_id):
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('update_personnel_credentials', [id, username, email])
+                cursor.callproc('update_personnel_credentials', [id, username, email, role_id])
                 result = cursor.fetchone()
                 return result[0] if result else None 
         except Exception as e:
