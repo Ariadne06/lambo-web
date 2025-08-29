@@ -1,0 +1,127 @@
+{% extends "base_admin.html" %}
+{% block title %}Add Maternal Record{% endblock %}
+
+{% block content %}
+
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white"> <!-- Header chip --> <div class="mb-6 flex items-center justify-between"> <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <span class="inline-block h-2 w-2 rounded-full bg-white"></span> Add Maternal Record </div> </div> <!-- Card --> <div class="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <form class="p-6 space-y-6">
+
+      <!-- Section label -->
+  <div class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+    <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span>
+    Maternal Record
+  </div>
+
+  <!-- Grid -->
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+    <!-- NHTS Status -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">NHTS Status</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <!-- badge -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4L11 12.2l5.6-5.6L18 8l-7 8Z"/>
+          </svg>
+        </span>
+        <select
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <option value="">Select NHTS status…</option>
+          <option>NHTS</option>
+          <option>Non‑NHTS</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Address / Landmark -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Address / Landmark</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <!-- location -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"/>
+          </svg>
+        </span>
+        <input type="text" placeholder="Input Address / Landmark"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"/>
+      </div>
+    </div>
+
+    <!-- Contact Number -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <!-- phone -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.1.36 2.3.56 3.58.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.07 21 3 13.93 3 5a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.28.2 2.48.56 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2Z"/>
+          </svg>
+        </span>
+        <input type="tel" placeholder="09XXXXXXXXX"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"/>
+      </div>
+    </div>
+
+    <!-- Registration Date -->
+    <div>
+      <label class="text-[11px] font-semibold text-gray-500">Registration Date</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <!-- calendar -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/>
+          </svg>
+        </span>
+        <input type="date"
+          class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"/>
+      </div>
+    </div>
+
+    <!-- Recorded By -->
+    <div class="md:col-span-2">
+      <label class="text-[11px] font-semibold text-gray-500">Recorded By</label>
+      <div class="relative mt-1">
+        <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+          <!-- user -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+          </svg>
+        </span>
+        <input type="text" value="Cristel Mandave" readonly
+          class="w-full rounded-lg border border-gray-300 bg-gray-50 pl-9 pr-3 py-2 text-sm"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note -->
+  <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">
+    <span class="mr-1">⚠️</span>
+    Please review the information before saving. Make sure all fields are complete and accurate.
+  </div>
+
+  <!-- Actions -->
+  <div class="flex items-center justify-end gap-2">
+    <button type="button"
+      class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+      <!-- close -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.7 2.87 18.29 9.17 12 2.87 5.71 4.29 4.29 10.59 10.6l6.3-6.3 1.41 1.41Z"/>
+      </svg>
+      Cancel
+    </button>
+
+    <button type="submit"
+      class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+      <!-- save -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17 3H5a2 2 0 0 0-2 2v14l4-4h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/>
+      </svg>
+      Save
+    </button>
+  </div>
+
+</form>
+</div> </div> <!-- Button color guarantees (avoid “white buttons” if global CSS overrides anchors/buttons) --> <style> .btn-red{ background:linear-gradient(90deg,#f43f5e,#dc2626) !important; color:#fff !important; } .btn-red:hover{ background:linear-gradient(90deg,#fb7185,#ef4444) !important; } .btn-gray{ background:#f3f4f6 !important; /* gray-100 */ color:#111827 !important; /* gray-900 */ } .btn-gray:hover{ background:#e5e7eb !important; } /* gray-200 */ </style>
+
+{% endblock %}

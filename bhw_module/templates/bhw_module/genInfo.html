@@ -45,7 +45,6 @@
         </svg>
         Export CSV
       </button>
-
     </div>
   </div>
 
@@ -72,13 +71,19 @@
           <td class="px-4 py-3">Adrianne Villarta</td>
           <td class="px-4 py-3">
             <div class="flex items-center justify-center gap-2">
-              <a href="#" class="gh-green inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+              <!-- View button with data-* -->
+              <button type="button"
+                      class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
+                      data-resident-id="1000"
+                      data-household-no="0001"
+                      data-smoker="No"
+                      data-name="Adrianne Villarta">
                 <!-- eye -->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
                 </svg>
                 View
-              </a>
+              </button>
             </div>
           </td>
         </tr>
@@ -93,18 +98,22 @@
           <td class="px-4 py-3">Adrian Medalla</td>
           <td class="px-4 py-3">
             <div class="flex items-center justify-center gap-2">
-              <a href="#" class="gh-green inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+              <button type="button"
+                      class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
+                      data-resident-id="1001"
+                      data-household-no="0002"
+                      data-smoker="Yes"
+                      data-name="Adrian Medalla">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
                 </svg>
                 View
-              </a>
+              </button>
             </div>
           </td>
         </tr>
 
-        <!-- Repeat more rows as needed … -->
-
+        <!-- Repeat more rows as needed, just set the data-* on the button -->
       </tbody>
     </table>
   </div>
@@ -120,7 +129,7 @@
     </nav>
   </div>
 
-  <!-- Floating bottom-right chip (like your sample) -->
+  <!-- Floating bottom-right chip -->
   <div class="fixed right-5 bottom-5">
     <button type="button" onclick="window.print()"
       class="gh-red inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow-lg ring-1 ring-black/5">
@@ -131,7 +140,7 @@
     </button>
   </div>
 
-  <!-- Scoped button colors (prevents global CSS from turning them white) -->
+  <!-- Scoped button colors -->
   <style>
     .gh-red{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
     .gh-red:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
@@ -143,4 +152,241 @@
     .gh-blue:hover{filter:brightness(.95)}
   </style>
 </div>
+
+<!-- ===== View Modal (Resident Health Profile) ===== -->
+<div id="residentViewModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="residentViewModal_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeResidentModal()"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-6xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="residentViewModal_title" class="text-lg font-semibold tracking-wide">Resident Health Profile</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" onclick="closeResidentModal()" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body (we inject the template below) -->
+      <div id="residentViewModalBody" class="max-h-[80vh] overflow-y-auto p-0"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Template we inject into the modal body ===== -->
+<template id="residentProfileTemplate">
+  <div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+    <!-- Header chip -->
+    <div class="mb-6 flex items-center justify-between">
+      <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
+           style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
+        <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+        Resident Health Profile
+      </div>
+      <!-- Quick ID pill -->
+      <div class="hidden sm:flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-gray-700 shadow ring-1 ring-gray-200">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-rose-600" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/>
+        </svg>
+        PhilHealth #: <span class="ml-1 text-gray-900">[[PHILHEALTH]]</span>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <!-- Top: avatar + name -->
+      <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+        <!-- Avatar -->
+        <div class="flex items-center justify-center">
+          <div class="relative h-44 w-44 rounded-full overflow-hidden ring-4 ring-white shadow-inner bg-gray-100 flex items-center justify-center">
+            <img src="[[AVATAR_URL]]" alt="Resident photo"
+                 class="h-full w-full object-cover object-center"
+                 onerror="this.classList.add('hidden'); this.parentNode.querySelector('.avatar-fallback').classList.remove('hidden');" />
+            <div class="avatar-fallback hidden absolute inset-0 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name + tags -->
+        <div class="md:col-span-2 grid grid-cols-1 gap-4">
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Full Name</label>
+            <div class="mt-1 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+              </svg>
+              <input value="[[NAME]]" class="w-full bg-transparent outline-none" readonly>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Membership Type</label>
+              <div class="mt-1 inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] font-semibold text-rose-700">
+                <span class="inline-block h-2 w-2 rounded-full bg-rose-600"></span> Non-Member
+              </div>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">FP Use</label>
+              <div class="mt-1 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-semibold text-emerald-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12 3.41 13.41 9 19l12-12L19.59 5.59 9 16.17Z"/></svg>
+                Yes
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-px w-full bg-gray-100"></div>
+
+      <!-- Body -->
+      <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
+        <!-- Lifestyle -->
+        <section class="space-y-4">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span> Lifestyle & History
+          </h3>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Medical History</label>
+            <input value="Diabetes" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Smoker</label>
+              <input value="[[SMOKER]]" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Alcohol Drinker</label>
+              <input value="Yes" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Sexually Active</label>
+            <input value="No" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
+            <div class="relative mt-1">
+              <input value="Select Date" class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Age of Menarche</label>
+            <input value="Enter Age" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+        </section>
+
+        <!-- Clinical -->
+        <section class="space-y-4">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span> Clinical & Risk Group
+          </h3>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Education Attainment</label>
+            <input value="College Degree" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Classification by Age / Risk</label>
+            <div class="mt-1 grid grid-cols-3 gap-3">
+              <input value="25" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              <input value="2nd Quarter" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              <input value="AB" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Remarks</label>
+            <div class="mt-1 grid grid-cols-2 gap-3">
+              <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4L11 12.2l5.6-5.6L18 8l-7 8Z"/></svg>
+                Vaccinated
+              </div>
+              <div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11h14v2H5z"/></svg>
+                None
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="border-t bg-gray-50 px-4 py-3">
+        <button type="button"
+                class="btn-back inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                onclick="closeResidentModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
+               viewBox="0 0 24 24" fill="currentColor">
+            <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+          </svg>
+          Back
+        </button>
+      </div>
+
+      <!-- Local styles to keep buttons visible -->
+      <style>
+        .btn-back{background:#f3f4f6;color:#111827!important}
+        .btn-back:hover{background:#e5e7eb}
+      </style>
+    </div>
+  </div>
+</template>
+
+<!-- ===== Script: wire up .gh-view-btn to open the modal with data ===== -->
+<script>
+  function openResidentModal(){ 
+    const m = document.getElementById('residentViewModal');
+    m.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(() => m.querySelector('button[onclick="closeResidentModal()"]')?.focus(), 0);
+  }
+  function closeResidentModal(){
+    document.getElementById('residentViewModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+  // ESC to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const m = document.getElementById('residentViewModal');
+      if (m && !m.classList.contains('hidden')) closeResidentModal();
+    }
+  });
+
+  // Delegate clicks from any .gh-view-btn
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.gh-view-btn');
+    if (!btn) return;
+
+    // Grab data from the button (ensure you set these data-* attributes on the View button)
+    const name        = btn.dataset.name || '—';
+    const smoker      = btn.dataset.smoker || '—';
+    const philhealth  = btn.dataset.philhealth || '—';
+    const avatarUrl   = btn.dataset.avatarUrl || '';
+
+    // Render template with simple token replacement
+    const tpl = document.getElementById('residentProfileTemplate');
+    let html = tpl.innerHTML
+      .replaceAll('[[NAME]]', name)
+      .replaceAll('[[SMOKER]]', smoker)
+      .replaceAll('[[PHILHEALTH]]', philhealth)
+      .replaceAll('[[AVATAR_URL]]', avatarUrl);
+
+    document.getElementById('residentViewModalBody').innerHTML = html;
+    openResidentModal();
+  });
+</script>
+
 {% endblock %}

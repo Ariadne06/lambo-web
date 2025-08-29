@@ -1,0 +1,2111 @@
+{% extends "base_admin.html" %}
+{% block title %}Maternal Profile Overview{% endblock %}
+
+{% block content %}
+
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white"> <!-- Title chip --> <div class="mb-6 flex items-center justify-between"> <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <span class="inline-block h-2 w-2 rounded-full bg-white"></span> Maternal Profile </div>
+<a href="#"
+   class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+  <!-- back -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+  </svg>
+  Back
+</a>
+</div> <!-- Card --> <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <form class="p-6 space-y-8">
+     <!-- 2-column details -->
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <!-- Left -->
+    <div class="space-y-4">
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Registration Date</label>
+        <div class="relative mt-1">
+          <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+          </span>
+          <input type="date" value="2025-01-01"
+                 class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Maternal Full Name</label>
+        <input type="text" value="Jereza Rodrigo"
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">NHTS Status</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <option>NHTS</option>
+          <option>Non‑NHTS</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Address</label>
+        <input type="text" value="Purok 7 Cansaga"
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
+        <input type="tel" value="09672687206"
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="space-y-4">
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Status</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Recorded By</label>
+        <input type="text" value="Cristel Mandave"
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" readonly>
+      </div>
+
+      <!-- Spacer for visual balance -->
+      <div class="hidden md:block h-40"></div>
+    </div>
+  </div>
+
+  <!-- Sticky tool dock -->
+<div class="sticky bottom-0 left-0 right-0 -mx-6 -mb-6 bg-gradient-to-t from-white to-white/70 px-6 pb-6 pt-4">
+  <div class="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-3">
+
+    <button type="button" class="btn-red" onclick="openModal('modalMedSurg')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M12 3 3 10h2v10h6v-6h2v6h6V10h2L12 3Zm1 7h-2V8H9V6h2V4h2v2h2v2h-2v2Z"/></svg>
+      Medical/Surgical
+    </button>
+
+    <!-- Obstetrical: open modal + say Edit -->
+      <a href="#" class="btn-red" onclick="openModal('modalObstetrical')">
+        <!-- pregnancy/heart line -->
+        <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M12 21s-6-3.5-6-9a6 6 0 1 1 12 0c0 5.5-6 9-6 9Zm-1-9 1.5-2 1.5 3 1-1h2"/></svg>
+        Obstetrical
+      </a>
+
+
+    <button type="button" class="btn-red" onclick="openModal('modalCheckups')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M9 3h6v2h3a2 2 0 0 1 2 2v14H4V7a2 2 0 0 1 2-2h3V3Zm2 6-2 2 1.4 1.4L11 12.8l3.6-3.6L16 10l-5 5-3-3 1.4-1.4L11 12.2 15.6 8 11 9Z"/></svg>
+      Check Ups
+    </button>
+
+    <button type="button" class="btn-red" onclick="openModal('modalImmunization')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="m19 3 2 2-3 3 1 1-6 6-2-2 6-6 1 1 1-1-3-3 1-1Zm-9 9-7 7 2 2 7-7-2-2Z"/></svg>
+      Immunization
+    </button>
+
+    <button type="button" class="btn-red" onclick="openModal('modalScreenings')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M6 2h2v6a4 4 0 1 0 8 0V2h2v6a6 6 0 0 1-5 5.92V18a2 2 0 0 0 4 0h2a4 4 0 1 1-8 0v-4.08A6 6 0 0 1 6 8V2Z"/></svg>
+      Screenings
+    </button>
+
+    <!-- Lab Screening + Iron (trigger) -->
+      <a href="#"
+        class="btn-red"
+        onclick="openModal('modalLabIron')">
+        <!-- beaker -->
+        <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M7 2h10v2h-1v4l4.5 8A3 3 0 0 1 17.9 21H6.1A3 3 0 0 1 3.5 16L8 8V4H7V2Zm2 6-4 7h10l-4-7H9Z"/></svg>
+        Lab Screening + Iron
+      </a>
+
+
+    <button type="button" class="btn-red" onclick="openModal('modalSupplements')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M8.5 14.5 14.5 8.5a4 4 0 1 1 5.6 5.6L14.1 20.1a4 4 0 1 1-5.6-5.6Zm1.4 1.4-2.1 2.1a2 2 0 0 0 2.8 2.8l2.1-2.1-2.8-2.8Z"/></svg>
+      Supplements
+    </button>
+
+    <button type="button" class="btn-red" onclick="openModal('modalDeliveryOutcome')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M12 3a3 3 0 0 1 3 3H9a3 3 0 0 1 3-3Zm-5 8a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6Zm3 2h6v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4Z"/></svg>
+      Delivery Outcome
+    </button>
+
+    <button type="button" class="btn-red" onclick="openModal('modalPostpartum')">
+      <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M12 2a6 6 0 1 1 0 12h-1v2h2v2h-2v4h-2v-4H7v-2h2v-2h-1a6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>
+      Postpartum Visit
+    </button>
+
+  </div>
+</div>
+</form>
+<!-- Medical / Surgical (VIEW) Modal -->
+<div id="modalMedSurg" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalMedSurg_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalMedSurg')"></div>
+
+  <!-- Modal card -->
+  <div class="relative mx-auto my-8 w-[96%] max-w-5xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4">
+        <h2 id="modalMedSurg_title" class="text-[22px] font-extrabold tracking-tight text-red-700">
+          Medical / Surgical History
+        </h2>
+        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                onclick="closeModal('modalMedSurg')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 pb-6 space-y-10">
+
+        <!-- ========== Medical Conditions ========== -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-6">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-[22px] font-bold text-red-700">Medical Conditions</h3>
+            <button type="button"
+                    class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                    onclick="openModal('modalMedical')">
+              <!-- medical icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11 2a1 1 0 0 1 2 0v3h3a1 1 0 1 1 0 2h-3v3a1 1 0 1 1-2 0V7H8a1 1 0 1 1 0-2h3V2Z"/>
+              </svg>
+              Add Medical Condition
+            </button>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-gray-200">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Condition</th>
+                  <th class="px-4 py-3 text-left font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-gray-800">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">Asthma</td>
+                  <td class="px-4 py-3">Diagnosed 2019</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">Allergy</td>
+                  <td class="px-4 py-3">Penicillin</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== Surgical History ========== -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-6">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-[22px] font-bold text-red-700">Surgical History</h3>
+            <button type="button"
+                    class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                    onclick="openModal('modalSurgical')">
+              <!-- scalpel icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.07 4.93 7 17l-4 1 1-4L14.93 3.93l4.14 1Z"/><path d="M7 19h10v2H7z"/>
+              </svg>
+              Add Surgical History
+            </button>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-gray-200">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Procedure</th>
+                  <th class="px-4 py-3 text-left font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-gray-800">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">Appendectomy</td>
+                  <td class="px-4 py-3">Done in 2018</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">&nbsp;</td>
+                  <td class="px-4 py-3">&nbsp;</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-start">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalMedSurg')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+            </svg>
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Local button colors (guards against global overrides) -->
+<style>
+  .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+  .btn-red:hover{filter:brightness(.97)}
+  .btn-gray{background:#f3f4f6!important;color:#111827!important}
+  .btn-gray:hover{background:#e5e7eb!important}
+</style>
+
+
+<!-- ===== Modal: Add Medical Condition ===== -->
+<div id="modalMedical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalMedical_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalMedical')"></div>
+
+  <!-- Sheet -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="modalMedical_title" class="text-lg font-semibold">Add Medical Condition</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalMedical')" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <form class="px-6 py-6 space-y-5">
+        <!-- Condition Name -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Condition Name</label>
+          <div class="relative">
+            <input type="text" placeholder="e.g., Asthma"
+                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5" opacity=".35"/><path d="M2 12l10 5 10-5" opacity=".35"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+          <div class="relative">
+            <textarea rows="4" placeholder="e.g., Diagnosed 2019, managed with inhaler"
+                      class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500"></textarea>
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5 3a2 2 0 0 0-2 2v14l4-3h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
+            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
+          </svg>
+          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-1">
+          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalMedical')">Cancel</button>
+          <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Add Surgical History ===== -->
+<div id="modalSurgical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalSurgical_title">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSurgical')"></div>
+
+  <div class="relative mx-auto my-8 w-[95%] max-w-xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="modalSurgical_title" class="text-lg font-semibold">Add Surgical History</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalSurgical')" aria-label="Close">&times;</button>
+      </div>
+
+      <form class="px-6 py-6 space-y-5">
+        <!-- Procedure -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Procedure Name</label>
+          <div class="relative">
+            <input type="text" placeholder="e.g., Appendectomy"
+                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5" opacity=".35"/><path d="M2 12l10 5 10-5" opacity=".35"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+          <div class="relative">
+            <textarea rows="4" placeholder="e.g., Done in 2018"
+                      class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500"></textarea>
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5 3a2 2 0 0 0-2 2v14l4-3h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
+            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
+          </svg>
+          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-1">
+          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalSurgical')">Cancel</button>
+          <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Obstetrical Edit Modal (with header action button) -->
+<div id="modalObstetrical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalObstetrical_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalObstetrical')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalObstetrical_title" class="text-lg font-semibold">Edit Obstetrical History</h2>
+
+        <div class="flex items-center gap-2">
+          <!-- NEW: Header Update button -->
+          <button type="button"
+                  class="rounded-full bg-blue-100 p-2 text-blue-700 hover:bg-blue-200"
+                  title="Edit Obstetrical History"
+                  onclick="openModal('modalObstetricalEdit')">
+            <!-- pencil icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11ZM20.7 7.04c.39-.39.39-1.02 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84Z"/>
+            </svg>
+          </button>
+
+
+          <!-- Close -->
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                  onclick="closeModal('modalObstetrical')" aria-label="Close modal">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <form id="formObstetrical" class="px-6 py-6 space-y-6">
+        <!-- Row: G P A -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <!-- Gravida -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Gravida (Pregnancies)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3 2 6 6 10 4-4 6-7 6-10a6 6 0 0 0-6-6Zm0 8a2 2 0 1 1 .001-3.999A2 2 0 0 1 12 10Z"/></svg>
+              </span>
+              <input type="number" min="0" value="1"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+          <!-- Para -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Para (Live Births)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm-1-7h2v5h-2v-5Zm1-6a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 8Z"/></svg>
+              </span>
+              <input type="number" min="0" value="0"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+          <!-- Abortion -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Abortion (Miscarriages)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C7 18 4 14 4 10a8 8 0 0 1 16 0c0 4-3 8-8 12Zm0-10a2 2 0 1 0-2-2 2 2 0 0 0 2 2Z"/></svg>
+              </span>
+              <input type="number" min="0" value="0"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Row: LMP & EDD -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <!-- LMP -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+              </span>
+              <input type="date" value="2020-01-01"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+          <!-- EDD -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Expected Delivery Date</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5v2h14V3Zm1 4H4v14h16V7ZM8 12h3v3H8v-3Z"/></svg>
+              </span>
+              <input type="date" value="2020-10-01"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer: Back + Update (kept) -->
+        <div class="flex items-center justify-between pt-2">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                  onclick="closeModal('modalObstetrical')">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/></svg>
+            Back
+          </button>
+        </div>
+      </form>
+
+      <!-- Local styles -->
+      <style>
+        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+        .btn-red:hover{filter:brightness(.97)}
+        .btn-gray{background:#f3f4f6!important;color:#111827!important}
+        .btn-gray:hover{background:#e5e7eb!important}
+      </style>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Edit Obstetrical History Modal -->
+<div id="modalObstetricalEdit" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalObstetricalEdit_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalObstetricalEdit')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalObstetricalEdit_title" class="text-lg font-semibold">Edit Obstetrical History</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalObstetricalEdit')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <form class="px-6 py-6 space-y-6" onsubmit="event.preventDefault(); /* submit via JS/AJAX here */ closeModal('modalObstetricalEdit')">
+        <!-- GPA Row -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <!-- Gravida -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Gravida (Pregnancies)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3 2 6 6 10 4-4 6-7 6-10a6 6 0 0 0-6-6Zm0 8a2 2 0 1 1 .001-3.999A2 2 0 0 1 12 10Z"/></svg>
+              </span>
+              <input type="number" min="0" value="0"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <!-- Para -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Para (Live Births)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm-1-7h2v5h-2v-5Zm1-6a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 8Z"/></svg>
+              </span>
+              <input type="number" min="0" value="0"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <!-- Abortion -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Abortion (Miscarriages)</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C7 18 4 14 4 10a8 8 0 0 1 16 0c0 4-3 8-8 12Zm0-10a2 2 0 1 0-2-2 2 2 0 0 0 2 2Z"/></svg>
+              </span>
+              <input type="number" min="0" value="0"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Dates Row -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+              </span>
+              <input type="date" value="2020-01-01"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Expected Delivery Date</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5v2h14V3Zm1 4H4v14h16V7ZM8 12h3v3H8v-3Z"/></svg>
+              </span>
+              <input type="date" value="2020-10-01"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
+          <span class="mr-1 inline-block align-middle">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
+          </span>
+          Please review the information before saving. Make sure all fields are complete and accurate.
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-2">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                  onclick="closeModal('modalObstetricalEdit')">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m5 13 4 4L19 7l-1.4-1.4L9 14.2 6.4 11.6 5 13Z"/></svg>
+            Save
+          </button>
+        </div>
+      </form>
+
+      <!-- Scoped styles -->
+      <style>
+        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+        .btn-red:hover{filter:brightness(.97)}
+        .btn-gray{background:#f3f4f6!important;color:#111827!important}
+        .btn-gray:hover{background:#e5e7eb!important}
+      </style>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Maternal Check Ups Modal -->
+<div id="modalCheckups" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalCheckups_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalCheckups')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-6xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalCheckups_title" class="text-lg font-semibold tracking-wide">Maternal Check Ups</h2>
+        <div class="flex items-center gap-2">
+          <!-- Add Check Up (optional nested modal trigger) -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalAddCheckUp')">
+            <!-- clipboard-plus -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 2h6a2 2 0 0 1 2 2h2v6h-2V6h-2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2H5v12h5v2H3V4h2a2 2 0 0 1 2-2Zm2 2h2v2h-2V4Zm8 10v-3h2v3h3v2h-3v3h-2v-3h-3v-2h3Z"/>
+            </svg>
+            Add Check Up
+          </button>
+
+
+          <!-- Close -->
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                  onclick="closeModal('modalCheckups')" aria-label="Close modal">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-6 bg-white">
+        <div class="rounded-2xl border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-red-600 text-white">
+                <tr>
+                  <th class="py-3 px-4 text-left">Trimester</th>
+                  <th class="py-3 px-4 text-left">Date</th>
+                  <th class="py-3 px-4 text-left">AOG</th>
+                  <th class="py-3 px-4 text-left">Height</th>
+                  <th class="py-3 px-4 text-left">Weight</th>
+                  <th class="py-3 px-4 text-left">BP</th>
+                  <th class="py-3 px-4 text-left">Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y">
+                <tr class="hover:bg-rose-50/40 transition">
+                  <td class="py-3 px-4">1</td>
+                  <td class="py-3 px-4">01/02/2020</td>
+                  <td class="py-3 px-4">20</td>
+                  <td class="py-3 px-4">80 cm</td>
+                  <td class="py-3 px-4">5 kg</td>
+                  <td class="py-3 px-4">36.7</td>
+                  <td class="py-3 px-4">None</td>
+                </tr>
+                <tr class="hover:bg-rose-50/40 transition">
+                  <td class="py-3 px-4">2</td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                </tr>
+                <tr class="hover:bg-rose-50/40 transition">
+                  <td class="py-3 px-4">3</td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                  <td class="py-3 px-4"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer / Back -->
+          <div class="flex items-center justify-between border-t bg-gray-50 px-4 py-3">
+            <button type="button"
+                    class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                    onclick="closeModal('modalCheckups')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+              </svg>
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoped button styles -->
+      <style>
+        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+        .btn-red:hover{filter:brightness(.97)}
+        .btn-gray{background:#f3f4f6!important;color:#111827!important}
+        .btn-gray:hover{background:#e5e7eb!important}
+      </style>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Add Check Up Modal -->
+<div id="modalAddCheckUp" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalAddCheckUp_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddCheckUp')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="modalAddCheckUp_title" class="text-lg font-semibold">Add Check Up</h2>
+        <button type="button"
+                class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalAddCheckUp')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body (your form) -->
+      <form class="p-6" onsubmit="event.preventDefault(); /* submit via JS/AJAX */ closeModal('modalAddCheckUp')">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+          <!-- Left column -->
+          <div class="space-y-5">
+            <!-- Trimester -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Trimester</label>
+              <div class="relative mt-1">
+                <select class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  <option value="">Select a Trimester</option>
+                  <option>1st</option>
+                  <option>2nd</option>
+                  <option>3rd</option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="m7 10 5 5 5-5H7Z"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Date -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Date of Visit</label>
+              <div class="relative mt-1">
+                <input type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Weight -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Weight (kg)</label>
+              <input type="text" placeholder="Input weight"
+                     class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+
+            <!-- Height -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Height (cm)</label>
+              <input type="text" placeholder="Input height"
+                     class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+
+            <!-- AOG -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Age of Gestation (weeks)</label>
+              <input type="text" placeholder="Input AOG"
+                     class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div class="space-y-5">
+            <!-- BP -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Blood Pressure</label>
+              <input type="text" placeholder="e.g., 110/70"
+                     class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+
+            <!-- Notes -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Note</label>
+              <textarea rows="7" placeholder="Add a note"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notice -->
+        <div class="mt-6">
+          <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-[12px] text-rose-700">
+            <span class="mr-1 inline-block h-2 w-2 rounded-full bg-rose-600"></span>
+            Note: Please review the information before saving. Make sure all fields are complete and accurate.
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-5 flex items-center justify-end gap-3">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                  onclick="closeModal('modalAddCheckUp')">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14l4-4h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/></svg>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Maternal Immunization Modal -->
+<div id="modalImmunization" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalImmunization_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalImmunization')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-6xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalImmunization_title" class="text-lg font-semibold tracking-wide">Maternal Immunization</h2>
+        <div class="flex items-center gap-2">
+          <!-- Add Immunization (optional nested modal trigger) -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalImmunizationAdd')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="m22 7-1-1-2 2-2-2 2-2-1-1-2 2-1-1-1 1 1 1-7 7-2-2-1 1 2 2-3 3 1 1 3-3 2 2 1-1-2-2 7-7 1 1 1-1-1-1 2-2Z"/>
+            </svg>
+            Add Immunization
+          </button>
+
+
+          <!-- Close -->
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                  onclick="closeModal('modalImmunization')" aria-label="Close modal">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="p-0">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm text-left border-collapse">
+            <thead>
+              <tr class="bg-red-600 text-white">
+                <th class="px-4 py-3 font-semibold">Vaccine</th>
+                <th class="px-4 py-3 font-semibold">1st Dose</th>
+                <th class="px-4 py-3 font-semibold">2nd Dose</th>
+                <th class="px-4 py-3 font-semibold">3rd Dose</th>
+                <th class="px-4 py-3 font-semibold">4th Dose</th>
+                <th class="px-4 py-3 font-semibold">5th Dose</th>
+                <th class="px-4 py-3 font-semibold">FIM Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="bg-white hover:bg-rose-50">
+                <td class="px-4 py-3 text-gray-700">TT (Tetanus Toxoid)</td>
+                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                    Pending
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-between border-t bg-gray-50 px-4 py-3">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalImmunization')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+            </svg>
+            Back
+          </button>
+          <div class="text-[11px] text-gray-500">Tip: Use Add Immunization to record doses.</div>
+        </div>
+      </div>
+
+      <!-- Scoped button styles -->
+      <style>
+        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+        .btn-red:hover{filter:brightness(.95)}
+        .btn-gray{background:#f3f4f6!important;color:#111827!important}
+        .btn-gray:hover{background:#e5e7eb!important}
+      </style>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Add Maternal Immunization Modal -->
+<div id="modalImmunizationAdd" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalImmunizationAdd_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalImmunizationAdd')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="modalImmunizationAdd_title" class="text-lg font-semibold">Add Maternal Immunization</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalImmunizationAdd')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <form class="p-6 space-y-6" onsubmit="event.preventDefault(); /* submit via JS/AJAX here */ closeModal('modalImmunizationAdd')">
+        <!-- Vaccine Type -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Vaccine Type</label>
+          <div class="relative mt-1">
+            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <option value="" selected disabled>Select a Vaccine</option>
+              <option>TT (Tetanus Toxoid)</option>
+              <option>Hepatitis B</option>
+              <option>Influenza</option>
+              <option>COVID-19</option>
+            </select>
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Date of Visit -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Date of Visit</label>
+          <div class="relative mt-1">
+            <input type="date"
+                   class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Dose Number -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Dose Number</label>
+          <div class="relative mt-1">
+            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <option value="" selected disabled>Select Dose</option>
+              <option>1st Dose</option>
+              <option>2nd Dose</option>
+              <option>3rd Dose</option>
+              <option>4th Dose</option>
+              <option>5th Dose</option>
+            </select>
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+          <span class="mr-1">⚠️</span>
+          Please review the information before saving. Make sure all fields are complete and accurate.
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button"
+                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                  onclick="closeModal('modalImmunizationAdd')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+            </svg>
+            Cancel
+          </button>
+
+          <button type="submit"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17 3H5a2 2 0 0 0-2 2v14l5-2 5 2 5-2 5 2V7l-6-4Z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Screenings Modal -->
+<div id="modalScreenings" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalScreenings_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalScreenings')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalScreenings_title" class="text-lg font-semibold tracking-wide">Infectious Disease Screening</h2>
+        <div class="flex items-center gap-2">
+          <!-- Add Screening opens nested modal -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalAddScreening')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
+            </svg>
+            Add Screening Record
+          </button>
+
+          <!-- Close -->
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                  onclick="closeModal('modalScreenings')" aria-label="Close modal">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-6">
+        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-rose-600 text-white">
+                <tr>
+                  <th class="px-6 py-3 text-left font-semibold">Disease Type</th>
+                  <th class="px-6 py-3 text-left font-semibold">Date Screened</th>
+                  <th class="px-6 py-3 text-left font-semibold">Result</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-700">
+                <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+                  <td class="px-6 py-3 font-medium">Syphilis</td>
+                  <td class="px-6 py-3">—</td>
+                  <td class="px-6 py-3">—</td>
+                </tr>
+                <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+                  <td class="px-6 py-3 font-medium">Hepatitis B</td>
+                  <td class="px-6 py-3">—</td>
+                  <td class="px-6 py-3">—</td>
+                </tr>
+                <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+                  <td class="px-6 py-3 font-medium">HIV Screening</td>
+                  <td class="px-6 py-3">—</td>
+                  <td class="px-6 py-3">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center justify-between border-t bg-gray-50 px-4 py-3">
+            <button type="button"
+                    class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                    onclick="closeModal('modalScreenings')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+              </svg>
+              Back
+            </button>
+            <div class="text-[11px] text-gray-500">Tip: Use “Add Screening Record” to log results.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoped styles -->
+      <style>
+        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+        .btn-red:hover{filter:brightness(.95)}
+        .btn-gray{background:#f3f4f6!important;color:#111827!important}
+        .btn-gray:hover{background:#e5e7eb!important}
+      </style>
+    </div>
+  </div>
+</div>
+
+<!-- (Optional) Nested: Add Screening Record Modal -->
+<div id="modalAddScreening" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="modalAddScreening_title">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddScreening')"></div>
+  <div class="relative mx-auto my-8 w-[95%] max-w-md">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-5 py-3 flex items-center justify-between">
+        <h3 id="modalAddScreening_title" class="text-sm font-semibold">Add Screening Record</h3>
+        <button class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalAddScreening')">&times;</button>
+      </div>
+
+      <form class="p-5 space-y-4">
+        <div>
+          <label class="block text-sm text-gray-700 mb-1">Disease Type</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <option>Syphilis</option>
+            <option>Hepatitis B</option>
+            <option>HIV Screening</option>
+            <option>Others…</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-700 mb-1">Date Screened</label>
+          <input type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-700 mb-1">Result</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <option>Pending</option>
+            <option>Negative</option>
+            <option>Positive</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalAddScreening')">Cancel</button>
+          <button type="submit" class="btn-red rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="event.preventDefault(); closeModal('modalAddScreening')">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Screening + Iron Modal -->
+<div id="modalLabIron" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalLabIron_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalLabIron')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-4xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="modalLabIron_title" class="text-lg font-semibold">Gestational Diabetes Screening</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalLabIron')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6">
+        <!-- Top-right Add button -->
+        <div class="mb-3 flex items-center justify-end">
+          <!-- Add Diabetes Record (opens modal) -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalAddGDM')">
+            <!-- lab icon -->
+            <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M7 2h10v2h-1v4l4.5 8A3 3 0 0 1 17.9 21H6.1A3 3 0 0 1 3.5 16L8 8V4H7V2Zm2 6-4 7h10l-4-7H9Z"/></svg>
+            Add Diabetes Record
+          </button>
+        </div>
+
+        <!-- Card-like table -->
+        <div class="overflow-hidden rounded-2xl border border-gray-200 shadow-sm bg-white">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-gray-800">
+                  <th class="w-1/2 px-6 py-3 text-center font-semibold border-r border-gray-200">Date Screened</th>
+                  <th class="w-1/2 px-6 py-3 text-center font-semibold">Result</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-700">
+                <tr class="odd:bg-white even:bg-gray-50">
+                  <td class="px-6 py-3 text-center border-r border-gray-200">01/02/2020</td>
+                  <td class="px-6 py-3 text-center">Normal</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer buttons -->
+        <div class="mt-6 flex items-center justify-between">
+          <button type="button"
+                  class="btn-gray inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalLabIron')">
+            Back
+          </button>
+
+          <!-- Trigger: View Lab Screening Result -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalLabResults')">
+            View Lab Screening Result
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Add Gestational Diabetes Modal -->
+<div id="modalAddGDM" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalAddGDM_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddGDM')"></div>
+
+  <!-- Card -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      
+      <!-- Body -->
+      <div class="p-6">
+        <div class="mb-6">
+          <h2 id="modalAddGDM_title" class="text-xl font-extrabold tracking-tight text-rose-700">
+            Add a Gestational Diabetes
+          </h2>
+        </div>
+
+        <form class="space-y-6">
+          <!-- Result -->
+          <div>
+            <label class="block text-[12px] font-semibold text-gray-600 mb-1">Result</label>
+            <div class="relative">
+              <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <option selected disabled>Select a Result</option>
+                <option>Normal</option>
+                <option>Positive (GDM)</option>
+                <option>Impaired Glucose Tolerance</option>
+                <option>Other/Unknown</option>
+              </select>
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Date Screened -->
+          <div>
+            <label class="block text-[12px] font-semibold text-gray-600 mb-1">Date Of Screened</label>
+            <div class="relative">
+              <input type="date" placeholder="mm/dd/yyyy"
+                     class="w-60 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+               
+              </span>
+            </div>
+          </div>
+
+          <!-- Footer: note + actions -->
+          <div class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <!-- Note -->
+            <div>
+              <div class="inline-flex items-start gap-2 rounded-lg border border-rose-300 bg-white px-3 py-2 text-[12px] text-rose-700">
+                <svg class="mt-0.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
+                <span>
+                  <b>Note:</b> Please review the information before saving.<br>
+                  Make sure all fields are complete and accurate.
+                </span>
+              </div>
+            </div>
+
+            <!-- Buttons (stacked on the right) -->
+            <div class="flex flex-col items-end gap-2">
+              <button type="submit"
+                      class="btn-red inline-flex items-center justify-center rounded-lg px-6 py-2 text-sm font-semibold shadow">
+                Save
+              </button>
+              <button type="button"
+                      class="btn-red inline-flex items-center justify-center rounded-lg px-6 py-2 text-sm font-semibold shadow"
+                      onclick="closeModal('modalAddGDM')">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<!-- View Lab Screening Result Modal -->
+<div id="modalLabResults" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalLabResults_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalLabResults')"></div>
+
+  <!-- Card -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+
+      <!-- Header row -->
+      <div class="flex items-center justify-between px-6 pt-5">
+        <h2 id="modalLabResults_title" class="text-xl font-extrabold tracking-tight text-rose-700">
+          Lab Screening Result
+        </h2>
+
+        <!-- Add Lab Screening Result (opens another modal if you have one) -->
+        <button type="button"
+                class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                onclick="openModal('modalAddLabResult')">
+          <!-- clipboard-plus -->
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3h6v2h3a2 2 0 0 1 2 2v14H4V7a2 2 0 0 1 2-2h3V3Zm7 9h-3v3h-2v-3H8v-2h3V7h2v3h3v2Z"/></svg>
+          Add Lab Screening Result
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="p-4">
+        <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <table class="min-w-full text-sm text-gray-800">
+            <thead>
+              <tr class="bg-gray-100 text-gray-800">
+                <th class="px-6 py-3 text-left font-semibold">Test Type</th>
+                <th class="px-6 py-3 text-left font-semibold">Test Date</th>
+                <th class="px-6 py-3 text-left font-semibold">Result</th>
+                <th class="px-6 py-3 text-left font-semibold">Iron Given</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="odd:bg-white even:bg-gray-50">
+                <td class="px-6 py-3 font-medium">HGB</td>
+                <td class="px-6 py-3">—</td>
+                <td class="px-6 py-3">—</td>
+                <td class="px-6 py-3">—</td>
+              </tr>
+              <tr class="odd:bg-white even:bg-gray-50">
+                <td class="px-6 py-3 font-medium">CBC</td>
+                <td class="px-6 py-3">—</td>
+                <td class="px-6 py-3">—</td>
+                <td class="px-6 py-3">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-start gap-3 px-6 pb-6">
+        <button type="button"
+                class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                onclick="closeModal('modalLabResults')">
+          Back
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Lab Screening Result Modal -->
+<div id="modalAddLabResult" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalAddLabResult_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddLabResult')"></div>
+
+  <!-- Modal card -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Title -->
+      <div class="px-6 pt-5">
+        <h2 id="modalAddLabResult_title" class="text-2xl font-extrabold tracking-tight text-rose-700">
+          Add a Lab Screening Result
+        </h2>
+      </div>
+
+      <!-- Form -->
+      <form class="px-6 pb-6">
+        <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <!-- Left column -->
+          <div class="space-y-5">
+            <!-- Test Type -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Test Type</label>
+              <div class="relative mt-1">
+                <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  <option value="" selected disabled>Select a Test</option>
+                  <option>HGB</option>
+                  <option>CBC</option>
+                  <option>OGTT</option>
+                  <option>Urinalysis</option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Test Date -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Test Date</label>
+              <div class="relative mt-1">
+                <input type="date"
+                       class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Result -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Result</label>
+              <div class="relative mt-1">
+                <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  <option value="" selected disabled>Select Result</option>
+                  <option>Normal</option>
+                  <option>Abnormal</option>
+                  <option>Positive</option>
+                  <option>Negative</option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div class="space-y-5">
+            <!-- Given Iron Tablet -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Given Iron Tablet</label>
+              <div class="relative mt-1">
+                <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  <option value="" selected disabled>Select Yes/No</option>
+                  <option>Yes</option>
+                  <option>No</option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Date Given -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Date Given</label>
+              <div class="relative mt-1">
+                <input type="date"
+                       class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Number of Tablet -->
+            <div>
+              <label class="text-[12px] font-semibold text-gray-600">Number of Tablet</label>
+              <input type="number" min="0" placeholder="Input Number of Tablet"
+                     class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-800 flex items-start gap-2">
+          <svg class="mt-0.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
+          <span><b>Note:</b> Please review the information before saving. Make sure all fields are complete and accurate.</span>
+        </div>
+
+        <!-- Actions (stacked on right like your mock) -->
+        <div class="mt-6 flex flex-col items-end gap-2">
+          <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold shadow">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14l5-2 5 2 5-2 5 2V7l-6-4Z"/></svg>
+            Save
+          </button>
+          <button type="button" class="btn-gray inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalAddLabResult')">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========= Supplements Modal (List) ========= -->
+<div id="modalSupplements" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalSupplements_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSupplements')"></div>
+
+  <!-- Card -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-4xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4">
+        <h2 id="modalSupplements_title" class="text-xl font-bold text-red-700">Supplement Records</h2>
+
+        <!-- Add Supplement Record -->
+        <button type="button"
+                class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                onclick="openModal('modalAddSupplement')">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4.22 4.22a6 6 0 0 1 8.49 0l7.07 7.07a6 6 0 1 1-8.49 8.49L4.22 12.71a6 6 0 0 1 0-8.49Zm8.49 1.41L5.64 12.7l4.95 4.95 7.78-7.78-4.95-4.95Z"/>
+          </svg>
+          Add Supplement Record
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="px-6 pb-6">
+        <div class="overflow-x-auto rounded-xl border border-gray-200">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left font-semibold">Supplement</th>
+                <th class="px-4 py-2 text-left font-semibold">Date Given</th>
+                <th class="px-4 py-2 text-left font-semibold">Quantity</th>
+                <th class="px-4 py-2 text-left font-semibold">Trimester</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-700 divide-y divide-gray-100">
+              <tr class="odd:bg-white even:bg-gray-50">
+                <td class="px-4 py-2">Iron</td>
+                <td class="px-4 py-2">01/02/2020</td>
+                <td class="px-4 py-2">30 Tabs</td>
+                <td class="px-4 py-2">2nd</td>
+              </tr>
+              <tr class="odd:bg-white even:bg-gray-50">
+                <td class="px-4 py-2">Iodine</td>
+                <td class="px-4 py-2">01/02/2020</td>
+                <td class="px-4 py-2">30 Tabs</td>
+                <td class="px-4 py-2">2nd</td>
+              </tr>
+              <!-- repeat rows as needed -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Back -->
+        <div class="mt-4">
+          <button type="button"
+                  class="btn-red rounded-lg px-4 py-1.5 text-sm font-semibold shadow"
+                  onclick="closeModal('modalSupplements')">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Add Supplement Record Modal ========= -->
+<div id="modalAddSupplement" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="modalAddSupplement_title">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddSupplement')"></div>
+
+  <div class="relative mx-auto my-8 w-[95%] max-w-xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h3 id="modalAddSupplement_title" class="text-lg font-semibold">Add Supplement Record</h3>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalAddSupplement')" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Form -->
+      <form class="px-6 py-6 space-y-5">
+        <!-- Supplement -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Supplement</label>
+          <div class="relative mt-1">
+            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <option value="" selected disabled>Select Supplement</option>
+              <option>Iron</option>
+              <option>Iodine</option>
+              <option>Folic Acid</option>
+              <option>Multivitamins</option>
+            </select>
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Date Given -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Date Given</label>
+          <div class="relative mt-1">
+            <input type="date" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Quantity -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Quantity</label>
+          <input type="text" placeholder="e.g., 30 Tabs" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+
+        <!-- Trimester -->
+        <div>
+          <label class="text-[12px] font-semibold text-gray-600">Trimester</label>
+          <div class="relative mt-1">
+            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <option value="" selected disabled>Select Trimester</option>
+              <option>1st</option>
+              <option>2nd</option>
+              <option>3rd</option>
+            </select>
+            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+          <span class="mr-1">⚠️</span>
+          Please review the information before saving. Make sure all fields are complete and accurate.
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" class="btn-gray rounded-lg px-5 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalAddSupplement')">Cancel</button>
+          <button type="submit" class="btn-red rounded-lg px-5 py-2 text-sm font-semibold shadow">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Delivery Outcome ===== -->
+<div id="modalDeliveryOutcome" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalDeliveryOutcome_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalDeliveryOutcome')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalDeliveryOutcome_title" class="text-lg font-semibold inline-flex items-center gap-2">
+          <!-- baby icon -->
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a3 3 0 0 1 3 3H9a3 3 0 0 1 3-3Zm-5 8a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6Z"/></svg>
+          Delivery Outcome
+        </h2>
+        <!-- Trigger button -->
+          <button type="button"
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="openModal('modalAddDeliveryOutcome')">
+            <!-- plus-baby icon -->
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3a3 3 0 0 1 3 3H9a3 3 0 0 1 3-3Zm-5 8a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6Zm10 8h3v2h-3v3h-2v-3H12v-2h3v-3h2v3Z"/>
+            </svg>
+            Add Delivery Outcome
+          </button>
+      </div>
+
+
+      <!-- Body -->
+      <div class="px-6 py-6">
+        <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <table class="min-w-full text-sm text-gray-800">
+            <thead>
+              <tr class="bg-gray-100 text-gray-700">
+                <th class="px-4 py-2 text-left font-semibold">Outcome</th>
+                <th class="px-4 py-2 text-left font-semibold">Delivery Date</th>
+                <th class="px-4 py-2 text-left font-semibold">Place</th>
+                <th class="px-4 py-2 text-left font-semibold">Baby Sex</th>
+                <th class="px-4 py-2 text-left font-semibold">Weight</th>
+                <th class="px-4 py-2 text-left font-semibold">Attendant</th>
+                <th class="px-4 py-2 text-left font-semibold">Delivery Type</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <!-- Sample/empty row -->
+              <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50/40 transition">
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">—</td>
+              </tr>
+              <!-- repeat rows as needed -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between border-t bg-gray-50 px-6 py-3">
+        <button type="button" class="btn-red rounded-lg px-4 py-1.5 text-sm font-semibold shadow"
+                onclick="closeModal('modalDeliveryOutcome')">Back</button>
+
+        <!-- ================= Add Delivery Outcome Modal ================= -->
+<div id="modalAddDeliveryOutcome" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="addDeliveryOutcome_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddDeliveryOutcome')"></div>
+
+  <!-- Modal card -->
+        <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+          <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+              <h2 id="addDeliveryOutcome_title" class="text-lg font-semibold">Add Delivery Outcome</h2>
+              <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                      aria-label="Close" onclick="closeModal('modalAddDeliveryOutcome')">&times;</button>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-6">
+              <form class="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
+                <!-- LEFT COLUMN -->
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Outcome Type</label>
+                  <div class="relative mt-1">
+                    <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option selected disabled>Select a Outcome</option>
+                      <option>Live Birth</option>
+                      <option>Still Birth</option>
+                      <option>Abortion</option>
+                      <option>Neonatal Death</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Birth Weight</label>
+                  <input type="number" inputmode="numeric" placeholder="Input weight in g"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Delivery Date</label>
+                  <div class="relative mt-1">
+                    <input type="date"
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Baby Sex</label>
+                  <div class="relative mt-1">
+                    <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option selected disabled>Select Sex</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Ambiguous</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Delivery Type</label>
+                  <div class="relative mt-1">
+                    <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option selected disabled>Select Delivery Type</option>
+                      <option>NSD (Normal Spontaneous)</option>
+                      <option>CS (Cesarean)</option>
+                      <option>Assisted (Forceps/Vacuum)</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Attendant Type</label>
+                  <div class="relative mt-1">
+                    <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option selected disabled>Select Attendant Type</option>
+                      <option>Physician</option>
+                      <option>Midwife</option>
+                      <option>Nurse</option>
+                      <option>Hilot / TBA</option>
+                      <option>Other</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Facility Name</label>
+                  <input type="text" placeholder="Input place of delivery"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-gray-600">Ownership</label>
+                  <div class="relative mt-1">
+                    <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option selected disabled>Select Ownership</option>
+                      <option>Government</option>
+                      <option>Private</option>
+                      <option>Home</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                    </span>
+                  </div>
+                </div>
+              </form>
+
+              <!-- Note -->
+              <div class="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-[12px] text-rose-700">
+                <span class="mr-1 inline-block align-middle">
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
+                </span>
+                Note: Please review the information before saving. Make sure all fields are complete and accurate.
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end gap-3 border-t bg-gray-50 px-6 py-3">
+              <button type="button" class="btn-gray rounded-lg px-5 py-2 text-sm font-semibold shadow"
+                      onclick="closeModal('modalAddDeliveryOutcome')">Cancel</button>
+              <button type="submit" class="btn-red rounded-lg px-5 py-2 text-sm font-semibold shadow">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Postpartum Visit LIST modal ===================== -->
+<div id="modalPostpartum" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="ppv_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalPostpartum')"></div>
+
+  <!-- Modal shell -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-6xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h2 id="ppv_title" class="text-xl font-bold text-rose-700">Postpartum Visit</h2>
+
+        <!-- Add button (opens sub-modal) -->
+        <button type="button"
+                class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                onclick="openModal('modalAddPostpartum')">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3a3 3 0 0 1 3 3H9a3 3 0 0 1 3-3Zm-5 8a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-6Zm9 7h3v2h-3v3h-2v-3H11v-2h3v-3h2v3Z"/>
+          </svg>
+          Add Postpartum Visit
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-4">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-gray-100 text-gray-800">
+                <th class="px-4 py-2 text-left font-semibold">Date</th>
+                <th class="px-4 py-2 text-left font-semibold">Weight</th>
+                <th class="px-4 py-2 text-left font-semibold">Height</th>
+                <th class="px-4 py-2 text-left font-semibold">Vitals</th>
+                <th class="px-4 py-2 text-left font-semibold">Notes</th>
+                <th class="px-4 py-2 text-left font-semibold">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              <!-- Example row -->
+              <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50/60">
+                <td class="px-4 py-2">01/01/2025</td>
+                <td class="px-4 py-2">40 KG</td>
+                <td class="px-4 py-2">160 cm</td>
+                <td class="px-4 py-2">BP: 110/70, Temp: 36.8</td>
+                <td class="px-4 py-2">Good Recovery</td>
+                <!-- Action cell (replace •••) -->
+                <td class="px-4 py-2">
+                  <button type="button"
+                          class="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-rose-700"
+                          onclick="openModal('ppvView_1000')">
+                    <!-- eye icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 5C5 5 2 12 2 12s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                    </svg>
+                    View
+                  </button>
+                </td>
+              </tr>
+              <!-- Add more rows as needed -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between border-t bg-gray-50 px-6 py-3">
+        <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                onclick="closeModal('modalPostpartum')">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Add Postpartum Visit SUB-modal ===================== -->
+<div id="modalAddPostpartum" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="add_ppv_title">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddPostpartum')"></div>
+
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <h3 id="add_ppv_title" class="text-lg font-semibold">Add Postpartum Visit</h3>
+        <button class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalAddPostpartum')">&times;</button>
+      </div>
+
+      <!-- Form -->
+      <form class="px-6 py-6 space-y-5">
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Date</label>
+            <input type="date"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Weight (kg)</label>
+            <input type="number" step="0.1" placeholder="e.g., 40"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Height (cm)</label>
+            <input type="number" step="0.1" placeholder="e.g., 160"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Vitals</label>
+            <input type="text" placeholder="e.g., BP: 110/70, Temp: 36.8"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-semibold text-gray-600">Notes</label>
+          <textarea rows="4" placeholder="Observations / advice"
+                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+        </div>
+
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+          <strong>Note:</strong> Please review the information before saving. Make sure all fields are complete and accurate.
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalAddPostpartum')">Cancel</button>
+          <button type="submit" class="btn-red rounded-lg px-5 py-2 text-sm font-semibold shadow"
+                  onclick="event.preventDefault(); closeModal('modalAddPostpartum')">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Postpartum Visit - VIEW modal -->
+<div id="ppvView_1000" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="ppvView_1000_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('ppvView_1000')"></div>
+
+  <!-- Modal shell -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-2xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
+        <h2 id="ppvView_1000_title" class="text-lg font-semibold">Postpartum Visit — Details</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('ppvView_1000')" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-5">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Date</label>
+            <input value="01/01/2025" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Weight</label>
+            <input value="40 KG" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-gray-600">Height</label>
+            <input value="160 cm" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-[11px] font-semibold text-gray-600">Vitals</label>
+            <input value="BP: 110/70, Temp: 36.8" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-[11px] font-semibold text-gray-600">Notes</label>
+            <textarea rows="3" readonly
+                      class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">Good Recovery</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-2 border-t bg-gray-50 px-6 py-3">
+        <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                onclick="closeModal('ppvView_1000')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+  function openModal(id){
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(()=>{
+      const first=el.querySelector('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+      if(first) first.focus();
+    },0);
+  }
+  function closeModal(id){
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      ['modalObstetrical','modalObstetricalEdit', 'modalImmunization','modalImmunizationAdd', 'modalCheckups','modalAddCheckUp', 'modalScreenings', 'modalAddScreening','modalLabIron', 'modalAddGDM', 'modalLabResults', 'modalAddLabResult', 'modalSupplements', 'modalAddSupplement', 'modalDeliveryOutcome', 'modalAddPostpartum', 'modalPostpartum', 'ppvView_1000', 'modalMedical', 'modalSurgical', 'modalMedSurg'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el && !el.classList.contains('hidden')) closeModal(id);
+      });
+    }
+  });
+</script>
+
+
+</div> </div> <!-- Button color utilities --> <style> .btn-red{ display:inline-flex;align-items:center;gap:.5rem; border-radius:.75rem;padding:.5rem .9rem; background:linear-gradient(90deg,#f43f5e,#dc2626)!important; color:#fff!important;font-weight:700;font-size:.85rem; box-shadow:0 4px 12px rgba(220,38,38,.25); } .btn-red:hover{filter:brightness(.97)} .btn-gray{background:#f3f4f6!important;color:#111827!important} .btn-gray:hover{background:#e5e7eb!important} .btn-red svg{color:#fff} </style>
+
+{% endblock %}

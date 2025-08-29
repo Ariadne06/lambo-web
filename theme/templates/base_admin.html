@@ -1,176 +1,90 @@
 {% load static tailwind_tags %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <title>{% block title %}Admin Dashboard{% endblock %}</title>
-    
-
-    {% tailwind_css %}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>{% block title %}Admin Dashboard{% endblock %}</title>
+  {% tailwind_css %}
 </head>
-<body class="bg-gray-100 min-h-screen">
-    
-        <!-- Sidebar -->
-        <nav id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-[#D10000] text-white p-4 flex flex-col overflow-y-auto">
-            <!-- Centered Logo -->
-            <div class="flex items-center justify-center mb-6">
-                <img src="{% static 'images/brgylogo.jpg' %}" alt="Logo" class="w-20 h-20 rounded-full shadow-lg border-4 border-white">
-                <span class="ml-4 text-lg font-semibold">Barangay Cansaga</span>
-            </div>
+<body class="bg-gray-100 min-h-screen font-[Poppins]">
+  <!-- Sidebar -->
+  <nav id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-[#D10000] text-white flex flex-col shadow-lg">
+    <!-- Logo -->
+    <div class="flex items-center justify-center flex-col py-6 border-b border-red-400/40">
+      <img src="{% static 'images/brgylogo.jpg' %}" alt="Logo" class="w-20 h-20 rounded-full shadow-lg border-4 border-white">
+      <span class="mt-3 text-lg font-semibold tracking-wide">Barangay Cansaga</span>
+    </div>
 
-            <hr class="border-gray-300 my-4">
+    <!-- Nav links -->
+    <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
+      <!-- Dashboard -->
+      <a href="{% url 'admin_module:admin_dashboard' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-800/80 transition">
+        <img src="{% static 'images/dashboard.svg' %}" alt="Dashboard Icon" class="h-5 w-5">
+        <span>Dashboard</span>
+      </a>
 
-            <!-- Navigation Links -->
-            <a href="{% url 'admin_module:admin_dashboard' %}" id="dashboard" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
-                <img src="{% static 'images/dashboard.svg' %}" alt="Dashboard Icon" class="h-5 w-5 mr-3">
-                <span class="truncate">Dashboard</span>
-            </a>
+      <!-- Manage -->
+      <button id="submenu-toggle" class="flex items-center w-full gap-3 px-4 py-3 rounded-lg hover:bg-red-800/80 transition">
+        <img src="{% static 'images/manage.svg' %}" alt="Manage Icon" class="h-5 w-5">
+        <span>Manage</span>
+        <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-auto transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      <div id="submenu" class="hidden ml-10 space-y-1">
+        <a href="{% url 'admin_module:admin_Addpersonnel' %}" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Add Personnel</a>
+        <a href="{% url 'admin_module:password_request' %}" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Request Change</a>
+        <a href="{% url 'admin_module:personnel_list' %}" class="block px-3 py-2 rounded-md hover:bg-red-800/60">View</a>
+      </div>
 
-            <div>
-                <button id="submenu-toggle" class="flex items-center text-white px-4 py-3 w-full rounded-md hover:bg-[#B80000] transition-colors duration-300">
-                    <div class="flex items-center">
-                        <img src="{% static 'images/manage.svg' %}" alt="Manage Icon" class="h-5 w-5 mr-3">
-                        <span class="truncate">Manage</span>
-                    </div>
-                    <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-auto transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                <div id="submenu" class="hidden bg-[#F9F9F9] text-gray-700 p-2 border-t border-gray-300 rounded-md shadow-md transition-all duration-300 ease-in-out">
-                    <a href="{% url 'admin_module:admin_Addpersonnel' %}" class="block px-4 py-2 hover:bg-gray-200 rounded-md">Add Personnel</a>
-                    <a href="{% url 'admin_module:password_request' %}" class="block px-4 py-2 hover:bg-gray-200 rounded-md">Request Change</a>
-                    <a href="{% url 'admin_module:personnel_list' %}" class="block px-4 py-2 hover:bg-gray-200 rounded-md">View</a>
-                </div>
-            </div>
+      <!-- Logs -->
+      <button id="logs-toggle" class="flex items-center w-full gap-3 px-4 py-3 rounded-lg hover:bg-red-800/80 transition">
+        <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5">
+        <span>Logs</span>
+        <svg id="logs-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-auto transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      <div id="logs-submenu" class="hidden ml-10 space-y-1">
+        <a href="{% url 'admin_module:activityLogs' %}" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Activity Logs</a>
+        <a href="#" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Authentication Logs</a>
+        <a href="#" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Resident Update Logs</a>
+        <a href="#" class="block px-3 py-2 rounded-md hover:bg-red-800/60">Document Logs</a>
+      </div>
+    </div>
 
-            <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
-                <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
-                <span class="truncate">Logs</span>
-            </a>
-
-            <!-- Profile Section -->
-            <div class="mt-auto flex items-center justify-between">
-
-                <!-- Logout Icon -->
-                <a href="{% url 'authentication:logout' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
-                    <img src="{% static 'images/logout-white.svg' %}" alt="Logout Icon" class="h-5 w-5 mr-3">
-                </a>
-                <!-- Profile Section -->
-                <a href="#" class="flex flex-col items-center mx-auto mt-4 group">
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-semibold truncate group-hover:underline">
-                            {{ request.session.username }}
-                        </span>
-                        <span class="text-xs text-gray-400 truncate group-hover:underline">
-                            {{ request.session.role_name }}
-                        </span>
-                    </div>
-                    <!-- <span class="bg-red-300 text-white w-10 h-10 flex items-center justify-center rounded-md shadow-lg">
-                        {{ request.session.first_name|slice:":1" }}
-                    </span> -->
-                </a>
-
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <div class="ml-64 min-h-screen bg-[#F1F1F1]">
-            <div class="p-6">
-            {% block content %}
-            <!-- Page-specific content goes here -->
-            {% endblock %}
-            </div>
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-red-400/40">
+      <div class="flex items-center justify-between">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold truncate">{{ request.session.username }}</p>
+          <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
         </div>
-    
-        <style>
-            body {
-                font-family: 'Poppins', sans-serif;
-            }
-        </style>
+        <a href="{% url 'authentication:logout' %}" class="ml-3 flex items-center gap-1 px-3 py-2 rounded-md bg-white text-red-700 font-medium hover:shadow-md transition">
+          <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4 invert">
+          <span class="text-xs">Logout</span>
+        </a>
+      </div>
+    </div>
+  </nav>
 
-    <script>
-        const submenuToggle = document.getElementById('submenu-toggle');
-        const submenu = document.getElementById('submenu');
-        const submenuArrow = document.getElementById('submenu-arrow');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
+  <!-- Main content -->
+  <div class="ml-64 min-h-screen">
+    <div class="p-6">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
 
-        submenuToggle.addEventListener('click', () => {
-            submenu.classList.toggle('hidden');
-            submenuArrow.classList.toggle('rotate-180');
-        });
-
-        sidebarToggle?.addEventListener('click', () => {
-            sidebar.classList.toggle('-translate-x-full');
-        });
-
-        (function () {
-        const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
-        const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-        const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
-
-        const TAB_FLAG    = 'tabAuth';
-        const CLOSED_KEY  = 'closed_session_token';
-        const SESSION_TOKEN = "{{ request.session.session_token }}";
-
-        // First load in this tab?
-        if (!sessionStorage.getItem(TAB_FLAG)) {
-        sessionStorage.setItem(TAB_FLAG, '1');
-
-        // If a previous tab left a token, report it and logout now
-        const closedToken = localStorage.getItem(CLOSED_KEY);
-        if (closedToken) {
-            (async () => {
-            const body = new URLSearchParams();
-            body.set('session_token', closedToken);
-
-            try {
-                await fetch(TAB_CLOSE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: body.toString(),
-                credentials: 'same-origin',
-                keepalive: true
-                });
-            } catch (_) { /* ignore */ }
-
-            try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
-            window.location.replace(TAB_CLOSE_URL);
-            })();
-            return;
-        }
-        }
-
-        // On tab/browser close: record token and call silent_logout
-        addEventListener('pagehide', () => {
-        try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-        sendClosePing(SESSION_TOKEN);
-        });
-        addEventListener('beforeunload', () => {
-        try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-        sendClosePing(SESSION_TOKEN);
-        });
-
-            // Idle detection (unchanged)
-            let last = Date.now(), timer;
-            function arm() {
-            clearTimeout(timer);
-            if (document.visibilityState !== 'visible') return;
-            timer = setTimeout(() => {
-                if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-                window.location.replace(LOGOUT_URL);
-                }
-            }, IDLE_LIMIT_MS + 100);
-            }
-            function bump(){ last = Date.now(); arm(); }
-            ['mousemove','keydown','click','wheel','scroll','touchstart']
-            .forEach(evt => addEventListener(evt, bump, { passive: true }));
-            addEventListener('visibilitychange', arm, { capture: true });
-            arm();
-        })();
+  <script>
+    function setupCollapse(btnId, panelId, arrowId) {
+      const btn = document.getElementById(btnId);
+      const panel = document.getElementById(panelId);
+      const arrow = document.getElementById(arrowId);
+      btn?.addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+      });
+    }
+    setupCollapse('submenu-toggle', 'submenu', 'submenu-arrow');
+    setupCollapse('logs-toggle', 'logs-submenu', 'logs-arrow');
   </script>
 </body>
 </html>

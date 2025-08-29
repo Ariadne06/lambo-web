@@ -1,0 +1,110 @@
+{% extends 'base_captain.html' %}
+
+{% block title %}
+    Resident Approvals
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-md rounded-lg p-6">
+  <!-- Header -->
+  <div class="mb-4 flex items-center justify-between">
+    <h2 class="text-xl font-semibold text-gray-800">Resident Approval Queue</h2>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+      <thead class="bg-[#D10000] text-white">
+        <tr>
+          <th class="px-6 py-3 text-left text-sm font-semibold">Resident ID</th>
+          <th class="px-6 py-3 text-left text-sm font-semibold">Full Name</th>
+          <th class="px-6 py-3 text-left text-sm font-semibold">Address</th>
+          <th class="px-6 py-3 text-left text-sm font-semibold">Date Registered</th>
+          <th class="px-6 py-3 text-center text-sm font-semibold">Action</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
+        <!-- Row 1 -->
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-3">100392</td>
+          <td class="px-6 py-3">Juan Dela Cruz</td>
+          <td class="px-6 py-3">Purok 3, Cansaga</td>
+          <td class="px-6 py-3">2025-08-22</td>
+          <td class="px-6 py-3">
+            <div class="flex items-center justify-center gap-2">
+            
+              <!-- Approve -->
+              <button type="button"
+                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
+                aria-label="Approve">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </button>
+              <!-- Reject -->
+              <button type="button"
+                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                aria-label="Reject">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 2 -->
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-3">100411</td>
+          <td class="px-6 py-3">Maria Santos</td>
+          <td class="px-6 py-3">Purok 1, Cansaga</td>
+          <td class="px-6 py-3">2025-08-21</td>
+          <td class="px-6 py-3">
+            <div class="flex items-center justify-center gap-2">
+              
+              <button type="button"
+                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
+                aria-label="Approve">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </button>
+              <button type="button"
+                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                aria-label="Reject">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 3 (example) -->
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-3">100427</td>
+          <td class="px-6 py-3">Precious Bugtai</td>
+          <td class="px-6 py-3">Purok 4, Cansaga</td>
+          <td class="px-6 py-3">2025-08-20</td>
+          <td class="px-6 py-3">
+            <div class="flex items-center justify-center gap-2">
+             
+              <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300" aria-label="Approve">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </button>
+              <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300" aria-label="Reject">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

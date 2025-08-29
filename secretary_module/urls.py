@@ -27,6 +27,7 @@ urlpatterns = [
      path('addAnnouncement', views.addAnnouncement),
      path('residentInfo1', views.residentInfo1),
      path('residentInfo2', views.residentInfo2),
+     path('approval', views.approval),
   
 
     
