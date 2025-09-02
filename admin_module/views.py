@@ -3,6 +3,23 @@ from authentication.decorators import custom_login_required, role_required
 from .models import Admin
 from django.contrib import messages
 from django.urls import reverse
+import re
+from utils.flash import set_flash, get_flash
+CODE_MESSAGES = {}
+
+def _clean_db_error(err: Exception) -> str:
+    text = str(err)
+
+    if "CONTEXT:" in text:
+        text = text.split("CONTEXT:")[0].strip()
+
+    m = re.search(r"(E\d{4,5})\s*:\s*(.*)", text)
+    if m:
+        code, raw_msg = m.group(1), m.group(2).strip()
+        friendly = CODE_MESSAGES.get(code, raw_msg or "An error occurred.")
+        return f"{friendly}"
+
+    return "Password change failed. Please check your entries and try again."
 
 # Create your views here.
 @custom_login_required
@@ -13,96 +30,140 @@ def admin_dashboard(request):
 @custom_login_required
 @role_required('Admin')
 def admin_Addpersonnel(request):
-    # Read query + filter from URL (?query=...&filter_status=...)
+
     query = (request.GET.get('query') or '').strip()
     filter_status = (request.GET.get('filter_status') or '').strip()
 
+    flash = get_flash(request) 
+
     results = []
     if query:
-        # If you want to avoid tiny searches, you can check len(query) >= 2
         results = Admin.sp_search_residents_live_with_id(query)
 
     context = {
         'results': results,
         'query': query,
         'filter_status': filter_status,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
     }
     return render(request, 'admin_module/admin_Addpersonnel.html', context)
 
 @custom_login_required
 @role_required('Admin')
 def add_personnel1(request):
-    # If someone hits this URL directly via GET, bounce them to the search page
+    
     if request.method != 'POST':
+        set_flash(request, "No resident selected.", "error")
         return redirect('admin_module:admin_Addpersonnel')
 
     resident_id = request.POST.get('resident_id')
     if not resident_id:
-        messages.error(request, "No resident selected.")
+        set_flash(request, "No resident selected.", "error")
         return redirect('admin_module:admin_Addpersonnel')
 
     try:
-        results = Admin.sp_get_resident_profile(resident_id)  # should return a list with one dict (or None)
+        results = Admin.sp_get_resident_profile(resident_id)
     except Exception as e:
-        messages.error(request, f"Error retrieving resident profile: {e}")
+        set_flash(request, f"Error retrieving resident profile: {e}", "error")
         return redirect('admin_module:admin_Addpersonnel')
 
     if not results:
-        messages.error(request, "Resident not found.")
+        set_flash(request, "Resident not found.", "error")
         return redirect('admin_module:admin_Addpersonnel')
 
     return render(request, 'admin_module/add_personnel1.html', {'results': results})
+
 
 @custom_login_required
 @role_required('Admin')
 def add_personnel2(request):
     if request.method != 'POST':
+        set_flash(request, "No resident selected.", "error")
         return redirect('admin_module:admin_Addpersonnel')
 
     resident_id = request.POST.get('resident_id')
     role_id     = request.POST.get('role_id')
-    email       = request.POST.get('email')  # or 'resident_email' if you keep Option B
-    username    = request.POST.get('username', '').strip()  # if this page also collects username
+    email       = request.POST.get('email')
+    username    = request.POST.get('username', '').strip()
+
+    # Default: no message
+    message = None
+    message_level = None
 
     if not (resident_id and role_id and email):
-        messages.error(request, "Missing required fields (resident, role, or email).")
-        return redirect('admin_module:add_personnel1')
+        message = "Missing required fields (resident, role, or email)."
+        message_level = "error"
+        return render(request, 'admin_module/add_personnel2.html', {
+            'resident_id': resident_id,
+            'role_id': role_id,
+            'email': email,
+            'message': message,
+            'message_level': message_level,
+        })
 
-    # If your Step 2 template collects username and submits on the same page:
     if username:
         try:
-            msg = Admin.sp_insert_personnel_credentials(int(resident_id), int(role_id), username, email)
-            messages.success(request, msg or "Personnel created.")
-            return redirect('admin_module:personnel_list')
+            msg = Admin.sp_insert_personnel_credentials(
+                int(resident_id), int(role_id), username, email
+            )
+            message = msg or "Personnel created successfully."
+            message_level = "success"
+            return render(request, 'admin_module/add_personnel2.html', {
+                'resident_id': resident_id,
+                'role_id': role_id,
+                'email': email,
+                'message': message,
+                'message_level': message_level,
+            })
         except Exception as e:
-            messages.error(request, f"Error adding personnel: {e}")
+            message = _clean_db_error(e)
+            message_level = "error"
 
-    # Otherwise, render the Step 2 form to collect username (and show email read-only)
+    # Initial form render (or after error)
     return render(request, 'admin_module/add_personnel2.html', {
         'resident_id': resident_id,
         'role_id': role_id,
         'email': email,
+        'message': message,
+        'message_level': message_level,
     })
 
 
 @custom_login_required
 @role_required('Admin')
 def personnel_list(request):
+    
+    flash = get_flash(request) 
+    
     if request.method == 'POST':
         pid = int(request.POST.get('pid'))
-        active = request.POST.get('active') 
+        active_raw = (request.POST.get('active') or '').strip().lower()
+
+        TRUE_SET  = {'1', 'true', 'on', 'yes'}
+        FALSE_SET = {'0', 'false', 'off', 'no', ''}
+
+        if active_raw in TRUE_SET:
+            active_bool = True
+        elif active_raw in FALSE_SET:
+            active_bool = False
+        else:
+            # unexpected value — handle safely
+            set_flash(request, "Invalid active flag.", "error")
+            return redirect('admin_module:personnel_list')
 
         try:
             admin_personnel_id = request.session.get('personnel_id')
             
-            result = Admin.sp_set_personnel_active_status(pid, active, admin_personnel_id)
+            result = Admin.sp_set_personnel_active_status(pid, active_bool, admin_personnel_id)
             if result is None:
                 raise Exception("Failed to update personnel active status.")
             
-            msg = f"Personnel {'activated' if active else 'deactivated'} successfully."
-            messages.success(request, msg)
+            msg = f"Personnel {'activated' if active_bool else 'deactivated'} successfully."
+            set_flash(request, msg, "success")
         except Exception as e:
-            messages.error(request, str(e))
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
 
         return redirect('admin_module:personnel_list')
 
@@ -117,6 +178,8 @@ def personnel_list(request):
         'results': results,
         'query': query,
         'filter_status': filter_status,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
     })
 
 # @custom_login_required
@@ -214,13 +277,21 @@ def personnel_list(request):
 @custom_login_required
 @role_required('Admin')
 def update_personnel(request):
+    
+    flash = get_flash(request) 
+    
+    if request.method not in ["GET", "POST"]: 
+        set_flash(request, "Invalid request method.", "error")
+        return redirect("admin_module:personnel_list")
+    
     if request.method == "POST":
         pid = request.POST.get("pid")
         username = (request.POST.get("username") or "").strip()
         email    = (request.POST.get("email") or "").strip()
+        role_id = request.POST.get("role_id")
 
         if not pid:
-            messages.error(request, "Missing personnel id.")
+            set_flash(request, "Missing personnel id.", "error")
             return redirect("admin_module:personnel_list")
 
         # Case A: POST from list page (only pid, no fields) -> just redirect to GET form
@@ -228,19 +299,21 @@ def update_personnel(request):
             return redirect(f"{reverse('admin_module:update_personnel')}?pid={pid}")
 
         # Case B: POST from update form -> only update if something actually changed
-        current = Admin.get_personnel_by_id(int(pid))  # see helper below
+        current = Admin.get_personnel_by_id(int(pid))
         new_username = username if username and username != current.get("username") else None
         new_email    = email    if email    and email    != current.get("email")    else None
+        new_role_id = role_id if role_id and int(role_id) != current.get("role_id") else None
 
-        if new_username is None and new_email is None:
-            messages.info(request, "No changes to save.")
+        if new_username is None and new_email is None and new_role_id is None:
+            set_flash(request, "No changes to save.")
             return redirect(f"{reverse('admin_module:update_personnel')}?pid={pid}")
 
         try:
-            msg = Admin.sp_update_personnel_credentials(int(pid), new_username, new_email)
-            messages.success(request, msg or "Updated successfully.")
+            msg = Admin.sp_update_personnel_credentials(int(pid), new_username, new_email, new_role_id)
+            set_flash(request, "Updated successfully.", "success")
         except Exception as e:
-            messages.error(request, str(e))
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
 
         return redirect(f"{reverse('admin_module:update_personnel')}?pid={pid}")
 
@@ -248,8 +321,14 @@ def update_personnel(request):
     pid = request.GET.get("pid")
     personnel = Admin.get_personnel_by_id(int(pid)) if pid else None
     if pid and not personnel:
+        set_flash(request, "Personnel not found.", "error")
         messages.error(request, "Personnel not found.")
-    return render(request, "admin_module/update_personnel.html", {"pid": pid, "personnel": personnel})
+    return render(request, "admin_module/update_personnel.html", {
+        "pid": pid, 
+        "personnel": personnel,
+        'message': flash['message'],
+        'message_level': flash['message_level'
+        ]})
 
 
 @custom_login_required
