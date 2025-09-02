@@ -13,4 +13,7 @@ urlpatterns = [
      path('update_personnel/', views.update_personnel, name='update_personnel'),
      path('password_request/', views.password_request, name='password_request'),
      path('activityLogs/', views.activityLogs, name='activityLogs'),
+     path('authenticationlog/', views.authenticationlog, name='authenticationlog'),
+     path('documentlog/', views.documentlog, name='documentlog'),
+     path('residentlog/', views.residentlog, name='residentlog'),
 ]
