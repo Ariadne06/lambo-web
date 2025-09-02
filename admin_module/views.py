@@ -261,3 +261,13 @@ def password_request(request):
 @role_required('Admin')
 def activityLogs(request):
  return render(request, 'admin_module/activityLogs.html')
+
+
+def authenticationlog(request):
+    return render(request, 'admin_module/authenticationlog.html')
+
+def documentlog(request):
+    return render(request, 'admin_module/documentlog.html')
+
+def residentlog(request):
+    return render(request, 'admin_module/residentlog.html')
