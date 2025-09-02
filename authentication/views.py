@@ -3,6 +3,31 @@ from .models import logging
 from django.contrib import messages
 from authentication.decorators import custom_login_required
 from django.http import HttpResponse
+import re
+
+CODE_MESSAGES = {} 
+
+def _clean_db_error(err: Exception) -> str:
+    """
+    Strip DB internals (e.g., 'CONTEXT: ...') and return a friendly message.
+    If a code like E6016 is present, prefer a mapped message.
+    """
+    text = str(err)
+
+    # Remove everything after 'CONTEXT:' if present
+    if "CONTEXT:" in text:
+        text = text.split("CONTEXT:")[0].strip()
+
+    # Look for our structured code pattern: E####:
+    m = re.search(r"(E\d{4,5})\s*:\s*(.*)", text)
+    if m:
+        code, raw_msg = m.group(1), m.group(2).strip()
+        friendly = CODE_MESSAGES.get(code, raw_msg or "An error occurred.")
+        # Return without leaking stack details
+        return f"{friendly}"  # or f"{friendly} ({code})" if you want to show the code
+
+    # Fallback: generic message
+    return "Password change failed. Please check your entries and try again."
 
 def login_view(request):
     
@@ -141,10 +166,10 @@ def req_pwd_change(request):
                 else:
                     messages.error(request, 'Passwords do not match.')
             except Exception as e:
-                messages.error(request, f'Password change failed: {str(e)}')
+                messages.error(request, _clean_db_error(e))
                 return render(request, 'authentication/forgotPassword.html')
         else:
-            messages.error(request, 'No personnel ID found in session.')
-            return render(request, 'authentication/login.html')
+            messages.error(request, 'Session expired. Please log in again.')
+            return redirect('authentication:login')
             
     return render(request, 'authentication/forgotPassword.html')

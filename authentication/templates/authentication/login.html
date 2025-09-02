@@ -29,10 +29,15 @@
       <!-- Alerts -->
       {% if messages %}
         {% for message in messages|latest_only %}
-          <div class="mt-4 rounded-md border p-3 text-sm
-                      {% if message.tags == 'error' %}border-red-300 bg-red-50 text-red-700
-                      {% elif message.tags == 'success' %}border-green-300 bg-green-50 text-green-700
-                      {% else %}border-gray-200 bg-gray-50 text-gray-700{% endif %}">
+          <div class="mt-3 mb-4 p-3 rounded-md text-sm font-medium 
+            {% if message.tags == 'error' %}
+              bg-red-100 text-red-700 border border-red-400
+            {% elif message.tags == 'success' %}
+              bg-green-100 text-green-700 border border-green-400
+            {% else %}
+              bg-gray-200 text-gray-800 border border-gray-400
+            {% endif %}
+          ">
             {{ message }}
           </div>
         {% endfor %}
