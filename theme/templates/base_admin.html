@@ -81,7 +81,7 @@
             {% else %}
                 hover:bg-red-800/60
             {% endif %}">
-    View
+    View Personnels
   </a>
 </div>
 
@@ -136,8 +136,6 @@
           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
           <span class="text-xs">Logout</span>
         </a>
-
-
       </div>
     </div>
   </nav>
@@ -168,6 +166,8 @@
     btn?.setAttribute('aria-expanded', 'false');
   }
 
+  // Reminder: Make sure this Function cannot be changed or overwritten
+  // It handles idle logout and tab close detection
   function openItem(item){
     const panel = getEl(item.panel);
     const arrow = getEl(item.arrow);
@@ -204,7 +204,73 @@
       }
     });
   });
-</script>
 
+  (function () {
+    const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+    const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+
+    const TAB_FLAG    = 'tabAuth';
+    const CLOSED_KEY  = 'closed_session_token';
+    const SESSION_TOKEN = "{{ request.session.session_token }}";
+
+    // First load in this tab?
+    if (!sessionStorage.getItem(TAB_FLAG)) {
+      sessionStorage.setItem(TAB_FLAG, '1');
+
+      // If a previous tab left a token, report it and logout now
+      const closedToken = localStorage.getItem(CLOSED_KEY);
+      if (closedToken) {
+        (async () => {
+          const body = new URLSearchParams();
+          body.set('session_token', closedToken);
+
+          try {
+            await fetch(TAB_CLOSE_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: body.toString(),
+              credentials: 'same-origin',
+              keepalive: true
+            });
+          } catch (_) { /* ignore */ }
+
+          try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
+            window.location.replace(TAB_CLOSE_URL);
+        })();
+        return;
+      }
+    }
+
+    // On tab/browser close: record token and call silent_logout
+    addEventListener('pagehide', () => {
+      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+      sendClosePing(SESSION_TOKEN);
+    });
+
+    addEventListener('beforeunload', () => {
+      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+      sendClosePing(SESSION_TOKEN);
+    });
+
+    // Idle detection (unchanged)
+    let last = Date.now(), timer;
+    function arm() {
+      clearTimeout(timer);
+      if (document.visibilityState !== 'visible') return;
+      timer = setTimeout(() => {
+        if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+          window.location.replace(LOGOUT_URL);
+        }
+      }, IDLE_LIMIT_MS + 100);
+    }
+
+    function bump(){ last = Date.now(); arm(); }
+    ['mousemove','keydown','click','wheel','scroll','touchstart']
+    .forEach(evt => addEventListener(evt, bump, { passive: true }));
+    addEventListener('visibilitychange', arm, { capture: true });
+    arm();
+  })();
+</script>
 </body>
 </html>
