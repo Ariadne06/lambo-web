@@ -122,4 +122,35 @@ class Admin(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_admin_reset_personnel_to_pending(id, admin_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('admin_reset_personnel_to_pending', [id, admin_id])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_edit_personnel_draft(id, admin_id, role_id, username, email):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('edit_personnel_draft', [id, admin_id, role_id, username, email])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_activty_logs(limit, offset, sort_by, sort_dir):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_activity_logs', [limit, offset, sort_by, sort_dir])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
 

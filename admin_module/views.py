@@ -3,23 +3,10 @@ from authentication.decorators import custom_login_required, role_required
 from .models import Admin
 from django.contrib import messages
 from django.urls import reverse
-import re
 from utils.flash import set_flash, get_flash
-CODE_MESSAGES = {}
-
-def _clean_db_error(err: Exception) -> str:
-    text = str(err)
-
-    if "CONTEXT:" in text:
-        text = text.split("CONTEXT:")[0].strip()
-
-    m = re.search(r"(E\d{4,5})\s*:\s*(.*)", text)
-    if m:
-        code, raw_msg = m.group(1), m.group(2).strip()
-        friendly = CODE_MESSAGES.get(code, raw_msg or "An error occurred.")
-        return f"{friendly}"
-
-    return "Password change failed. Please check your entries and try again."
+from utils.db_message import _clean_db_error
+from django.utils.timezone import localtime
+from django.utils.http import urlencode
 
 # Create your views here.
 @custom_login_required
@@ -141,14 +128,43 @@ def personnel_list(request):
         active_raw = (request.POST.get('active') or '').strip().lower()
 
         TRUE_SET  = {'1', 'true', 'on', 'yes'}
-        FALSE_SET = {'0', 'false', 'off', 'no', ''}
+        FALSE_SET = {'0', 'false', 'off', 'no'}
+        PENDING_SET = {'pending'} 
 
         if active_raw in TRUE_SET:
             active_bool = True
         elif active_raw in FALSE_SET:
             active_bool = False
+        elif active_raw in PENDING_SET:
+            try:
+                admin_personnel_id = request.session.get('personnel_id')
+                
+                try:
+                    username = request.POST.get('edit_username')
+                    email = request.POST.get('edit_email')
+                    role_id = request.POST.get('edit_position')
+                    
+                    reslt = Admin.sp_edit_personnel_draft(pid, admin_personnel_id, role_id, username, email)
+                    
+                    if reslt is None:
+                        raise Exception("Failed to edit personnel credentials.")
+                except Exception as e:
+                    msg = _clean_db_error(e)
+                    set_flash(request, msg, "error")
+                    return redirect('admin_module:personnel_list')
+                
+                result = Admin.sp_admin_reset_personnel_to_pending(pid, admin_personnel_id)
+                if result is None:
+                    raise Exception("Failed to reset personnel to pending.")
+                
+                msg = f"Status set to Pending. This personnel can now be re-evaluated for approval or rejection."
+                set_flash(request, msg, "success")
+            except Exception as e:
+                msg = _clean_db_error(e)
+                set_flash(request, msg, "error")
+                
+            return redirect('admin_module:personnel_list')
         else:
-            # unexpected value — handle safely
             set_flash(request, "Invalid active flag.", "error")
             return redirect('admin_module:personnel_list')
 
@@ -336,17 +352,87 @@ def update_personnel(request):
 def password_request(request):
  return render(request, 'admin_module/password_request.html')
 
+VALID_SORT_BY = {"log_timestamp", "action", "subsystem_name", "table_name", "performed_by_name"}
+VALID_SORT_DIR = {"asc", "desc"}
+LIMIT_OPTIONS = [10, 25, 50, 100]
+
+def activityLogs(request):
+        # --- Query params ---
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+
+    sort_by  = request.GET.get("sort_by", "log_timestamp")
+    sort_dir = request.GET.get("sort_dir", "desc").lower()
+    if sort_by not in VALID_SORT_BY:
+        sort_by = "log_timestamp"
+    if sort_dir not in VALID_SORT_DIR:
+        sort_dir = "desc"
+
+    offset = (page - 1) * limit
+
+    # --- Fetch logs (grab one extra to detect next) ---
+    rows = Admin.sp_get_activty_logs(
+        limit=limit + 1,
+        offset=offset,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    ) or []
+
+    has_next = len(rows) > limit
+    has_prev = page > 1
+    activity_logs = rows[:limit]
+
+    # format timestamps
+    for r in activity_logs:
+        ts = r.get("log_timestamp")
+        r["log_timestamp_fmt"] = localtime(ts).strftime("%m/%d/%Y, %I:%M %p") if ts else ""
+
+    # ---- Build URLs in the view (no function calls in template) ----
+    base_params = {"limit": limit, "sort_by": sort_by, "sort_dir": sort_dir}
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+
+    # limit pills reset page to 1
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    context = {
+        "activity_logs": activity_logs,
+        "limit": limit,
+        "page": page,
+        "sort_by": sort_by,
+        "sort_dir": sort_dir,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+    }
+    return render(request, "admin_module/activityLogs.html", context)
+
 @custom_login_required
 @role_required('Admin')
-def activityLogs(request):
- return render(request, 'admin_module/activityLogs.html')
-
-
 def authenticationlog(request):
     return render(request, 'admin_module/authenticationlog.html')
 
+@custom_login_required
+@role_required('Admin')
 def documentlog(request):
     return render(request, 'admin_module/documentlog.html')
 
+@custom_login_required
+@role_required('Admin')
 def residentlog(request):
     return render(request, 'admin_module/residentlog.html')
