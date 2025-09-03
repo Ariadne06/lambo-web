@@ -7,76 +7,179 @@
 {% block content %}
 <div class="flex flex-col min-h-screen bg-gray-100 p-6">
 
-    <!-- Page Title -->
-    <h1 class="text-2xl font-bold text-red-700 mb-6">Activity Logs</h1>
+  <!-- Page Title -->
+  <h1 class="text-2xl font-bold text-red-700 mb-6">Activity Logs</h1>
 
-    <!-- Search & Filters -->
-    <div class="flex justify-between items-center mb-4">
-        <!-- Search -->
-        <div class="relative w-full max-w-sm">
-            <input type="text" placeholder="Search" class="w-full border rounded px-4 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-            <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1011.5 3a7.5 7.5 0 005.15 13.65z" />
-            </svg>
+  <!-- Top Controls: Limit selector + Filters dropdown -->
+  <div class="flex justify-between items-center mb-4">
+    <!-- Limit Selector -->
+    <form method="get" class="flex items-center gap-2 text-sm">
+      <label for="limit" class="text-gray-600">Rows per page:</label>
+      <div class="relative inline-block">
+        <select id="limit" name="limit"
+                class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                onchange="this.form.page.value=1; this.form.submit()">
+          {% for n in limit_options %}
+            <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Preserve other query params -->
+      <input type="hidden" name="page" value="{{ page }}">
+      <input type="hidden" name="sort_by" value="{{ sort_by }}">
+      <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+    </form>
+
+    <!-- Advanced Filters Dropdown -->
+    <div class="relative">
+      <!-- Button that toggles the dropdown -->
+      <button type="button"
+              onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+              class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+        </svg>
+        Filters
+      </button>
+
+      <!-- Dropdown Menu -->
+      <form id="filtersMenu" method="get"
+            class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+        <!-- CHANGED: increased width from w-56 → w-64 -->
+        <!-- CHANGED: padding from p-3 → p-4 for more spacing -->
+        <!-- CHANGED: space-y-3 → space-y-4 to increase spacing between fields -->
+
+        <!-- Sort By -->
+        <div>
+          <label for="sort_by" class="block text-gray-600 mb-1">Sort By</label>
+          <select id="sort_by" name="sort_by"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm">
+            <!-- CHANGED: px-2 py-1 → px-3 py-2 for bigger selects -->
+            <option value="log_timestamp" {% if sort_by == "log_timestamp" %}selected{% endif %}>Log Timestamp</option>
+            <option value="action" {% if sort_by == "action" %}selected{% endif %}>Action</option>
+            <option value="subsystem_name" {% if sort_by == "subsystem_name" %}selected{% endif %}>Subsystem</option>
+            <option value="table_name" {% if sort_by == "table_name" %}selected{% endif %}>Table</option>
+            <option value="performed_by_name" {% if sort_by == "performed_by_name" %}selected{% endif %}>Performed By (Name)</option>
+          </select>
         </div>
 
-        <!-- Advanced Filters -->
-        <div class="text-sm text-gray-600 flex items-center space-x-1 cursor-pointer hover:text-red-600">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
-            </svg>
-            <span>Advanced Filters</span>
+        <!-- Sort Direction -->
+        <div>
+          <label for="sort_dir" class="block text-gray-600 mb-1">Direction</label>
+          <select id="sort_dir" name="sort_dir"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm">
+            <!-- CHANGED: px-2 py-1 → px-3 py-2 for bigger selects -->
+            <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Descending</option>
+          </select>
         </div>
-    </div>
 
-    <!-- Activity Log Table -->
-    <div class="overflow-x-auto bg-white rounded shadow">
-        <table class="min-w-full table-auto border border-gray-300 text-sm">
-            <thead class="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                    <th class="px-4 py-2 border">Personnel ID</th>
-                    <th class="px-4 py-2 border">Full Name</th>
-                    <th class="px-4 py-2 border">Sex</th>
-                    <th class="px-4 py-2 border">Position</th>
-                    <th class="px-4 py-2 border">Date and Time</th>
-                    <th class="px-4 py-2 border">Activity</th>
-                </tr>
-            </thead>
-            <tbody class="text-center text-gray-800">
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-2 border">00011</td>
-                    <td class="px-4 py-2 border">Adrianne Villarta</td>
-                    <td class="px-4 py-2 border">Male</td>
-                    <td class="px-4 py-2 border">Treasurer</td>
-                    <td class="px-4 py-2 border">01/01/2025, 12:30 PM</td>
-                    <td class="px-4 py-2 border">Log In</td>
-                </tr>
-                <!-- Repeat more rows or use a Django loop -->
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-2 border">00012</td>
-                    <td class="px-4 py-2 border">Adrian Medalla</td>
-                    <td class="px-4 py-2 border">Male</td>
-                    <td class="px-4 py-2 border">Councilor</td>
-                    <td class="px-4 py-2 border">01/01/2025, 12:30 PM</td>
-                    <td class="px-4 py-2 border">Update Address</td>
-                </tr>
-                <!-- More rows ... -->
-            </tbody>
-        </table>
-    </div>
+        <!-- Hidden preserved params -->
+        <input type="hidden" name="limit" value="{{ limit }}">
+        <input type="hidden" name="page" value="1">
 
-    <!-- Logs Report Button -->
-    <div class="flex justify-end mt-4">
-        <button class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m4 0a2 2 0 002-2V7a2 2 0 00-2-2h-3.17a2 2 0 01-1.41-.59l-1.83-1.83A2 2 0 0012.17 2H8a2 2 0 00-2 2v13a2 2 0 002 2h8z" />
-            </svg>
-            Logs Report
-        </button>
+        <!-- Apply button -->
+        <div class="flex justify-end gap-2">
+          <button type="submit"
+                  class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 text-sm">
+            <!-- CHANGED: px-3 py-1 → px-4 py-2 for larger button -->
+            Apply
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 
+  <!-- Activity Log Table -->
+  <div class="overflow-x-auto bg-white rounded shadow">
+    <table class="table-fixed border border-gray-300 text-sm" style="width: 1px;">
+      <colgroup>
+        <col style="width:80px" />
+        <col style="width:90px" />
+        <col style="width:200px" />
+        <col style="width:120px" />
+        <col style="width:120px" />
+        <col style="width:140px" />
+        <col style="width:90px" />
+        <col style="width:200px" />
+        <col style="width:120px" />
+      </colgroup>
+
+      <thead class="bg-gray-100 text-gray-700 font-semibold">
+        <tr>
+          <th class="border px-2 py-2">Log Entry ID</th>
+          <th class="border px-2 py-2">Performed By (ID)</th>
+          <th class="border px-2 py-2">Performed By (Name)</th>
+          <th class="border px-2 py-2">Performed By (Role)</th>
+          <th class="border px-2 py-2">Date &amp; Time</th>
+          <th class="border px-2 py-2">Activity</th>
+          <th class="border px-2 py-2">Performed On (ID)</th>
+          <th class="border px-2 py-2">Performed On (Name)</th>
+          <th class="border px-2 py-2">Performed On (Type)</th>
+        </tr>
+      </thead>
+
+      <tbody class="text-center text-gray-800">
+        {% for log in activity_logs %}
+          <tr class="hover:bg-gray-50 align-top">
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.log_id }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.performed_by_id }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.performed_by_name }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.performed_by_role_name }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.log_timestamp_fmt|default:log.log_timestamp }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.action }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.target_id }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.target_name }}</td>
+            <td class="border px-2 py-2 whitespace-normal break-words">{{ log.target_type }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9" class="border px-2 py-6 text-gray-500">No activity logs found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Logs Report Button -->
+  <div class="flex justify-end mt-4">
+    <button class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m4 0a2 2 0 002-2V7a2 2 0 00-2-2h-3.17a2 2 0 01-1.41-.59l-1.83-1.83A2 2 0 0012.17 2H8a2 2 0 00-2 2v13a2 2 0 002 2h8z" />
+      </svg>
+      Logs Report
+    </button>
+  </div>
 </div>
+
+<script>
+  // Close filters dropdown if clicked outside
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    const button = e.target.closest('button');
+    if (!e.target.closest('#filtersMenu') && !button) {
+      menu.classList.add('hidden');
+    }
+  });
+</script>
 {% endblock %}

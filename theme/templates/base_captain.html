@@ -24,31 +24,37 @@
             <hr class="border-gray-300 my-4">
 
             <!-- Navigation Links -->
-            <a href="{% url 'admin_module:admin_dashboard' %}" id="dashboard" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+            <a href="{% url 'captain_module:captain_dashboard'%}" id="dashboard" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/dashboard.svg' %}" alt="Dashboard Icon" class="h-5 w-5 mr-3">
                 <span class="truncate">Dashboard</span>
             </a>
 
-            <div>
+            {% comment %} <div>
                 <button id="submenu-toggle" class="flex items-center text-white px-4 py-3 w-full rounded-md hover:bg-[#B80000] transition-colors duration-300">
                     <div class="flex items-center">
                         <img src="{% static 'images/manage.svg' %}" alt="Manage Icon" class="h-5 w-5 mr-3">
                         <span class="truncate">View Resident</span>
                     </div>
                 </button>
-            </div>
+            </div> {% endcomment %}
 
-            <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+            <a href="{% url 'captain_module:captain_viewResident' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+                <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
+                <span class="truncate">View Resident</span>
+            </a>
+
+
+            <a href="{% url 'captain_module:captain_householdList' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
                 <span class="truncate">View Household</span>
             </a>
 
-             <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+             <a href="{% url 'captain_module:captain_businessList' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
                 <span class="truncate">View Business</span>
             </a>
 
-            <a href="{% url 'admin_module:activityLogs' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
+            <a href="{% url 'captain_module:personnelRequest' %}" class="flex items-center text-white px-4 py-3 rounded-md hover:bg-[#B80000] transition-colors duration-300">
                 <img src="{% static 'images/logs.svg' %}" alt="Logs Icon" class="h-5 w-5 mr-3">
                 <span class="truncate">Personnel Request</span>
             </a>
