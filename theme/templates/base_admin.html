@@ -166,8 +166,6 @@
     btn?.setAttribute('aria-expanded', 'false');
   }
 
-  // Reminder: Make sure this Function cannot be changed or overwritten
-  // It handles idle logout and tab close detection
   function openItem(item){
     const panel = getEl(item.panel);
     const arrow = getEl(item.arrow);
@@ -205,6 +203,8 @@
     });
   });
 
+  // Reminder: Make sure this Function cannot be changed or overwritten
+  // It handles idle logout and tab close detection
   (function () {
     const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
     const LOGOUT_URL    = "{% url 'authentication:logout' %}";
