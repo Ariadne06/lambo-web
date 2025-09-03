@@ -31,11 +31,12 @@
             <td class="px-4 py-2 border border-gray-200">
               <div class="flex items-center justify-center gap-2">
                 <!-- info -->
-                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
-                  </svg>
-                </button>
+                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info"
+                      onclick="openModal('modalDocInfo-1000')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
+                </svg>
+              </button>
                 <!-- PRINT: enabled & obvious -->
                 <a href="#" class="print-btn" title="Print">
                     <svg viewBox="0 0 24 24">
@@ -66,7 +67,8 @@
             <td class="px-4 py-2 border border-gray-200">Pending</td>
             <td class="px-4 py-2 border border-gray-200">
               <div class="flex items-center justify-center gap-2">
-                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info">
+                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info"
+                        onclick="openModal('modalDocInfo-1001')">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
                   </svg>
@@ -94,6 +96,210 @@
       </nav>
     </div>
   </div>
+<!-- =========================
+     INFO MODAL (Row 1 / Paid)
+     ========================= -->
+<div id="modalDocInfo-1000" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title_1000">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
+       onclick="closeModal('modalDocInfo-1000')"></div>
+
+  <!-- Panel wrapper -->
+  <div class="relative mx-auto my-16 w-[520px] max-w-[92vw]">
+    <!-- Glow ring -->
+    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
+
+    <!-- Panel -->
+    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
+         data-panel>
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
+          </svg>
+          <h3 id="docinfo_title_1000" class="text-base font-semibold tracking-wide">Document Details</h3>
+        </div>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                aria-label="Close" onclick="closeModal('modalDocInfo-1000')">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 pt-5 pb-4">
+        <!-- top summary -->
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resident ID</span>
+          <span class="font-mono text-sm tracking-widest text-gray-900">1000</span>
+        </div>
+
+        <!-- details grid -->
+        <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Adrianne Villarta</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Application</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Barangay Clearance</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Purpose</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Job Application</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
+            <dd class="col-span-3">
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                300 Php
+              </span>
+            </dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">0001</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Status</dt>
+            <dd class="col-span-3">
+              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <!-- check -->
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="m5 13 4 4L19 7l-1.4-1.4L9 14.2 6.4 11.6 5 13Z"/></svg>
+                Paid
+              </span>
+            </dd>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 pb-5 flex items-center justify-end gap-2">
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
+                onclick="closeModal('modalDocInfo-1000')">
+          Close
+        </button>
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700"
+                onclick="window.print()">
+          <!-- printer -->
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/></svg>
+          Print
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================
+     INFO MODAL (Row 2 / Pending)
+     ========================== -->
+<div id="modalDocInfo-1001" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title_1001">
+  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
+       onclick="closeModal('modalDocInfo-1001')"></div>
+  <div class="relative mx-auto my-16 w-[520px] max-w-[92vw]">
+    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
+    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
+         data-panel>
+      <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
+          <h3 id="docinfo_title_1001" class="text-base font-semibold tracking-wide">Document Details</h3>
+        </div>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                aria-label="Close" onclick="closeModal('modalDocInfo-1001')">&times;</button>
+      </div>
+
+      <div class="px-6 pt-5 pb-4">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resident ID</span>
+          <span class="font-mono text-sm tracking-widest text-gray-900">1001</span>
+        </div>
+
+        <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Adrian Medalla</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Application</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Barangay Clearance</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Purpose</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-900">Job Application</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
+            <dd class="col-span-3">
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[13px] font-semibold text-amber-800 ring-1 ring-amber-200">
+                300 Php (Pending)
+              </span>
+            </dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
+            <dd class="col-span-3 text-sm font-medium text-gray-400">—</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Status</dt>
+            <dd class="col-span-3">
+              <span class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[13px] font-semibold text-gray-700 ring-1 ring-gray-200">
+                <!-- clock -->
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 11h5v-2h-4V7h-2v6Z"/></svg>
+                Awaiting Payment
+              </span>
+            </dd>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 pb-5 flex items-center justify-end">
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
+                onclick="closeModal('modalDocInfo-1001')">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function openModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('hidden');
+    // animate in
+    requestAnimationFrame(() => {
+      el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+      const panel = el.querySelector('[data-panel]');
+      if(panel){
+        panel.classList.remove('scale-95','opacity-0');
+        panel.classList.add('scale-100','opacity-100');
+      }
+    });
+  }
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    // animate out
+    el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
+    const panel = el.querySelector('[data-panel]');
+    if(panel){
+      panel.classList.add('scale-95','opacity-0');
+      panel.classList.remove('scale-100','opacity-100');
+    }
+    setTimeout(() => el.classList.add('hidden'), 180);
+  }
+  // ESC to close the *currently shown* modal (both supported)
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Escape') return;
+    ['modalDocInfo-1000','modalDocInfo-1001'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el && !el.classList.contains('hidden')) closeModal(id);
+    });
+  });
+</script>
+
 </div>
 
 {% endblock %}

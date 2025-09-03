@@ -357,7 +357,7 @@ VALID_SORT_DIR = {"asc", "desc"}
 LIMIT_OPTIONS = [10, 25, 50, 100]
 
 def activityLogs(request):
-    # --- Query params ---
+        # --- Query params ---
     try:
         limit = int(request.GET.get("limit", 25))
     except Exception:
@@ -421,3 +421,18 @@ def activityLogs(request):
         "limit_urls": limit_urls,
     }
     return render(request, "admin_module/activityLogs.html", context)
+
+@custom_login_required
+@role_required('Admin')
+def authenticationlog(request):
+    return render(request, 'admin_module/authenticationlog.html')
+
+@custom_login_required
+@role_required('Admin')
+def documentlog(request):
+    return render(request, 'admin_module/documentlog.html')
+
+@custom_login_required
+@role_required('Admin')
+def residentlog(request):
+    return render(request, 'admin_module/residentlog.html')
