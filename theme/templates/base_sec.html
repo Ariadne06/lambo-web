@@ -1,0 +1,234 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>{% block title %}Secretary Dashboard{% endblock %}</title>
+  {% tailwind_css %}
+</head>
+<body class="bg-gray-100 min-h-screen font-[Poppins]">
+  <!-- Sidebar -->
+  <nav id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-[#D10000] text-white flex flex-col shadow-lg">
+    <!-- Logo -->
+    <div class="flex items-center justify-center flex-col py-6 border-b border-red-400/40">
+      <img src="{% static 'images/brgylogo.jpg' %}" alt="Logo" class="w-20 h-20 rounded-full shadow-lg border-4 border-white">
+      <span class="mt-3 text-lg font-semibold tracking-wide">Barangay Cansaga</span>
+    </div>
+
+    <!-- Nav links -->
+    <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
+            <!-- Dashboard -->
+          <a href="{% url 'admin_module:admin_dashboard' %}"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/80
+                  {% endif %}">
+          <img 
+            src="{% static 'images/dashboard.svg' %}" 
+            alt="Dashboard Icon" class="h-5 w-5"
+            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+              src="{% static 'images/dashboard-red.svg' %}"
+            {% endif %}>
+
+          <span>Dashboard</span>
+        </a>
+
+<!-- Manage submenu -->
+<button id="submenu-toggle"
+        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+               {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
+                   bg-white text-red-700 font-semibold shadow-sm
+               {% else %}
+                   hover:bg-red-800/80
+               {% endif %}">
+  <img src="{% static 'images/manage.svg' %}" alt="Manage Icon"
+       class="h-5 w-5 {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} invert {% endif %}">
+  <span>Manage</span>
+  <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg"
+       class="h-5 w-5 ml-auto transition-transform duration-300
+              {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} rotate-180 {% endif %}"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+  </svg>
+</button>
+<div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+  <a href="{% url 'admin_module:admin_Addpersonnel' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Resident List
+  </a>
+  <a href="{% url 'admin_module:password_request' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'password_request' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Household List
+  </a>
+  <a href="{% url 'admin_module:personnel_list' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'personnel_list' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Business List
+  </a>
+  <a href="{% url 'admin_module:personnel_list' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'personnel_list' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Certificates
+  </a>
+</div>
+
+<a href=""
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Applications</span>
+  </a>
+<a href=""
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Price Update</span>
+  </a>
+
+  <a href=""
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Approval</span>
+  </a>
+
+  <a href=""
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Announcement</span>
+  </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-red-400/40">
+      <div class="flex items-center justify-between">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold truncate">{{ request.session.username }}</p>
+          <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
+        </div>
+       <a href="{% url 'authentication:logout' %}"
+          class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
+                  hover:bg-red-800 ring-1 ring-white/20 transition">
+          <!-- keep the white icon; no invert so it stays visible on dark red -->
+          <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
+          <span class="text-xs">Logout</span>
+        </a>
+
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="ml-64 min-h-screen">
+    <div class="p-6">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <script>
+  // Define your accordion items once
+  const ACCORDION = [
+    { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
+    { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
+  ];
+
+  function getEl(id){ return document.getElementById(id); }
+
+  function closeItem(item){
+    const panel = getEl(item.panel);
+    const arrow = getEl(item.arrow);
+    const btn   = getEl(item.btn);
+    if (!panel) return;
+    panel.classList.add('hidden');
+    arrow?.classList.remove('rotate-180');
+    btn?.setAttribute('aria-expanded', 'false');
+  }
+
+  function openItem(item){
+    const panel = getEl(item.panel);
+    const arrow = getEl(item.arrow);
+    const btn   = getEl(item.btn);
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    arrow?.classList.add('rotate-180');
+    btn?.setAttribute('aria-expanded', 'true');
+  }
+
+  // Wire up clicks so that opening one closes the others
+  ACCORDION.forEach((item) => {
+    const btn = getEl(item.btn);
+    const panel = getEl(item.panel);
+
+    // Initialize aria states from the server-rendered classes
+    if (btn && panel) {
+      const isOpen = !panel.classList.contains('hidden');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btn.setAttribute('aria-controls', item.panel);
+    }
+
+    btn?.addEventListener('click', () => {
+      const currentlyOpen = !getEl(item.panel).classList.contains('hidden');
+
+      if (currentlyOpen) {
+        // Simply close this one
+        closeItem(item);
+      } else {
+        // Close all others
+        ACCORDION.forEach(other => { if (other !== item) closeItem(other); });
+        // Open the clicked one
+        openItem(item);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
