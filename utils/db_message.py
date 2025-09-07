@@ -14,4 +14,4 @@ def _clean_db_error(err: Exception) -> str:
         friendly = CODE_MESSAGES.get(code, raw_msg or "An error occurred.")
         return f"{friendly}"
 
-    return "Password change failed. Please check your entries and try again."
+    return "We couldn't complete your request. Please try again."

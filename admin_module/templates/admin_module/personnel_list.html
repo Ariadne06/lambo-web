@@ -20,12 +20,12 @@
     <div class="flex items-center gap-2"> 
       <span class="text-sm text-gray-600">Advanced Filters:</span> 
       {% with active=filter_status|default:'' %} 
-      <button type="button" onclick="document.getElementById('filter_status').value='2'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '2' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Captain </button> 
-      <button type="button" onclick="document.getElementById('filter_status').value='3'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '3' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Secretary </button> 
-      <button type="button" onclick="document.getElementById('filter_status').value='4'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '4' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Assistant Secretary </button> 
-      <button type="button" onclick="document.getElementById('filter_status').value='5'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '5' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Treasurer </button> 
-      <button type="button" onclick="document.getElementById('filter_status').value='6'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '6' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Health Worker </button> 
-      <button type="button" onclick="document.getElementById('filter_status').value='7'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == '7' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Midwife </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Barangay Captain'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Barangay Captain' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Captain </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Barangay Secretary'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Barangay Secretary' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Secretary </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Barangay Assistant Secretary'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Barangay Assistant Secretary' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Assistant Secretary </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Barangay Treasurer'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Barangay Treasurer' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Treasurer </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Barangay Health Worker'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Barangay Health Worker' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Health Worker </button> 
+      <button type="button" onclick="document.getElementById('filter_status').value='Midwife'; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if active == 'Midwife' %} bg-red-600 text-white border-red-600 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Midwife </button> 
       <button type="button" onclick="document.getElementById('filter_status').value=''; document.getElementById('searchForm').requestSubmit();" class="text-sm px-3 py-1 rounded-full border transition {% if not active %} bg-gray-200 text-gray-800 border-gray-300 {% else %} border-gray-300 text-gray-700 hover:border-red-500 {% endif %}"> Clear </button> 
       {% endwith %} 
     </div> 
@@ -46,67 +46,45 @@
       <thead class="bg-gray-100 text-sm font-semibold text-gray-700"> 
         <tr> 
           <th class="px-4 py-2 border">Personnel ID</th> 
-          {% comment %} <th class="px-4 py-2 border">Full Name</th> {% endcomment %} 
+          <th class="px-4 py-2 border">Full Name</th>
           <th class="px-4 py-2 border">Username</th> 
           <th class="px-4 py-2 border">Email</th> 
           <th class="px-4 py-2 border">Position</th> 
           <th class="px-4 py-2 border text-center">Action</th> 
         </tr> 
       </thead> 
-      <tbody class="text-sm text-gray-800 text-center"> 
+      <tbody class="text-sm text-gray-800"> 
         {% if results and results|length > 0 %} 
           {% for row in results %} 
-            {% with pid=row.0 username=row.4 email=row.5 position=row.3 is_active=row.7 approval=row.13 %} 
-              {% if position != 1 %} 
+            {% comment %} {% with pid=row.0 full_name=row.2 username=row.4 email=row.5 position=row.3 is_active=row.6 approval=row.7 %}  {% endcomment %}
+              {% if row.role_name != "Admin" %}
                 {% comment %} {% if not filter_status or status == filter_status %} {% endcomment %} 
                 <tr class="hover:bg-gray-50"> 
-                  <td class="py-2 px-4 border">{{ pid }}</td> 
-                  {% comment %} 
-                  <td class="py-2 px-4 border"> 
-                    <!-- POST Form Instead of Link --> 
-                    <form method="post" action="{% url 'admin_module:add_personnel1' %}" style="display:inline;"> 
-                      {% csrf_token %} 
-                      <input type="hidden" name="resident_id" value="{{ rid }}"> 
-                      <button type="submit" class="text-red-700 hover:underline"> 
-                        {{ fn }}{% if mn %} {{ mn }}{% endif %} {{ ln }} 
-                      </button> 
-                    </form> 
-                    {% if dob %} 
-                      <div class="text-xs text-gray-500">{{ dob }}</div> 
-                    {% endif %} 
-                  </td> 
-                  {% endcomment %} 
-                  <td class="py-2 px-4 border">{{ username }}</td> 
-                  <td class="py-2 px-4 border">{{ email }}</td> 
-                  <td class="py-2 px-4 border"> 
-                    {% if position == 2 %} Captain 
-                    {% elif position == 3 %} Secretary 
-                    {% elif position == 4 %} Assistant Secretary 
-                    {% elif position == 5 %} Treasurer 
-                    {% elif position == 6 %} Health Worker 
-                    {% elif position == 7 %} Midwife 
-                    {% else %} Unknown {% endif %} 
-                  </td> 
+                  <td class="py-2 px-4 border text-center">{{ row.personnel_id }}</td> 
+                  <td class="py-2 px-4 border">{{ row.full_name }}</td> 
+                  <td class="py-2 px-4 border">{{ row.username }}</td> 
+                  <td class="py-2 px-4 border">{{ row.email }}</td> 
+                  <td class="py-2 px-4 border">{{ row.role_name }}</td> 
                   <td class="px-4 py-2 border"> 
                     <div class="flex justify-center gap-3"> 
-                      {% if approval == 'approved' %} 
+                      {% if row.approval_status == 'approved' %} 
                         <!-- Update Button (always available) --> 
                         <form method="post" action="{% url 'admin_module:update_personnel' %}" style="display:inline;"> 
                           {% csrf_token %} 
-                          <input type="hidden" name="pid" value="{{ pid }}"> 
+                          <input type="hidden" name="pid" value="{{ row.personnel_id }}"> 
                           <button type="submit" class="hover:text-blue-700" title="Update"> 
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" /> 
                             </svg> 
                           </button> 
                         </form> 
-                        {% if is_active %} 
+                        {% if row.is_active %} 
                           <!-- Active → show Deactivate (X) --> 
                           <form method="post" action="{% url 'admin_module:personnel_list' %}" style="display:inline;"> 
                             {% csrf_token %} 
-                            <input type="hidden" name="pid" value="{{ pid }}"> 
+                            <input type="hidden" name="pid" value="{{ row.personnel_id }}"> 
+                            <input type="hidden" name="active" value="false"> 
                             <button type="submit" class="hover:text-red-700" title="Deactivate"> 
-                              <input type="hidden" name="active" value="false"> 
                               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-1.414 1.414L12 12l-4.95-4.95-1.414 1.414L10.586 13.5 5.636 18.464l1.414 1.414L12 14.914l4.95 4.95 1.414-1.414L13.414 13.5l4.95-4.95z" /> 
                               </svg> 
@@ -116,7 +94,7 @@
                           <!-- Inactive → show Activate (✓) --> 
                           <form method="post" action="{% url 'admin_module:personnel_list' %}" style="display:inline;"> 
                             {% csrf_token %} 
-                            <input type="hidden" name="pid" value="{{ pid }}"> 
+                            <input type="hidden" name="pid" value="{{ row.personnel_id }}"> 
                             <input type="hidden" name="active" value="true"> 
                             <button type="submit" class="hover:text-green-700" title="Activate"> 
                               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
@@ -125,7 +103,7 @@
                             </button> 
                           </form> 
                         {% endif %}
-                      {% elif approval == 'rejected' %}
+                      {% elif row.approval_status == 'rejected' %}
                         <!-- Update Button (always available) --> 
                           <button type="button" class="text-gray-400 cursor-not-allowed" title="Update"> 
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
@@ -135,7 +113,7 @@
                         
                         <form method="post" action="{% url 'admin_module:personnel_list' %}" style="display:inline;">
                           {% csrf_token %} 
-                          <input type="hidden" name="pid" value="{{ pid }}"> 
+                          <input type="hidden" name="pid" value="{{ row.personnel_id }}"> 
                           <input type="hidden" name="active" value="pending">
                           <button type="submit" class="hover:text-green-700" title="set_to_pending"> 
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +126,7 @@
                           <!-- Update Button (always available) --> 
                           <form method="post" action="{% url 'admin_module:update_personnel' %}" style="display:inline;"> 
                             {% csrf_token %} 
-                            <input type="hidden" name="pid" value="{{ pid }}"> 
+                            <input type="hidden" name="pid" value="{{ row.personnel_id}}"> 
                             <button type="submit" class="hover:text-blue-700" title="Update"> 
                               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" /> 
@@ -167,8 +145,8 @@
                   </td> 
                 </tr> 
                 {% comment %} {% endif %} {% endcomment %} 
-              {% endif %} 
-            {% endwith %} 
+              {% endif %}
+            {% comment %} {% endwith %}  {% endcomment %}
           {% endfor %} 
         {% else %} 
           <tr> 
@@ -219,12 +197,12 @@
       <label class="block text-sm">
         <span class="text-gray-700">Role</span>
         <select id="pm-role" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-          <option value="2">Captain</option>
-          <option value="3">Secretary</option>
-          <option value="4">Assistant Secretary</option>
-          <option value="5">Treasurer</option>
-          <option value="6">Health Worker</option>
-          <option value="7">Midwife</option>
+          <option value="Barangay Captain">Captain</option>
+          <option value="Barangay Secretary">Secretary</option>
+          <option value="Barangay Assistant Secretary">Assistant Secretary</option>
+          <option value="Barangay Treasurer">Treasurer</option>
+          <option value="Barangay Health Worker">Health Worker</option>
+          <option value="Midwife">Midwife</option>
         </select>
       </label>
 
@@ -246,16 +224,6 @@
 
 <script>
   (function () {
-    // map role text <-> id
-    const roleTextToId = {
-      'captain': 2,
-      'secretary': 3,
-      'assistant secretary': 4,
-      'treasurer': 5,
-      'health worker': 6,
-      'midwife': 7
-    };
-
     const modal = document.getElementById('pendingModal');
     const usernameInput = document.getElementById('pm-username');
     const emailInput = document.getElementById('pm-email');
@@ -301,13 +269,13 @@
 
       // columns: [0]=PID, [1]=Username, [2]=Email, [3]=Position text
       const cells = tr.querySelectorAll('td');
-      const username = cells[1]?.textContent?.trim() || '';
-      const email = cells[2]?.textContent?.trim() || '';
-      const roleText = (cells[3]?.textContent || '').trim().toLowerCase();
+      const username = cells[2]?.textContent?.trim() || '';
+      const email = cells[3]?.textContent?.trim() || '';
+      const roleText = cells[4]?.textContent || '';
 
       usernameInput.value = username;
       emailInput.value = email;
-      roleSelect.value = String(roleTextToId[roleText] || 3); // default to Secretary if unknown
+      roleSelect.value = roleText
 
       // remember the exact form to submit (the one with csrf + pid + active=pending)
       formToSubmit = btn.closest('form');
@@ -332,13 +300,13 @@
     // Confirm => inject edited values into the SAME form and submit via POST
     confirmBtn.addEventListener('click', function () {
       if (!formToSubmit) return;
-      const u = ensureHiddenInput(formToSubmit, 'edit_username');
-      const em = ensureHiddenInput(formToSubmit, 'edit_email');
-      const pos = ensureHiddenInput(formToSubmit, 'edit_position');
+        const u   = ensureHiddenInput(formToSubmit, 'edit_username');
+        const em  = ensureHiddenInput(formToSubmit, 'edit_email');
+        const rol = ensureHiddenInput(formToSubmit, 'edit_role');
 
-      u.value = (usernameInput.value || '').trim();
-      em.value = (emailInput.value || '').trim();
-      pos.value = roleSelect.value; // 2..7
+        u.value  = (usernameInput.value || '').trim();
+        em.value = (emailInput.value || '').trim();
+        rol.value = (roleSelect.value || '').trim();
 
       formToSubmit.requestSubmit();
       closeModal();
