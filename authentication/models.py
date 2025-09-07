@@ -43,3 +43,18 @@ class logging(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_request_password_reset(username, email):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc(
+                    'request_password_reset', [
+                        username,
+                        email
+                    ]
+                )
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e

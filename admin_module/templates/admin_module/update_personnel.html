@@ -59,12 +59,12 @@
               <label class="block text-sm font-semibold text-gray-700">Role / Position</label>
               <select name="role_id" class="w-full border rounded px-3 py-2 text-sm" required>
                 <option value="">-- Select Role --</option>
-                <option value="2" {% if personnel.role_id == "Barangay Captain" %}selected{% endif %}>Barangay Captain</option>
-                <option value="3" {% if personnel.role_id == "Barangay Secretary" %}selected{% endif %}>Barangay Secretary</option>
-                <option value="4" {% if personnel.role_id == "Barangay Assistant Secretary" %}selected{% endif %}>Asst. Secretary</option>
-                <option value="5" {% if personnel.role_id == "Barangay Treasurer" %}selected{% endif %}>Barangay Treasurer</option>
-                <option value="6" {% if personnel.role_id == "Barangay Health Worker" %}selected{% endif %}>Barangay Health Worker</option>
-                <option value="7" {% if personnel.role_id == "Midwife" %}selected{% endif %}>Midwife</option>
+                <option value="2" {% if personnel.role_name == "Barangay Captain" %}selected{% endif %}>Barangay Captain</option>
+                <option value="3" {% if personnel.role_name == "Barangay Secretary" %}selected{% endif %}>Barangay Secretary</option>
+                <option value="4" {% if personnel.role_name == "Barangay Assistant Secretary" %}selected{% endif %}>Asst. Secretary</option>
+                <option value="5" {% if personnel.role_name == "Barangay Treasurer" %}selected{% endif %}>Barangay Treasurer</option>
+                <option value="6" {% if personnel.role_name == "Barangay Health Worker" %}selected{% endif %}>Barangay Health Worker</option>
+                <option value="7" {% if personnel.role_name == "Midwife" %}selected{% endif %}>Midwife</option>
               </select>
             </div>
           </div>

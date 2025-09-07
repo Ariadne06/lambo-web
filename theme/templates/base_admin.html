@@ -88,22 +88,22 @@
 <!-- Logs submenu -->
 <button id="logs-toggle"
         class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'activityLogs' %}
+               {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %}
                    bg-white text-red-700 font-semibold shadow-sm
                {% else %}
                    hover:bg-red-800/80
                {% endif %}">
   <img src="{% static 'images/logs.svg' %}" alt="Logs Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'activityLogs' %} invert {% endif %}">
+       class="h-5 w-5 {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} invert {% endif %}">
   <span>Logs</span>
   <svg id="logs-arrow" xmlns="http://www.w3.org/2000/svg"
        class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'activityLogs' %} rotate-180 {% endif %}"
+              {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} rotate-180 {% endif %}"
        fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
   </svg>
 </button>
-<div id="logs-submenu" class="{% if request.resolver_match.url_name in 'activityLogs' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+<div id="logs-submenu" class="{% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
   <a href="{% url 'admin_module:activityLogs' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'activityLogs' %}
@@ -113,12 +113,34 @@
             {% endif %}">
     Activity Logs
   </a>
-  <a href="#"
-     class="block px-3 py-2 rounded-md hover:bg-red-800/60">Authentication Logs</a>
-  <a href="#"
-     class="block px-3 py-2 rounded-md hover:bg-red-800/60">Resident Update Logs</a>
-  <a href="#"
-     class="block px-3 py-2 rounded-md hover:bg-red-800/60">Document Logs</a>
+    <a href="{% url 'admin_module:authenticationlog' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'authenticationlog' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Authentication Logs
+  </a>
+  <a href="{% url 'admin_module:residentlog' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'residentlog' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Resident Update Logs
+  </a>
+
+  <a href="{% url 'admin_module:documentlog' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'documentlog' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Document Logs
+  </a>
 </div>
     </div>
 

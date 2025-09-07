@@ -55,44 +55,6 @@ class Admin(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
-
-
-    @staticmethod
-    def sp_display_personnel_credentials(query: str = '', role_filter: str | None = None):
-        sql = """
-            SELECT
-                pc.personnel_id,   -- 0
-                pc.personnel_code,
-                pc.resident_id,
-                pc.role_id,        -- 3 (position)
-                pc.username,       -- 4
-                pc.email,          -- 5
-                pc.password,
-                pc.is_active,      -- 7
-                pc.req_pass_change,
-                pc.req_pass_reason,
-                pc.password_reset_requested_at,
-                pc.created_at,
-                pc.updated_at,
-                pc.approval_status, -- 13 (your template uses this)
-                pc.approved_by,
-                pc.approved_at,
-                pc.approval_notes
-            FROM Personnel_Credentials pc
-            WHERE pc.role_id <> 1                                   -- exclude Admin from list
-              AND (%s = '' OR (
-                    pc.username ILIKE %s OR
-                    pc.email    ILIKE %s OR
-                    pc.personnel_code ILIKE %s
-              ))
-              AND (%s IS NULL OR pc.role_id = %s)                   -- optional role filter
-            ORDER BY pc.personnel_id;
-        """
-        like = f"%{query}%"
-        params = [query, like, like, like, role_filter, role_filter]
-        with connection.cursor() as cursor:
-            cursor.execute(sql, params)
-            return cursor.fetchall()
         
     @staticmethod
     def get_personnel_by_id(pid: int):
@@ -101,7 +63,7 @@ class Admin(models.Model):
             row = cursor.fetchone()
             if not row:
                 return None
-            return {"pid": row[0], "username": row[5] or "", "email": row[6] or "", "role_id": row[4] or ""}
+            return {"pid": row[0], "username": row[5] or "", "email": row[6] or "", "role_id": row[3], "role_name": row[4]}
         
     @staticmethod
     def sp_update_personnel_credentials(id, username, email, role_id):
@@ -153,4 +115,46 @@ class Admin(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
-
+        
+    @staticmethod
+    def sp_get_personnel_password_requests_forgot(
+        query, 
+        approval_status, 
+        is_active,
+        role_id,
+        start_ts, 
+        end_ts, 
+        limit, 
+        offset, 
+        sort_by, 
+        sort_dir
+    ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_personnel_password_requests_forgot', [
+                    query, 
+                    approval_status, 
+                    is_active,
+                    role_id,
+                    start_ts, 
+                    end_ts,  
+                    limit, 
+                    offset, 
+                    sort_by, 
+                    sort_dir
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_admin_review_personnel_password_request(pid, action):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('admin_review_personnel_password_request', [pid, action])
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e
