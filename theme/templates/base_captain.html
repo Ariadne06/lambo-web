@@ -123,7 +123,7 @@
   // Reminder: Make sure this Function cannot be changed or overwritten
   // It handles idle logout and tab close detection
   (function () {
-    const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+    const IDLE_LIMIT_MS = 5 * 60 * 1000;
     const LOGOUT_URL    = "{% url 'authentication:logout' %}";
     const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
 
