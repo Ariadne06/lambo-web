@@ -17,12 +17,12 @@ def login_view(request):
     # Already logged in?
     if request.session.get('session_token') and request.session.get('role_name'):
         role = request.session.get('role_name')
-        if role == 'Barangay Secretary':
-            return redirect('personnels_module:secretary_dashboard')
+        if role == 'Admin':
+            return redirect('admin_module:admin_dashboard')
         elif role == 'Barangay Captain':
             return redirect('captain_module:captain_dashboard')
-        elif role == 'Admin':
-            return redirect('admin_module:admin_dashboard')
+        elif role == 'Barangay Secretary':
+            return redirect('secretary_module:secretary_dashboard')
         else:
             messages.error(request, 'Access denied: Unrecognized role.')
             return redirect('authentication:login')
@@ -56,6 +56,8 @@ def login_view(request):
                     return redirect('admin_module:admin_dashboard')
                 elif role == 'Barangay Captain':
                     return redirect('captain_module:captain_dashboard')
+                elif role == 'Barangay Secretary':
+                    return redirect('secretary_module:secretary_dashboard')
                 else:
                     messages.error(request, 'Access denied: Unrecognized role.')
                     request.session.flush()
