@@ -20,7 +20,7 @@
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
             <!-- Dashboard -->
-          <a href="{% url 'admin_module:admin_dashboard' %}"
+          <a href="{% url 'secretary_module:secretary_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
                   {% if request.resolver_match.url_name == 'admin_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
@@ -56,7 +56,7 @@
   </svg>
 </button>
 <div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'admin_module:admin_Addpersonnel' %}"
+  <a href="{% url 'secretary_module:resident_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
                 bg-white text-red-700 font-semibold shadow-sm
@@ -65,7 +65,7 @@
             {% endif %}">
     Resident List
   </a>
-  <a href="{% url 'admin_module:password_request' %}"
+  <a href="{% url 'secretary_module:household_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'password_request' %}
                 bg-white text-red-700 font-semibold shadow-sm
@@ -74,7 +74,7 @@
             {% endif %}">
     Household List
   </a>
-  <a href="{% url 'admin_module:personnel_list' %}"
+  <a href="{% url 'secretary_module:business_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'personnel_list' %}
                 bg-white text-red-700 font-semibold shadow-sm
@@ -83,7 +83,7 @@
             {% endif %}">
     Business List
   </a>
-  <a href="{% url 'admin_module:personnel_list' %}"
+  <a href="{% url 'secretary_module:add_certificate' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'personnel_list' %}
                 bg-white text-red-700 font-semibold shadow-sm
@@ -94,7 +94,7 @@
   </a>
 </div>
 
-<a href=""
+<a href="{% url 'secretary_module:applications' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
             {% if request.resolver_match.url_name == 'households_view' %}
               bg-white text-red-700 font-semibold shadow-sm
@@ -106,7 +106,8 @@
                 {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
     <span>Applications</span>
   </a>
-<a href=""
+
+<a href="{% url 'secretary_module:price_update' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
             {% if request.resolver_match.url_name == 'households_view' %}
               bg-white text-red-700 font-semibold shadow-sm
@@ -119,7 +120,7 @@
     <span>Price Update</span>
   </a>
 
-  <a href=""
+  <a href="{% url 'secretary_module:approval' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
             {% if request.resolver_match.url_name == 'households_view' %}
               bg-white text-red-700 font-semibold shadow-sm
@@ -132,7 +133,7 @@
     <span>Approval</span>
   </a>
 
-  <a href=""
+  <a href="{% url 'secretary_module:announcement' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
             {% if request.resolver_match.url_name == 'households_view' %}
               bg-white text-red-700 font-semibold shadow-sm
@@ -228,6 +229,75 @@
       }
     });
   });
+
+  // Reminder: Make sure this Function cannot be changed or overwritten
+  // It handles idle logout and tab close detection
+  (function () {
+    const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+    const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+
+    const TAB_FLAG    = 'tabAuth';
+    const CLOSED_KEY  = 'closed_session_token';
+    const SESSION_TOKEN = "{{ request.session.session_token }}";
+
+    // First load in this tab?
+    if (!sessionStorage.getItem(TAB_FLAG)) {
+      sessionStorage.setItem(TAB_FLAG, '1');
+
+      // If a previous tab left a token, report it and logout now
+      const closedToken = localStorage.getItem(CLOSED_KEY);
+      if (closedToken) {
+        (async () => {
+          const body = new URLSearchParams();
+          body.set('session_token', closedToken);
+
+          try {
+            await fetch(TAB_CLOSE_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: body.toString(),
+              credentials: 'same-origin',
+              keepalive: true
+            });
+          } catch (_) { /* ignore */ }
+
+          try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
+            window.location.replace(TAB_CLOSE_URL);
+        })();
+        return;
+      }
+    }
+
+    // On tab/browser close: record token and call silent_logout
+    addEventListener('pagehide', () => {
+      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+      sendClosePing(SESSION_TOKEN);
+    });
+
+    addEventListener('beforeunload', () => {
+      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+      sendClosePing(SESSION_TOKEN);
+    });
+
+    // Idle detection (unchanged)
+    let last = Date.now(), timer;
+    function arm() {
+      clearTimeout(timer);
+      if (document.visibilityState !== 'visible') return;
+      timer = setTimeout(() => {
+        if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+          window.location.replace(LOGOUT_URL);
+        }
+      }, IDLE_LIMIT_MS + 100);
+    }
+
+    function bump(){ last = Date.now(); arm(); }
+    ['mousemove','keydown','click','wheel','scroll','touchstart']
+    .forEach(evt => addEventListener(evt, bump, { passive: true }));
+    addEventListener('visibilitychange', arm, { capture: true });
+    arm();
+  })();
 </script>
 
 </body>
