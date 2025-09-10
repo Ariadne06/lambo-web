@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <title>{% block title %}Admin Dashboard{% endblock %}</title>
+  <title>{% block title %}Secretary Dashboard{% endblock %}</title>
   {% tailwind_css %}
 </head>
 <body class="bg-gray-100 min-h-screen font-[Poppins]">
@@ -20,7 +20,7 @@
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
             <!-- Dashboard -->
-          <a href="{% url 'admin_module:admin_dashboard' %}"
+          <a href="{% url 'secretary_module:secretary_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
                   {% if request.resolver_match.url_name == 'admin_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
@@ -56,92 +56,95 @@
   </svg>
 </button>
 <div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'admin_module:admin_Addpersonnel' %}"
+  <a href="{% url 'secretary_module:resident_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
                 bg-white text-red-700 font-semibold shadow-sm
             {% else %}
                 hover:bg-red-800/60
             {% endif %}">
-    Add Personnel
+    Resident List
   </a>
-  <a href="{% url 'admin_module:password_request' %}"
+  <a href="{% url 'secretary_module:household_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'password_request' %}
                 bg-white text-red-700 font-semibold shadow-sm
             {% else %}
                 hover:bg-red-800/60
             {% endif %}">
-    Request Change
+    Household List
   </a>
-  <a href="{% url 'admin_module:personnel_list' %}"
+  <a href="{% url 'secretary_module:business_list' %}"
      class="block px-3 py-2 rounded-md transition
             {% if request.resolver_match.url_name == 'personnel_list' %}
                 bg-white text-red-700 font-semibold shadow-sm
             {% else %}
                 hover:bg-red-800/60
             {% endif %}">
-    View Personnels
+    Business List
+  </a>
+  <a href="{% url 'secretary_module:add_certificate' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name == 'personnel_list' %}
+                bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+                hover:bg-red-800/60
+            {% endif %}">
+    Certificates
   </a>
 </div>
 
-<!-- Logs submenu -->
-<button id="logs-toggle"
-        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %}
-                   bg-white text-red-700 font-semibold shadow-sm
-               {% else %}
-                   hover:bg-red-800/80
-               {% endif %}">
-  <img src="{% static 'images/logs.svg' %}" alt="Logs Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} invert {% endif %}">
-  <span>Logs</span>
-  <svg id="logs-arrow" xmlns="http://www.w3.org/2000/svg"
-       class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} rotate-180 {% endif %}"
-       fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-  </svg>
-</button>
-<div id="logs-submenu" class="{% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'admin_module:activityLogs' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'activityLogs' %}
-                bg-white text-red-700 font-semibold shadow-sm
+<a href="{% url 'secretary_module:applications' %}"
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
             {% else %}
-                hover:bg-red-800/60
+              hover:bg-red-800/80
             {% endif %}">
-    Activity Logs
-  </a>
-    <a href="{% url 'admin_module:authenticationlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'authenticationlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Authentication Logs
-  </a>
-  <a href="{% url 'admin_module:residentlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'residentlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Resident Update Logs
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Applications</span>
   </a>
 
-  <a href="{% url 'admin_module:documentlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'documentlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
+<a href="{% url 'secretary_module:price_update' %}"
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
             {% else %}
-                hover:bg-red-800/60
+              hover:bg-red-800/80
             {% endif %}">
-    Document Logs
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Price Update</span>
   </a>
-</div>
+
+  <a href="{% url 'secretary_module:approval' %}"
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Approval</span>
+  </a>
+
+  <a href="{% url 'secretary_module:announcement' %}"
+     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+            {% if request.resolver_match.url_name == 'households_view' %}
+              bg-white text-red-700 font-semibold shadow-sm
+            {% else %}
+              hover:bg-red-800/80
+            {% endif %}">
+    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
+         class="h-5 w-5
+                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+    <span>Announcement</span>
+  </a>
     </div>
 
     <!-- Footer -->
@@ -158,6 +161,8 @@
           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
           <span class="text-xs">Logout</span>
         </a>
+
+
       </div>
     </div>
   </nav>
@@ -294,5 +299,6 @@
     arm();
   })();
 </script>
+
 </body>
 </html>

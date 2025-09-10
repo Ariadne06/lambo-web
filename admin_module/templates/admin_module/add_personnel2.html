@@ -17,6 +17,22 @@
       <span class="text-red-700 border-b-2 border-red-700 pb-1">2. Log In Details</span>
     </div>
 
+      <!-- Display messages -->
+      {% if message %}
+        <div class="mb-4 p-3 rounded-md text-sm font-medium
+          {% if message_level == 'error' %}
+            bg-red-100 text-red-700 border border-red-400
+          {% elif message_level == 'success' %}
+            bg-green-100 text-green-700 border border-green-400
+          {% else %}
+            bg-gray-100 text-gray-700 border border-gray-300
+          {% endif %}
+        ">
+          {{ message }}
+        </div>
+      {% endif %}
+
+
     <!-- Form -->
     <form method="post" id="addPersonnelForm">
       {% csrf_token %}
@@ -67,4 +83,17 @@
     </form>
   </div>
 </div>
+
+<script>
+  // Redirect after success message
+  document.addEventListener("DOMContentLoaded", function () {
+    var level = "{{ message_level|default:'' }}";
+    if (level === "success") {
+      setTimeout(function () {
+        window.location.href = "{% url 'admin_module:personnel_list' %}";
+      }, 2000);
+    }
+  });
+
+</script>
 {% endblock %}
