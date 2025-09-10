@@ -5,10 +5,10 @@ class Captain(models.Model):
         managed = False
         
     @staticmethod
-    def sp_get_pending_personnel_requests(text):
+    def sp_get_pending_personnel_requests(query, limit, offset, sort_by, sort_dir):
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_pending_personnel_requests', [text])
+                cursor.callproc('get_pending_personnel_requests', [query, limit, offset, sort_by, sort_dir])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]
