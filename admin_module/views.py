@@ -4,13 +4,11 @@ from .models import Admin
 from django.contrib import messages
 from django.urls import reverse
 from utils.flash import set_flash, get_flash
-from utils.db_message import _clean_db_error
+from utils.db_message import _clean_db_error, _clean_params
 from django.utils.timezone import localtime
 from django.utils.http import urlencode
+from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 
-VALID_SORT_BY = {"log_timestamp", "action", "subsystem_name", "table_name", "performed_by_name", "full_name", "role_name", "username"}
-VALID_SORT_DIR = {"asc", "desc"}
-LIMIT_OPTIONS = [10, 25, 50, 100]
 
 # Create your views here.
 @custom_login_required
@@ -297,10 +295,6 @@ def update_personnel(request):
         'message': flash['message'],
         'message_level': flash['message_level'
         ]})
-    
-def _clean_params(d: dict) -> dict:
-    return {k: v for k, v in d.items() if v not in (None, "")}
-
 
 @custom_login_required
 @role_required('Admin')
@@ -422,7 +416,9 @@ def password_request(request):
 @custom_login_required
 @role_required('Admin')
 def activityLogs(request):
-        # --- Query params ---
+    
+    query = (request.GET.get('query') or '').strip()
+    
     try:
         limit = int(request.GET.get("limit", 25))
     except Exception:
@@ -452,6 +448,7 @@ def activityLogs(request):
         offset=offset,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        query=query,
     ) or []
 
     has_next = len(rows) > limit
@@ -464,7 +461,12 @@ def activityLogs(request):
         r["log_timestamp_fmt"] = localtime(ts).strftime("%m/%d/%Y, %I:%M %p") if ts else ""
 
     # ---- Build URLs in the view (no function calls in template) ----
-    base_params = {"limit": limit, "sort_by": sort_by, "sort_dir": sort_dir}
+    base_params = {
+        "limit": limit, 
+        "sort_by": sort_by, 
+        "sort_dir": sort_dir,
+        "query": query,
+        }
 
     prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
     next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
@@ -484,6 +486,7 @@ def activityLogs(request):
         "next_url": next_url,
         "limit_options": LIMIT_OPTIONS,
         "limit_urls": limit_urls,
+        'query': query,
     }
     return render(request, "admin_module/activityLogs.html", context)
 

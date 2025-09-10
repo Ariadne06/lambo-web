@@ -7,6 +7,126 @@
 <div class="bg-white shadow-md rounded-lg p-6">
   <h2 class="text-xl font-semibold text-gray-700 mb-4">Personnel Requests</h2>
 
+    <!-- ONE GET FORM FOR EVERYTHING -->
+  <form id="controlsForm" method="get" class="flex flex-wrap justify-between items-center gap-4 mb-4 w-full">
+    <!-- Search (debounced auto-submit) -->
+    <div class="relative w-full max-w-xs">
+      <input type="search" name="query" id="queryInput"
+             placeholder="Search residents…"
+             value="{{ query|default:'' }}"
+             class="w-full bg-gray-100 h-10 px-5 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+      <span class="absolute right-3 top-2.5 text-gray-500">
+        <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387-1.414 1.414-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z"/>
+        </svg>
+      </span>
+      <!-- role/status filter is a hidden input updated by the dropdown -->
+      <input type="hidden" name="filter_status" id="filter_status" value="{{ filter_status|default:'' }}">
+    </div>
+
+    <!-- Rows per page (auto-submit) -->
+    <div class="flex items-center gap-2 text-sm">
+      <label for="limit" class="text-gray-600">Rows per page:</label>
+      <div class="relative inline-block">
+        <select id="limit" name="limit"
+                class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+          {% for n in limit_options %}
+            <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Role/Status Dropdown (updates hidden input + auto-submit) -->
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-gray-600">Advanced Filters:</span>
+
+      {% with active=filter_status|default:'' %}
+      <div class="relative inline-block text-left">
+        <!-- Trigger -->
+        <button type="button"
+                id="roleDropdownBtn"
+                class="text-sm px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:border-red-500 transition inline-flex items-center gap-2"
+                aria-haspopup="true" aria-expanded="false">
+          <span>{{ active|default:"All roles" }}</span>
+          <svg class="w-4 h-4 opacity-70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+        <!-- Menu -->
+        <div id="roleDropdownMenu"
+             class="absolute z-10 mt-2 w-56 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/10 hidden">
+          <div class="py-1" role="menu" aria-labelledby="roleDropdownBtn">
+            {% for label in role_labels %}
+            <button type="button"
+                    data-value="{{ label }}"
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-red-50 hover:text-red-700"
+                    role="menuitem">
+              {% if active and active == label %}
+              <span class="mr-2">✓</span>
+              {% else %}
+              <span class="mr-6"></span>
+              {% endif %}
+              {{ label }}
+            </button>
+            {% endfor %}
+            <div class="my-1 h-px bg-gray-200"></div>
+            <button type="button" data-value=""
+                    class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    role="menuitem">
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+    </div>
+
+    <!-- Sort (kept inside SAME form; auto-submit on change) -->
+    <div class="relative">
+      <button type="button"
+              onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+              class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+        </svg>
+        Filters
+      </button>
+
+      <div id="filtersMenu"
+           class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+        <div>
+          <label for="sort_by" class="block text-gray-600 mb-1">Sort By</label>
+          <select id="sort_by" name="sort_by"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+            <option value="full_name" {% if sort_by == "full_name" %}selected{% endif %}>Full Name</option>
+            <option value="role_name" {% if sort_by == "role_name" %}selected{% endif %}>Position</option>
+            <option value="username"  {% if sort_by == "username"  %}selected{% endif %}>Username</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="sort_dir" class="block text-gray-600 mb-1">Direction</label>
+          <select id="sort_dir" name="sort_dir"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+            <option value="asc"  {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Descending</option>
+          </select>
+        </div>
+
+        <!-- Optional manual apply -->
+        <div class="flex justify-end gap-2">
+          <button type="submit" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 text-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden page field (reset to 1 on any change) -->
+    <input type="hidden" name="page" id="pageField" value="{{ page }}">
+  </form>
+
   {% if message %}
     <div id="messages" class="mb-4 px-4 py-3 rounded border
         {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
@@ -93,7 +213,89 @@
       </tbody>
     </table>
   </div>
+
+    <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
+<script>
+  // Debounce helper
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
+
+  // Auto-submit selects (and reset page to 1)
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => {
+      pageField.value = 1;
+      form.requestSubmit();
+    });
+  });
+
+  // Search: submit after typing stops
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    queryInput.addEventListener('input', debounce(() => {
+      pageField.value = 1;
+      form.requestSubmit();
+    }, 350));
+  }
+
+  // Filters menu toggling + outside click close
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    const toggleBtn = e.target.closest('button');
+    if (!menu) return;
+    if (!e.target.closest('#filtersMenu') && !toggleBtn) menu.classList.add('hidden');
+  });
+
+  // Role/Status dropdown wiring (updates hidden #filter_status + submit)
+  (function () {
+    const btn   = document.getElementById('roleDropdownBtn');
+    const menu  = document.getElementById('roleDropdownMenu');
+    const input = document.getElementById('filter_status');
+
+    if (!btn || !menu || !input) return;
+
+    function openMenu(){ menu.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); }
+    function closeMenu(){ menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+    function toggleMenu(){ menu.classList.contains('hidden') ? openMenu() : closeMenu(); }
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+
+    // Click on an option
+    menu.querySelectorAll('[data-value]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const val = e.currentTarget.getAttribute('data-value') || '';
+        input.value = val;
+        closeMenu();
+        pageField.value = 1;
+        form.requestSubmit();
+      });
+    });
+
+    // Close on outside click / Escape
+    document.addEventListener('click', (e) => {
+      if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== btn) closeMenu();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+  })();
+</script>
 {% endblock %}
 
 
