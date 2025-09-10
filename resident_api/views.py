@@ -1030,6 +1030,17 @@ class MobileLoginView(APIView):
             result = mobile_login(username, password)
             
             if result['status'] == 'success':
+              
+                if result.get('account_type') == 'resident' and not result.get('is_verified', True):
+                    return Response({
+                        'success': False,
+                        'status': 'not_verified',
+                        'message': 'Your account is pending verification. Please wait for approval.',
+                        'account_type': result.get('account_type'),
+                        'username': result.get('username')
+                    }, status=200)
+                
+                
                 return Response({
                     'success': True,
                     'status': 'success',
@@ -1038,10 +1049,11 @@ class MobileLoginView(APIView):
                     'username': result['username'],
                     'role_name': result.get('role_name'),
                     'role_id': result.get('role_id'),
-                    'session_token': result['session_token'],
+                    'session_token': result['session_token'],  
                     'message': 'Login successful'
                 }, status=200)
             else:
+               
                 return Response({
                     'success': False,
                     'status': result['status'],
