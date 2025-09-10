@@ -1,0 +1,281 @@
+{% extends "base_admin.html" %}
+{% block title %}Maternal Health Record{% endblock %}
+
+{% block content %}
+<style>
+  .btn-print {
+    background-color: #ef3f3f !important; /* gray-800 */
+    color: #fff !important;
+  }
+  .btn-print:hover {
+    background-color: #111827 !important; /* gray-900 */
+  }
+</style>
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 via-white to-rose-50/40">
+
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <!-- Title chip -->
+    <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5 bg-rose-600">
+      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+      List of Maternal Health Record
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="window.print()" 
+        class="btn-print inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 9V3h12v6h1.5A2.5 2.5 0 0 1 22 11.5v5A2.5 2.5 0 0 1 19.5 19H18v-4H6v4H4.5A2.5 2.5 0 0 1 2 16.5v-5A2.5 2.5 0 0 1 4.5 9H6Zm2 0h8V5H8v4Z"/>
+        </svg>
+        Print Report
+      </button>
+
+      <!-- Add Maternal Record -->
+      <a href="#"
+         class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow bg-rose-600 hover:bg-rose-700">
+        <!-- plus -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
+        </svg>
+        Add Maternal Record
+      </a>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white p-6 shadow-md">
+
+    <!-- Search & Filters -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <!-- Search -->
+      <div class="relative w-full sm:w-80">
+        <input type="text" placeholder="Search Maternal"
+               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-9 text-sm focus:border-rose-500 focus:ring focus:ring-rose-200" />
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M10 2a8 8 0 1 0 5.3 14.3l4.7 4.7 1.4-1.4-4.7-4.7A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+        </svg>
+      </div>
+
+      <!-- Filters -->
+      <button class="inline-flex items-center gap-1 text-sm font-semibold text-rose-700 hover:text-rose-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M4 6h16v2H4Zm4 5h8v2H8Zm-2 5h12v2H6Z"/>
+        </svg>
+        Advanced Filters
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-rose-600 text-white">
+          <tr>
+            <th class="px-4 py-2 font-semibold">Resident ID</th>
+            <th class="px-4 py-2 font-semibold">Full Name</th>
+            <th class="px-4 py-2 font-semibold">Registered Date</th>
+            <th class="px-4 py-2 font-semibold">NHTS Status</th>
+            <th class="px-4 py-2 text-center font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-800">
+          <!-- Example row -->
+          <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+            <td class="px-4 py-2">1000</td>
+            <td class="px-4 py-2 font-medium">Adrianne Villarta</td>
+            <td class="px-4 py-2">01/02/2020</td>
+            <td class="px-4 py-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">NHTS</span>
+            </td>
+            <td class="px-4 py-2">
+              <div class="flex items-center justify-center gap-2">
+                <!-- View -->
+                <button class="rounded-full bg-rose-100 p-2 text-rose-700 hover:bg-rose-200" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5c-7.63 0-12 7-12 7s4.37 7 12 7 12-7 12-7-4.37-7-12-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full bg-blue-100 p-2 text-blue-700 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                  title="Edit / Update"
+                  onclick="openMaternalEditModal(this)"
+                  data-resident-id="1000"
+                  data-full-name="Adrianne Villarta"
+                  data-registered-date="2020-01-02"
+                  data-nhts="NHTS"
+                >
+                  <!-- edit icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11ZM20.7 7.04c.39-.39.39-1.02 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84Z"/>
+                  </svg>
+                </button>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- Duplicate this <tr> for more rows -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-center text-sm text-gray-600">1 2 3 4 5 6 7 … 60</div>
+
+    
+  </div>
+  <!-- Edit Maternal Record Modal -->
+<div id="maternalEditModal" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="maternalEditModal_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeMaternalEditModal()"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/25 grid place-items-center">
+            <!-- clipboard-heart icon -->
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 3h6a2 2 0 0 1 2 2h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2-2Z" opacity=".15"/>
+              <path d="M16 5a2 2 0 0 0-2-2h-1a1 1 0 0 1-2 0H10a2 2 0 0 0-2 2H5v14h14V5h-3Z"/>
+              <path d="M12 19s-5-3.1-5-6.5A3.5 3.5 0 0 1 12 10a3.5 3.5 0 0 1 5 2.5C17 15.9 12 19 12 19Z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="maternalEditModal_title" class="text-base font-semibold">Maternal Health Record — Edit</h2>
+            <p id="maternalEditModal_meta" class="text-white/80 text-xs">
+              Resident: <span id="maternalEdit_name">—</span> • ID: <span id="maternalEdit_id">—</span>
+            </p>
+          </div>
+        </div>
+
+        <button type="button" class="text-white/90 hover:text-white text-2xl leading-none font-bold"
+                aria-label="Close modal" onclick="closeMaternalEditModal()">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+        <form id="maternalEditForm" class="space-y-6">
+          <!-- NHTS -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">NHTS Status</label>
+            <select id="edit_nhts"
+                    class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <option>NHTS</option>
+              <option>Non-NHTS</option>
+            </select>
+          </div>
+
+          <!-- Address -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Address</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>
+              </span>
+              <input id="edit_address" type="text" value="Purok 3, Cansaga"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <!-- Contact -->
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.5 3 3.6 5.1 6.6 6.6l2.2-2.2c.3-.3.8-.4 1.1-.2 1.2.4 2.6.6 3.9.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11.8 21 3 12.2 3 2.5 3 1.9 3.4 1.5 4 1.5H7c.6 0 1 .4 1 1 0 1.4.2 2.7.6 3.9.1.4 0 .8-.3 1.1l-1.7 2.3Z"/></svg>
+              </span>
+              <input id="edit_contact" type="tel" value="09672687206"
+                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <!-- Sticky footer inside modal -->
+          <div class="sticky bottom-0 -mx-6 mt-2 bg-gradient-to-t from-white to-white/70 px-6 py-4">
+            <div class="flex items-center justify-end gap-3">
+              <button type="button" class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                      onclick="closeMaternalEditModal()">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18 18 6l-1.4-1.4L4.6 16.6 6 18Zm0 0v4h4l10.6-10.6-4-4L6 18Z"/></svg>
+                Cancel
+              </button>
+
+              <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21 7 9 19l-6-6 1.4-1.4L9 16.2 19.6 5.6 21 7Z"/></svg>
+                Update
+              </button>
+            </div>
+          </div>
+
+          <!-- Note -->
+          <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <span class="font-semibold">Note:</span> Please review the information before saving. Make sure all fields are complete and accurate.
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scoped styles to ensure buttons keep their colors -->
+<style>
+  .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
+  .btn-red:hover{filter:brightness(.97)}
+  .btn-gray{background:#f3f4f6!important;color:#111827!important}
+  .btn-gray:hover{background:#e5e7eb!important}
+</style>
+
+<script>
+  function openMaternalEditModal(triggerBtn){
+    const modal = document.getElementById('maternalEditModal');
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+
+    // Populate header meta from button data-* (if provided)
+    const name = triggerBtn?.dataset.fullName || '';
+    const id = triggerBtn?.dataset.residentId || '';
+    const nhts = triggerBtn?.dataset.nhts || '';
+    const address = triggerBtn?.dataset.address || '';
+    const contact = triggerBtn?.dataset.contact || '';
+
+    if (name) document.getElementById('maternalEdit_name').textContent = name;
+    if (id) document.getElementById('maternalEdit_id').textContent = id;
+
+    const nhtsSelect = document.getElementById('edit_nhts');
+    if (nhts){
+      const match = Array.from(nhtsSelect.options).find(o => o.textContent.trim().toLowerCase() === nhts.trim().toLowerCase());
+      if (match) nhtsSelect.value = match.value;
+    }
+    if (address) document.getElementById('edit_address').value = address;
+    if (contact) document.getElementById('edit_contact').value = contact;
+
+    // Focus first field
+    setTimeout(()=> nhtsSelect.focus(), 0);
+  }
+
+  function closeMaternalEditModal(){
+    const modal = document.getElementById('maternalEditModal');
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  // Close on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      const modal = document.getElementById('maternalEditModal');
+      if (modal && !modal.classList.contains('hidden')) closeMaternalEditModal();
+    }
+  });
+
+  // (Optional) intercept submit (remove if you post to server)
+  document.getElementById('maternalEditForm')?.addEventListener('submit', (e) => {
+    // e.preventDefault();
+    // TODO: AJAX submit or regular form submission
+  });
+</script>
+
+</div>
+{% endblock %}

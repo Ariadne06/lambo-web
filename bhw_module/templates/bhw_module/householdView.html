@@ -103,7 +103,27 @@
                     <td class="px-4 py-2">Male</td>
                     <td class="px-4 py-2">Catholic</td>
                     <td class="px-4 py-2">Single</td>
-                    <td class="px-4 py-2 text-center">•••</td>
+                    <td class="px-4 py-2 text-center">
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-semibold shadow hover:bg-red-700 transition"
+                    onclick="openResidentViewModal(this)"
+                    data-resident-id="1000"
+                    data-first-name="Adrianne"
+                    data-middle-name="C."
+                    data-last-name="Villarta"
+                    data-dob="2028-08-08"
+                    data-sex="Male"
+                    data-religion="Catholic"
+                    data-status="Single"
+                >
+                    <!-- eye icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5C5 5 2 12 2 12s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                    </svg>
+                    View
+                </button>
+                </td>
                 </tr>
                 <!-- Repeat rows -->
             </tbody>
@@ -116,6 +136,264 @@
         ⬅ Back
     </button>
 </div>
+<!-- Resident View Modal (2-step) -->
+<div id="residentViewModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="residentViewModal_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeResidentViewModal()"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[96%] max-w-6xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-4 flex items-center justify-between">
+        <h2 id="residentViewModal_title" class="text-lg font-semibold">Resident — View</h2>
+        <button type="button" class="text-white/90 hover:text-white text-2xl leading-none font-bold"
+                aria-label="Close modal" onclick="closeResidentViewModal()">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 max-h-[75vh] overflow-y-auto">
+        <!-- Top: avatar + stepper -->
+        <div class="flex items-start gap-6 mb-4">
+          <!-- Avatar -->
+          <div class="shrink-0">
+            <div class="w-28 h-28 rounded-full ring-2 ring-gray-200 overflow-hidden grid place-items-center bg-gray-50">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 12c-5.33 0-8 2.67-8 6v2h16v-2c0-3.33-2.67-6-8-6Z"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Stepper -->
+          <div class="grow">
+            <div class="flex items-center gap-8 text-sm font-medium mb-2">
+              <button type="button" class="rv-stepper-1 flex items-center gap-2 text-red-700" onclick="rvGoto(1)">
+                <span>1</span><span>Personal</span>
+              </button>
+              <button type="button" class="rv-stepper-2 flex items-center gap-2 text-gray-400" onclick="rvGoto(2)">
+                <span>2</span><span>Health</span>
+              </button>
+            </div>
+            <p class="text-xs text-gray-500">Use Next/Back to switch sections.</p>
+          </div>
+        </div>
+
+        <!-- STEP 1: Personal (from your design) -->
+        <section data-step="1" class="rv-step grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">First Name</label>
+            <input id="rv_first_name" type="text" value="Adrianne" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Relationship of the HH Head</label>
+            <input id="rv_relation" type="text" value="Brother" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Middle Name</label>
+            <input id="rv_middle_name" type="text" value="C." class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Civil Status</label>
+            <input id="rv_civil_status" type="text" value="Single" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Last Name</label>
+            <input id="rv_last_name" type="text" value="Villarta" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Religion</label>
+            <input id="rv_religion" type="text" value="Catholic" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Date of Birth</label>
+            <input id="rv_dob" type="text" value="01/01/2020" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Membership Type</label>
+            <input id="rv_membership" type="text" value="Non Member" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Sex</label>
+            <input id="rv_sex" type="text" value="Male" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">PhilHealth ID Number</label>
+            <input id="rv_philhealth" type="text" value="000000" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+        </section>
+
+        <!-- STEP 2: Health (from your design) -->
+        <section data-step="2" class="rv-step hidden grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Medical History</label>
+            <input id="rv_med_history" type="text" value="Diabetes" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">FP Use</label>
+            <select id="rv_fp_use" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option selected>Yes</option><option>No</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Smoker</label>
+            <select id="rv_smoker" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option>Yes</option><option>No</option><option>Former</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Education Attainment</label>
+            <input id="rv_education" type="text" value="College Degree" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Alcohol Beverage Drinker</label>
+            <select id="rv_drinker" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option>Yes</option><option>No</option><option selected>Occasional</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">Age (Risk Group)</label>
+              <input id="rv_age" type="number" value="25" class="w-full rounded-md border border-gray-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">Quarter</label>
+              <select id="rv_quarter" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+                <option>1st Quarter</option><option selected>2nd Quarter</option><option>3rd Quarter</option><option>4th Quarter</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Sexually Active</label>
+            <select id="rv_sex_active" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
+              <option>No</option><option>Yes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Health Risk Classification</label>
+            <input id="rv_risk_class" type="text" value="AB" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Last Menstrual Period</label>
+            <input id="rv_lmp" type="date" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Remarks</label>
+            <input id="rv_remarks" type="text" value="Vaccinated" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Age of MENARCHE</label>
+            <input id="rv_menarche_age" type="number" placeholder="Enter Age" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700 mb-1">Other Conditions</label>
+            <input id="rv_other_cond" type="text" value="None" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          </div>
+        </section>
+
+        <!-- Modal Footer -->
+        <div class="mt-6 flex items-center justify-between">
+          <button id="rv_backBtn" type="button"
+                  class="inline-flex items-center justify-center rounded-xl bg-gray-200 px-5 py-2 text-gray-800 text-sm font-medium shadow hover:bg-gray-300"
+                  onclick="rvPrev()">
+            Back
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="rv_nextBtn" type="button"
+                    class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
+                    onclick="rvNext()">
+              Next
+            </button>
+            <button id="rv_updateBtn" type="button"
+                    class="hidden inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
+                    onclick="/* submit/update here */ closeResidentViewModal()">
+              Update
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- /Modal Body -->
+    </div>
+  </div>
+</div>
+<script>
+  let rvStep = 1;
+
+  function openResidentViewModal(btn){
+    // Optional: prefill from row dataset
+    if(btn && btn.dataset){
+      document.getElementById('rv_first_name').value = btn.dataset.firstName || 'Adrianne';
+      document.getElementById('rv_middle_name').value = btn.dataset.middleName || 'C.';
+      document.getElementById('rv_last_name').value  = btn.dataset.lastName || 'Villarta';
+      document.getElementById('rv_dob').value        = (btn.dataset.dob || '2020-01-01').replaceAll('-','/'); // simple format
+      document.getElementById('rv_sex').value        = btn.dataset.sex || 'Male';
+      document.getElementById('rv_religion').value   = btn.dataset.religion || 'Catholic';
+      document.getElementById('rv_civil_status').value = btn.dataset.status || 'Single';
+    }
+    rvGoto(1);
+    document.getElementById('residentViewModal').classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeResidentViewModal(){
+    document.getElementById('residentViewModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  function rvGoto(step){
+    rvStep = step;
+    // show/hide sections
+    document.querySelectorAll('#residentViewModal .rv-step').forEach(s => s.classList.add('hidden'));
+    const active = document.querySelector(`#residentViewModal .rv-step[data-step="${step}"]`);
+    if(active) active.classList.remove('hidden');
+
+    // stepper colors
+    const s1 = document.querySelector('#residentViewModal .rv-stepper-1');
+    const s2 = document.querySelector('#residentViewModal .rv-stepper-2');
+    if(step === 1){
+      s1.classList.remove('text-gray-400'); s1.classList.add('text-red-700');
+      s2.classList.remove('text-red-700');  s2.classList.add('text-gray-400');
+    }else{
+      s2.classList.remove('text-gray-400'); s2.classList.add('text-red-700');
+      s1.classList.remove('text-red-700');  s1.classList.add('text-gray-400');
+    }
+
+    // footer buttons
+    const back   = document.getElementById('rv_backBtn');
+    const next   = document.getElementById('rv_nextBtn');
+    const update = document.getElementById('rv_updateBtn');
+
+    if(step === 1){
+      back.textContent = 'Back';
+      next.classList.remove('hidden');
+      update.classList.add('hidden');
+    }else{
+      back.textContent = 'Back';
+      next.classList.add('hidden');
+      update.classList.remove('hidden');
+    }
+  }
+
+  function rvNext(){ rvGoto( Math.min(2, rvStep + 1) ); }
+  function rvPrev(){ rvGoto( Math.max(1, rvStep - 1) ); }
+
+  // ESC to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      const m = document.getElementById('residentViewModal');
+      if(m && !m.classList.contains('hidden')) closeResidentViewModal();
+    }
+  });
+</script>
 
 </div>
 {% endblock %}

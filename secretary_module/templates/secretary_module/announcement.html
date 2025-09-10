@@ -1,4 +1,4 @@
-{% extends 'base_captain.html' %}
+{% extends 'base_sec.html' %}
 
 {% block title %}
     Secretary
@@ -13,10 +13,15 @@
       <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         
         <!-- Header -->
-        <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-          <h2 class="text-base font-semibold">Full Announcement</h2>
-          <button class="rounded-md bg-red-700 px-4 py-1 text-sm font-semibold hover:bg-red-800">Add</button>
-        </div>
+          <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold">Full Announcement</h2>
+            <button type="button"
+                    class="rounded-md bg-red-700 px-4 py-1 text-sm font-semibold hover:bg-red-800"
+                    onclick="openModal('modalAnnouncementCreate')">
+              Add
+            </button>
+          </div>
+
 
         <!-- Body -->
         <div class="px-10 py-8 space-y-6 text-gray-800">
@@ -86,6 +91,154 @@
       </div>
     </div>
   </div>
+
+<!-- Create Announcement Modal -->
+<div id="modalAnnouncementCreate" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="modalAnnouncementCreate_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
+       onclick="closeModal('modalAnnouncementCreate')"></div>
+
+  <!-- Panel wrapper -->
+  <div class="relative mx-auto my-10 w-[96%] max-w-6xl">
+    <!-- Soft glow -->
+    <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
+
+    <!-- Panel -->
+    <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
+         data-panel>
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M19 4H5a2 2 0 0 0-2 2v12l4-2 5 2 5-2 4 2V6a2 2 0 0 0-2-2Z"/>
+          </svg>
+          <h2 id="modalAnnouncementCreate_title" class="text-base font-semibold tracking-wide">Create New Announcement</h2>
+        </div>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                aria-label="Close" onclick="closeModal('modalAnnouncementCreate')">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-10 py-10">
+        <form class="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 text-sm">
+          <!-- LEFT: Title + Content -->
+          <div class="lg:col-span-2 space-y-8">
+            <!-- Title -->
+            <div>
+              <label class="block text-gray-800 font-medium mb-2">Title</label>
+              <input type="text" placeholder="Enter title"
+                     class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600">
+              <p class="mt-1.5 text-xs text-gray-500">Keep it short and punchy (max 100 characters works best).</p>
+            </div>
+
+            <!-- Content -->
+            <div>
+              <label class="block text-gray-800 font-medium mb-2">Content</label>
+              <textarea rows="12" placeholder="Enter content"
+                        class="w-full rounded-xl border border-gray-300 px-4 py-3 resize-y focus:outline-none focus:ring-2 focus:ring-red-600"></textarea>
+              <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                <span>Tip: Bullets, emojis, and clear times help people scan fast.</span>
+                <span>0 / 1000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Meta (Date + Photo) -->
+          <div class="space-y-8">
+            <!-- Event Date -->
+            <div>
+              <label class="block text-gray-800 font-medium mb-2">Event Date</label>
+              <div class="relative">
+                <input type="date"
+                       class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-600">
+                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm14 8H3v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10Z"/>
+                </svg>
+              </div>
+              <p class="mt-1.5 text-xs text-gray-500">Leave blank if it’s a general announcement.</p>
+            </div>
+
+            <!-- Photo Upload -->
+            <div>
+              <label class="block text-gray-800 font-medium mb-2">Photo</label>
+              <label class="group block rounded-2xl border-2 border-dashed border-gray-300 hover:border-red-400 bg-gray-50 px-4 py-6 text-center cursor-pointer">
+                <div class="flex flex-col items-center gap-2">
+                  <svg class="h-8 w-8 text-gray-400 group-hover:text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3 7 8h3v6h4V8h3l-5-5ZM5 18h14v2H5v-2Z"/>
+                  </svg>
+                <div class="text-gray-700">
+                    <span class="font-semibold">Click to upload</span>
+                    <span class="text-gray-500"> or drag & drop</span>
+                  </div>
+                  <span class="text-xs text-gray-500">PNG, JPG up to 5MB</span>
+                </div>
+                <input type="file" class="hidden" />
+              </label>
+            </div>
+
+            <!-- Preview -->
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <div class="aspect-video w-full rounded-lg bg-gray-100 grid place-content-center text-gray-400">
+                Image preview
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="lg:col-span-3">
+            <div class="flex items-center justify-end gap-4">
+              <button type="button"
+                      class="inline-flex items-center rounded-xl bg-gray-100 px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                      onclick="closeModal('modalAnnouncementCreate')">
+                Cancel
+              </button>
+              <button type="submit"
+                      class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-7 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14l4-4 4 2 4-2 4 2V7l-2-2ZM7 7h8v4H7V7Z"/></svg>
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // add once per page
+  function openModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+      const panel = el.querySelector('[data-panel]');
+      if(panel){
+        panel.classList.remove('scale-95','opacity-0');
+        panel.classList.add('scale-100','opacity-100');
+      }
+    });
+  }
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
+    const panel = el.querySelector('[data-panel]');
+    if(panel){
+      panel.classList.add('scale-95','opacity-0');
+      panel.classList.remove('scale-100','opacity-100');
+    }
+    setTimeout(() => el.classList.add('hidden'), 180);
+  }
+  // ESC to close
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Escape') return;
+    const m = document.getElementById('modalAnnouncementCreate');
+    if(m && !m.classList.contains('hidden')) closeModal('modalAnnouncementCreate');
+  });
+</script>
+
 </div>
 
 {% endblock %}

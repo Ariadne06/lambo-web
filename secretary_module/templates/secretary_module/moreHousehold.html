@@ -1,145 +1,355 @@
-{% extends 'base_captain.html' %}
+{% extends 'base_sec.html' %}
 
-{% block title %}
-    Secretary
-{% endblock %}
+{% block title %}Secretary{% endblock %}
 
 {% block content %}
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
 
-<div class="p-6 bg-white shadow-md rounded-lg">
+  <!-- Title chip -->
+  <div class="mb-5 flex items-center justify-between">
+    <div
+      class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
+      style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
+      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+      Secretary — Household Profile
+    </div>
+  </div>
 
-  <!-- Household Info Form -->
-  <form class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div>
-      <label class="block text-sm font-semibold">Household ID</label>
-      <input type="text" value="1000" class="w-full border rounded px-2 py-1">
+  <!-- Household Card -->
+  <div class="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="border-b bg-gray-50/60 px-6 py-4">
+      <h2 class="flex items-center gap-2 text-base font-semibold text-gray-900">
+        <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span>
+        Household Information
+      </h2>
     </div>
 
-    <div>
-      <label class="block text-sm font-semibold">Sitio/Parok</label>
-      <input type="text" value="Parok 1" class="w-full border rounded px-2 py-1">
+    <form class="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
+      <!-- 1 -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Household ID</label>
+        <div class="mt-1 relative">
+          <input type="text" value="1000"
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+            <!-- id icon -->
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v16H3V4Zm2 2v12h14V6H5Zm2 2h6v2H7V8Zm0 4h6v2H7v-2Z"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Sitio/Parok</label>
+        <input type="text" value="Parok 1"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Select One</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>New NHTS</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Household No.</label>
+        <input type="text" value="0001"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Barangay</label>
+        <input type="text" value="Cansaga"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Type of Water Source</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>1st Water Source</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Family No.</label>
+        <input type="text" value="000F-001"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Toilet Facility</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>1 Connected to Septic w/ Sewerage System</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Waste Management</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>A. Thru Segregation</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Household Head</label>
+        <input type="text" value="Adrianna Villarta"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Renter (Y/N)</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>No</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">With Minor Drainage?</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>No</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">Date of Visit</label>
+        <input type="date" value="2018-01-01"
+               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600">1st Visit</label>
+        <select class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <option>1st Quarter</option>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- Members Card -->
+  <div class="mx-auto mt-6 max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b bg-gray-50/60 px-6 py-4">
+      <h2 class="flex items-center gap-2 text-base font-semibold text-gray-900">
+        <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span>
+        Household Members
+      </h2>
+      <div class="hidden md:block text-xs text-gray-500">2 records</div>
     </div>
 
-    <div>
-      <label class="block text-sm font-semibold">Select One</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>New NHTS</option>
-      </select>
-    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-rose-600 text-white sticky top-0 z-10">
+          <tr>
+            <th class="whitespace-nowrap px-4 py-3 text-left font-semibold">Resident ID</th>
+            <th class="px-4 py-3 text-left font-semibold">First Name</th>
+            <th class="px-4 py-3 text-left font-semibold">M.I.</th>
+            <th class="px-4 py-3 text-left font-semibold">Last Name</th>
+            <th class="px-4 py-3 text-left font-semibold">Date of Birth</th>
+            <th class="px-4 py-3 text-left font-semibold">Sex</th>
+            <th class="px-4 py-3 text-left font-semibold">Religion</th>
+            <th class="px-4 py-3 text-left font-semibold">Status</th>
+            <th class="px-4 py-3 text-center font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <!-- Row 1 -->
+          <tr class="hover:bg-gray-50/70">
+            <td class="px-4 py-3 font-medium text-gray-800">1000</td>
+            <td class="px-4 py-3">Adrianna</td>
+            <td class="px-4 py-3">C.</td>
+            <td class="px-4 py-3">Villarta</td>
+            <td class="px-4 py-3">08/08/2018</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-[12px] font-semibold text-pink-700">Female</span>
+            </td>
+            <td class="px-4 py-3">Catholic</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-700">Single</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-center gap-2">
+                <button type="button"
+                      class="btn-green inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
+                      onclick="openMemberView()">
+                <!-- eye -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
+                </svg>
+                View
+              </button>
 
-    <div>
-      <label class="block text-sm font-semibold">Household No.</label>
-      <input type="text" value="0001" class="w-full border rounded px-2 py-1">
-    </div>
+              </div>
+            </td>
+          </tr>
 
-    <div>
-      <label class="block text-sm font-semibold">Barangay</label>
-      <input type="text" value="Cansaga" class="w-full border rounded px-2 py-1">
-    </div>
+          <!-- Row 2 -->
+          <tr class="hover:bg-gray-50/70">
+            <td class="px-4 py-3 font-medium text-gray-800">1001</td>
+            <td class="px-4 py-3">Adrian</td>
+            <td class="px-4 py-3">C.</td>
+            <td class="px-4 py-3">Medalla</td>
+            <td class="px-4 py-3">08/08/2018</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-[12px] font-semibold text-blue-700">Male</span>
+            </td>
+            <td class="px-4 py-3">Catholic</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-700">Single</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-center gap-2">
+                <button type="button"
+                    class="btn-green inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
+                    onclick="openMemberView()">
+              <!-- eye -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
+              </svg>
+              View
+            </button>
 
-    <div>
-      <label class="block text-sm font-semibold">Select Type of Water Source</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>1st Water Source</option>
-      </select>
+              </div>
+            </td>
+          </tr>
+          <!-- more rows... -->
+        </tbody>
+      </table>
     </div>
+  </div>
+<!-- Member "View" Modal -->
+<div id="modalMemberView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="mv_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalMemberView')"></div>
 
-    <div>
-      <label class="block text-sm font-semibold">Family No.</label>
-      <input type="text" value="000F-001" class="w-full border rounded px-2 py-1">
+  <!-- Dialog -->
+  <div class="relative mx-auto my-8 w-[96%] max-w-5xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50/60">
+        <h2 id="mv_title" class="text-base font-semibold text-gray-900">Resident Details</h2>
+        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                aria-label="Close modal" onclick="closeModal('modalMemberView')">&times;</button>
+      </div>
+
+      <!-- Body (your provided layout) -->
+      <div class="px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Avatar -->
+          <div class="lg:col-span-3 flex lg:block items-center justify-center">
+            <div class="h-40 w-40 rounded-full border-2 border-gray-300 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.239-8 5v1h16v-1c0-2.761-3.58-5-8-5Z"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Form columns -->
+          <div class="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Left column -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-700">First Name</label>
+                <input type="text" value="Adrianne" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Middle Name</label>
+                <input type="text" value="Medalla" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Last Name</label>
+                <input type="text" value="Villarta" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Date of Birth</label>
+                <input type="text" value="01/01/2000" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Sex</label>
+                <select class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <option selected>Male</option>
+                  <option>Female</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Religion</label>
+                <input type="text" value="Catholic" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Educational Attainment</label>
+                <input type="text" value="College Graduate" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+            </div>
+
+            <!-- Right column -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-700">House Number</label>
+                <input type="text" value="Block 5 Lot 11" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Street</label>
+                <input type="text" value="Washington Street" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Barangay</label>
+                <input type="text" value="Cansaga" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Resident Status</label>
+                <input type="text" value="Permanent" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700">Civil Status</label>
+                <input type="text" value="Married" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="mt-6 flex justify-end">
+          <button type="button"
+                  class="rounded-md bg-red-600 text-white px-4 py-2 text-sm hover:bg-red-700"
+                  onclick="closeModal('modalMemberView')">
+            Back
+          </button>
+        </div>
+      </div>
     </div>
-
-    <div>
-      <label class="block text-sm font-semibold">Select Toilet Facility</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>1 Connected to Septic w/ Sewerage System</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">Select Type of Waste Management</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>A. Thru Segregation</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">Household Head</label>
-      <input type="text" value="Adrianna Villarta" class="w-full border rounded px-2 py-1">
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">Renter (Y/N)</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>No</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">With Minor Drainage?</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>No</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">Date of Visit</label>
-      <input type="date" value="2018-01-01" class="w-full border rounded px-2 py-1">
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold">1st Visit</label>
-      <select class="w-full border rounded px-2 py-1">
-        <option>1st Quarter</option>
-      </select>
-    </div>
-  </form>
-
-  <!-- Household Members Table -->
-  <h2 class="text-lg font-bold text-red-600 mb-2">Household Member</h2>
-  <div class="overflow-x-auto">
-    <table class="w-full border-collapse border text-sm">
-      <thead class="bg-gray-100">
-        <tr>
-          <th class="border px-3 py-2">Resident ID</th>
-          <th class="border px-3 py-2">First Name</th>
-          <th class="border px-3 py-2">M.I</th>
-          <th class="border px-3 py-2">Last Name</th>
-          <th class="border px-3 py-2">Date of Birth</th>
-          <th class="border px-3 py-2">Sex</th>
-          <th class="border px-3 py-2">Religion</th>
-          <th class="border px-3 py-2">Status</th>
-          <th class="border px-3 py-2">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="border px-3 py-2">1000</td>
-          <td class="border px-3 py-2">Adrianna</td>
-          <td class="border px-3 py-2">C.</td>
-          <td class="border px-3 py-2">Villarta</td>
-          <td class="border px-3 py-2">08/08/2018</td>
-          <td class="border px-3 py-2">Female</td>
-          <td class="border px-3 py-2">Catholic</td>
-          <td class="border px-3 py-2">Single</td>
-          <td class="border px-3 py-2 text-center">•••</td>
-        </tr>
-        <tr>
-          <td class="border px-3 py-2">1001</td>
-          <td class="border px-3 py-2">Adrian</td>
-          <td class="border px-3 py-2">C.</td>
-          <td class="border px-3 py-2">Medalla</td>
-          <td class="border px-3 py-2">08/08/2018</td>
-          <td class="border px-3 py-2">Male</td>
-          <td class="border px-3 py-2">Catholic</td>
-          <td class="border px-3 py-2">Single</td>
-          <td class="border px-3 py-2 text-center">•••</td>
-        </tr>
-        <!-- repeat more rows as needed -->
-      </tbody>
-    </table>
   </div>
 </div>
 
+  <!-- Local button colors so they never turn white -->
+  <style>
+    .btn-blue{background:#3b82f6;color:#fff!important}
+    .btn-blue:hover{filter:brightness(.95)}
+    .btn-green{background:#22c55e;color:#fff!important}
+    .btn-green:hover{filter:brightness(.95)}
+  </style>
+</div>
+
+<script>
+  function openModal(id){ document.getElementById(id)?.classList.remove('hidden'); }
+  function closeModal(id){ document.getElementById(id)?.classList.add('hidden'); }
+
+  // Specific opener for the member view (could accept an ID later if you want to populate dynamically)
+  function openMemberView(){
+    openModal('modalMemberView');
+  }
+
+  // Optional: close on Escape
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal('modalMemberView');
+  });
+</script>
 
 {% endblock %}
