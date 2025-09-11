@@ -1,8 +1,6 @@
 {% extends 'base_admin.html' %}
 
-{% block title %}
-    Activity Logs
-{% endblock %}
+{% block title %}Activity Logs{% endblock %}
 
 {% block content %}
 <div class="flex flex-col min-h-screen bg-gray-100 p-6">
@@ -10,30 +8,36 @@
   <!-- Page Title -->
   <h1 class="text-2xl font-bold text-red-700 mb-6">Activity Logs</h1>
 
-  <!-- Top Controls: Limit selector + Filters dropdown -->
-  <div class="flex justify-between items-center mb-4">
-    <!-- Limit Selector -->
-    <form method="get" class="flex items-center gap-2 text-sm">
+  <!-- ONE GET FORM FOR EVERYTHING -->
+  <form id="controlsForm" method="get" class="flex w-full items-center justify-between gap-4 mb-4">
+    <!-- Search -->
+    <div class="relative w-full max-w-xs">
+      <input type="search" name="query" id="queryInput"
+             value="{{ query|default:'' }}"
+             placeholder="Search residents…"
+             class="w-full bg-gray-100 h-10 px-5 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+      <span class="absolute right-3 top-2.5 text-gray-500">
+        <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387-1.414 1.414-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z"/>
+        </svg>
+      </span>
+    </div>
+
+    <!-- Rows per page -->
+    <div class="flex items-center gap-2 text-sm">
       <label for="limit" class="text-gray-600">Rows per page:</label>
       <div class="relative inline-block">
         <select id="limit" name="limit"
-                class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                onchange="this.form.page.value=1; this.form.submit()">
+                class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
           {% for n in limit_options %}
             <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
           {% endfor %}
         </select>
       </div>
+    </div>
 
-      <!-- Preserve other query params -->
-      <input type="hidden" name="page" value="{{ page }}">
-      <input type="hidden" name="sort_by" value="{{ sort_by }}">
-      <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
-    </form>
-
-    <!-- Advanced Filters Dropdown -->
+    <!-- Advanced Filters Dropdown (still inside the SAME form) -->
     <div class="relative">
-      <!-- Button that toggles the dropdown -->
       <button type="button"
               onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
               class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
@@ -44,19 +48,14 @@
         Filters
       </button>
 
-      <!-- Dropdown Menu -->
-      <form id="filtersMenu" method="get"
-            class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
-        <!-- CHANGED: increased width from w-56 → w-64 -->
-        <!-- CHANGED: padding from p-3 → p-4 for more spacing -->
-        <!-- CHANGED: space-y-3 → space-y-4 to increase spacing between fields -->
+      <div id="filtersMenu"
+           class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
 
         <!-- Sort By -->
         <div>
           <label for="sort_by" class="block text-gray-600 mb-1">Sort By</label>
           <select id="sort_by" name="sort_by"
-                  class="w-full border rounded px-3 py-2 bg-white text-sm">
-            <!-- CHANGED: px-2 py-1 → px-3 py-2 for bigger selects -->
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
             <option value="log_timestamp" {% if sort_by == "log_timestamp" %}selected{% endif %}>Log Timestamp</option>
             <option value="action" {% if sort_by == "action" %}selected{% endif %}>Action</option>
             <option value="performed_by_name" {% if sort_by == "performed_by_name" %}selected{% endif %}>Performed By (Name)</option>
@@ -67,28 +66,26 @@
         <div>
           <label for="sort_dir" class="block text-gray-600 mb-1">Direction</label>
           <select id="sort_dir" name="sort_dir"
-                  class="w-full border rounded px-3 py-2 bg-white text-sm">
-            <!-- CHANGED: px-2 py-1 → px-3 py-2 for bigger selects -->
-            <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+            <option value="asc"  {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
             <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Descending</option>
           </select>
         </div>
 
-        <!-- Hidden preserved params -->
-        <input type="hidden" name="limit" value="{{ limit }}">
-        <input type="hidden" name="page" value="1">
-
-        <!-- Apply button -->
+        <!-- Apply button (optional because selects auto-submit) -->
         <div class="flex justify-end gap-2">
           <button type="submit"
                   class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 text-sm">
-            <!-- CHANGED: px-3 py-1 → px-4 py-2 for larger button -->
             Apply
           </button>
         </div>
-      </form>
+      </div>
     </div>
-  </div>
+
+    <!-- Hidden page field (reset to 1 on any change) -->
+    <input type="hidden" name="page" id="pageField" value="{{ page }}">
+
+  </form>
 
   <!-- Activity Log Table -->
   <div class="overflow-x-auto bg-white rounded shadow">
@@ -163,7 +160,7 @@
     <button class="bg-red-700 text-white text-sm px-6 py-2 rounded hover:bg-red-800 transition flex items-center gap-2">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m4 0a2 2 0 002-2V7a2 2 0 00-2-2h-3.17a2 2 0 01-1.41-.59l-1.83-1.83A2 2 0 0012.17 2H8a2 2 0 00-2 2v13a2 2 0 002 2h8z" />
+              d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m4 0a2 2 0 002-2V7a2 2 0 00-2-2h-3.17a 2 2 0 01-1.41-.59l-1.83-1.83A2 2 0 0012.17 2H8a2 2 0 00-2 2v13a2 2 0 002 2h8z" />
       </svg>
       Logs Report
     </button>
@@ -171,11 +168,34 @@
 </div>
 
 <script>
+  // Debounce helper
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
+
+  // Auto-submit selects (and reset page to 1)
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => {
+      pageField.value = 1;
+      form.requestSubmit();
+    });
+  });
+
+  // Search: submit after typing stops
+  const queryInput = document.getElementById('queryInput');
+  queryInput.addEventListener('input', debounce(() => {
+    pageField.value = 1;
+    form.requestSubmit();
+  }, 350));
+
   // Close filters dropdown if clicked outside
   document.addEventListener('click', function (e) {
     const menu = document.getElementById('filtersMenu');
-    const button = e.target.closest('button');
-    if (!e.target.closest('#filtersMenu') && !button) {
+    if (!menu) return;
+    const withinMenu = e.target.closest('#filtersMenu');
+    const pressedBtn = e.target.closest('button');
+    if (!withinMenu && !pressedBtn) {
       menu.classList.add('hidden');
     }
   });
