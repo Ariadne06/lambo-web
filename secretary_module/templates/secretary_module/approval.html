@@ -1,16 +1,93 @@
 {% extends 'base_sec.html' %}
 
-{% block title %}
-    Resident Approvals
-{% endblock %}
+{% block title %}Resident Approvals{% endblock %}
 
 {% block content %}
 <div class="bg-white shadow-md rounded-lg p-6">
-  <!-- Header -->
-  <div class="mb-4 flex items-center justify-between">
-    <h2 class="text-xl font-semibold text-gray-800">Resident Approval Queue</h2>
-  </div>
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Resident Approval Queue</h2>
 
+  <!-- ONE GET FORM FOR EVERYTHING -->
+  <form id="controlsForm" method="get" class="flex flex-wrap justify-between items-center gap-4 mb-4 w-full">
+    <!-- Search (debounced auto-submit) -->
+    <div class="relative w-full max-w-xs">
+      <input type="search" name="query" id="queryInput"
+             placeholder="Search residents…"
+             value="{{ query|default:'' }}"
+             class="w-full bg-gray-100 h-10 px-5 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+      <span class="absolute right-3 top-2.5 text-gray-500">
+        <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387-1.414 1.414-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z"/>
+        </svg>
+      </span>
+    </div>
+
+    <!-- Rows per page (auto-submit) -->
+    <div class="flex items-center gap-2 text-sm">
+      <label for="limit" class="text-gray-600">Rows per page:</label>
+      <div class="relative inline-block">
+        <select id="limit" name="limit"
+                class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+          {% for n in limit_options %}
+            <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Advanced Filters: Sort (auto-submit) -->
+    <div class="relative">
+      <button type="button"
+              onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+              class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+        </svg>
+        Filters
+      </button>
+
+      <div id="filtersMenu"
+           class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+        <div>
+          <label for="sort_by" class="block text-gray-600 mb-1">Sort By</label>
+          <select id="sort_by" name="sort_by"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+            <option value="date_uploaded" {% if sort_by == "date_uploaded" %}selected{% endif %}>Date Uploaded</option>
+            <option value="full_name" {% if sort_by == "full_name" %}selected{% endif %}>Full Name</option>
+            <option value="username"  {% if sort_by == "username"  %}selected{% endif %}>Username</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="sort_dir" class="block text-gray-600 mb-1">Direction</label>
+          <select id="sort_dir" name="sort_dir"
+                  class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+            <option value="asc"  {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Descending</option>
+          </select>
+        </div>
+
+        <!-- Optional manual apply -->
+        <div class="flex justify-end gap-2">
+          <button type="submit" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 text-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden page field (reset to 1 on any change) -->
+    <input type="hidden" name="page" id="pageField" value="{{ page }}">
+  </form>
+
+  {% if message %}
+    <div class="mb-4 px-4 py-3 rounded border
+        {% if message_level == 'success' %} bg-green-100 text-green-700 border-green-400
+        {% elif message_level == 'error' %} bg-red-100 text-red-700 border-red-400
+        {% else %} bg-gray-200 text-gray-800 border-gray-400 {% endif %}">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <!-- Table -->
   <div class="overflow-x-auto">
     <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
       <thead class="bg-[#D10000] text-white">
@@ -18,93 +95,327 @@
           <th class="px-6 py-3 text-left text-sm font-semibold">Resident ID</th>
           <th class="px-6 py-3 text-left text-sm font-semibold">Full Name</th>
           <th class="px-6 py-3 text-left text-sm font-semibold">Address</th>
-          <th class="px-6 py-3 text-left text-sm font-semibold">Date Registered</th>
+          <th class="px-6 py-3 text-left text-sm font-semibold">Date Uploaded</th>
           <th class="px-6 py-3 text-center text-sm font-semibold">Action</th>
         </tr>
       </thead>
-
       <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
-        <!-- Row 1 -->
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-3">100392</td>
-          <td class="px-6 py-3">Juan Dela Cruz</td>
-          <td class="px-6 py-3">Purok 3, Cansaga</td>
-          <td class="px-6 py-3">2025-08-22</td>
-          <td class="px-6 py-3">
-            <div class="flex items-center justify-center gap-2">
-            
-              <!-- Approve -->
+        {% if results %}
+          {% for person in results %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3">{{ person.resident_id }}</td>
+            <td class="px-6 py-3">{{ person.full_name }}</td>
+            <td class="px-6 py-3">{{ person.full_address }}</td>
+            <td class="px-6 py-3">{{ person.date_uploaded }}</td>
+            <td class="px-6 py-3 text-center">
               <button type="button"
-                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
-                aria-label="Approve">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>
+                      class="p-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                      data-rid="{{ person.resident_id }}"
+                      data-filepath="{{ person.file_path }}"
+                      data-fullname="{% if person.doc_source == 'guardian' and person.guardian_full_name %}{{ person.guardian_full_name }}{% else %}{{ person.full_name }}{% endif %}"
+                      data-birthdate="{% if person.doc_source == 'guardian' and person.guardian_birthdate %}{{ person.guardian_birthdate|date:'Y-m-d' }}{% else %}{{ person.birthdate|date:'Y-m-d' }}{% endif %}"
+                      data-docsource="{{ person.doc_source }}"
+                      data-doctype="{{ person.document_type }}"
+                      data-doctype-id="{{ person.identity_doc_type_id }}"
+                      onclick="openReviewModal(this)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
               </button>
-              <!-- Reject -->
-              <button type="button"
-                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
-                aria-label="Reject">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Row 2 -->
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-3">100411</td>
-          <td class="px-6 py-3">Maria Santos</td>
-          <td class="px-6 py-3">Purok 1, Cansaga</td>
-          <td class="px-6 py-3">2025-08-21</td>
-          <td class="px-6 py-3">
-            <div class="flex items-center justify-center gap-2">
-              
-              <button type="button"
-                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
-                aria-label="Approve">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>
-              </button>
-              <button type="button"
-                class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
-                aria-label="Reject">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Row 3 (example) -->
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-3">100427</td>
-          <td class="px-6 py-3">Precious Bugtai</td>
-          <td class="px-6 py-3">Purok 4, Cansaga</td>
-          <td class="px-6 py-3">2025-08-20</td>
-          <td class="px-6 py-3">
-            <div class="flex items-center justify-center gap-2">
-             
-              <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300" aria-label="Approve">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>
-              </button>
-              <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-full shadow-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300" aria-label="Reject">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </td>
-        </tr>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="5" class="py-4 px-4 text-center text-gray-500">No results found.</td></tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
+<!-- ===================== Modal (only one close, modal has its own scrollbar) ===================== -->
+<div id="reviewModal" class="fixed inset-0 hidden z-[1000]">
+  <!-- Backdrop (no click-to-close) -->
+  <div class="absolute inset-0 bg-black/50"></div>
+
+  <!-- Wrapper with its own scrollbar -->
+  <div class="absolute inset-0 flex items-start justify-center px-4 py-6 overflow-y-auto">
+    <!-- Card also scrolls if needed -->
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto flex flex-col">
+      <!-- Sticky header with the ONLY close button -->
+      <div class="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-gray-50 z-10">
+        <div class="flex items-center gap-3">
+          <span class="text-lg font-semibold">Review Document</span>
+          <span id="modalDocSource" class="px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-700">—</span>
+        </div>
+        <button type="button" class="text-2xl text-gray-500 hover:text-gray-700" onclick="closeReviewModal()">×</button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-2">
+        <!-- Info left -->
+        <div class="border-r p-4">
+          <div class="border rounded-lg p-4 bg-gray-50">
+            <h4 class="font-semibold mb-3">Info</h4>
+            <p class="mb-1"><span class="text-gray-500">Name:</span> <span id="modalName" class="font-medium">—</span></p>
+            <p class="mb-1"><span class="text-gray-500">Birthdate:</span> <span id="modalBirthdate" class="font-medium">—</span></p>
+            <p class="mb-1"><span class="text-gray-500">Resident ID:</span> <span id="modalResidentId" class="font-medium">—</span></p>
+            <p class="mb-1"><span class="text-gray-500">Submitted Document:</span> <span id="modalDocType" class="font-medium">—</span></p>
+          </div>
+          <form id="decisionForm" method="post" action="{% url 'secretary_module:approval_decide' %}" class="mt-4">
+            {% csrf_token %}
+            <input type="hidden" name="rid" id="decisionRid">
+            <input type="hidden" name="action" id="decisionAction">
+            <input type="hidden" name="doctype_id" id="doctypeIdInput">
+
+            <div class="flex gap-2">
+              <button type="button" onclick="submitDecision('approved')" class="flex-1 px-4 py-2 rounded bg-green-600 text-white"  id="approveBtn">Approve</button>
+              <button type="button" onclick="prepareReject()" class="flex-1 px-4 py-2 rounded bg-red-600 text-white">Reject</button>
+            </div>
+
+            <!-- Rejection notes (hidden until user chooses Reject) -->
+            <div id="rejectionNotesWrap" class="mt-3 hidden">
+              <label for="rejectionNotes" class="block text-sm font-medium text-gray-700 mb-1">
+                Reason for rejection <span class="text-red-600">*</span>
+              </label>
+              <textarea id="rejectionNotes" name="rejection_notes" rows="4" maxlength="500"
+                        class="w-full border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                        placeholder="Briefly explain why this document is rejected (max 500 chars)"></textarea>
+              <div class="mt-1 flex items-center justify-between text-xs text-gray-500">
+                <span>These notes will be saved with the decision.</span>
+                <span><span id="rejCount">0</span>/500</span>
+              </div>
+
+              <div class="mt-3 flex items-center gap-2">
+                <button type="button" onclick="confirmReject()" class="px-4 py-2 rounded bg-red-700 text-white hover:bg-red-800">
+                  Confirm Reject
+                </button>
+                <button type="button" onclick="cancelReject()" class="px-3 py-2 rounded border hover:bg-gray-50">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Preview right -->
+        <div class="p-4">
+          <div class="border rounded-lg bg-gray-50 h-full flex flex-col">
+            <div class="shrink-0 flex items-center justify-between px-3 py-2 border-b bg-white sticky top-0 z-10">
+              <span class="text-sm text-gray-600">Preview</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="zoomOut()" class="px-2 py-1 border rounded">−</button>
+                <span id="zoomLabel" class="w-12 text-center">100%</span>
+                <button type="button" onclick="zoomIn()" class="px-2 py-1 border rounded">+</button>
+                <button type="button" onclick="zoomReset()" class="px-3 py-1 border rounded">Reset</button>
+              </div>
+            </div>
+            <!-- The inner viewer has its own scroll for panning with mouse-wheel; dragging also supported -->
+            <div id="viewerBox" class="grow overflow-auto bg-gray-50 relative cursor-grab">
+              <div id="canvas" class="inline-block relative">
+                <img id="reviewImg"
+                     class="select-none block"
+                     alt="Document preview"
+                     style="transform-origin: top left; max-width: 100%; height: auto;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /Body -->
+    </div>
+  </div>
+</div>
+
+<script>
+  // Debounce helper
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+  function resetPage(){ const pf=document.getElementById('pageField'); if(pf) pf.value=1; }
+
+  const form = document.getElementById('controlsForm');
+
+  // Auto-submit selects (and reset page to 1)
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => { resetPage(); form.requestSubmit(); });
+  });
+
+  // Search: submit after typing stops
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    queryInput.addEventListener('input', debounce(() => { resetPage(); form.requestSubmit(); }, 350));
+  }
+
+  // Filters menu toggling + outside click close
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    const toggleBtn = e.target.closest('button');
+    if (!menu) return;
+    if (!e.target.closest('#filtersMenu') && !toggleBtn) menu.classList.add('hidden');
+  });
+
+  // Modal + image controls
+  let zoom = 1, dragging = false, startX = 0, startY = 0, scrollLeft = 0, scrollTop = 0;
+  const modal = document.getElementById('reviewModal');
+  const img = document.getElementById('reviewImg');
+  const viewer = document.getElementById('viewerBox');
+  const zoomLabel = document.getElementById('zoomLabel');
+  const ridInput = document.getElementById('decisionRid');
+  const nameSpan = document.getElementById('modalName');
+  const bdaySpan = document.getElementById('modalBirthdate');
+  const resIdSpan = document.getElementById('modalResidentId');
+  const sourceSpan = document.getElementById('modalDocSource');
+  const docTypeSpan = document.getElementById('modalDocType');
+  const approveBtn = document.getElementById('approveBtn');
+
+  // Rejection UI refs
+  const rejectionWrap = document.getElementById('rejectionNotesWrap');
+  const rejectionNotes = document.getElementById('rejectionNotes');
+  const rejCount = document.getElementById('rejCount');
+
+  function lockBodyScroll(){ document.documentElement.style.overflow = 'hidden'; }
+  function unlockBodyScroll(){ document.documentElement.style.overflow = ''; }
+
+  function openReviewModal(btn){
+    modal.classList.remove('hidden');
+    lockBodyScroll();
+
+    ridInput.value = btn.dataset.rid;
+    nameSpan.textContent = btn.dataset.fullname || '—';
+    bdaySpan.textContent = btn.dataset.birthdate || '—';
+    resIdSpan.textContent = btn.dataset.rid || '—';
+    sourceSpan.textContent = (btn.dataset.docsource || '—').toUpperCase();
+    docTypeSpan.textContent = btn.dataset.doctype || '—';
+
+    // set doctype id safely where btn is in scope
+    document.getElementById('doctypeIdInput').value = btn.dataset.doctypeId || '';
+
+    // Reset zoom and viewer position
+    zoom = 1; applyZoom();
+    viewer.scrollTop = 0; viewer.scrollLeft = 0;
+    img.src = '';
+
+    // Reset rejection UI each time modal opens
+    cancelReject();
+
+    if (approveBtn) approveBtn.disabled = false; 
+
+    fetch(`{% url 'secretary_module:approval_get_doc_url' %}?file_path=${encodeURIComponent(btn.dataset.filepath)}`)
+      .then(r => r.json())
+      .then(({url}) => { img.src = url; })
+      .catch(() => {});
+  }
+
+  function closeReviewModal(){
+    modal.classList.add('hidden');
+    img.src = '';
+    unlockBodyScroll();
+    cancelReject();
+
+    if (approveBtn) approveBtn.disabled = false; 
+  }
+
+  // Approve (direct submit)
+  function submitDecision(action){
+    if (action === 'approved' && approveBtn && approveBtn.disabled) return;
+    document.getElementById('decisionAction').value = action;
+    document.getElementById('decisionForm').submit();
+  }
+
+  // Rejection flow
+  function prepareReject(){
+    rejectionWrap.classList.remove('hidden');
+    if (rejectionNotes) rejectionNotes.focus();
+
+    if (approveBtn) approveBtn.disabled = true;
+  }
+
+  function cancelReject(){
+    if (!rejectionWrap) return;
+    rejectionWrap.classList.add('hidden');
+    if (rejectionNotes){
+      rejectionNotes.value = '';
+      rejectionNotes.classList.remove('ring-2','ring-red-500');
+    }
+    if (rejCount) rejCount.textContent = '0';
+
+    if (approveBtn) approveBtn.disabled = false; 
+  }
+
+  function confirmReject(){
+    const val = (rejectionNotes?.value || '').trim();
+    if (!val){
+      // Require a reason
+      rejectionNotes.classList.add('ring-2','ring-red-500');
+      rejectionNotes.focus();
+      return;
+    }
+    rejectionNotes.classList.remove('ring-2','ring-red-500');
+    submitDecision('rejected');
+  }
+
+  // Live char counter
+  if (rejectionNotes && rejCount){
+    rejectionNotes.addEventListener('input', () => {
+      rejCount.textContent = (rejectionNotes.value || '').length;
+    });
+  }
+
+  // Zoom helpers
+  function applyZoom(){
+    img.style.transform = `scale(${zoom})`;
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+  }
+  function zoomIn(){ zoom = Math.min(6, zoom + 0.1); applyZoom(); }
+  function zoomOut(){ zoom = Math.max(0.3, zoom - 0.1); applyZoom(); }
+  function zoomReset(){ zoom = 1; applyZoom(); viewer.scrollTop = 0; viewer.scrollLeft = 0; }
+
+  // Drag to pan inside viewer
+  viewer.addEventListener('mousedown', e=>{
+    dragging = true;
+    viewer.classList.add('cursor-grabbing');
+    startX = e.pageX - viewer.offsetLeft;
+    startY = e.pageY - viewer.offsetTop;
+    scrollLeft = viewer.scrollLeft;
+    scrollTop = viewer.scrollTop;
+    e.preventDefault();
+  });
+  window.addEventListener('mouseup', ()=>{
+    dragging = false;
+    viewer.classList.remove('cursor-grabbing');
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    e.preventDefault();
+    const x = e.pageX - viewer.offsetLeft;
+    const y = e.pageY - viewer.offsetTop;
+    viewer.scrollLeft = scrollLeft - (x - startX);
+    viewer.scrollTop  = scrollTop  - (y - startY);
+  });
+
+  // Expose if needed elsewhere
+  window.openReviewModal = openReviewModal;
+  window.closeReviewModal = closeReviewModal;
+  window.submitDecision = submitDecision;
+  window.zoomIn = zoomIn; window.zoomOut = zoomOut; window.zoomReset = zoomReset;
+  window.prepareReject = prepareReject; window.confirmReject = confirmReject; window.cancelReject = cancelReject;
+</script>
 {% endblock %}
