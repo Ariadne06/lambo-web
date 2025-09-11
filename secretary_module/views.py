@@ -1,7 +1,12 @@
 from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
-
-# Create your views here.
+from django.utils.http import urlencode
+from utils.flash import set_flash, get_flash
+from utils.db_message import _clean_db_error, _clean_params, coerce_message
+from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
+from .models import Secretary
+from utils.supa import url_for_doc
+from django.http import JsonResponse, HttpResponseBadRequest
 
 @custom_login_required
 @role_required('Barangay Secretary')
@@ -80,6 +85,134 @@ def announcement(request):
 
 @custom_login_required
 @role_required('Barangay Secretary')
+def get_doc_url(request):
+    """
+    Given a file_path (path within the bucket), return a viewable URL.
+    - If bucket is public (dev) -> public URL
+    - If bucket is private (prod) -> short-lived signed URL
+    SECURITY NOTE: In production, prefer accepting a doc_id and look up file_path server-side.
+    """
+    file_path = request.GET.get("file_path")
+    if not file_path:
+        return HttpResponseBadRequest("Missing file_path")
+
+    try:
+        url = url_for_doc(file_path)
+        if not url:
+            return HttpResponseBadRequest("Could not generate URL")
+        return JsonResponse({"url": url})
+    except Exception as e:
+        return HttpResponseBadRequest(str(e))
+
+@custom_login_required
+@role_required('Barangay Secretary')
+def approval_decide(request):
+    
+    rid = int(request.POST.get("rid"))
+    doc_type_id = int(request.POST.get("doctype_id"))
+    action = request.POST.get("action")      
+    review_notes = request.POST.get("rejection_notes", "")
+    pid = int(request.session.get("personnel_id"))          
+
+    if action not in ("approved", "rejected"):
+        return HttpResponseBadRequest("Invalid request.")
+
+    try:
+        result = Secretary.sp_review_resident_supporting_certificate(
+            rid=rid,
+            doc_type_id=doc_type_id,
+            review_status=action,
+            review_notes=review_notes,
+            pid=pid
+        )
+        msg = coerce_message(result)
+        set_flash(request, msg, "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect("secretary_module:approval")
+
+@custom_login_required
+@role_required('Barangay Secretary')
 def approval(request):
-    return render(request, 'secretary_module/approval.html')
+    flash = get_flash(request) 
+    
+    limit = None
+    offset = None
+    sort_by = ''
+    sort_dir = ''
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+        
+    sort_by  = request.GET.get("sort_by")
+    sort_dir = request.GET.get("sort_dir", "desc").lower()
+    if sort_by not in VALID_SORT_BY:
+        sort_by = ""
+    if sort_dir not in VALID_SORT_DIR:
+        sort_dir = "desc"
+        
+    offset = (page - 1) * limit
+    
+    try:
+        results = Secretary.sp_get_pending_supporting_certificates(
+            query=query,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+
+    
+    base_params = _clean_params({
+        "limit": limit,
+        "sort_by": sort_by,
+        "sort_dir": sort_dir,
+        "query": query,    
+    })
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    
+        # limit pills reset page to 1
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    return render(request, 'secretary_module/approval.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "sort_by": sort_by,
+        "sort_dir": sort_dir,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+        'session_personnel_id': request.session.get('personnel_id'),
+    })
 
