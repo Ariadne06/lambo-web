@@ -106,10 +106,10 @@ class Admin(models.Model):
             raise e
         
     @staticmethod
-    def sp_get_activty_logs(limit, offset, sort_by, sort_dir):
+    def sp_get_activty_logs(limit, offset, sort_by, sort_dir, query):
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_activity_logs', [limit, offset, sort_by, sort_dir])
+                cursor.callproc('get_activity_logs', [limit, offset, sort_by, sort_dir, query])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]

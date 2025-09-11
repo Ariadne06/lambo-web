@@ -158,6 +158,21 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
 
+# ---- Supabase storage ----
+ENV = os.environ.get("ENV", "development")  # "development" | "production"
+
+# Bucket for resident docs (from your Supabase screenshot)
+SUPABASE_BUCKET_DOCS = os.environ.get("SUPABASE_BUCKET_DOCS", "resident-documents")
+
+# Public only in dev, private in production
+SUPABASE_BUCKET_DOCS_PUBLIC = os.environ.get(
+    "SUPABASE_BUCKET_DOCS_PUBLIC",
+    "true" if ENV == "development" else "false"
+).lower() == "true"
+
+# Signed URL lifetime for private docs
+SUPABASE_SIGNED_SECONDS = int(os.environ.get("SUPABASE_SIGNED_SECONDS", "300"))
+
 # if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 #     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 # else:
