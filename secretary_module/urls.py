@@ -19,5 +19,7 @@ urlpatterns = [
      path('applications/', views.applications, name="applications"),
      path('price_update/', views.price_update, name="price_update"),
      path('announcement/', views.announcement, name="announcement"),
-     path('approval/', views.approval, name="approval"),    
+     path('approval/', views.approval, name="approval"),
+     path("approval/get-doc-url", views.get_doc_url, name="approval_get_doc_url"),
+     path("approval/decide", views.approval_decide, name="approval_decide"),       
 ]
