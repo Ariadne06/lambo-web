@@ -223,6 +223,12 @@ class Resident(models.Model):
     status = models.ForeignKey('ResidentStatus', on_delete=models.PROTECT, db_column='status_id')
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, blank=True, null=True, db_column='address_id')
     is_verified = models.BooleanField(default=False)
+    occupation_id = models.IntegerField(blank=True, null=True)
+    nationality_id = models.IntegerField(blank=True, null=True)
+    employment_status_id = models.IntegerField(blank=True, null=True)
+    is_pwd = models.BooleanField(default=False)
+    profile_image_path = models.TextField(blank=True, null=True)
+
     def __str__(self):
         return f"{self.last_name}, {self.first_name}"
 
@@ -355,3 +361,39 @@ class Subsystem(models.Model):
     class Meta:
         managed = False
         db_table = 'subsystem'
+
+
+class Occupation(models.Model):
+    occupation_id = models.AutoField(primary_key=True)
+    occupation_name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.occupation_name
+
+    class Meta:
+        managed = False
+        db_table = 'occupation'
+
+class Nationality(models.Model):
+    nationality_id = models.AutoField(primary_key=True)
+    nationality = models.CharField(max_length=100)
+    country_name = models.CharField(max_length=100, blank=True, null=True)
+    iso_alpha2 = models.CharField(max_length=2, blank=True, null=True)
+
+    def __str__(self):
+        return self.nationality
+
+    class Meta:
+        managed = False
+        db_table = 'nationality'
+
+class EmploymentStatus(models.Model):
+    employment_status_id = models.AutoField(primary_key=True)
+    employment_status_name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.employment_status_name
+
+    class Meta:
+        managed = False
+        db_table = 'employment_status'
