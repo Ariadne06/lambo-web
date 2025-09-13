@@ -30,10 +30,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-pmxq2n=0rxlqw^k4cvqlz!uc*!+9(epm$y_gl=-r-4lzzldo*s'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+load_dotenv()
+# ---- Supabase storage ----
+ENV = os.environ.get("ENV", "development")  # "development" | "production"
+if ENV == "production":
+    DEBUG = False
+    print("Running in production mode")
+    print(f"ENV value: Inside Production Block {ENV}")
+    ALLOWED_HOSTS = ['*']
+else:
+    DEBUG = True
+    print("Running in development mode")
+    print(f"ENV value: Inside Development Block {ENV}")
+    ALLOWED_HOSTS = ['*']
 
-ALLOWED_HOSTS = ['*']
+# # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = False
+
+# ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -82,6 +96,7 @@ NPM_BIN_PATH = 'C:/Program Files/nodejs/npm.cmd'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -127,8 +142,6 @@ WSGI_APPLICATION = 'lambo.wsgi.application'
 #     }
 # }
 
-load_dotenv()  
-
 if 'CI' in os.environ:  # Check if running in CI environment
     DATABASES = {
         'default': {
@@ -157,9 +170,6 @@ else:
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
-
-# ---- Supabase storage ----
-ENV = os.environ.get("ENV", "development")  # "development" | "production"
 
 # Bucket for resident docs (from your Supabase screenshot)
 SUPABASE_BUCKET_DOCS = os.environ.get("SUPABASE_BUCKET_DOCS", "resident-documents")
@@ -235,3 +245,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ID ANALYZER API
 ID_ANALYZER_API_KEY = os.getenv('ID_ANALYZER_API_KEY')
 OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if not set
+
+if not DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
