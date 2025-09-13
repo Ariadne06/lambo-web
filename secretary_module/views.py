@@ -215,7 +215,3 @@ def approval(request):
         'message_level': flash['message_level'],
         'session_personnel_id': request.session.get('personnel_id'),
     })
-    
-    
-# trial
-
