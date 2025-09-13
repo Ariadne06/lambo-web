@@ -37,7 +37,7 @@ if ENV == "production":
     DEBUG = False
     print("Running in production mode")
     print(f"ENV value: Inside Production Block {ENV}")
-    ALLOWED_HOSTS = ['*']
+    ALLOWED_HOSTS = ['lambo-web-5mka.onrender.com']
 else:
     DEBUG = True
     print("Running in development mode")
