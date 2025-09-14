@@ -235,3 +235,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ID ANALYZER API
 ID_ANALYZER_API_KEY = os.getenv('ID_ANALYZER_API_KEY')
 OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if not set
+
+# restrict/disable drf browsable api in production
+if not DEBUG:
+    REST_FRAMEWORK = {
+        'DEFAULT_RENDERER_CLASSES': [
+            'rest_framework.renderers.JSONRenderer',
+        ],
+    }
