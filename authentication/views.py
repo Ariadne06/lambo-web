@@ -142,11 +142,13 @@ def req_pwd_change(request):
             return redirect('authentication:req_pwd_change')
 
         try:
-            logging.sp_request_password_reset(username, email)
-            # success → set flash, then REDIRECT (this is the “R” in PRG)
-            set_flash(request, "Submitted successfully!", "success")
+            result = logging.sp_request_password_reset(username, email)
+            
+            if result == "Reset request accepted. Personnel account matched.":
+                set_flash(request, result, "success")
+            else:
+                set_flash(request, result, "error")
         except Exception as e:
-            # normalize DB error and flash it
             set_flash(request, _clean_db_error(e), "error")
 
         return redirect('authentication:req_pwd_change')  # ← important
@@ -159,7 +161,6 @@ def req_pwd_change(request):
 def reset_password(request):
     if request.method == 'POST':
         pid = request.session.get('pending_personnel_id')
-        old_password = request.POST.get('old_password')
         new_password = request.POST.get('new_password')
         confirm_password = request.POST.get('confirm_password')
         
@@ -168,7 +169,7 @@ def reset_password(request):
             try:
                 if new_password and new_password == confirm_password:
                     # Call the stored procedure to change the password
-                    logging.sp_change_personnel_default_pwd(pid, old_password, confirm_password)
+                    logging.sp_change_personnel_default_pwd(pid, new_password)
                     messages.success(request, 'Password changed successfully.')
                     request.session.flush()
                     return redirect('authentication:login')

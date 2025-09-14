@@ -31,12 +31,12 @@ class logging(models.Model):
             raise e
         
     @staticmethod
-    def sp_change_personnel_default_pwd(pid, new_password, confirm_password):
+    def sp_change_personnel_default_pwd(pid, new_password):
         try:
             with connection.cursor() as cursor:
                 cursor.callproc(
                     'change_personnel_default_password', [
-                        pid, new_password, confirm_password
+                        pid, new_password
                     ]
                 )
                 result = cursor.fetchone()
