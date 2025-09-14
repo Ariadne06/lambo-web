@@ -251,9 +251,7 @@ OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if no
 if not DEBUG:
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# restrict/disable drf browsable api in production
-if not DEBUG:
+    # restrict/disable drf browsable api in production
     REST_FRAMEWORK = {
         'DEFAULT_RENDERER_CLASSES': [
             'rest_framework.renderers.JSONRenderer',
