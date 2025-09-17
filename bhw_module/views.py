@@ -11,21 +11,6 @@ def bhw_dashboard(request):
 def householdList(request):
     return render(request, 'bhw_module/householdList.html')
 
-def addHousehold1(request):
-    return render(request, 'bhw_module/addHousehold1.html')
-
-def addHousehold2(request):
-    return render(request, 'bhw_module/addHousehold2.html')
-
-def addHousehold3(request):
-    return render(request, 'bhw_module/addHousehold3.html')
-
-def addHousehold4(request):
-    return render(request, 'bhw_module/addHousehold4.html')
-
-def addHousehold5(request):
-    return render(request, 'bhw_module/addHousehold5.html')
-
 def householdView(request):
     return render(request, 'bhw_module/householdView.html')
 
@@ -73,3 +58,6 @@ def maternalAdd(request):
 
 def maternalView(request):
     return render(request, 'bhw_module/maternalView.html')
+
+def HouseholdAdd(request):
+    return render(request, 'bhw_module/HouseholdAdd.html')
