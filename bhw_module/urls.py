@@ -6,11 +6,6 @@ app_name = 'bhw_module'
 urlpatterns = [
      path('', views.bhw_dashboard, name='bhw_dashboard'),
      path('householdList', views.householdList),
-     path('addHousehold1', views.addHousehold1),
-     path('addHousehold2', views.addHousehold2),
-     path('addHousehold3', views.addHousehold3),
-     path('addHousehold4', views.addHousehold4),
-     path('addHousehold5', views.addHousehold5),
      path('householdView', views.householdView),
      path('householdVisit', views.householdVisit),
      path('residentList', views.residentList),
@@ -27,6 +22,7 @@ urlpatterns = [
      path('maternalList', views.maternalList),
      path('maternalAdd', views.maternalAdd),
      path('maternalView', views.maternalView),
+     path('HouseholdAdd', views.HouseholdAdd),
      
 
 ]
