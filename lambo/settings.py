@@ -94,7 +94,11 @@ INTERNAL_IPS = [
 
 # NPM_BIN_PATH = 'C:/Program Files/nodejs/npm.cmd'
 
-NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", "/usr/bin/npm")
+# ---- Tailwind / npm binary path ----
+if ENV == "production":
+    NPM_BIN_PATH = "/usr/bin/npm"
+else:
+    NPM_BIN_PATH = 'C:/Program Files/nodejs/npm.cmd'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
