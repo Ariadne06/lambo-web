@@ -10,7 +10,6 @@ from urllib.parse import urlencode
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
-from supabase import create_client, Client
 from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
@@ -244,10 +243,6 @@ def forgotpassword(request):
 
     # GET: just show the page (no prefilled data)
     return render(request, "authentication/mobileForgotPassword.html")
-
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
-SUPABASE_SERVICE_ROLE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
 @csrf_exempt
 def api_forgot_password(request):
