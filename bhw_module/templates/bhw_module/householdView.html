@@ -1,399 +1,814 @@
-{% extends "base_admin.html" %}
+{% extends "base_bhw.html" %}
 
 {% block content %}
-<div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
-    <!-- Header -->
-    <div class="flex justify-between items-center border-b pb-3 mb-4">
-        <h2 class="text-xl font-bold text-red-600 flex items-center">
-            🏠 Household Profile
-        </h2>
-        <button class="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2V7a2 2 0 012-2h16a2 2 0 012 2v9a2 2 0 01-2 2h-2m-4 0h-4"/>
-            </svg>
-            Print
-        </button>
-    </div>
-
-    <!-- Household Info -->
-    <div class="grid grid-cols-3 gap-6 mb-8">
-        <div>
-            <label class="text-sm text-gray-500">Household ID</label>
-            <input type="text" value="10000" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Sitio/Purok</label>
-            <input type="text" value="Purok 5" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Category</label>
-            <input type="text" value="Non-NHTS" class="w-full p-2 border rounded-lg">
-        </div>
-
-        <div>
-            <label class="text-sm text-gray-500">Household No.</label>
-            <input type="text" value="0001" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Barangay</label>
-            <input type="text" value="Cansaga" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Water Source</label>
-            <input type="text" value="Point Source" class="w-full p-2 border rounded-lg">
-        </div>
-
-        <div>
-            <label class="text-sm text-gray-500">Family No.</label>
-            <input type="text" value="0001-001" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Household Head</label>
-            <input type="text" value="Adrianne Villarta" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Toilet Facility</label>
-            <input type="text" value="Connected to Septic Tank" class="w-full p-2 border rounded-lg">
-        </div>
-
-        <div>
-            <label class="text-sm text-gray-500">Renter (Y/N)</label>
-            <input type="text" value="No" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">Waste Management</label>
-            <input type="text" value="Waste Segregation" class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-            <label class="text-sm text-gray-500">With Drainage?</label>
-            <input type="text" value="No" class="w-full p-2 border rounded-lg">
-        </div>
-
-        <div>
-            <label class="text-sm text-gray-500">Date of Visit</label>
-            <input type="text" value="01/01/2020" class="w-full p-2 border rounded-lg">
-        </div>
-    </div>
-
-    <!-- Household Members Table -->
-    <h3 class="text-lg font-bold text-red-600 mb-3">👥 Household Members</h3>
-    <div class="overflow-x-auto bg-gray-50 rounded-xl shadow-inner">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-red-600 text-white">
-                <tr>
-                    <th class="px-4 py-3">Resident ID</th>
-                    <th class="px-4 py-3">First Name</th>
-                    <th class="px-4 py-3">M.I</th>
-                    <th class="px-4 py-3">Last Name</th>
-                    <th class="px-4 py-3">Date of Birth</th>
-                    <th class="px-4 py-3">Sex</th>
-                    <th class="px-4 py-3">Religion</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3 text-center">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                <tr class="hover:bg-red-50 transition">
-                    <td class="px-4 py-2">1000</td>
-                    <td class="px-4 py-2">Adrianne</td>
-                    <td class="px-4 py-2">C.</td>
-                    <td class="px-4 py-2">Villarta</td>
-                    <td class="px-4 py-2">08/08/2028</td>
-                    <td class="px-4 py-2">Male</td>
-                    <td class="px-4 py-2">Catholic</td>
-                    <td class="px-4 py-2">Single</td>
-                    <td class="px-4 py-2 text-center">
-                <button
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-semibold shadow hover:bg-red-700 transition"
-                    onclick="openResidentViewModal(this)"
-                    data-resident-id="1000"
-                    data-first-name="Adrianne"
-                    data-middle-name="C."
-                    data-last-name="Villarta"
-                    data-dob="2028-08-08"
-                    data-sex="Male"
-                    data-religion="Catholic"
-                    data-status="Single"
-                >
-                    <!-- eye icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 5C5 5 2 12 2 12s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
-                    </svg>
-                    View
-                </button>
-                </td>
-                </tr>
-                <!-- Repeat rows -->
-            </tbody>
-        </table>
-    </div>
-
-   <!-- Footer -->
-<div class="flex justify-end mt-6">
-    <button class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">
-        ⬅ Back
-    </button>
-</div>
-<!-- Resident View Modal (2-step) -->
-<div id="residentViewModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="residentViewModal_title">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="closeResidentViewModal()"></div>
-
-  <!-- Modal container -->
-  <div class="relative mx-auto my-8 w-[96%] max-w-6xl">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-
-      <!-- Modal Header -->
-      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-4 flex items-center justify-between">
-        <h2 id="residentViewModal_title" class="text-lg font-semibold">Resident — View</h2>
-        <button type="button" class="text-white/90 hover:text-white text-2xl leading-none font-bold"
-                aria-label="Close modal" onclick="closeResidentViewModal()">&times;</button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="p-6 max-h-[75vh] overflow-y-auto">
-        <!-- Top: avatar + stepper -->
-        <div class="flex items-start gap-6 mb-4">
-          <!-- Avatar -->
-          <div class="shrink-0">
-            <div class="w-28 h-28 rounded-full ring-2 ring-gray-200 overflow-hidden grid place-items-center bg-gray-50">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 12c-5.33 0-8 2.67-8 6v2h16v-2c0-3.33-2.67-6-8-6Z"/>
+<div class="min-h-screen bg-gradient-to-b from-white via-red-50/40 to-white">
+  <!-- Top Bar / Title -->
+  <header class="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-6 py-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
+            <!-- Back arrow -->
+            <a href="" class="inline-flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-gray-200 hover:bg-gray-50" aria-label="Back to Household List">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.78 15.53a.75.75 0 0 1-1.06 0l-5-5a.75.75 0 0 1 0-1.06l5-5a.75.75 0 1 1 1.06 1.06L8.06 9.25l4.72 4.72a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd"/>
               </svg>
+            </a>
+            <div class="h-12 w-1.5 rounded-full bg-red-600"></div>
+            <div>
+              <h1 class="text-2xl font-semibold tracking-tight">HH-2024-002</h1>
+              <p class="text-sm text-gray-500">Household Head: <span class="font-medium text-gray-700">Maria Santos</span></p>
             </div>
-          </div>
-
-          <!-- Stepper -->
-          <div class="grow">
-            <div class="flex items-center gap-8 text-sm font-medium mb-2">
-              <button type="button" class="rv-stepper-1 flex items-center gap-2 text-red-700" onclick="rvGoto(1)">
-                <span>1</span><span>Personal</span>
-              </button>
-              <button type="button" class="rv-stepper-2 flex items-center gap-2 text-gray-400" onclick="rvGoto(2)">
-                <span>2</span><span>Health</span>
-              </button>
-            </div>
-            <p class="text-xs text-gray-500">Use Next/Back to switch sections.</p>
           </div>
         </div>
+      </div>
+    </div>
+  </header>
 
-        <!-- STEP 1: Personal (from your design) -->
-        <section data-step="1" class="rv-step grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">First Name</label>
-            <input id="rv_first_name" type="text" value="Adrianne" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Relationship of the HH Head</label>
-            <input id="rv_relation" type="text" value="Brother" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Middle Name</label>
-            <input id="rv_middle_name" type="text" value="C." class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Civil Status</label>
-            <input id="rv_civil_status" type="text" value="Single" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Last Name</label>
-            <input id="rv_last_name" type="text" value="Villarta" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Religion</label>
-            <input id="rv_religion" type="text" value="Catholic" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Date of Birth</label>
-            <input id="rv_dob" type="text" value="01/01/2020" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Membership Type</label>
-            <input id="rv_membership" type="text" value="Non Member" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Sex</label>
-            <input id="rv_sex" type="text" value="Male" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">PhilHealth ID Number</label>
-            <input id="rv_philhealth" type="text" value="000000" class="w-full rounded-md border border-gray-300 px-3 py-2">
+  <!-- Content -->
+  <main class="mx-auto max-w-7xl px-6 py-10">
+    <div class="grid grid-cols-12 gap-8">
+      <!-- Left Column: Household Summary -->
+      <aside class="col-span-4 space-y-6">
+        <!-- Household card -->
+        <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+          <div class="px-6 py-6">
+            <dl class="divide-y divide-gray-100">
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">Household Head</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">Maria Santos</dd>
+              </div>
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">Household No.</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">HH-2024-002</dd>
+              </div>
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">House Type</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">Wooden</dd>
+              </div>
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">Ownership</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">Renting</dd>
+              </div>
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">Address</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">Purok 5, Sitio Mabini</dd>
+              </div>
+            </dl>
           </div>
         </section>
 
-        <!-- STEP 2: Health (from your design) -->
-        <section data-step="2" class="rv-step hidden grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Medical History</label>
-            <input id="rv_med_history" type="text" value="Diabetes" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        <!-- Actions -->
+        <section class="rounded-2xl border bg-white p-5 shadow-sm">
+          <p class="text-sm text-gray-600">Quick Actions</p>
+          <div class="mt-3 grid grid-cols-1 gap-3">
+            <button id="openAddFamilyModal" class="rounded-xl border border-red-600 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+              Add Family Unit
+            </button>
           </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">FP Use</label>
-            <select id="rv_fp_use" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-              <option selected>Yes</option><option>No</option>
-            </select>
-          </div>
+        </section>
+      </aside>
 
+      <!-- Right Column: Families -->
+      <section class="col-span-8 space-y-6">
+        <div class="flex items-end justify-between">
           <div>
-            <label class="block text-sm text-gray-700 mb-1">Smoker</label>
-            <select id="rv_smoker" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-              <option>Yes</option><option>No</option><option>Former</option>
-            </select>
+            <h2 class="text-lg font-semibold">Families in this Household</h2>
+            <p class="text-sm text-gray-500">Each family shows the same details captured when adding.</p>
           </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Education Attainment</label>
-            <input id="rv_education" type="text" value="College Degree" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
+        </div>
 
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Alcohol Beverage Drinker</label>
-            <select id="rv_drinker" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-              <option>Yes</option><option>No</option><option selected>Occasional</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm text-gray-700 mb-1">Age (Risk Group)</label>
-              <input id="rv_age" type="number" value="25" class="w-full rounded-md border border-gray-300 px-3 py-2">
+        {# Example Family Card (make these dynamic in your template loop) #}
+        <details open class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 transition-colors group-open:from-red-50">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
+              <div>
+                <h3 class="font-semibold tracking-tight">FAM-002 · Family Head: Maria Santos</h3>
+                <p class="mt-1 text-xs text-gray-500">Respondent: <span class="font-medium text-gray-700">Maria Santos</span> · Relationship to Head: <span class="font-medium text-gray-700">Head</span></p>
+                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: NO</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigent: YES</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: EXTENDED</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: Level II (communal)</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: Collected by LGU</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">With blinc drainage: YES</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: Water-sealed (own)</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm text-gray-700 mb-1">Quarter</label>
-              <select id="rv_quarter" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-                <option>1st Quarter</option><option selected>2nd Quarter</option><option>3rd Quarter</option><option>4th Quarter</option>
+            <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </summary>
+
+          <!-- Members -->
+          <div class="px-6 pb-6 pt-2">
+            <h4 class="mb-3 text-sm font-semibold">Members</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Member: Maria -->
+              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">MS</div>
+                  <div class="text-sm font-medium">Maria Santos</div>
+                </div>
+                <button
+                  type="button"
+                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  data-member-id="RES-001"
+                  data-member-name="Maria Santos"
+                  data-member-sex="Female"
+                >
+                  Add Health Info
+                </button>
+              </div>
+
+              <!-- Member: Jose -->
+              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">JS</div>
+                  <div class="text-sm font-medium">Jose Santos</div>
+                </div>
+                <button
+                  type="button"
+                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  data-member-id="RES-002"
+                  data-member-name="Jose Santos"
+                  data-member-sex="Male"
+                >
+                  Add Health Info
+                </button>
+              </div>
+            </div>
+
+
+            <div class="mt-5 flex items-center gap-2">
+              <button
+                class="openAddMemberModal rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                data-family-number="FAM-002">
+                Add Member
+              </button>
+            </div>
+          </div>
+        </details>
+
+        {# Another Sample Card #}
+        <details class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 transition-colors group-open:from-red-50">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
+              <div>
+                <h3 class="font-semibold tracking-tight">FAM-003 · Family Head: Jose Santos</h3>
+                <p class="mt-1 text-xs text-gray-500">Respondent: <span class="font-medium text-gray-700">Ana Santos</span> · Relationship to Head: <span class="font-medium text-gray-700">Spouse/Partner</span></p>
+                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: YES</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigent: NO</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: NUCLEAR</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: Level III (individual)</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: Composting</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">With blinc drainage: NO</span>
+                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: Water-sealed (shared)</span>
+                </div>
+              </div>
+            </div>
+            <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </summary>
+          <div class="px-6 pb-6 pt-2">
+            <h4 class="mb-3 text-sm font-semibold">Members</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">JS</div>
+                  <div class="text-sm font-medium">Jose Santos</div>
+                </div>
+                <button
+                  type="button"
+                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  data-member-id="RES-002"
+                  data-member-name="Jose Santos"
+                  data-member-sex="Male"
+                >
+                  Add Health Info
+                </button>
+              </div>
+             <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">MS</div>
+                  <div class="text-sm font-medium">Maria Santos</div>
+                </div>
+                <button
+                  type="button"
+                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  data-member-id="RES-001"
+                  data-member-name="Maria Santos"
+                  data-member-sex="Female"
+                >
+                  Add Health Info
+                </button>
+              </div>
+            </div>
+            <div class="mt-5 flex items-center gap-2">
+              <button
+                class="openAddMemberModal rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                data-family-number="FAM-002">
+                Add Member
+              </button>
+            </div>
+          </div>
+        </details>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Add Family Unit Modal -->
+<div id="addFamilyModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- dialog -->
+  <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">Add Family Unit</h3>
+      <button id="closeAddFamilyModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post" action="" class="px-6 py-5">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Family Number -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Family Number</label>
+          <input name="family_number" type="text" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Family Head -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Family Head</label>
+          <input name="family_head" type="text" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Respondent Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Respondent Name</label>
+          <input name="respondent_name" type="text" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Relationship to the Head (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship to the Head</label>
+          <select name="relationship_to_head" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Head</option>
+            <option>Spouse/Partner</option>
+            <option>Son/Daughter</option>
+            <option>Parent</option>
+            <option>Sibling</option>
+            <option>Relative</option>
+            <option>Non-relative</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- NHTS Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">NHTS Status</label>
+          <select name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+
+        <!-- Indigent Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Indigent Status</label>
+          <select name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+
+        <!-- Household Type (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Household Type</label>
+          <select name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>NUCLEAR</option>
+            <option>EXTENDED</option>
+            <option>SINGLE PARENT</option>
+            <option>OTHERS</option>
+          </select>
+        </div>
+
+        <!-- Type of Water Source (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Water Source</label>
+          <select name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Level I (point source)</option>
+            <option>Level II (communal)</option>
+            <option>Level III (individual)</option>
+            <option>Deep well/Hand pump</option>
+            <option>Protected spring</option>
+            <option>Purchased/Delivered</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- Type of Waste Management (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Waste Management</label>
+          <select name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Collected by LGU</option>
+            <option>Composting</option>
+            <option>MRF/Segregation</option>
+            <option>Open dumping</option>
+            <option>Burning</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- With blinc drainage (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">With blinc drainage</label>
+          <select name="with_blinc_drainage" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+
+        <!-- Type of Toilet Facility (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Toilet Facility</label>
+          <select name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Water-sealed (own)</option>
+            <option>Water-sealed (shared)</option>
+            <option>Pit latrine</option>
+            <option>None</option>
+            <option>Others</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelAddFamilyModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Family</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Add Member Modal -->
+<div id="addMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">Add Household Member</h3>
+      <button id="closeAddMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 11-1.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06 5.28 15.78a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+    <form method="post" action="" class="px-6 py-5">
+      {% csrf_token %}
+
+      <!-- family hook (filled by JS when opening the modal) -->
+      <input type="hidden" name="family_number" id="member_family_number">
+
+      <!-- --------------- Identity ---------------- -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Full Name (search in residents) -->
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">Full Name (search residents)</label>
+          <input name="resident_full_name" id="resident_full_name" list="residentList"
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                 autocomplete="off" placeholder="Type to search…">
+          <!-- Store selected resident_id here if you map it in JS -->
+          <input type="hidden" name="resident_id" id="resident_id">
+          <!-- Build this datalist from context (optional) -->
+          <datalist id="residentList">
+            {% if residents %}
+              {% for r in residents %}
+                <option data-id="{{ r.id }}" value="{{ r.full_name }}"></option>
+              {% endfor %}
+            {% endif %}
+          </datalist>
+        </div>
+
+        <!-- Date of Birth -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
+          <input name="dob" type="date" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Sex -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Sex</label>
+          <select name="sex" id="sex" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Female</option>
+            <option>Male</option>
+          </select>
+        </div>
+
+        <!-- Relationship to the Head -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship to the Head</label>
+          <select name="relationship_to_head" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Head</option>
+            <option>Spouse/Partner</option>
+            <option>Son/Daughter</option>
+            <option>Parent</option>
+            <option>Sibling</option>
+            <option>Relative</option>
+            <option>Non-relative</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- Civil Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Civil Status</label>
+          <select name="civil_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Single</option>
+            <option>Married</option>
+            <option>Separated</option>
+            <option>Widowed</option>
+            <option>Live-in</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- Religion -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Religion</label>
+          <select name="religion" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Roman Catholic</option>
+            <option>INC</option>
+            <option>Evangelical</option>
+            <option>Iglesia Baptista</option>
+            <option>Muslim</option>
+            <option>None</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <!-- PhilHealth ID -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth ID</label>
+          <input name="philhealth_id" type="text" placeholder="e.g., 12-345678901-2"
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Membership Type -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth Membership Type</label>
+          <select name="membership_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="">Select…</option>
+            <option>Member</option>
+            <option>Dependent</option>
+            <option>Sponsored</option>
+            <option>Indigent</option>
+            <option>Senior Citizen</option>
+            <option>None</option>
+          </select>
+        </div>
+      </div>
+
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelAddMemberModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Member</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- General Health Info Modal -->
+<div id="generalHealthModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        General Health Info <span id="gh_member_label" class="text-gray-500"></span>
+      </h3>
+      <button id="closeGeneralHealthModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 111.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06 5.28 15.78a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post" action="" class="px-6 py-5">
+
+      <!-- Hidden context -->
+      <input type="hidden" name="member_id" id="gh_member_id">
+      <input type="hidden" name="member_sex" id="gh_member_sex">
+
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <!-- LEFT -->
+        <div class="space-y-4">
+          <!-- Medical History (multiple selection) -->
+          <fieldset>
+            <legend class="text-sm font-medium text-gray-700">Medical History (select all that apply)</legend>
+            <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="HPN" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                HPN – Hypertension
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="DM" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                DM – Diabetes
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="TB" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                TB – Tuberculosis
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="S" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                S – Surgery
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="Asthma" class="h-4 w-4">
+                Asthma
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="Heart Disease" class="h-4 w-4">
+                Heart Disease
+              </label>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple (server: use <code>request.POST.getlist('medical_history')</code>).</p>
+          </fieldset>
+
+          <!-- Smoker -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Smoker</label>
+            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select Yes/No</option>
+              <option value="YES">YES</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+
+          <!-- Alcohol Beverage Drinker -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker</label>
+            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select Yes/No</option>
+              <option value="YES">YES</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+
+          <!-- Sexually Active -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Sexually Active</label>
+            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select Yes/No</option>
+              <option value="YES">YES</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+
+          <!-- LMP (Female only) -->
+          <div id="gh_lmp_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">Last Menstrual Period</label>
+            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="space-y-4">
+          <!-- Age of Menarche (Female only) -->
+          <div id="gh_menarche_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">Age of MENARCHE</label>
+            <input name="age_menarche" type="number" min="8" max="20" placeholder="Enter Age"
+                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          </div>
+
+          <!-- FP Use -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">FP Use</label>
+            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select Yes/No</option>
+              <option value="YES">YES</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+
+          <!-- Education Attainment -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Education Attainment</label>
+            <select name="education_attainment" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select One</option>
+              <option>No formal schooling</option>
+              <option>Elementary</option>
+              <option>High School</option>
+              <option>Senior High</option>
+              <option>Vocational</option>
+              <option>College</option>
+              <option>Post-graduate</option>
+            </select>
+          </div>
+
+          <!-- Classification by Age / Health Risk Group -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+              <label class="block text-sm font-medium text-gray-700">Age</label>
+              <input name="risk_age" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" placeholder="Age">
+            </div>
+            <div class="col-span-1">
+              <label class="block text-sm font-medium text-gray-700">Quarter</label>
+              <select name="risk_quarter" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                <option value="">Select Quarter</option>
+                <option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option>
+              </select>
+            </div>
+            <div class="col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Classification</label>
+              <select name="risk_classification" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                <option value="">Select Classification</option>
+                <option>Pregnant</option>
+                <option>Postpartum</option>
+                <option>Senior (60+)</option>
+                <option>Child (0–14)</option>
+                <option>Adolescent (15–19)</option>
+                <option>PWD</option>
+                <option>NCD Risk</option>
+                <option>Others</option>
               </select>
             </div>
           </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Sexually Active</label>
-            <select id="rv_sex_active" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-              <option>No</option><option>Yes</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Health Risk Classification</label>
-            <input id="rv_risk_class" type="text" value="AB" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Last Menstrual Period</label>
-            <input id="rv_lmp" type="date" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Remarks</label>
-            <input id="rv_remarks" type="text" value="Vaccinated" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Age of MENARCHE</label>
-            <input id="rv_menarche_age" type="number" placeholder="Enter Age" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1">Other Conditions</label>
-            <input id="rv_other_cond" type="text" value="None" class="w-full rounded-md border border-gray-300 px-3 py-2">
-          </div>
-        </section>
-
-        <!-- Modal Footer -->
-        <div class="mt-6 flex items-center justify-between">
-          <button id="rv_backBtn" type="button"
-                  class="inline-flex items-center justify-center rounded-xl bg-gray-200 px-5 py-2 text-gray-800 text-sm font-medium shadow hover:bg-gray-300"
-                  onclick="rvPrev()">
-            Back
-          </button>
-          <div class="flex items-center gap-2">
-            <button id="rv_nextBtn" type="button"
-                    class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                    onclick="rvNext()">
-              Next
-            </button>
-            <button id="rv_updateBtn" type="button"
-                    class="hidden inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                    onclick="/* submit/update here */ closeResidentViewModal()">
-              Update
-            </button>
-          </div>
         </div>
       </div>
-      <!-- /Modal Body -->
-    </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelGeneralHealthModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save</button>
+      </div>
+    </form>
   </div>
 </div>
+
+
+
+<!-- Minimal modal JS -->
 <script>
-  let rvStep = 1;
+  (function () {
+    const docEl = document.documentElement;
 
-  function openResidentViewModal(btn){
-    // Optional: prefill from row dataset
-    if(btn && btn.dataset){
-      document.getElementById('rv_first_name').value = btn.dataset.firstName || 'Adrianne';
-      document.getElementById('rv_middle_name').value = btn.dataset.middleName || 'C.';
-      document.getElementById('rv_last_name').value  = btn.dataset.lastName || 'Villarta';
-      document.getElementById('rv_dob').value        = (btn.dataset.dob || '2020-01-01').replaceAll('-','/'); // simple format
-      document.getElementById('rv_sex').value        = btn.dataset.sex || 'Male';
-      document.getElementById('rv_religion').value   = btn.dataset.religion || 'Catholic';
-      document.getElementById('rv_civil_status').value = btn.dataset.status || 'Single';
+    /* ---------- helpers ---------- */
+    function anyModalOpen() {
+      return !!document.querySelector('.fixed.inset-0.flex');
     }
-    rvGoto(1);
-    document.getElementById('residentViewModal').classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
-  }
-
-  function closeResidentViewModal(){
-    document.getElementById('residentViewModal').classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
-  }
-
-  function rvGoto(step){
-    rvStep = step;
-    // show/hide sections
-    document.querySelectorAll('#residentViewModal .rv-step').forEach(s => s.classList.add('hidden'));
-    const active = document.querySelector(`#residentViewModal .rv-step[data-step="${step}"]`);
-    if(active) active.classList.remove('hidden');
-
-    // stepper colors
-    const s1 = document.querySelector('#residentViewModal .rv-stepper-1');
-    const s2 = document.querySelector('#residentViewModal .rv-stepper-2');
-    if(step === 1){
-      s1.classList.remove('text-gray-400'); s1.classList.add('text-red-700');
-      s2.classList.remove('text-red-700');  s2.classList.add('text-gray-400');
-    }else{
-      s2.classList.remove('text-gray-400'); s2.classList.add('text-red-700');
-      s1.classList.remove('text-red-700');  s1.classList.add('text-gray-400');
+    function openModal(el) {
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      docEl.classList.add('overflow-y-hidden');
+    }
+    function closeModal(el) {
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+      if (!anyModalOpen()) docEl.classList.remove('overflow-y-hidden');
+    }
+    function bindBackdropClose(el, closeFn) {
+      el?.addEventListener('click', (e) => { if (e.target === el) closeFn(); });
     }
 
-    // footer buttons
-    const back   = document.getElementById('rv_backBtn');
-    const next   = document.getElementById('rv_nextBtn');
-    const update = document.getElementById('rv_updateBtn');
+    /* =====================================
+       FAMILY MODAL (Add Family Unit)
+    ====================================== */
+    const familyModal = document.getElementById('addFamilyModal');
+    const openFamilyBtn = document.getElementById('openAddFamilyModal');
+    const closeFamilyBtn = document.getElementById('closeAddFamilyModal');
+    const cancelFamilyBtn = document.getElementById('cancelAddFamilyModal');
 
-    if(step === 1){
-      back.textContent = 'Back';
-      next.classList.remove('hidden');
-      update.classList.add('hidden');
-    }else{
-      back.textContent = 'Back';
-      next.classList.add('hidden');
-      update.classList.remove('hidden');
+    const openFamilyModal = () => openModal(familyModal);
+    const closeFamilyModal = () => closeModal(familyModal);
+
+    openFamilyBtn?.addEventListener('click', openFamilyModal);
+    closeFamilyBtn?.addEventListener('click', closeFamilyModal);
+    cancelFamilyBtn?.addEventListener('click', closeFamilyModal);
+    bindBackdropClose(familyModal, closeFamilyModal);
+
+    /* =====================================
+       MEMBER MODAL (Add Member)
+    ====================================== */
+    const memberModal = document.getElementById('addMemberModal');
+    const openMemberBtns = document.querySelectorAll('.openAddMemberModal');
+    const closeMemberBtn = document.getElementById('closeAddMemberModal');
+    const cancelMemberBtn = document.getElementById('cancelAddMemberModal');
+    const memberFamilyField = document.getElementById('member_family_number');
+
+    function openMemberModal(familyNum) {
+      if (memberFamilyField) memberFamilyField.value = familyNum || '';
+      openModal(memberModal);
     }
-  }
+    const closeMemberModal = () => closeModal(memberModal);
 
-  function rvNext(){ rvGoto( Math.min(2, rvStep + 1) ); }
-  function rvPrev(){ rvGoto( Math.max(1, rvStep - 1) ); }
+    openMemberBtns.forEach(btn => {
+      btn.addEventListener('click', () => openMemberModal(btn.dataset.familyNumber));
+    });
+    closeMemberBtn?.addEventListener('click', closeMemberModal);
+    cancelMemberBtn?.addEventListener('click', closeMemberModal);
+    bindBackdropClose(memberModal, closeMemberModal);
 
-  // ESC to close
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape'){
-      const m = document.getElementById('residentViewModal');
-      if(m && !m.classList.contains('hidden')) closeResidentViewModal();
+    /* female-only fields (Add Member modal) */
+    const sexSel = document.getElementById('sex');
+    const lmpWrap = document.getElementById('lmp_wrap');
+    const menarcheWrap = document.getElementById('menarche_wrap');
+    function toggleFemaleOnly() {
+      const isFemale = sexSel?.value === 'Female';
+      lmpWrap?.classList.toggle('hidden', !isFemale);
+      menarcheWrap?.classList.toggle('hidden', !isFemale);
     }
-  });
+    sexSel?.addEventListener('change', toggleFemaleOnly);
+    toggleFemaleOnly();
+
+    /* Name datalist -> resident_id mapping (Add Member modal) */
+    const nameInput = document.getElementById('resident_full_name');
+    const hiddenId = document.getElementById('resident_id');
+    nameInput?.addEventListener('change', () => {
+      const list = document.getElementById('residentList');
+      const opts = list ? list.children : [];
+      if (hiddenId) hiddenId.value = '';
+      for (const o of opts) {
+        if (o.value === nameInput.value && o.dataset.id) {
+          hiddenId.value = o.dataset.id;
+          break;
+        }
+      }
+    });
+
+    /* =====================================
+       GENERAL HEALTH MODAL (per member)
+    ====================================== */
+    const ghModal = document.getElementById('generalHealthModal');
+    const ghOpenBtns = document.querySelectorAll('.openGeneralHealthModal');
+    const ghCloseBtn = document.getElementById('closeGeneralHealthModal');
+    const ghCancelBtn = document.getElementById('cancelGeneralHealthModal');
+
+    const ghMemberId = document.getElementById('gh_member_id');
+    const ghMemberSex = document.getElementById('gh_member_sex');
+    const ghMemberLabel = document.getElementById('gh_member_label');
+
+    const ghLmpWrap = document.getElementById('gh_lmp_wrap');
+    const ghMenarcheWrap = document.getElementById('gh_menarche_wrap');
+
+    function setFemaleOnlyVisibility(sex) {
+      const isFemale = (sex || '').toLowerCase() === 'female';
+      ghLmpWrap?.classList.toggle('hidden', !isFemale);
+      ghMenarcheWrap?.classList.toggle('hidden', !isFemale);
+    }
+
+    function openGHModal(memberId, memberName, memberSex) {
+      if (ghMemberId) ghMemberId.value = memberId || '';
+      if (ghMemberSex) ghMemberSex.value = memberSex || '';
+      if (ghMemberLabel) ghMemberLabel.textContent = memberName ? `– ${memberName}` : '';
+      setFemaleOnlyVisibility(memberSex);
+      openModal(ghModal);
+    }
+    const closeGHModal = () => closeModal(ghModal);
+
+    ghOpenBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        openGHModal(btn.dataset.memberId, btn.dataset.memberName, btn.dataset.memberSex);
+      });
+    });
+    ghCloseBtn?.addEventListener('click', closeGHModal);
+    ghCancelBtn?.addEventListener('click', closeGHModal);
+    bindBackdropClose(ghModal, closeGHModal);
+
+    /* =====================================
+       GLOBAL: ESC closes top-most open modal
+    ====================================== */
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      // Close in priority: GH -> Member -> Family
+      if (ghModal && !ghModal.classList.contains('hidden')) return closeGHModal();
+      if (memberModal && !memberModal.classList.contains('hidden')) return closeMemberModal();
+      if (familyModal && !familyModal.classList.contains('hidden')) return closeFamilyModal();
+    });
+  })();
 </script>
 
-</div>
 {% endblock %}

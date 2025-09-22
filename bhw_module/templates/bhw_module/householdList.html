@@ -1,4 +1,4 @@
-{% extends 'base_admin.html' %}
+{% extends 'base_bhw.html' %}
 {% block content %}
 
 <style>
@@ -13,6 +13,8 @@
   .btn-view:hover{ background:#1d4ed8; }     /* blue-700 */
   .btn-visit{ background:#16a34a; }          /* green-600 */
   .btn-visit:hover{ background:#15803d; }    /* green-700 */
+  .btn-add{ background:#f59e0b; }            /* amber-500 */
+  .btn-add:hover{ background:#d97706; }      /* amber-600 */
   .btn-action svg{ width:16px; height:16px; fill:currentColor; color:#fff; }
 </style>
 
@@ -42,7 +44,6 @@
         <tr class="bg-gray-100 text-gray-700">
           <th class="py-3 px-4 border">Household ID</th>
           <th class="py-3 px-4 border">Household No.</th>
-          <th class="py-3 px-4 border">Family No.</th>
           <th class="py-3 px-4 border">Household Head</th>
           <th class="py-3 px-4 border text-center">Action</th>
         </tr>
@@ -51,13 +52,11 @@
         <tr class="hover:bg-gray-50">
           <td class="py-3 px-4 border">1000</td>
           <td class="py-3 px-4 border">0001</td>
-          <td class="py-3 px-4 border">0001-002</td>
           <td class="py-3 px-4 border">Adrianne Villarta</td>
           <td class="py-3 px-4 border text-center">
             <div class="flex justify-center gap-3">
               <!-- View -->
               <a href="#" class="btn-action btn-view" title="View">
-                <!-- eye icon -->
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 5C5 5 1.73 12 1.73 12S5 19 12 19s10.27-7 10.27-7S19 5 12 5Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/>
                 </svg>
@@ -66,12 +65,12 @@
 
               <!-- Visit -->
               <a href="#" class="btn-action btn-visit" title="Household Visit">
-                <!-- home icon -->
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
                 </svg>
                 <span>Visit</span>
               </a>
+
             </div>
           </td>
         </tr>
