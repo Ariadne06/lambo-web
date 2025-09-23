@@ -32,6 +32,14 @@ def login_view(request):
             return redirect('captain_module:captain_dashboard')
         elif role == 'Barangay Secretary':
             return redirect('secretary_module:secretary_dashboard')
+        elif role == 'Barangay Assistant Secretary':
+            return redirect('secretary_module:secretary_dashboard')
+        elif role == 'Barangay Treasurer':
+            return redirect('treasurer_module:treasurer_dashboard')
+        elif role == 'Barangay Health Worker':
+            return redirect('bhw_module:bhw_dashboard')
+        elif role == 'Midwife':
+            return redirect('nurse_module:nurse_dashboard')
         else:
             messages.error(request, 'Access denied: Unrecognized role.')
             return redirect('authentication:login')
@@ -67,6 +75,14 @@ def login_view(request):
                     return redirect('captain_module:captain_dashboard')
                 elif role == 'Barangay Secretary':
                     return redirect('secretary_module:secretary_dashboard')
+                elif role == 'Barangay Assistant Secretary':
+                    return redirect('secretary_module:secretary_dashboard')
+                elif role == 'Barangay Treasurer':
+                    return redirect('treasurer_module:treasurer_dashboard')
+                elif role == 'Barangay Health Worker':
+                    return redirect('bhw_module:bhw_dashboard')
+                elif role == 'Midwife':
+                    return redirect('nurse_module:nurse_dashboard')
                 else:
                     messages.error(request, 'Access denied: Unrecognized role.')
                     request.session.flush()
@@ -193,7 +209,8 @@ def reset_password(request):
             
     return render(request, 'authentication/forgotPassword.html')
 
-def forgotpassword(request):
+def forgot_password(request):
+    flash = get_flash(request)
     if request.method == "POST":
         username = (request.POST.get("username") or "").strip()
         email    = (request.POST.get("email") or "").strip()
@@ -201,48 +218,40 @@ def forgotpassword(request):
         p2       = (request.POST.get("confirm_password") or "").strip()
 
         if not username or not email:
-            messages.error(request, "Invalid request: missing user info.")
+            set_flash(request, "Invalid request: missing user info.", "error")
             return redirect("authentication:login")
 
         if len(p1) < 8:
-            messages.error(request, "Password must be at least 8 characters.")
+            set_flash(request, "Password must be at least 8 characters.", "error")
             return render(request, "authentication/forgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
         if p1 != p2:
-            messages.error(request, "Passwords do not match.")
+            set_flash(request, "Passwords do not match.", "error")
             return render(request, "authentication/forgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
         try:
-            # OPTIONAL: re-check username+email is valid
-            # res = logging.sp_request_password_reset(username, email)
-            # if not res or "accepted" not in str(res).lower():
-            #     messages.error(request, "User not found.")
-            #     return render(request, "authentication/forgotPassword.html", {
-            #         "prefilled_username": username, "prefilled_email": email,
-            #     })
+            results = logging.sp_reset_resident_password_by_username(username, p1) 
 
-            # TODO: call your real stored procedure here.
-            # If you only have a proc that takes an ID, look up the ID first.
-            # Example placeholder:
-            status = logging.sp_change_password_via_reset(username, p1)  # <-- replace with your proc
-
-            # If your proc returns a message, check it here
-            # if not status or "success" not in str(status).lower(): raise Exception(str(status))
-
-            messages.success(request, "Password updated. You can now sign in.")
+            set_flash(request, results, "success")
+            # "Password updated. You can now sign in."
             return redirect("authentication:login")
         except Exception as e:
-            messages.error(request, _clean_db_error(e))
+            set_flash(request, _clean_db_error(e), "error")
             return render(request, "authentication/forgotPassword.html", {
-                "prefilled_username": username, "prefilled_email": email,
+                "prefilled_username": username, 
+                "prefilled_email": email,
+                'message': flash['message'],
+                'message_level': flash['message_level'],
             })
 
-    # GET: just show the page (no prefilled data)
-    return render(request, "authentication/mobileForgotPassword.html")
+    return render(request, "authentication/mobileForgotPassword.html", {
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @csrf_exempt
 def api_forgot_password(request):
@@ -317,7 +326,7 @@ def api_forgot_password(request):
 def reset_from_link(request, token: str):
     data = load_reset_token(token, max_age_seconds=30 * 60)  # 30 minutes
     if not data:
-        messages.error(request, "Reset link is invalid or has expired.")
+        set_flash(request,"Reset link is invalid or has expired.", "error")
         return redirect("authentication:login")
 
     # Pre-fill/lock username+email into the form (hidden inputs)
