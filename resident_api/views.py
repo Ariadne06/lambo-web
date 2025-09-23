@@ -23,6 +23,7 @@ from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from .utils.ocr_processing import validate_document_header
 
 # Local imports
 from .serializers import (
@@ -246,6 +247,7 @@ class ResidentRegistrationView(APIView):
                     'error': 'Document type is required for registration.',
                     'error_code': 'MISSING_DOCUMENT_TYPE'
                 }, status=400)
+
             
             # Generic error handling
             else:
@@ -631,6 +633,25 @@ class VerifyIdFieldsView(APIView):
             if not id_image:
                 return Response({'status': 'error', 'message': 'No image provided'}, status=400)
 
+            # --- SUPPORTING DOCS HEADER CHECK ---
+            # If this is a supporting document, only check the header/title
+            if doc_type and any(x in doc_type.lower() for x in ['birth', 'voter']):
+                # Only check header/title for supporting docs
+                header_ok = validate_document_header(id_image, doc_type)
+                if not header_ok:
+                    return Response({
+                        'status': 'mismatch',
+                        'mismatches': {
+                            'header': {
+                                'user': doc_type,
+                                'ocr': 'Header/title not found in image'
+                            }
+                        }
+                    }, status=200)
+
+                # If header is OK, you can skip field comparison and return match
+                return Response({'status': 'match'})
+
             # Extract fields using improved logic
             ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
             
@@ -695,10 +716,25 @@ class VerifyGuardianIdFieldsView(APIView):
                 return Response({'error': 'No image provided'}, status=400)
             
             if not guardian_username:
-                return Response({'error': 'Guardian username not provided'}, status=400)
+                return Response({'error': 'Guardian username not provided'}, status=400) 
 
             print(f"DEBUG: Verifying guardian ID for username: {guardian_username}")
             print(f"DEBUG: Document type: {doc_type}")
+
+            # --- GUARDIAN SUPPORTING DOCS HEADER CHECK ---
+            if doc_type and any(x in doc_type.lower() for x in ['birth', 'voter']):
+                header_ok = validate_document_header(id_image, doc_type)
+                if not header_ok:
+                    return Response({
+                        'status': 'mismatch',
+                        'mismatches': {
+                            'header': {
+                                'user': doc_type,
+                                'ocr': 'Header/title not found in image'
+                            }
+                        }
+                    }, status=200)
+                return Response({'status': 'match'})
 
             # Get guardian information from database
             guardian_info = None
