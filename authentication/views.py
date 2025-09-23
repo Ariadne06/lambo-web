@@ -237,8 +237,6 @@ def forgot_password(request):
             results = logging.sp_reset_resident_password_by_username(username, p1) 
 
             set_flash(request, results, "success")
-            # "Password updated. You can now sign in."
-            return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
             return render(request, "authentication/forgotPassword.html", {
@@ -270,9 +268,8 @@ def api_forgot_password(request):
 
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        # Use your own check. Example using your proc that already validates:
-        res = logging.sp_request_password_reset(username, email)
-        if not res or "accepted" not in str(res).lower():
+        res = logging.sp_check_resident_username_email(username, email)
+        if res is not True:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
         return JsonResponse({"error": _clean_db_error(e)}, status=500)

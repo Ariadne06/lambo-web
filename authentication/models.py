@@ -73,3 +73,18 @@ class logging(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_check_resident_username_email(username, email):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc(
+                    'check_resident_username_email', [
+                        username,
+                        email
+                    ]
+                )
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e
