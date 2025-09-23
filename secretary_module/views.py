@@ -7,6 +7,7 @@ from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from .models import Secretary
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
+from django.db import connection
 
 @custom_login_required
 @role_required('Barangay Secretary')
@@ -31,7 +32,58 @@ def moreHousehold(request):
 @custom_login_required
 @role_required('Barangay Secretary')
 def Addbusiness(request):
-    return render(request, 'secretary_module/Addbusiness.html')
+    if request.method == "POST":
+        try:
+            # Collect POST values
+            resident_id           = int(request.POST.get("resident_id"))
+            business_name         = request.POST.get("business_name")
+            business_type_id      = int(request.POST.get("business_type_id"))
+            nature_of_business    = request.POST.get("nature_of_business")
+            ownership_id          = int(request.POST.get("ownership_id"))
+
+            house_number          = request.POST.get("house_number")
+            street                = request.POST.get("street")
+            barangay              = request.POST.get("barangay")
+            sitio_id              = int(request.POST.get("sitio_id"))
+            city_municipality     = request.POST.get("city_municipality")
+            country               = request.POST.get("country") or "Philippines"
+
+            total_gross_income    = request.POST.get("total_gross_income")
+            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number")
+            clearance_date_issued = request.POST.get("clearance_date_issued") or None
+
+            personnel_id          = int(request.session.get("personnel_id"))
+
+            # Call the stored procedure wrapper
+            result = Secretary.sp_register_business(
+                resident_id,
+                business_name,
+                business_type_id,
+                nature_of_business,
+                ownership_id,
+                house_number,
+                street,
+                barangay,
+                sitio_id,
+                city_municipality,
+                country,
+                total_gross_income,
+                dti_sec_cda_reg_num,
+                clearance_date_issued,
+                personnel_id,
+            )
+
+            msg = coerce_message(result)
+            set_flash(request, msg, "success")
+        except Exception as e:
+            set_flash(request, _clean_db_error(e), "error")
+
+        return redirect("secretary_module:business_list")
+
+    # GET → just show the form
+    return render(request, "secretary_module/Addbusiness.html")
+
+
 
 @custom_login_required
 @role_required('Barangay Secretary')
