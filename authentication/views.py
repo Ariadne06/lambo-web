@@ -237,7 +237,6 @@ def forgot_password(request):
             results = logging.sp_reset_resident_password_by_username(username, p1) 
 
             set_flash(request, results, "success")
-            return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
             return render(request, "authentication/forgotPassword.html", {
