@@ -261,7 +261,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ID ANALYZER API
 ID_ANALYZER_API_KEY = os.getenv('ID_ANALYZER_API_KEY')
 OCR_BACKEND = os.getenv('OCR_BACKEND', 'idanalyzer') #default to idanylzer if not set
-
+ENABLE_OCR_VALIDATION = os.environ.get('ENABLE_OCR_VALIDATION', 'true').lower() == 'true'
 if not DEBUG:
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
