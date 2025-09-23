@@ -52,6 +52,8 @@ urlpatterns = [
     path('bhw_module/', include('bhw_module.urls')),
 
     path('household_api/', include('household_module.urls')),
+
+    path('certificate_api/', include('certificate_issuance_module.urls')),
 ]
 
 
