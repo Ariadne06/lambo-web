@@ -223,13 +223,13 @@ def forgot_password(request):
 
         if len(p1) < 8:
             set_flash(request, "Password must be at least 8 characters.", "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
         if p1 != p2:
             set_flash(request, "Passwords do not match.", "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
@@ -237,9 +237,10 @@ def forgot_password(request):
             results = logging.sp_reset_resident_password_by_username(username, p1) 
 
             set_flash(request, results, "success")
+            return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
@@ -309,7 +310,7 @@ def api_forgot_password(request):
         send_mail(
             subject=subject,
             message=text_body,
-            from_email=None,         # uses DEFAULT_FROM_EMAIL
+            from_email=None,
             recipient_list=[email],
             html_message=html_body,
             fail_silently=False,
