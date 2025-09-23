@@ -5,6 +5,15 @@ from authentication.decorators import custom_login_required
 from django.http import HttpResponse
 from utils.db_message import _clean_db_error
 from utils.flash import set_flash, get_flash
+import os, json
+from urllib.parse import urlencode
+from django.http import JsonResponse, HttpResponseNotAllowed
+from django.views.decorators.csrf import csrf_exempt
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.utils.html import escape
+from .tokens import make_reset_token, load_reset_token
+
 
 def login_view(request):
     
@@ -23,6 +32,14 @@ def login_view(request):
             return redirect('captain_module:captain_dashboard')
         elif role == 'Barangay Secretary':
             return redirect('secretary_module:secretary_dashboard')
+        elif role == 'Barangay Assistant Secretary':
+            return redirect('secretary_module:secretary_dashboard')
+        elif role == 'Barangay Treasurer':
+            return redirect('treasurer_module:treasurer_dashboard')
+        elif role == 'Barangay Health Worker':
+            return redirect('bhw_module:bhw_dashboard')
+        elif role == 'Midwife':
+            return redirect('nurse_module:nurse_dashboard')
         else:
             messages.error(request, 'Access denied: Unrecognized role.')
             return redirect('authentication:login')
@@ -58,6 +75,14 @@ def login_view(request):
                     return redirect('captain_module:captain_dashboard')
                 elif role == 'Barangay Secretary':
                     return redirect('secretary_module:secretary_dashboard')
+                elif role == 'Barangay Assistant Secretary':
+                    return redirect('secretary_module:secretary_dashboard')
+                elif role == 'Barangay Treasurer':
+                    return redirect('treasurer_module:treasurer_dashboard')
+                elif role == 'Barangay Health Worker':
+                    return redirect('bhw_module:bhw_dashboard')
+                elif role == 'Midwife':
+                    return redirect('nurse_module:nurse_dashboard')
                 else:
                     messages.error(request, 'Access denied: Unrecognized role.')
                     request.session.flush()
@@ -183,3 +208,129 @@ def reset_password(request):
             return redirect('authentication:login')
             
     return render(request, 'authentication/forgotPassword.html')
+
+def forgot_password(request):
+    flash = get_flash(request)
+    if request.method == "POST":
+        username = (request.POST.get("username") or "").strip()
+        email    = (request.POST.get("email") or "").strip()
+        p1       = (request.POST.get("new_password") or "").strip()
+        p2       = (request.POST.get("confirm_password") or "").strip()
+
+        if not username or not email:
+            set_flash(request, "Invalid request: missing user info.", "error")
+            return redirect("authentication:login")
+
+        if len(p1) < 8:
+            set_flash(request, "Password must be at least 8 characters.", "error")
+            return render(request, "authentication/forgotPassword.html", {
+                "prefilled_username": username, "prefilled_email": email,
+            })
+
+        if p1 != p2:
+            set_flash(request, "Passwords do not match.", "error")
+            return render(request, "authentication/forgotPassword.html", {
+                "prefilled_username": username, "prefilled_email": email,
+            })
+
+        try:
+            results = logging.sp_reset_resident_password_by_username(username, p1) 
+
+            set_flash(request, results, "success")
+            # "Password updated. You can now sign in."
+            return redirect("authentication:login")
+        except Exception as e:
+            set_flash(request, _clean_db_error(e), "error")
+            return render(request, "authentication/forgotPassword.html", {
+                "prefilled_username": username, 
+                "prefilled_email": email,
+                'message': flash['message'],
+                'message_level': flash['message_level'],
+            })
+
+    return render(request, "authentication/mobileForgotPassword.html", {
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@csrf_exempt
+def api_forgot_password(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    # 1) Parse JSON body
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+        username = (body.get("username") or "").strip()
+        email    = (body.get("email") or "").strip()
+        if not username or not email:
+            return JsonResponse({"error": "username and email are required"}, status=400)
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+    # 2) Verify this pair exists in your DB (use your stored proc)
+    try:
+        # Use your own check. Example using your proc that already validates:
+        res = logging.sp_request_password_reset(username, email)
+        if not res or "accepted" not in str(res).lower():
+            return JsonResponse({"error": "User not found for that username+email"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": _clean_db_error(e)}, status=500)
+
+    # 3) Create signed, expiring token with ONLY the info you need
+    token = make_reset_token({"u": username, "e": email})
+
+    # 4) Build the link to your reset page
+    #    http://127.0.0.1:8000/authentication/reset/<token>/
+    reset_path = reverse("authentication:reset_from_link", args=[token])
+    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    reset_link = f"{host}{reset_path}"
+
+    # 5) Send the email (uses your Gmail SMTP settings)
+    subject = "Reset Your LAMBO Password"
+    text_body = (
+        f"Hi {username},\n\n"
+        "We received a request to reset your password.\n\n"
+        f"Username: {username}\n"
+        f"Reset link: {reset_link}\n\n"
+        "This link expires in 30 minutes.\n"
+        "If you did not request this, please ignore this email."
+    )
+    html_body = f"""
+      <h2>Reset Your Password</h2>
+      <p>Hi <strong>{escape(username)}</strong>,</p>
+      <p>Your username: <strong>{escape(username)}</strong></p>
+      <p><a href="{escape(reset_link)}"
+            style="background:#d32f2f;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
+        Reset Password
+      </a></p>
+      <p style="color:#666;font-size:12px">
+        This link expires in 30 minutes. If you didn’t request this, ignore this email.
+      </p>
+    """
+    try:
+        send_mail(
+            subject=subject,
+            message=text_body,
+            from_email=None,         # uses DEFAULT_FROM_EMAIL
+            recipient_list=[email],
+            html_message=html_body,
+            fail_silently=False,
+        )
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to send email: {e}"}, status=500)
+
+    return JsonResponse({"message": "Password reset email sent."}, status=200)
+
+
+def reset_from_link(request, token: str):
+    data = load_reset_token(token, max_age_seconds=30 * 60)  # 30 minutes
+    if not data:
+        set_flash(request,"Reset link is invalid or has expired.", "error")
+        return redirect("authentication:login")
+
+    # Pre-fill/lock username+email into the form (hidden inputs)
+    return render(request, "authentication/mobileForgotPassword.html", {
+        "prefilled_username": data.get("u"),
+        "prefilled_email": data.get("e"),
+    })
