@@ -1,15 +1,24 @@
 import re
 import cv2
+import io
 import numpy as np
 import pytesseract
 import requests
 from PIL import Image, ImageEnhance
 from django.conf import settings
-from .text_processing import normalize_name, clean_name_line, correct_month_name
+from .text_processing import normalize_name, clean_name_line, correct_month_name, normalize_for_comparison, normalize_name_for_comparison, names_are_similar
 
 # Configure Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+VOTER_KEYWORDS = ["VOTER'S CERTIFICATE", "VOTERS CERTIFICATE", "COMMISSION ON ELECTIONS", "COMELEC"]
+BIRTH_KEYWORDS = ["CERTIFICATE OF LIVE BIRTH", "BIRTH CERTIFICATE", "PHILIPPINE STATISTICS AUTHORITY", "PSA"]
+
+DOCUMENT_TYPE_KEYWORDS = {
+    "birth certificate": BIRTH_KEYWORDS,
+    "voter's certificate": VOTER_KEYWORDS,
+    "voters certificate": VOTER_KEYWORDS,  # alternate
+}
 
 def preprocess_image_for_ocr(pil_image):
     """Preprocess image for better OCR accuracy."""
@@ -359,3 +368,50 @@ def handle_philippine_drivers_license(raw_first, raw_middle, raw_last, full_name
     last_name = normalize_name(last_name) if last_name else ''
     
     return first_name, middle_name, last_name
+
+def _normalize(text):
+    return re.sub(r'\s+', ' ', (text or '').upper()).strip()
+
+def _match_keywords(text, keywords):
+    T = _normalize(text)
+    return any(k in T for k in keywords)
+
+def validate_document_header(file_obj, expected_type):
+    """
+    Extracts text and checks if it contains the header keywords for the chosen document_type.
+    Returns True if keywords found, else False.
+    """
+    if not getattr(settings, 'ENABLE_OCR_VALIDATION', True):
+        print("[OCR] Validation disabled in settings.")
+        return True
+
+    try:
+        file_obj.seek(0)
+        img = Image.open(io.BytesIO(file_obj.read()))
+        img = img.convert('L')
+        text = pytesseract.image_to_string(img, lang='eng') or ''
+        file_obj.seek(0)
+    except Exception as e:
+        print(f"[OCR] Exception during OCR: {e}")
+        return False
+
+    print(f"[OCR] Extracted text for '{expected_type}':")
+    print("----- OCR TEXT START -----")
+    print(text)
+    print("----- OCR TEXT END -----")
+
+    doc_key = (expected_type or '').strip().lower()
+    keywords = DOCUMENT_TYPE_KEYWORDS.get(doc_key)
+    if not keywords:
+        if 'voter' in doc_key:
+            keywords = VOTER_KEYWORDS
+        elif 'birth' in doc_key:
+            keywords = BIRTH_KEYWORDS
+
+    if not keywords:
+        print(f"[OCR] No keywords setup for document type: '{doc_key}'. Skipping OCR validation.")
+        return True
+
+    found = _match_keywords(text, keywords)
+    print(f"[OCR] Header keywords for '{doc_key}' found: {found}")
+    return found
