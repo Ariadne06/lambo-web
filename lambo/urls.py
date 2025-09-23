@@ -50,6 +50,8 @@ urlpatterns = [
     path('secretary_module/', include('secretary_module.urls')),
 
     path('bhw_module/', include('bhw_module.urls')),
+
+    path('household_api/', include('household_module.urls')),
 ]
 
 
