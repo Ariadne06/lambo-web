@@ -1,4 +1,6 @@
 from django.db import models, connection
+from decimal import Decimal, InvalidOperation
+from datetime import datetime, date
 
 class Secretary(models.Model):
     class Meta:
@@ -34,3 +36,43 @@ class Secretary(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+
+    
+    @staticmethod
+    def sp_register_business(resident_id,
+                    business_name,
+                    business_type_id,
+                    nature_of_business,
+                    ownership_id,
+                    house_number,
+                    street,
+                    barangay,
+                    sitio_id,
+                    city_municipality,
+                    country,
+                    total_gross_income,
+                    dti_sec_cda_reg_number,
+                    clearance_date_issued,
+                    created_by,):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('register_business', [resident_id,
+                    business_name,
+                    business_type_id,
+                    nature_of_business,
+                    ownership_id,
+                    house_number,
+                    street,
+                    barangay,
+                    sitio_id,
+                    city_municipality,
+                    country,
+                    total_gross_income,
+                    dti_sec_cda_reg_number,
+                    clearance_date_issued,
+                    created_by,])
+                result = cursor.fetchone()
+                return result[0]
+        except Exception as e:
+            raise e
+    
