@@ -17,7 +17,7 @@ def custom_login_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-def role_required(required_role):
+def role_required(*required_role):
     """
     Decorator to check if the user has the required role to access the view.
     """
@@ -27,7 +27,7 @@ def role_required(required_role):
             # Check the user's role (assuming the role is stored in the session or user model)
             user_role = request.session.get('role_name')
             
-            if user_role != required_role:
+            if user_role not in required_role:
                 messages.error(request, 'You do not have permission to access this page.')
                 return redirect('authentication:login') 
             return view_func(request, *args, **kwargs)

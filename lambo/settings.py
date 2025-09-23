@@ -189,6 +189,16 @@ SUPABASE_BUCKET_DOCS_PUBLIC = os.environ.get(
 # Signed URL lifetime for private docs
 SUPABASE_SIGNED_SECONDS = int(os.environ.get("SUPABASE_SIGNED_SECONDS", "300"))
 
+# 📧 Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "lambonoreply@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "wnwhiswyfzlibifa")
+DEFAULT_FROM_EMAIL = f"LAMBO No-reply <{EMAIL_HOST_USER}>"
+
+
 # if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 #     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 # else:
