@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'secretary_module',
     'bhw_module',
     'household_module',
+    'certificate_issuance_module',
 
     'django_browser_reload', # Browser Reload
 
