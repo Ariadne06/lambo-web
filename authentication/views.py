@@ -269,7 +269,6 @@ def api_forgot_password(request):
 
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        # Use your own check. Example using your proc that already validates:
         res = logging.sp_check_resident_username_email(username, email)
         if res is not True:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
