@@ -11,22 +11,22 @@ from django.db import connection
 
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def secretary_dashboard(request):
     return render(request, 'secretary_module/secretary_dashboard.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def resident_list(request):
     return render(request, 'secretary_module/resident_list.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def household_list(request):
     return render(request, 'secretary_module/household_list.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def moreHousehold(request):
     return render(request, 'secretary_module/moreHousehold.html')
 
@@ -46,7 +46,7 @@ def _find_resident_id_by_name(query: str):
     return rows[0][0]  # first column = resident_id
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def Addbusiness(request):
     if request.method == "POST":
         try:
@@ -103,57 +103,57 @@ def Addbusiness(request):
     })
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def businessDetail1(request):
     return render(request, 'secretary_module/businessDetail1.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def businessDetail2(request):
     return render(request, 'secretary_module/businessDetail2.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def businessDetail3(request):
     return render(request, 'secretary_module/businessDetail3.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def business_list(request):
     return render(request, "secretary_module/manageBusiness.html")
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def add_certificate(request):
     return render(request, 'secretary_module/addCertificate.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def manageCert1(request):
     return render(request, 'secretary_module/manageCert1.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def manageCert2(request):
     return render(request, 'secretary_module/manageCert2.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def applications(request):
     return render(request, 'secretary_module/applications.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def price_update(request):
     return render(request, 'secretary_module/priceUpdate.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def announcement(request):
     return render(request, 'secretary_module/announcement.html')
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def get_doc_url(request):
     """
     Given a file_path (path within the bucket), return a viewable URL.
@@ -174,7 +174,7 @@ def get_doc_url(request):
         return HttpResponseBadRequest(str(e))
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def approval_decide(request):
     
     rid = int(request.POST.get("rid"))
@@ -202,7 +202,7 @@ def approval_decide(request):
     return redirect("secretary_module:approval")
 
 @custom_login_required
-@role_required('Barangay Secretary')
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def approval(request):
     flash = get_flash(request) 
     
