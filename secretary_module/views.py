@@ -7,84 +7,153 @@ from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from .models import Secretary
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
+from django.db import connection
+
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def secretary_dashboard(request):
     return render(request, 'secretary_module/secretary_dashboard.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def resident_list(request):
     return render(request, 'secretary_module/resident_list.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def household_list(request):
     return render(request, 'secretary_module/household_list.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def moreHousehold(request):
     return render(request, 'secretary_module/moreHousehold.html')
 
-@custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
-def Addbusiness(request):
-    return render(request, 'secretary_module/Addbusiness.html')
+def _find_resident_id_by_name(query: str):
+    """
+    Uses your PostgreSQL function search_business_owner to resolve resident_id
+    from a name/email/phone query. Returns a single resident_id or raises.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM search_business_owner(%s, %s, %s)", [query, 20, 0])
+        rows = cursor.fetchall()
+
+    if not rows:
+        raise ValueError("Resident not found")
+    if len(rows) > 1:
+        raise ValueError("Multiple residents found. Please be more specific.")
+    return rows[0][0]  # first column = resident_id
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
+def Addbusiness(request):
+    if request.method == "POST":
+        try:
+
+            resident_name = request.POST.get("resident_name")
+            resident_id = _find_resident_id_by_name(resident_name)
+
+            # Collect the rest
+            business_name         = request.POST.get("business_name")
+            business_type_id      = int(request.POST.get("business_type_id"))
+            nature_of_business    = request.POST.get("nature_of_business")
+            ownership_id          = int(request.POST.get("ownership_id"))
+            house_number          = request.POST.get("house_number")
+            street                = request.POST.get("street")
+            barangay              = request.POST.get("barangay")
+            sitio_id              = int(request.POST.get("sitio_id"))
+            city_municipality     = request.POST.get("city_municipality")
+            country               = request.POST.get("country") or "Philippines"
+            total_gross_income    = request.POST.get("total_gross_income")
+            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number")
+            clearance_date_issued = request.POST.get("clearance_date_issued") or None
+            personnel_id          = int(request.session.get("personnel_id"))
+
+            # Call your stored procedure
+            result = Secretary.sp_register_business(
+                resident_id,
+                business_name,
+                business_type_id,
+                nature_of_business,
+                ownership_id,
+                house_number,
+                street,
+                barangay,
+                sitio_id,
+                city_municipality,
+                country,
+                total_gross_income,
+                dti_sec_cda_reg_num,
+                clearance_date_issued,
+                personnel_id,
+            )
+
+            set_flash(request, "Successfully Submitted", "success")
+
+        except ValueError as ve:
+            set_flash(request, str(ve), "error")
+        except Exception as e:
+            set_flash(request, str(e), "error")
+
+    flash = get_flash(request)
+    return render(request, "secretary_module/Addbusiness.html", {
+        'message': flash.get('message'),
+        'message_level': flash.get('message_level'),
+    })
+
+@custom_login_required
+@role_required('Barangay Secretary')
 def businessDetail1(request):
     return render(request, 'secretary_module/businessDetail1.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def businessDetail2(request):
     return render(request, 'secretary_module/businessDetail2.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def businessDetail3(request):
     return render(request, 'secretary_module/businessDetail3.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def business_list(request):
-    return render(request, 'secretary_module/manageBusiness.html')
+    return render(request, "secretary_module/manageBusiness.html")
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def add_certificate(request):
     return render(request, 'secretary_module/addCertificate.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def manageCert1(request):
     return render(request, 'secretary_module/manageCert1.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def manageCert2(request):
     return render(request, 'secretary_module/manageCert2.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def applications(request):
     return render(request, 'secretary_module/applications.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def price_update(request):
     return render(request, 'secretary_module/priceUpdate.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def announcement(request):
     return render(request, 'secretary_module/announcement.html')
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def get_doc_url(request):
     """
     Given a file_path (path within the bucket), return a viewable URL.
@@ -105,7 +174,7 @@ def get_doc_url(request):
         return HttpResponseBadRequest(str(e))
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def approval_decide(request):
     
     rid = int(request.POST.get("rid"))
@@ -133,7 +202,7 @@ def approval_decide(request):
     return redirect("secretary_module:approval")
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Secretary')
 def approval(request):
     flash = get_flash(request) 
     
