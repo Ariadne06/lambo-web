@@ -75,4 +75,5 @@ class Secretary(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
     
