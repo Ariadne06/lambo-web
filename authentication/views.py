@@ -223,13 +223,13 @@ def forgot_password(request):
 
         if len(p1) < 8:
             set_flash(request, "Password must be at least 8 characters.", "error")
-            return render(request, "authentication/mobileForgotPassword.html", {
+            return render(request, "authentication/forgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
         if p1 != p2:
             set_flash(request, "Passwords do not match.", "error")
-            return render(request, "authentication/mobileForgotPassword.html", {
+            return render(request, "authentication/forgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
@@ -243,7 +243,7 @@ def forgot_password(request):
             return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
-            return render(request, "authentication/mobileForgotPassword.html", {
+            return render(request, "authentication/forgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
@@ -251,8 +251,6 @@ def forgot_password(request):
             })
 
     return render(request, "authentication/mobileForgotPassword.html", {
-        "prefilled_username": username, 
-        "prefilled_email": email,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
