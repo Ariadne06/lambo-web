@@ -279,9 +279,10 @@ def api_forgot_password(request):
     token = make_reset_token({"u": username, "e": email})
 
     # 4) Build the link to your reset page
-    #    http://127.0.0.1:8000/authentication/reset/<token>/
+    #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    # host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    host = "http://10.162.93.189:8000" 
     reset_link = f"{host}{reset_path}"
 
     # 5) Send the email (uses your Gmail SMTP settings)
