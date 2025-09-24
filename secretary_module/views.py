@@ -50,7 +50,7 @@ def _find_resident_id_by_name(query: str):
 def Addbusiness(request):
     if request.method == "POST":
         try:
-            # 🔑 Resolve owner first
+
             resident_name = request.POST.get("resident_name")
             resident_id = _find_resident_id_by_name(resident_name)
 
