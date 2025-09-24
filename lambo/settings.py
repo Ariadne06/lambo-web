@@ -195,7 +195,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "lambonoreply@gmail.com")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "wnwhiswyfzlibifa")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "rreabxzdmlifsyek")
 DEFAULT_FROM_EMAIL = f"LAMBO No-reply <{EMAIL_HOST_USER}>"
 
 
