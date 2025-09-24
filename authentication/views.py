@@ -234,8 +234,11 @@ def forgot_password(request):
             })
 
         try:
+            # print(f"[DEBUG] Attempting to reset password for user: {username} {p1}")
             results = logging.sp_reset_resident_password_by_username(username, p1) 
-
+            # if results:
+            #     print(f"[DEBUG] Password reset results: {results}")
+            # print(f"[DEBUG] Password reset results: {results}")
             set_flash(request, results, "success")
             return redirect("authentication:login")
         except Exception as e:
@@ -248,6 +251,8 @@ def forgot_password(request):
             })
 
     return render(request, "authentication/mobileForgotPassword.html", {
+        "prefilled_username": username, 
+        "prefilled_email": email,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -281,8 +286,8 @@ def api_forgot_password(request):
     # 4) Build the link to your reset page
     #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    # host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
-    host = "http://10.162.93.189:8000" 
+    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    # host = "http://10.162.93.189:8000" 
     reset_link = f"{host}{reset_path}"
 
     # 5) Send the email (uses your Gmail SMTP settings)
