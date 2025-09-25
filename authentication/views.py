@@ -246,7 +246,7 @@ def forgot_password(request):
             return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
-            return render(request, "authentication/mobilForgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
