@@ -276,7 +276,7 @@ def api_forgot_password(request):
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
         res = logging.sp_request_password_reset(username, email)
-        if res is not True:
+        if not res:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
         return JsonResponse({"error": _clean_db_error(e)}, status=500)
