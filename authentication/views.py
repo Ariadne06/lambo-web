@@ -14,9 +14,10 @@ from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
 from django.core.mail import get_connection, EmailMultiAlternatives
-import threading, logging
+import threading
+import logging as pylogging                 # <-- stdlib logging renamed
 
-log = logging.getLogger(__name__)
+log = pylogging.getLogger(__name__)
 
 def _send_reset_email_async(subject, text_body, html_body, recipient, timeout=10):
     def _task():
