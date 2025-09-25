@@ -239,14 +239,14 @@ def forgot_password(request):
         try:
             # print(f"[DEBUG] Attempting to reset password for user: {username} {p1}")
             results = logging.sp_reset_resident_password_by_username(username, p1) 
-            # if results:
-            #     print(f"[DEBUG] Password reset results: {results}")
-            # print(f"[DEBUG] Password reset results: {results}")
+            if not results:
+                set_flash(request, f"[DEBUG] Password reset results: {username} {results}", "error")
             set_flash(request, results, "success")
             return redirect("authentication:login")
         except Exception as e:
-            set_flash(request, _clean_db_error(e), "error")
-            return render(request, "authentication/mobileForgotPassword.html", {
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
+            return render(request, "authentication/login.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
