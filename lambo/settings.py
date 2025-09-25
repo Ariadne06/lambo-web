@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'nurse_module',
     'secretary_module',
     'bhw_module',
+    'household_module',
+    'certificate_issuance_module',
 
     'django_browser_reload', # Browser Reload
 
