@@ -9,11 +9,13 @@ import os, json
 from urllib.parse import urlencode
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
-from django.core.mail import send_mail
+# from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
 from django.conf import settings
+from sendgrid import SendGridAPIClient           # NEW
+from sendgrid.helpers.mail import Mail  
 
 
 def login_view(request):
@@ -285,7 +287,7 @@ def api_forgot_password(request):
     # 4) Build the link to your reset page
     #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    reset_link = f"{settings.SITE_ORIGIN.rstrip('/')}{reset_path}"  # change to your public domain in prod
+    reset_link = f"{settings.SITE_ORIGIN.rstrip('/')}{reset_path}"  
     # host = "http://10.162.93.189:8000" 
     # reset_link = f"{host}{reset_path}"
 
@@ -312,14 +314,27 @@ def api_forgot_password(request):
       </p>
     """
     try:
-        send_mail(
+        message = Mail(
+            from_email=settings.DEFAULT_FROM_EMAIL,   # must be a verified sender or domain in SendGrid
+            to_emails=[email],
             subject=subject,
-            message=text_body,
-            from_email=None,
-            recipient_list=[email],
-            html_message=html_body,
-            fail_silently=False,
+            html_content=html_body,
+            plain_text_content=text_body,             # NEW: include plain text too
         )
+       
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        resp = sg.send(message)
+        
+        if resp.status_code not in (200, 202):
+            body = getattr(resp, "body", b"")
+            try:
+                body = body.decode() if hasattr(body, "decode") else str(body)
+            except Exception:
+                body = str(body)
+            return JsonResponse(
+                {"error": f"SendGrid error: {resp.status_code} {body[:300]}"},
+                status=500,
+            )
     except Exception as e:
         return JsonResponse({"error": f"Failed to send email: {e}"}, status=500)
 
