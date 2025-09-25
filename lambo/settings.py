@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'nurse_module',
     'secretary_module',
     'bhw_module',
+    'household_module',
+    'certificate_issuance_module',
 
     'django_browser_reload', # Browser Reload
 
@@ -196,6 +198,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "lambonoreply@gmail.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "rreabxzdmlifsyek")
+EMAIL_TIMEOUT = 10            # <- important
 DEFAULT_FROM_EMAIL = f"LAMBO No-reply <{EMAIL_HOST_USER}>"
 
 
