@@ -13,29 +13,6 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
-from django.core.mail import get_connection, EmailMultiAlternatives
-import threading
-import logging as pylogging                 # <-- stdlib logging renamed
-
-log = pylogging.getLogger(__name__)
-
-def _send_reset_email_async(subject, text_body, html_body, recipient, timeout=10):
-    def _task():
-        try:
-            conn = get_connection(timeout=timeout)  # uses EMAIL_* + this timeout
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=text_body,
-                from_email=None,   # DEFAULT_FROM_EMAIL
-                to=[recipient],
-                connection=conn,
-            )
-            if html_body:
-                msg.attach_alternative(html_body, "text/html")
-            msg.send()
-        except Exception:
-            log.exception("Forgot-password SMTP send failed")
-    threading.Thread(target=_task, daemon=True).start()
 
 
 def login_view(request):
@@ -293,30 +270,25 @@ def api_forgot_password(request):
     except Exception:
         return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
-    # 2) Verify the pair (but do NOT reveal existence)
+    # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        pair_ok = logging.sp_check_resident_username_email(username, email)
+        res = logging.sp_check_resident_username_email(username, email)
+        if res is not True:
+            return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
         return JsonResponse({"error": _clean_db_error(e)}, status=500)
 
-    # Uniform response prevents account enumeration
-    uniform_ok = JsonResponse(
-        {"message": "If this account exists, we've sent a reset link."},
-        status=200,
-    )
-
-    if pair_ok is not True:
-        # Do not send email; still return 200
-        return uniform_ok
-
-    # 3) Create signed, expiring token
+    # 3) Create signed, expiring token with ONLY the info you need
     token = make_reset_token({"u": username, "e": email})
 
-    # 4) Build absolute https link (no hardcoded host)
+    # 4) Build the link to your reset page
+    #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    reset_link = request.build_absolute_uri(reset_path)
+    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    # host = "http://10.162.93.189:8000" 
+    reset_link = f"{host}{reset_path}"
 
-    # 5) Fire-and-forget email; DO NOT block request
+    # 5) Send the email (uses your Gmail SMTP settings)
     subject = "Reset Your LAMBO Password"
     text_body = (
         f"Hi {username},\n\n"
@@ -338,10 +310,19 @@ def api_forgot_password(request):
         This link expires in 30 minutes. If you didn’t request this, ignore this email.
       </p>
     """
-    _send_reset_email_async(subject, text_body, html_body, email, timeout=10)
+    try:
+        send_mail(
+            subject=subject,
+            message=text_body,
+            from_email=None,
+            recipient_list=[email],
+            html_message=html_body,
+            fail_silently=False,
+        )
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to send email: {e}"}, status=500)
 
-    return uniform_ok
-
+    return JsonResponse({"message": "Password reset email sent."}, status=200)
 
 
 def reset_from_link(request, token: str):
