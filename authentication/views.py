@@ -246,7 +246,7 @@ def forgot_password(request):
         except Exception as e:
             msg = _clean_db_error(e)
             set_flash(request, msg, "error")
-            return render(request, "authentication/login.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
@@ -275,7 +275,7 @@ def api_forgot_password(request):
 
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        res = logging.sp_check_resident_username_email(username, email)
+        res = logging.sp_request_password_reset(username, email)
         if res is not True:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
