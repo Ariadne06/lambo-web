@@ -13,6 +13,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
+from django.conf import settings
 
 
 def login_view(request):
@@ -223,13 +224,13 @@ def forgot_password(request):
 
         if len(p1) < 8:
             set_flash(request, "Password must be at least 8 characters.", "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
         if p1 != p2:
             set_flash(request, "Passwords do not match.", "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, "prefilled_email": email,
             })
 
@@ -243,7 +244,7 @@ def forgot_password(request):
             return redirect("authentication:login")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
-            return render(request, "authentication/forgotPassword.html", {
+            return render(request, "authentication/mobilForgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
                 'message': flash['message'],
@@ -284,11 +285,11 @@ def api_forgot_password(request):
     # 4) Build the link to your reset page
     #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
+    reset_link = f"{settings.SITE_ORIGIN.rstrip('/')}{reset_path}"  # change to your public domain in prod
     # host = "http://10.162.93.189:8000" 
-    reset_link = f"{host}{reset_path}"
+    # reset_link = f"{host}{reset_path}"
 
-    # 5) Send the email (uses your Gmail SMTP settings)
+    # 5) Send the email (Django email backend will use your SMTP or SendGrid)
     subject = "Reset Your LAMBO Password"
     text_body = (
         f"Hi {username},\n\n"
