@@ -189,12 +189,23 @@
             <input type="hidden" name="doctype_id" id="doctypeIdInput">
 
             <div class="flex gap-2">
-              <button type="button" onclick="submitDecision('approved')" class="flex-1 px-4 py-2 rounded bg-green-600 text-white"  id="approveBtn">Approve</button>
+              <button type="button" onclick="submitDecision('approve')" class="flex-1 px-4 py-2 rounded bg-green-600 text-white"  id="approveBtn">Approve</button>
               <button type="button" onclick="prepareReject()" class="flex-1 px-4 py-2 rounded bg-red-600 text-white">Reject</button>
             </div>
 
             <!-- Rejection notes (hidden until user chooses Reject) -->
             <div id="rejectionNotesWrap" class="mt-3 hidden">
+              <label for="review_action" class="block text-sm font-medium text-gray-700 mb-1">
+                Choose a rejection type <span class="text-red-600">*</span>
+              </label>
+              <select id="review_action" name="review_action" required
+                      class="w-full border rounded px-3 py-2 text-sm bg-white text-gray-700
+                            focus:outline-none focus:ring-2 focus:ring-red-500">
+                <option value="">-- Select --</option>
+                <option value="RESUBMISSION">Resubmission</option>
+                <option value="RE_REGISTER">Re-register</option>
+              </select>
+
               <label for="rejectionNotes" class="block text-sm font-medium text-gray-700 mb-1">
                 Reason for rejection <span class="text-red-600">*</span>
               </label>
@@ -360,17 +371,32 @@
     if (approveBtn) approveBtn.disabled = false; 
   }
 
-  function confirmReject(){
-    const val = (rejectionNotes?.value || '').trim();
-    if (!val){
-      // Require a reason
-      rejectionNotes.classList.add('ring-2','ring-red-500');
-      rejectionNotes.focus();
-      return;
-    }
-    rejectionNotes.classList.remove('ring-2','ring-red-500');
-    submitDecision('rejected');
+function confirmReject() {
+  const notes = (rejectionNotes?.value || '').trim();
+  const sel = document.getElementById('review_action');
+
+  // validate rejection type
+  if (!sel.value) {
+    sel.classList.add('ring-2', 'ring-red-500');
+    sel.focus();
+    return;
+  } else {
+    sel.classList.remove('ring-2', 'ring-red-500');
   }
+
+  // validate rejection notes
+  if (!notes) {
+    rejectionNotes.classList.add('ring-2', 'ring-red-500');
+    rejectionNotes.focus();
+    return;
+  } else {
+    rejectionNotes.classList.remove('ring-2', 'ring-red-500');
+  }
+
+  // set action and submit with validation
+  document.getElementById('decisionAction').value = 'reject';
+  document.getElementById('decisionForm').requestSubmit();
+}
 
   // Live char counter
   if (rejectionNotes && rejCount){

@@ -155,12 +155,7 @@ def announcement(request):
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def get_doc_url(request):
-    """
-    Given a file_path (path within the bucket), return a viewable URL.
-    - If bucket is public (dev) -> public URL
-    - If bucket is private (prod) -> short-lived signed URL
-    SECURITY NOTE: In production, prefer accepting a doc_id and look up file_path server-side.
-    """
+
     file_path = request.GET.get("file_path")
     if not file_path:
         return HttpResponseBadRequest("Missing file_path")
@@ -181,23 +176,26 @@ def approval_decide(request):
     doc_type_id = int(request.POST.get("doctype_id"))
     action = request.POST.get("action")      
     review_notes = request.POST.get("rejection_notes", "")
-    pid = int(request.session.get("personnel_id"))          
+    pid = int(request.session.get("personnel_id"))
+    review_action = request.POST.get("review_action", "")          
 
-    if action not in ("approved", "rejected"):
-        return HttpResponseBadRequest("Invalid request.")
+    if action not in ("approve", "reject"):
+        set_flash(request, "Invalid request.", "error")
+        return redirect("secretary_module:approval")
 
     try:
         result = Secretary.sp_review_resident_supporting_certificate(
             rid=rid,
             doc_type_id=doc_type_id,
             review_status=action,
+            pid=pid,
             review_notes=review_notes,
-            pid=pid
+            review_action=review_action
         )
         msg = coerce_message(result)
         set_flash(request, msg, "success")
     except Exception as e:
-        set_flash(request, _clean_db_error(e), "error")
+        set_flash(request, str(e), "error")
 
     return redirect("secretary_module:approval")
 
