@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -27,4 +27,6 @@ urlpatterns += [
     path('resident-profile/<int:resident_id>/', ResidentProfileView.as_view(), name='resident-profile'),
     path('update-resident-profile/<int:resident_id>/', UpdateResidentProfileView.as_view(), name='update-resident-profile'),
     path('change-personnel-password/', ChangePersonnelPasswordView.as_view(), name='change-personnel-password'),
+    path('resubmit-supporting-certificate/', ResubmitSupportingCertificateView.as_view(), name='resubmit-supporting-certificate'),
+    path('re-register-resident/', ReRegisterResidentView.as_view(), name='re-register-resident'),
 ]
