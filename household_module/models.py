@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, connection
 
 
 class HouseOwnershipType(models.Model):
@@ -64,6 +64,111 @@ class Household(models.Model):
     class Meta:
         managed = False
         db_table = 'household'
+        
+    @staticmethod
+    def sp_insert_household(
+            house_ownership_id,
+            house_type_id,
+            barangay,
+            city,            
+            sitio_id,
+            pid,
+            house_number,
+            street,
+            country,
+            household_head_id,
+            respondent_id,
+            relationship_id,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_household', [
+                    house_ownership_id,
+                    house_type_id,
+                    barangay,
+                    city,            
+                    sitio_id,
+                    pid,
+                    house_number,
+                    street,
+                    country,
+                    household_head_id,
+                    respondent_id,
+                    relationship_id,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_relationship_to_household_head():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT rth_id, description
+                FROM relationship_to_householdhead
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_house_ownership():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT house_ownership_id, description
+                FROM House_Ownership
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_house_type():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT house_type_id, description
+                FROM house_type
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_sitio():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT sitio_id, sitio_name
+                FROM sitio
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_search_resaident(query):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('search_resident', [
+                    query
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
 
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)
