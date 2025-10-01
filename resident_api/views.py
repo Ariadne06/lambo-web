@@ -878,6 +878,7 @@ class MobileLoginView(APIView):
                     # Only add rejection_action if present
                     if result.get('rejection_action'):
                         response_data['rejection_action'] = result['rejection_action']
+                        response_data['review_notes'] = result.get('review_notes')
                         # If resubmission, add identity_doc_type_id
                         if result['rejection_action'] == 'RESUBMISSION' and result.get('identity_doc_type_id'):
                             response_data['identity_doc_type_id'] = result['identity_doc_type_id']
