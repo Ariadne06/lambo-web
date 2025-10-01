@@ -1,12 +1,16 @@
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Household
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.db import DatabaseError, IntegrityError
 from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType
 from .serializers import (
     HouseOwnershipTypeSerializer, HouseholdTypeSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
-    HouseholdCreateSerializer, FamilyCreateSerializer, HouseholdListSerializer
+    HouseholdCreateSerializer, FamilyCreateSerializer, HouseholdListSerializer,
+    RelationshipListSerializer, HouseholdInsertSerializer
 )
 from .services.household_service import HouseholdService
 from .utils.database_helpers import get_lookup_data
@@ -177,3 +181,23 @@ class LookupDataView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+class RelationshipViewSet(ViewSet):
+    def list(self, request):
+        s = RelationshipListSerializer(instance={})  # <-- important
+        return Response(s.data)
+    
+class InsertHouseholdView(APIView):
+    parser_classes = (JSONParser,)
+
+    def get(self, request):
+        # lets DRF render the browsable page
+        return Response({"detail": "POST to this URL to insert a household."})
+
+    def post(self, request):
+        s = HouseholdInsertSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        instance = s.save()  # calls your sp_insert_household via serializer.create()
+        return Response({"success": True, **instance}, status=201)
+    
+    
