@@ -1,4 +1,5 @@
 {% extends 'base_bhw.html' %}
+{% load static %}
 {% block title %}Add Household{% endblock %}
 
 {% block content %}
@@ -13,10 +14,20 @@
       <p class="text-gray-500 text-sm">Enter the household’s core details. Fields marked <span class="text-red-600">*</span> are required.</p>
     </div>
 
+    <!-- Flash message (optional) -->
+    {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
+      </div>
+    {% endif %}
+
     <div class="grid grid-cols-12 gap-6">
       <!-- Form Section -->
       <div class="col-span-12">
-        <form id="household-form" method="POST" class="bg-white border rounded-xl shadow-sm p-6 space-y-6">
+        <form id="household-form" method="post" class="bg-white border rounded-xl shadow-sm p-6 space-y-6"  action="{% url 'bhw_module:HouseholdAdd' %}">
           {% csrf_token %}
 
           <!-- Section Title -->
@@ -25,28 +36,24 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Household Head -->
-            <div>
+            <!-- Household Head (typeahead) -->
+            <div class="relative">
               <label for="household_head" class="block text-gray-700 text-sm font-medium mb-1">
                 Household Head <span class="text-red-600">*</span>
               </label>
               <input id="household_head" name="household_head" type="text" required
-                     placeholder="Enter Household Head"
-                     autocomplete="name"
+                     placeholder="Search resident by name"
+                     autocomplete="off"
+                     data-autocomplete="resident"
+                     data-target-hidden="#household_head_id"
                      class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-              <p class="text-xs text-gray-500 mt-1">Primary person considered head of the household.</p>
-            </div>
+              <input type="hidden" id="household_head_id" name="household_head_id">
 
-            <!-- Respondent Name -->
-            <div>
-              <label for="respondent_name" class="block text-gray-700 text-sm font-medium mb-1">
-                Respondent Name <span class="text-red-600">*</span>
-              </label>
-              <input id="respondent_name" name="respondent_name" type="text" required
-                     placeholder="Enter Respondent Name"
-                     autocomplete="name"
-                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-              <p class="text-xs text-gray-500 mt-1">Person providing the information (may be the head).</p>
+              <!-- dropdown -->
+              <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+                   data-autocomplete-list="#household_head"></div>
+
+              <p class="text-xs text-gray-500 mt-1">Primary person considered head of the household.</p>
             </div>
 
             <!-- Relationship to Head -->
@@ -57,27 +64,11 @@
               <select id="relationship" name="relationship" required
                       class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-red-500 focus:outline-none">
                 <option value="" selected disabled>— Select Relationship —</option>
-                <option>Self (Head)</option>
-                <option>Spouse</option>
-                <option>Child</option>
-                <option>Parent</option>
-                <option>Sibling</option>
-                <option>Relative</option>
-                <option>Housemate</option>
-                <option>Other</option>
+                {% for rel in relationship %}
+                  <option value="{{ rel.rth_id }}">{{ rel.description }}</option>
+                {% endfor %}
               </select>
               <p class="text-xs text-gray-500 mt-1">Relationship of respondent to the household head.</p>
-            </div>
-
-            <!-- Sitio / Purok -->
-            <div>
-              <label for="sitio_purok" class="block text-gray-700 text-sm font-medium mb-1">
-                Sitio / Purok <span class="text-red-600">*</span>
-              </label>
-              <input id="sitio_purok" name="sitio_purok" type="text" required
-                     placeholder="Enter Sitio/Purok"
-                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-              <p class="text-xs text-gray-500 mt-1">e.g., Purok 2, Sitio Riverside.</p>
             </div>
 
             <!-- Household Number -->
@@ -92,7 +83,90 @@
               <p class="text-xs text-gray-500 mt-1">Local numbering (digits or alphanumerics, max 20).</p>
             </div>
 
-            <!-- Barangay (pre-filled to Cansaga; adjust if needed) -->
+            <!-- Respondent Name (typeahead) -->
+            <div class="relative">
+              <label for="respondent_name" class="block text-gray-700 text-sm font-medium mb-1">
+                Respondent Name <span class="text-red-600">*</span>
+              </label>
+              <input id="respondent_name" name="respondent_name" type="text" required
+                     placeholder="Search resident by name"
+                     autocomplete="off"
+                     data-autocomplete="resident"
+                     data-target-hidden="#respondent_id"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+              <input type="hidden" id="respondent_id" name="respondent_id">
+
+              <!-- dropdown -->
+              <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+                   data-autocomplete-list="#respondent_name"></div>
+
+              <p class="text-xs text-gray-500 mt-1">Person providing the information (may be the head).</p>
+            </div>
+
+            <!-- House Ownership -->
+            <div>
+              <label for="house_ownership" class="block text-gray-700 text-sm font-medium mb-1">
+                House Ownership <span class="text-red-600">*</span>
+              </label>
+              <select id="house_ownership" name="house_ownership" required
+                      class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-red-500 focus:outline-none">
+                <option value="" selected disabled>— Select Ownership —</option>
+                {% for ho in house_ownership %}
+                  <option value="{{ ho.house_ownership_id }}">{{ ho.description }}</option>
+                {% endfor %}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Specify if the house is owned, rented, or under another arrangement.</p>
+            </div>
+
+            <!-- House Type -->
+            <div>
+              <label for="house_type" class="block text-gray-700 text-sm font-medium mb-1">
+                House Type <span class="text-red-600">*</span>
+              </label>
+              <select id="house_type" name="house_type" required
+                      class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-red-500 focus:outline-none">
+                <option value="" selected disabled>— Select House Type —</option>
+                {% for ht in house_type %}
+                  <option value="{{ ht.house_type_id }}">{{ ht.description }}</option>
+                {% endfor %}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">e.g., concrete, semi-concrete, light materials.</p>
+            </div>
+          </div>
+
+          <!-- Section Title -->
+          <div class="border-b pb-2">
+            <h2 class="text-lg font-medium">Address</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Sitio / Purok -->
+            <div>
+              <label for="sitio" class="block text-gray-700 text-sm font-medium mb-1">
+                Sitio <span class="text-red-600">*</span>
+              </label>
+              <select id="sitio" name="sitio" required
+                      class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-red-500 focus:outline-none">
+                <option value="" selected disabled>— Select Sitio —</option>
+                {% for s in sitio %}
+                  <option value="{{ s.sitio_id }}">{{ s.sitio_name }}</option>
+                {% endfor %}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Please select the correct sitio.</p>
+            </div>
+
+            <!-- Street -->
+            <div>
+              <label for="street" class="block text-gray-700 text-sm font-medium mb-1">
+                Street
+              </label>
+              <input id="street" name="street" type="text"
+                     placeholder="Enter Street"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+              <p class="text-xs text-gray-500 mt-1">e.g. Riverside St.</p>
+            </div>
+
+            <!-- Barangay (pre-filled to Cansaga) -->
             <div>
               <label for="barangay" class="block text-gray-700 text-sm font-medium mb-1">
                 Barangay <span class="text-red-600">*</span>
@@ -100,8 +174,20 @@
               <input id="barangay" name="barangay" type="text" required
                      value="Cansaga"
                      placeholder="Enter Barangay"
-                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none" readonly>
               <p class="text-xs text-gray-500 mt-1">Defaulted to Barangay Cansaga for LAMBO.</p>
+            </div>
+
+            <!-- Municipality /  City -->
+            <div>
+              <label for="municipality_city" class="block text-gray-700 text-sm font-medium mb-1">
+                Municipality / City <span class="text-red-600">*</span>
+              </label>
+              <input id="municipality_city" name="municipality_city" type="text" required
+                     value="Consolacion"
+                     placeholder="Enter Municipality / City"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none" readonly>
+              <p class="text-xs text-gray-500 mt-1">Defaulted to Municipality of Consolacion for LAMBO.</p>
             </div>
           </div>
 
@@ -111,19 +197,162 @@
               <a href="javascript:history.back()" class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">
                 Back
               </a>
-              <button type="reset" class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">
-                Cancel
-              </button>
             </div>
             <button type="submit"
-                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
+                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium" >
               Submit
             </button>
           </div>
         </form>
-
       </div>
     </div>
   </div>
 </div>
+
+<!-- Autocomplete script -->
+<script>
+(function() {
+  const SEARCH_URL = "{% url 'bhw_module:resident_search_api' %}";
+  const DEBOUNCE_MS = 250;
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }
+  }
+
+  function highlight(text, q) {
+    if (!q) return text;
+    try {
+      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + ')', 'ig');
+      return text.replace(re, '<mark class="bg-yellow-100">$1</mark>');
+    } catch { return text; }
+  }
+
+  function makeItemHTML(item, q) {
+    const name = item.full_name || '(No name)';
+    const sub = [item.address, item.sex, item.dob].filter(Boolean).join(' • ');
+    return `
+      <button type="button" class="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50"
+              data-resident-id="${item.resident_id || ''}"
+              data-resident-name="${(name || '').replace(/"/g,'&quot;')}">
+        <div class="text-sm">${highlight(name, q)}</div>
+        ${sub ? `<div class="text-xs text-gray-500">${sub}</div>` : ''}
+      </button>
+    `;
+  }
+
+  async function fetchResidents(q) {
+    const url = new URL(SEARCH_URL, window.location.origin);
+    url.searchParams.set('q', q);
+    const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('Network error');
+    const data = await res.json();
+    return data.results || [];
+  }
+
+  function attachAutocomplete(input) {
+    const list = input.parentElement.querySelector('[data-autocomplete-list]');
+    const hiddenSelector = input.getAttribute('data-target-hidden');
+    const hidden = document.querySelector(hiddenSelector);
+
+    let currentIndex = -1;
+    let items = [];
+
+    const closeList = () => {
+      list.innerHTML = '';
+      list.classList.add('hidden');
+      currentIndex = -1;
+    };
+
+    const openList = () => list.classList.remove('hidden');
+
+    const setSelection = (id, name) => {
+      input.value = name || '';
+      hidden.value = id || '';
+      closeList();
+    };
+
+    const render = () => async () => {
+      const term = input.value.trim();
+      hidden.value = ''; // clear previous selection when user types
+      if (!term) { closeList(); return; }
+      try {
+        items = await fetchResidents(term);
+        if (!items.length) { closeList(); return; }
+        list.innerHTML = items.map(i => makeItemHTML(i, term)).join('');
+        openList();
+      } catch {
+        closeList();
+      }
+    };
+
+    const debouncedRender = debounce(render(), DEBOUNCE_MS);
+    input.addEventListener('input', debouncedRender);
+
+    // click selection
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-resident-id]');
+      if (!btn) return;
+      setSelection(btn.dataset.residentId, btn.dataset.residentName);
+      input.focus();
+    });
+
+    // keyboard navigation
+    input.addEventListener('keydown', (e) => {
+      if (list.classList.contains('hidden')) return;
+
+      const buttons = Array.from(list.querySelectorAll('button[data-resident-id]'));
+      if (!buttons.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        currentIndex = (currentIndex + 1) % buttons.length;
+        buttons[currentIndex].focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+        buttons[currentIndex].focus();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeList();
+      }
+    });
+
+    // select via Enter when a button is focused
+    list.addEventListener('keydown', (e) => {
+      const btn = e.target.closest('button[data-resident-id]');
+      if (!btn) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        setSelection(btn.dataset.residentId, btn.dataset.residentName);
+        input.focus();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeList();
+        input.focus();
+      }
+    });
+
+    // click outside closes
+    document.addEventListener('click', (e) => {
+      if (!input.parentElement.contains(e.target)) closeList();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[data-autocomplete="resident"]').forEach(attachAutocomplete);
+
+    // guard on submit to ensure IDs exist
+    const form = document.getElementById('household-form');
+    form.addEventListener('submit', (e) => {
+      const hhId = document.getElementById('household_head_id').value;
+      const respId = document.getElementById('respondent_id').value;
+      if (!hhId || !respId) {
+        e.preventDefault();
+        alert('Please select both Household Head and Respondent from the suggestions so their IDs are captured.');
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
