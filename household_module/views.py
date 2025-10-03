@@ -10,7 +10,8 @@ from .serializers import (
     HouseOwnershipTypeSerializer, HouseholdTypeSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
     HouseholdCreateSerializer, FamilyCreateSerializer, HouseholdListSerializer,
-    RelationshipListSerializer, HouseholdInsertSerializer
+    RelationshipListSerializer, HouseholdInsertSerializer, HouseOwnershipListSerializer,
+    HouseTypeListSerializer, SitioListSerializer, ResidentSearchListSerializer
 )
 from .services.household_service import HouseholdService
 from .utils.database_helpers import get_lookup_data
@@ -184,7 +185,22 @@ class LookupDataView(APIView):
             
 class RelationshipViewSet(ViewSet):
     def list(self, request):
-        s = RelationshipListSerializer(instance={})  # <-- important
+        s = RelationshipListSerializer(instance={})
+        return Response(s.data)
+    
+class HouseOwnershipViewSet(ViewSet):
+    def list(self, request):
+        s = HouseOwnershipListSerializer(instance={})
+        return Response(s.data)
+    
+class HouseTypeViewSet(ViewSet):
+    def list(self, request):
+        s = HouseTypeListSerializer(instance={})
+        return Response(s.data)
+    
+class SitioViewSet(ViewSet):
+    def list(self, request):
+        s = SitioListSerializer(instance={})
         return Response(s.data)
     
 class InsertHouseholdView(APIView):
@@ -197,7 +213,13 @@ class InsertHouseholdView(APIView):
     def post(self, request):
         s = HouseholdInsertSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        instance = s.save()  # calls your sp_insert_household via serializer.create()
+        instance = s.save()
         return Response({"success": True, **instance}, status=201)
+    
+class ResidentSearchView(APIView):
+    def get(self, request):
+        q = request.query_params.get("q", "").strip()
+        s = ResidentSearchListSerializer(instance={}, context={"query": q})
+        return Response(s.data)
     
     
