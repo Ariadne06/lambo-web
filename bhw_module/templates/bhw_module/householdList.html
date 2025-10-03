@@ -28,13 +28,72 @@
       + Add Household
     </button>
 
-    <div class="flex items-center gap-3">
-      <input type="text" placeholder="Search Household"
-             class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
-      <button class="text-gray-600 hover:text-red-600 text-sm flex items-center gap-1">
-        <i class="fas fa-sliders-h"></i> Advanced Filters
-      </button>
-    </div>
+    <form id="controlsForm" method="GET" class="flex items-center gap-3">
+      <div class="flex items-center gap-3">
+        <input type="text" 
+          placeholder="Search Household" 
+          name="query" 
+          id="queryInput"
+          value="{{ query|default:'' }}"
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
+      </div>
+
+      <!-- Rows per page (auto-submit) -->
+      <div class="flex items-center gap-2 text-sm">
+        <label for="limit" class="text-gray-600">Rows per page:</label>
+        <div class="relative inline-block">
+          <select id="limit" name="limit"
+                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+            {% for n in limit_options %}
+              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Filters dropdown -->
+      <div class="relative">
+        <button type="button"
+                onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+                class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+          </svg>
+          Filters
+        </button>
+
+        <div id="filtersMenu"
+            class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+          <div>
+            <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
+            <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+                <option value="">— Select Sitio —</option>
+                {% for s in sitio %}
+                  <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+                {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="status" class="block text-gray-600 mb-1">Status</label>
+            <select id="status" name="status" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="all">— Select Status —</option>
+              <option value="active"  {% if status == "active" %}selected{% endif %}>Active</option>
+              <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+            </select>
+          </div>
+
+          {% comment %} <!-- Optional manual apply -->
+          <div class="flex justify-end gap-2">
+            <button type="submit" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 text-sm">Apply</button>
+          </div> {% endcomment %}
+        </div>
+      </div>
+
+      <!-- Hidden page field (reset to 1 on any change) -->
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+    </form>
   </div>
 
     <!-- Flash message (optional) -->
@@ -55,49 +114,104 @@
           <th class="py-3 px-4 border">Household ID</th>
           <th class="py-3 px-4 border">Household No.</th>
           <th class="py-3 px-4 border">Household Head</th>
+          <th class="py-3 px-4 border">Full Address</th>
           <th class="py-3 px-4 border text-center">Action</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
-        <tr class="hover:bg-gray-50">
-          <td class="py-3 px-4 border">1000</td>
-          <td class="py-3 px-4 border">0001</td>
-          <td class="py-3 px-4 border">Adrianne Villarta</td>
-          <td class="py-3 px-4 border text-center">
-            <div class="flex justify-center gap-3">
-              <!-- View -->
-              <a href="#" class="btn-action btn-view" title="View">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5C5 5 1.73 12 1.73 12S5 19 12 19s10.27-7 10.27-7S19 5 12 5Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/>
-                </svg>
-                <span>View</span>
-              </a>
+        {% if results %}
+          {% for person in results %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3">{{ person.household_id }}</td>
+              <td class="px-6 py-3">{{ person.household_number }}</td>
+              <td class="px-6 py-3">{{ person.household_head }}</td>
+              <td class="px-6 py-3">{{ person.full_address }}</td>
+              <td class="px-6 py-3">
+                <div class="flex items-center justify-center gap-2">
+                  <form method="post" action="{% url 'bhw_module:householdList' %}" class="flex items-center justify-center gap-2">
+                    {% csrf_token %}
+                    <div class="flex justify-center gap-3">
+                      <!-- View -->
+                      <a href="{% url 'bhw_module:householdView' %}" class="btn-action btn-view" title="View">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 5C5 5 1.73 12 1.73 12S5 19 12 19s10.27-7 10.27-7S19 5 12 5Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/>
+                        </svg>
+                        <span>View</span>
+                      </a>
 
-              <!-- Visit -->
-              <a href="#" class="btn-action btn-visit" title="Household Visit">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
-                </svg>
-                <span>Visit</span>
-              </a>
-
-            </div>
-          </td>
-        </tr>
-        <!-- more rows ... -->
+                      <!-- Visit -->
+                      <a href="{% url 'bhw_module:householdVisit' %}" class="btn-action btn-visit" title="Household Visit">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
+                        </svg>
+                        <span>Visit</span>
+                      </a>
+                    </div>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %} 
+          <tr> 
+            <td colspan="6" class="py-4 px-4 text-center text-gray-500"> 
+              No results found.
+            </td> 
+          </tr> 
+        {% endif %} 
       </tbody>
     </table>
   </div>
 
   <!-- Pagination -->
-  <div class="flex justify-center mt-4">
-    <nav class="flex gap-2">
-      <button class="px-3 py-1 border rounded hover:bg-gray-200">1</button>
-      <button class="px-3 py-1 border rounded hover:bg-gray-200">2</button>
-      <button class="px-3 py-1 border rounded hover:bg-gray-200">3</button>
-      <span class="px-3 py-1">...</span>
-      <button class="px-3 py-1 border rounded hover:bg-gray-200">60</button>
-    </nav>
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
   </div>
-</div>
+
+  <script>
+  // Debounce helper
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
+
+  // Auto-submit selects (and reset page to 1)
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => {
+      pageField.value = 1;
+      form.requestSubmit();
+    });
+  });
+
+  // Search: submit after typing stops (1s delay; set to 2000 for 2s)
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    const SEARCH_DEBOUNCE_MS = 1000; // ← change to 2000 for 2 seconds
+    queryInput.addEventListener('input', debounce(() => {
+      pageField.value = 1;
+      form.requestSubmit();
+    }, SEARCH_DEBOUNCE_MS));
+  }
+
+  // Filters menu toggling + outside click close
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    if (!menu) return;
+    const clickedInsideMenu = e.target.closest('#filtersMenu');
+    const clickedToggleBtn = e.target.closest('button') && e.target.closest('button').textContent.trim() === 'Filters';
+    if (!clickedInsideMenu && !clickedToggleBtn) menu.classList.add('hidden');
+  });
+  </script>
 {% endblock %}

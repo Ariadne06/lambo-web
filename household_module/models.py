@@ -158,11 +158,36 @@ class Household(models.Model):
             raise e
         
     @staticmethod
-    def sp_search_resaident(query):
+    def sp_search_resident(query):
         try:
             with connection.cursor() as cursor:
                 cursor.callproc('search_resident', [
                     query
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_all_households(
+            query,
+            barangay,
+            sitio_id,
+            status,
+            limit,
+            offset
+        ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_all_households', [
+                    query,
+                    barangay,
+                    sitio_id,
+                    status,
+                    limit,
+                    offset
                 ])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()

@@ -7,7 +7,7 @@ urlpatterns = [
      path('', views.bhw_dashboard, name='bhw_dashboard'),
      path('householdList/', views.householdList, name='householdList'),
      path('householdView/', views.householdView, name='householdView'),
-     path('householdVisit/', views.householdVisit),
+     path('householdVisit/', views.householdVisit, name='householdVisit'),
      path('residentList/', views.residentList),
      path('residentAdd1/', views.residentAdd1),
      path('residentAdd2/', views.residentAdd2),
