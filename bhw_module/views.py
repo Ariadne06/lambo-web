@@ -3,6 +3,10 @@ from authentication.decorators import custom_login_required, role_required
 from household_module.models import Household
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from utils.constants import LIMIT_OPTIONS
+from django.utils.http import urlencode
 
 # Create your views here.
 
@@ -16,8 +20,83 @@ def bhw_dashboard(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdList(request):
+    
+    limit = None
+    offset = None
+    results = []
+    status= ''
+    
+    query = (request.GET.get('query') or '').strip()
+    status = (request.GET.get('status') or 'all').strip()
+    raw_sitio = request.GET.get('sitio_id')
+    
+    try:
+        sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
+    except ValueError:
+        sitio_id = None  # ignore bad input
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Household.sp_get_all_households(
+            query=query,
+            barangay=None,
+            sitio_id=sitio_id,
+            status=status,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, str(e), "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+        "status": status,
+    }
+    if sitio_id is not None:
+        base_params["sitio_id"] = sitio_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    
+    sitio = Household.sp_get_sitio()
     flash = get_flash(request)
     return render(request, 'bhw_module/householdList.html',{
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        'status': status,
+        'sitio_id': sitio_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'sitio': sitio,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -146,7 +225,7 @@ def HouseholdAdd(request):
         
 
     if query:
-        results = Household.sp_search_resaident(query)
+        results = Household.sp_search_resident(query)
     
     relationship = Household.sp_get_relationship_to_household_head()
     house_ownership = Household.sp_get_house_ownership()
@@ -164,10 +243,6 @@ def HouseholdAdd(request):
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
-    
-# bhw/views.py
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -177,7 +252,7 @@ def resident_search_api(request):
     if not q:
         return JsonResponse({'results': []})
     try:
-        rows = Household.sp_search_resaident(q)  # uses your stored proc
+        rows = Household.sp_search_resident(q)  # uses your stored proc
         # Normalize/whitelist fields returned to the frontend
         normalized = []
         for r in rows:
