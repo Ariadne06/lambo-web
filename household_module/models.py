@@ -194,6 +194,65 @@ class Household(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_get_specific_household(hid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_specific_household', [hid])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_update_household(
+            hid,
+            pid,
+            house_ownership_id,
+            house_type_id,
+            barangay,
+            city, 
+            house_number,
+            street,        
+            sitio_id,
+            country,
+            household_head_id,
+            respondent_id,
+            relationship_id,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_household', [
+                    hid,
+                    pid,
+                    house_ownership_id,
+                    house_type_id,
+                    barangay,
+                    city, 
+                    house_number,
+                    street,        
+                    sitio_id,
+                    country,
+                    household_head_id,
+                    respondent_id,
+                    relationship_id,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_mark_household_visited(hid, pid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('mark_household_visited', [hid, pid])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
 
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)
