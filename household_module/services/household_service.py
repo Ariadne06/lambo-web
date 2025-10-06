@@ -1,43 +1,41 @@
-from ..utils.database_helpers import get_households_for_bhw, create_household, create_family, get_lookup_data
-import logging
-
-logger = logging.getLogger(__name__)
+from email.headerregistry import Address
+from django.db import connection
+from ..utils.database_helpers import get_all_households
+from ..models import Household
+import json
 
 class HouseholdService:
-    """Service class following your ProfileService pattern"""
+    """Service to handle household operations """
     
     @staticmethod
-    def get_households_for_personnel(personnel_id):
-        """Get households for BHW - simple wrapper like your ProfileService"""
+    def insert_household(data):
         try:
-            return get_households_for_bhw(personnel_id)
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_household', [
+                    data['house_ownership_id'],
+                    data['house_type_id'],
+                    data['barangay'],
+                    data['city_municipality'],
+                    data['sitio_id'],
+                    data['personnel_id'],
+                    data.get('house_number'),
+                    data.get('street'),
+                    data.get('country', 'Philippines'),
+                    data.get('household_head_id'),
+                    data.get('respondent_id'),
+                    data.get('respondent_rth_id'),
+                    data.get('performed_by_id'),
+                    data.get('performed_by_type', 'personnel'),
+                    data.get('enforce_bhw_assignment', False),
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None
         except Exception as e:
-            logger.error(f"Service error getting households: {e}")
-            raise e
+            raise Exception(f"Database operation failed: {str(e)}")
     
     @staticmethod
-    def create_new_household(form_data, personnel_id):
-        """Create household - simple wrapper like your ProfileService"""
-        try:
-            return create_household(form_data, personnel_id)
-        except Exception as e:
-            logger.error(f"Service error creating household: {e}")
-            raise e
-    
-    @staticmethod
-    def create_new_family(household_id, form_data, personnel_id):
-        """Create family - simple wrapper like your ProfileService"""
-        try:
-            return create_family(household_id, form_data, personnel_id)
-        except Exception as e:
-            logger.error(f"Service error creating family: {e}")
-            raise e
-    
-    @staticmethod
-    def get_all_lookup_data():
-        """Get lookup data - simple wrapper like your ProfileService"""
-        try:
-            return get_lookup_data()
-        except Exception as e:
-            logger.error(f"Service error getting lookup data: {e}")
-            raise e
+    def get_all_households():
+        """
+        Get all households 
+        """
+        return get_all_households()

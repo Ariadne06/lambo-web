@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
+from .models import HouseOwnershipType, HouseType, HouseholdType, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
 from resident_profiling_module.models import Resident, Address
 from .services.household_service import HouseholdService
 
@@ -7,6 +7,11 @@ class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = HouseOwnershipType
         fields = ['house_ownership_id', 'description']
+
+class HouseTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HouseType
+        fields = ['house_type_id', 'description']
 
 class HouseholdTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,50 +33,16 @@ class WasteManagementTypeSerializer(serializers.ModelSerializer):
         model = WasteManagementType
         fields = ['waste_management_type_id', 'code', 'description']
 
-
-class HouseholdCreateSerializer(serializers.ModelSerializer):
-    # Write-only fields for creation
-    house_ownership_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    house_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    address_id = serializers.IntegerField(write_only=True, required=True)
-    household_head_id = serializers.IntegerField(write_only=True, required=True)
-    respondent_id = serializers.IntegerField(write_only=True, required=True)
-    respondent_relationship_to_hh_id = serializers.IntegerField(write_only=True, required=False, default=1)
-    
+class RelationshipToHouseholdHeadSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Household
-        fields = [
-            'household_code', 'house_number', 'is_visited', 'quarter', 'year', 'created_at',
-            'house_ownership_type_id', 'address_id', 'household_head_id', 'respondent_id', 
-            'respondent_relationship_to_hh_id'
-        ]
-        read_only_fields = ['household_code', 'is_visited', 'quarter', 'year', 'created_at']
-    
-    def create(self, validated_data):
-        """Create household using service - following your pattern"""
-        try:
+        model = RelationshipToHouseholdHead
+        fields = ['rth_id', 'description']
 
-            request = self.context.get('request')
-            personnel_id = request.user.personnel.personnel_id
-            
-            print(f"Creating household for personnel: {personnel_id}")
-            
-            household_id = HouseholdService.create_new_household(validated_data, personnel_id)
-            
-            if not household_id:
-                raise serializers.ValidationError("Failed to create household")
-            
-            # Return a mock household object for response
-            household = Household()
-            household.household_id = household_id
-            household.house_number = validated_data.get('house_number', '')
-            
-            print(f"Household created successfully with ID: {household_id}")
-            return household
-            
-        except Exception as e:
-            print(f"Household creation failed: {str(e)}")
-            raise serializers.ValidationError(f"Household creation failed: {str(e)}")
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['house_number', 'street', 'barangay', 'sitio', 'city_municipality', 'country']
+
 
 class FamilyCreateSerializer(serializers.ModelSerializer):
 
@@ -105,11 +76,11 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Create family using service - following your pattern"""
+        """Create family using service - """
         try:
             request = self.context.get('request')
             personnel_id = request.user.personnel.personnel_id
-            household_id = self.context.get('household_id')  # Pass this from view
+            household_id = self.context.get('household_id')  
             
             if not household_id:
                 raise serializers.ValidationError("Household ID is required")
@@ -133,79 +104,38 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
             print(f"Family creation failed: {str(e)}")
             raise serializers.ValidationError(f"Family creation failed: {str(e)}")
 
-# Simple response serializers
-class HouseholdListSerializer(serializers.Serializer):
-    """Simple serializer for household list responses"""
-    household_id = serializers.IntegerField()
-    household_code = serializers.CharField()
-    house_number = serializers.CharField(allow_blank=True, allow_null=True)
-    household_head_name = serializers.CharField()
-    respondent_name = serializers.CharField()
-    full_address = serializers.CharField()
-    is_visited = serializers.BooleanField()
-    family_count = serializers.IntegerField()
-    visited_families = serializers.IntegerField()
-    quarter = serializers.IntegerField()
-    year = serializers.IntegerField()
-    
 
-class RelationshipToHouseholdHeadSerializer(serializers.Serializer):
-    rth_id = serializers.IntegerField()
-    description = serializers.CharField()
 
-class RelationshipListSerializer(serializers.Serializer):
-    # This wraps the list returned by your static method
-    results = RelationshipToHouseholdHeadSerializer(many=True, read_only=True)
+# class RelationshipListSerializer(serializers.Serializer):
+#     # This wraps the list returned by your static method
+#     results = RelationshipToHouseholdHeadSerializer(many=True, read_only=True)
 
-    @staticmethod
-    def get_results():
-        return Household.sp_get_relationship_to_household_head()
+#     @staticmethod
+#     def get_results():
+#         return Household.sp_get_relationship_to_household_head()
 
-    def to_representation(self, instance):
-        # instance is ignored; we pull directly from the DB
-        return {"results": self.get_results()}
+#     def to_representation(self, instance):
+#         # instance is ignored; we pull directly from the DB
+#         return {"results": self.get_results()}
     
 class HouseholdInsertSerializer(serializers.Serializer):
-    # Mirror the SP signature (types + nullability)
-    house_ownership_id = serializers.IntegerField(required=False, allow_null=True)
-    house_type_id = serializers.IntegerField(required=False, allow_null=True)
-    barangay = serializers.CharField()
-    city_municipality = serializers.CharField()
-    sitio_id = serializers.IntegerField(required=False, allow_null=True)
-    personnel_id = serializers.IntegerField()
+    house_ownership_id = serializers.IntegerField(required=True)
+    house_type_id = serializers.IntegerField(required=True)
+    barangay = serializers.CharField(required=True)
+    city_municipality = serializers.CharField(required=True)
+    sitio_id = serializers.IntegerField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
     house_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     street = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    country = serializers.CharField()
-    household_head_id = serializers.IntegerField()
-    respondent_id = serializers.IntegerField()
-    respondent_relationship_to_hh_id = serializers.IntegerField(required=False, allow_null=True)
-    performed_by_id = serializers.IntegerField()
-    performed_by_type = serializers.CharField()   # e.g. "PERSONNEL"
-    enforce_bhw_assignment = serializers.BooleanField(default=True)
+    country = serializers.CharField(required=False, default='Philippines')
+    household_head_id = serializers.IntegerField(required=False, allow_null=True)
+    respondent_id = serializers.IntegerField(required=False, allow_null=True)
+    respondent_rth_id = serializers.IntegerField(required=False, allow_null=True)
+    performed_by_id = serializers.IntegerField(required=False, allow_null=True)
+    performed_by_type = serializers.CharField(required=False, default='personnel')
+    enforce_bhw_assignment = serializers.BooleanField(required=False, default=False)
 
-    # Return value from SP
-    household_id = serializers.IntegerField(read_only=True)
-
-    def create(self, validated):
-        new_id = Household.sp_insert_household(
-            house_ownership_id=validated.get("house_ownership_id"),
-            house_type_id=validated.get("house_type_id"),
-            barangay=validated["barangay"],
-            city_municipality=validated["city_municipality"],
-            sitio_id=validated.get("sitio_id"),
-            personnel_id=validated["personnel_id"],
-            house_number=validated.get("house_number"),
-            street=validated.get("street"),
-            country=validated["country"],
-            household_head_id=validated["household_head_id"],
-            respondent_id=validated["respondent_id"],
-            respondent_relationship_to_hh_id=validated.get("respondent_relationship_to_hh_id"),
-            performed_by_id=validated["performed_by_id"],
-            performed_by_type=validated["performed_by_type"],
-            enforce_bhw_assignment=validated.get("enforce_bhw_assignment", True),
-        )
-        return {"household_id": new_id}
-
-    def to_representation(self, instance):
-        # instance is {"household_id": <int>}
-        return {"household_id": instance.get("household_id")}
+    def create(self, validated_data):
+        # Call the service to execute the SQL function
+        household_id = HouseholdService.insert_household(validated_data)
+        return {'household_id': household_id}

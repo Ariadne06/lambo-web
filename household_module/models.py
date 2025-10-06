@@ -1,4 +1,6 @@
 from django.db import models, connection
+from resident_profiling_module.models import Address
+
 
 
 class HouseOwnershipType(models.Model):
@@ -8,6 +10,14 @@ class HouseOwnershipType(models.Model):
     class Meta:
         managed = False
         db_table = 'house_ownership'
+
+class HouseType(models.Model):
+    house_type_id = models.AutoField(primary_key=True)
+    description = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        managed = False
+        db_table = 'house_type'
 
 class HouseholdType(models.Model):
     household_type_id = models.AutoField(primary_key=True)               
@@ -44,13 +54,22 @@ class WasteManagementType(models.Model):
         managed = False
         db_table = 'waste_management_type'
 
+class RelationshipToHouseholdHead(models.Model):
+    rth_id = models.AutoField(primary_key=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'relationship_to_householdhead'
+
 # Main tables 
 class Household(models.Model):
     household_id = models.AutoField(primary_key=True)
-    household_code = models.CharField(max_length=20, unique=True)
-    house_ownership_type_id = models.IntegerField(null=True, blank=True)
+    household_number = models.CharField(max_length=20, unique=True)
+    house_ownership_id = models.IntegerField(null=True, blank=True)
+    house_type_id = models.IntegerField(null=True, blank=True)
     house_number = models.CharField(max_length=50, null=True, blank=True)
-    address_id = models.IntegerField()
+    address = models.ForeignKey('resident_profiling_module.Address', on_delete=models.SET_NULL, null=True, db_column='address_id')
     household_head_id = models.IntegerField()
     respondent_id = models.IntegerField()
     respondent_relationship_to_hh_id = models.IntegerField(null=True, blank=True)
@@ -175,7 +194,7 @@ class Family(models.Model):
     family_code = models.CharField(max_length=20, unique=True)
     household_id = models.IntegerField()
     household_type_id = models.IntegerField()
-    family_head_id = models.IntegerField()  # REQUIRED!
+    family_head_id = models.IntegerField()  
     respondent_id = models.IntegerField()
     respondent_relationship_to_fh_id = models.IntegerField(null=True, blank=True)
     ip_status = models.BooleanField(default=False)
