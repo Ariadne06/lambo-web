@@ -1039,3 +1039,37 @@ class ReRegisterResidentView(APIView):
             return Response({'success': True, 'message': result})
         except Exception as e:
             return Response({'success': False, 'message': str(e)}, status=400)
+        
+
+class CheckUsernameAvailabilityView(APIView):
+    """Check if username is available."""
+    
+    def post(self, request):
+        try:
+            username = request.data.get('username', '').strip()
+            
+            if not username:
+                return Response({
+                    'available': False,
+                    'message': 'Username is required'
+                }, status=400)
+            
+            # Call the database function
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT is_username_available(%s)", [username])
+                result = cursor.fetchone()[0]
+                
+                # result is 1 if available, 0 if taken
+                is_available = result == 1
+                
+                return Response({
+                    'available': is_available,
+                    'message': 'Username is available' if is_available else 'Username is already taken'
+                }, status=200)
+                
+        except Exception as e:
+            print(f"Username check error: {str(e)}")
+            return Response({
+                'available': False,
+                'message': 'Failed to check username availability'
+            }, status=500)
