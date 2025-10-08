@@ -11,7 +11,7 @@ def get_all_households():
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT * FROM get_all_households(
-                    NULL, NULL, NULL, 'all', 10000, 0
+                    NULL, NULL, NULL, 'all', NULL, 10000, 0
                 )
             """)
             columns = [col[0] for col in cursor.description]
