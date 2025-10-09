@@ -9,10 +9,13 @@ import os, json
 from urllib.parse import urlencode
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
-from django.core.mail import send_mail
+# from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
+from django.conf import settings
+from sendgrid import SendGridAPIClient           # NEW
+from sendgrid.helpers.mail import Mail  
 
 
 def login_view(request):
@@ -234,12 +237,15 @@ def forgot_password(request):
             })
 
         try:
+            # print(f"[DEBUG] Attempting to reset password for user: {username} {p1}")
             results = logging.sp_reset_resident_password_by_username(username, p1) 
-
+            if not results:
+                set_flash(request, f"[DEBUG] Password reset results: {username} {results}", "error")
             set_flash(request, results, "success")
             return redirect("authentication:login")
         except Exception as e:
-            set_flash(request, _clean_db_error(e), "error")
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
             return render(request, "authentication/mobileForgotPassword.html", {
                 "prefilled_username": username, 
                 "prefilled_email": email,
@@ -269,8 +275,8 @@ def api_forgot_password(request):
 
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        res = logging.sp_check_resident_username_email(username, email)
-        if res is not True:
+        res = logging.sp_request_password_reset(username, email)
+        if not res:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
         return JsonResponse({"error": _clean_db_error(e)}, status=500)
@@ -279,12 +285,13 @@ def api_forgot_password(request):
     token = make_reset_token({"u": username, "e": email})
 
     # 4) Build the link to your reset page
-    #    http://127.0.0.1:8000/authentication/reset/<token>/
+    #    http://10.162.93.189:8000/authentication/reset/<token>/
     reset_path = reverse("authentication:reset_from_link", args=[token])
-    host = "https://lambo-web-5mka.onrender.com"  # change to your public domain in prod
-    reset_link = f"{host}{reset_path}"
+    reset_link = f"{settings.SITE_ORIGIN.rstrip('/')}{reset_path}"  
+    # host = "http://10.162.93.189:8000" 
+    # reset_link = f"{host}{reset_path}"
 
-    # 5) Send the email (uses your Gmail SMTP settings)
+    # 5) Send the email (Django email backend will use your SMTP or SendGrid)
     subject = "Reset Your LAMBO Password"
     text_body = (
         f"Hi {username},\n\n"
@@ -307,14 +314,27 @@ def api_forgot_password(request):
       </p>
     """
     try:
-        send_mail(
+        message = Mail(
+            from_email=settings.DEFAULT_FROM_EMAIL,   # must be a verified sender or domain in SendGrid
+            to_emails=[email],
             subject=subject,
-            message=text_body,
-            from_email=None,
-            recipient_list=[email],
-            html_message=html_body,
-            fail_silently=False,
+            html_content=html_body,
+            plain_text_content=text_body,             # NEW: include plain text too
         )
+       
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        resp = sg.send(message)
+        
+        if resp.status_code not in (200, 202):
+            body = getattr(resp, "body", b"")
+            try:
+                body = body.decode() if hasattr(body, "decode") else str(body)
+            except Exception:
+                body = str(body)
+            return JsonResponse(
+                {"error": f"SendGrid error: {resp.status_code} {body[:300]}"},
+                status=500,
+            )
     except Exception as e:
         return JsonResponse({"error": f"Failed to send email: {e}"}, status=500)
 
