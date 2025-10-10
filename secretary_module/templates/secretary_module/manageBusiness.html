@@ -38,18 +38,21 @@
   <div class="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
     <!-- Top tools -->
-    <div class="flex items-center justify-between gap-3 border-b bg-gray-50 px-4 py-3">
-      <!-- Search -->
-      <div class="relative w-full max-w-xs">
-        <input type="text" placeholder="Search business…"
-               class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M10 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm8.7 13.3 3 3-1.4 1.4-3-3 1.4-1.4Z"/>
-        </svg>
-      </div>
-      <div class="text-[12px] text-gray-500 hidden sm:block">Showing 2 of 2</div>
-    </div>
+      <form class="flex items-center justify-between gap-3 border-b bg-gray-50 px-4 py-3" method="get">
+        <div class="relative w-full max-w-xs">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search business…"
+                class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+          <svg xmlns="http://www.w3.org/2000/svg"
+              class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm8.7 13.3 3 3-1.4 1.4-3-3 1.4-1.4Z"/>
+          </svg>
+        </div>
+
+        <div class="text-[12px] text-gray-500 hidden sm:block">
+          Showing {{ rows|length }} of {{ total }}
+        </div>
+      </form>
+
 
     <!-- Table -->
     <div class="overflow-x-auto">
@@ -58,253 +61,190 @@
           <tr>
             <th class="px-4 py-3 text-left font-semibold">Business ID</th>
             <th class="px-4 py-3 text-left font-semibold">Business Name</th>
+            <th class="px-4 py-3 text-left font-semibold">Owners Name</th>
             <th class="px-4 py-3 text-left font-semibold">Address</th>
             <th class="px-4 py-3 text-left font-semibold">Status</th>
             <th class="px-4 py-3 text-center font-semibold">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
-          <!-- Row -->
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 font-medium text-gray-800">1000</td>
-            <td class="px-4 py-3">Adrianne Store</td>
-            <td class="px-4 py-3">Purok 3, Cansaga, Consolacion</td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-700">
-                Active
-              </span>
-            </td>
+       <tbody class="divide-y divide-gray-100">
+            {% for r in rows %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-medium text-gray-800">{{ r.business_id }}</td>
+              <td class="px-4 py-3">{{ r.business_name }}</td>
+              <td class="text-xs text-gray-500">Owner: {{ r.owner_name }}</td>
+              <td class="px-4 py-3">{{ r.address }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-700">
+                  {{ r.status }}
+                </span>
+              </td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-2">
                 <button type="button"
-                        class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                        onclick="openModal('modalBusinessView')">
+                  class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
+                  onclick="openBusinessView('{{ r.business_id }}')">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
                   </svg>
                   View
                 </button>
                 <button type="button"
-                  class="btn-blue inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                  title="Edit"
-                  onclick="openModal('modalBusinessEdit')">
-                  <!-- pencil -->
+                        class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
+                        onclick="UB.open('{{ r.business_id }}')">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="m3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>
+                    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/>
                   </svg>
                   Edit
                 </button>
-
+                <button type="button"
+                        class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5 text-red-600"
+                        onclick="closeBusiness('{{ r.business_id }}')">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  Close
+                </button>
               </div>
             </td>
           </tr>
 
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 font-medium text-gray-800">1001</td>
-            <td class="px-4 py-3">Medalla Barber Shop</td>
-            <td class="px-4 py-3">Purok 3, Cansaga, Consolacion</td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-700">
-                Active
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-center gap-2">
-                <button type="button"
-                      class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                      onclick="openModal('modalBusinessView')">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
-                </svg>
-                View
-              </button>
-                <button type="button"
-                  class="btn-blue inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                  title="Edit"
-                  onclick="openModal('modalBusinessEdit')">
-                  <!-- pencil -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="m3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>
-                  </svg>
-                  Edit
-                </button>
-
-              </div>
-            </td>
-          </tr>
-
-          <!-- more rows… -->
+        
+          {% empty %}
+          <tr><td colspan="5" class="px-4 py-3 text-center text-gray-500">No businesses found.</td></tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
-    <div class="flex justify-center px-4 py-4 text-sm">
-      <nav class="flex items-center gap-2 text-gray-600">
-        <a href="#" class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">1</a>
-        <a href="#" class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">2</a>
-        <a href="#" class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">3</a>
-        <span class="px-1">…</span>
-        <a href="#" class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">60</a>
-      </nav>
-    </div>
+      <div class="flex justify-center px-4 py-4 text-sm">
+        <nav class="flex items-center gap-1 text-gray-600">
+
+          {% if has_prev %}
+            <a href="?q={{ q }}&status={{ status }}&page={{ prev_page }}&per_page={{ per_page }}"
+              class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">Prev</a>
+          {% endif %}
+
+          {% for p in page_numbers %}
+            {% if forloop.first == false and p|add:'-1' != page_numbers|slice:'%d' %}{% endif %}
+            {% if p == page %}
+              <span class="rounded-md px-2 py-1 bg-gray-100 text-rose-600 font-semibold">{{ p }}</span>
+            {% else %}
+              {# show ellipsis around distant gaps #}
+              {% if forloop.counter0 > 0 and p > page_numbers|slice:":forloop.counter0"|last|add:1 %}
+                <span class="px-1">…</span>
+              {% endif %}
+              <a href="?q={{ q }}&status={{ status }}&page={{ p }}&per_page={{ per_page }}"
+                class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">{{ p }}</a>
+            {% endif %}
+          {% endfor %}
+
+          {% if has_next %}
+            <a href="?q={{ q }}&status={{ status }}&page={{ next_page }}&per_page={{ per_page }}"
+              class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">Next</a>
+          {% endif %}
+
+        </nav>
+      </div>
   </div>
 </div>
+
 <!-- View Business Modal -->
-<div id="modalBusinessView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="mbv_title">
+<div id="modalBusinessView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
+  
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalBusinessView')"></div>
 
   <!-- Dialog -->
-  <div class="relative mx-auto my-8 w-[96%] max-w-6xl">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+  <div class="relative mx-auto my-8 w-[96%] max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
 
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50/60">
-        <h2 id="mbv_title" class="text-base font-semibold text-gray-900">Business Details</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
+      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-4">
+        <h2 class="text-base font-semibold text-white">Business Details</h2>
+        <button type="button"
+                class="text-white/90 hover:text-white text-xl font-bold"
                 aria-label="Close modal" onclick="closeModal('modalBusinessView')">&times;</button>
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-6">
-        <h3 class="text-sm font-semibold text-gray-800 mb-6 text-center">Business Profile</h3>
+      <div class="px-6 py-6 space-y-4 text-sm">
 
-        <!-- 3-column grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
-          <!-- Owners Data -->
-          <div>
-            <h4 class="font-semibold text-gray-700 mb-3">Owners Data</h4>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-500">First Name</label>
-                <input type="text" value="Adriane" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Middle Name</label>
-                <input type="text" value="Villarta" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Last Name</label>
-                <input type="text" value="Medalla" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Date of Birth</label>
-                <input type="text" value="01/01/2000" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Sex</label>
-                <input type="text" value="Male" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Resident Status</label>
-                <input type="text" value="Non Resident" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-            </div>
-          </div>
-
-          <!-- Business Data -->
-          <div>
-            <h4 class="font-semibold text-gray-700 mb-3">Business Data</h4>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-500">Business Name</label>
-                <input type="text" value="Adriane Store" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Business Type</label>
-                <input type="text" value="Sari-sari Store" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Number of Unit</label>
-                <input type="text" value="0" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Contact Number</label>
-                <input type="text" value="0967262706" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Business Status</label>
-                <input type="text" value="Active" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-            </div>
-          </div>
-
-          <!-- Business Address -->
-          <div>
-            <h4 class="font-semibold text-gray-700 mb-3">Business Address</h4>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-500">House Number</label>
-                <input type="text" value="Block 5" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Street</label>
-                <input type="text" value="Sampaguita Street" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Sitio</label>
-                <input type="text" value="Sitio 5" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">City</label>
-                <input type="text" value="Consolacion" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Province</label>
-                <input type="text" value="Cebu" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-              <div>
-                <label class="block text-gray-500">Country</label>
-                <input type="text" value="Philippines" readonly
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
-              </div>
-            </div>
-          </div>
+        <!-- Business ID -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Business ID:</span>
+          <span id="mbv_business_id" class="text-gray-800"></span>
         </div>
 
-        <!-- Actions -->
-        <div class="mt-10 flex justify-between">
+        <!-- Owner's Name -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Owner's Name:</span>
+          <span id="mbv_owner_name" class="text-gray-800"></span>
+        </div>
+
+        <!-- Business Name -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Business Name:</span>
+          <span id="mbv_business_name" class="text-gray-800"></span>
+        </div>
+
+        <!-- Business Type -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Business Type:</span>
+          <span id="mbv_business_type" class="text-gray-800"></span>
+        </div>
+
+        <!-- Business Status -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Business Status:</span>
+          <span id="mbv_business_status" class="text-gray-800"></span>
+        </div>
+
+        <!-- Issuance Date (only when active) -->
+        <div id="mbv_clearance_row" class="flex justify-between border-b pb-2 hidden">
+          <span class="font-semibold text-gray-600">Issuance Date:</span>
+          <span id="mbv_clearance_date" class="text-gray-800"></span>
+        </div>
+
+        <!-- Total Gross Income -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Total Gross Income:</span>
+          <span id="mbv_total_gross_income" class="text-gray-800"></span>
+        </div>
+
+        <!-- Business Address -->
+        <div class="flex flex-col">
+          <span class="font-semibold text-gray-600 mb-1">Business Address:</span>
+          <span id="mbv_address" class="text-gray-800"></span>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between gap-3 border-t bg-gray-50/60 px-6 py-4">
+        <div class="flex items-center gap-3">
           <button type="button"
-                  class="rounded-xl bg-red-600 px-6 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
+                  class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
                   onclick="closeModal('modalBusinessView')">
             Close
           </button>
-
-          <div class="flex gap-4">
-            <a href="#"
-               class="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
-              <i class="fa fa-file-alt"></i> Business Clearance
-            </a>
-            <button type="button"
-                    class="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                    onclick="openModal('modalPaymentHistory')">
-              <i class="fa fa-receipt"></i> Payment History
-            </button>
-
-          </div>
+          <a href="#"
+             class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700">
+            Business Clearance
+          </a>
+          <button type="button"
+                  class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700"
+                  onclick="openModal('modalPaymentHistory')">
+            Payment History
+          </button>
         </div>
       </div>
 
     </div>
   </div>
 </div>
+
 
 <!-- Payment History Modal -->
 <div id="modalPaymentHistory" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="mph_title">
@@ -401,143 +341,127 @@
   </div>
 </div>
 
-<!-- Update Info Modal -->
-<div id="modalBusinessEdit" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="editBiz_title">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('modalBusinessEdit')"></div>
-
-  <!-- Panel -->
-  <div class="relative left-1/2 top-16 -translate-x-1/2 w-[92%] max-w-6xl">
-    <div class="bg-white border border-gray-300 rounded-md shadow-lg overflow-hidden">
-      <!-- Header -->
-      <div class="px-6 py-4 flex items-center justify-between">
-        <h2 id="editBiz_title" class="text-xl font-semibold text-red-700">Update Info</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl leading-none font-bold"
-                aria-label="Close modal" onclick="closeModal('modalBusinessEdit')">&times;</button>
-      </div>
-
-      <!-- Body -->
-      <div class="px-6 pb-6">
-        <form class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-          <!-- Owners Data -->
-          <div>
-            <h3 class="font-semibold text-gray-700 mb-2">Owners Data</h3>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-600 mb-1">First Name</label>
-                <input type="text" value="Adrianne" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Middle Name</label>
-                <input type="text" value="Villarta" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Last Name</label>
-                <input type="text" value="Medalla" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Date of Birth</label>
-                <input type="text" value="01/01/2000" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Sex</label>
-                <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-                  <option selected>Male</option>
-                  <option>Female</option>
-                  <option>Prefer not to say</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Resident Status</label>
-                <input type="text" value="Non-Resident" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-            </div>
-          </div>
-
-          <!-- Business Address -->
-          <div>
-            <h3 class="font-semibold text-gray-700 mb-2">Business Address</h3>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-600 mb-1">House Number</label>
-                <input type="text" value="Block 5" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Street</label>
-                <input type="text" value="Sampaguita Street" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Sitio</label>
-                <input type="text" value="Sitio 5" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">City</label>
-                <input type="text" value="Consolacion" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Province</label>
-                <input type="text" value="Cebu" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Country</label>
-                <input type="text" value="Philippines" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-            </div>
-          </div>
-
-          <!-- Business Data -->
-          <div>
-            <h3 class="font-semibold text-gray-700 mb-2">Business Data</h3>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-gray-600 mb-1">Business Name</label>
-                <input type="text" value="Adrianne Store" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Business Type</label>
-                <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-                  <option selected>Sari-sari Store</option>
-                  <option>Retail</option>
-                  <option>Food &amp; Beverage</option>
-                  <option>Service</option>
-                  <option>Manufacturing</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Contact Number</label>
-                <input type="text" value="09672662706" class="w-full rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">Business Status</label>
-                <select class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white">
-                  <option selected>Active</option>
-                  <option>Inactive</option>
-                  <option>Pending</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-gray-400 mb-1">Number of Unit</label>
-                <input type="text" value="0" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-100" disabled>
-              </div>
-            </div>
-          </div>
-        </form>
-
-        <!-- Footer actions -->
-        <div class="mt-6 flex items-center justify-end gap-3">
-          <button type="button"
-                  class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                  onclick="closeModal('modalBusinessEdit')">
-            Cancel
-          </button>
-          <button type="submit"
-                  class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700">
-            Update
-          </button>
-        </div>
-      </div>
+<!-- Update Business Modal -->
+<div id="updateBusinessModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="bg-white w-full max-w-3xl rounded-xl shadow-xl">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Update Business</h3>
+      <button type="button" class="p-2" onclick="UB.close()">✕</button>
     </div>
+
+    <form id="updateBusinessForm" class="p-6 space-y-4">
+      <input type="hidden" name="business_id" id="ub_business_id">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+  <!-- Business ID (read-only) -->
+  <label class="block">
+    <span class="text-sm font-medium">Business ID</span>
+    <input id="ub_business_id_display" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+  </label>
+
+  <!-- Business name -->
+  <label class="block">
+    <span class="text-sm font-medium">Business name</span>
+    <input id="ub_business_name" name="business_name" class="mt-1 w-full border rounded-md p-2" />
+  </label>
+
+  <!-- Business Type (dropdown) -->
+  <label class="block">
+    <span class="text-sm font-medium">Business type</span>
+    <select id="ub_business_type_id" name="business_type_id"
+            class="mt-1 w-full border rounded-md p-2 bg-white">
+      <option value="">-- Select type --</option>
+      {% for t in business_types %}
+        <option value="{{ t.id }}">{{ t.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <!-- Nature of business -->
+  <label class="block md:col-span-2">
+    <span class="text-sm font-medium">Nature of business</span>
+    <textarea id="ub_nature" name="nature_of_business"
+              class="mt-1 w-full border rounded-md p-2" rows="2"></textarea>
+  </label>
+
+  <!-- Ownership (dropdown) -->
+  <label class="block">
+    <span class="text-sm font-medium">Ownership</span>
+    <select id="ub_ownership_id" name="ownership_id"
+            class="mt-1 w-full border rounded-md p-2 bg-white">
+      <option value="">-- Select ownership --</option>
+      {% for o in ownerships %}
+        <option value="{{ o.id }}">{{ o.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <!-- Change owner (manual search) -->
+  <label class="block">
+    <span class="text-sm font-medium">Change owner (type name)</span>
+    <input id="ub_resident_name" name="resident_name" class="mt-1 w-full border rounded-md p-2"
+           placeholder="Leave blank to keep current" />
+  </label>
+
+  <!-- House # -->
+  <label class="block">
+    <span class="text-sm font-medium">House #</span>
+    <input id="ub_house_number" name="house_number" class="mt-1 w-full border rounded-md p-2" />
+  </label>
+
+  <!-- Street -->
+  <label class="block">
+    <span class="text-sm font-medium">Street</span>
+    <input id="ub_street" name="street" class="mt-1 w-full border rounded-md p-2" />
+  </label>
+
+  <!-- Barangay (read-only) -->
+  <label class="block">
+    <span class="text-sm font-medium">Barangay</span>
+    <input value="Cansaga" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+  </label>
+
+  <!-- Sitio ID -->
+  <label class="block">
+    <span class="text-sm font-medium">Sitio (ID)</span>
+    <input id="ub_sitio_id" name="sitio_id" class="mt-1 w-full border rounded-md p-2" placeholder="e.g. 5" />
+  </label>
+
+  <!-- City/Municipality (read-only, always Consolacion) -->
+  <label class="block">
+    <span class="text-sm font-medium">City/Municipality</span>
+    <input value="Consolacion" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+  </label>
+
+  <!-- Country (read-only, always Philippines) -->
+  <label class="block">
+    <span class="text-sm font-medium">Country</span>
+    <input value="Philippines" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+  </label>
+
+  <!-- Total gross income -->
+  <label class="block">
+    <span class="text-sm font-medium">Total gross income</span>
+    <input id="ub_income" name="total_gross_income" class="mt-1 w-full border rounded-md p-2" />
+  </label>
+
+  <!-- DTI/SEC/CDA Reg # -->
+  <label class="block">
+    <span class="text-sm font-medium">DTI/SEC/CDA Reg. #</span>
+    <input id="ub_dti" name="dti_sec_cda_reg_number" class="mt-1 w-full border rounded-md p-2" />
+  </label>
+
+</div>
+
+
+      <div id="ub_alert" class="hidden text-sm p-2 rounded-md"></div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" class="px-4 py-2 rounded-md border" onclick="UB.close()">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-md bg-red-600 text-white">Save changes</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -546,19 +470,284 @@
   function openModal(id){ document.getElementById(id)?.classList.remove('hidden'); }
   function closeModal(id){ document.getElementById(id)?.classList.add('hidden'); }
 
-  // Optional: close with Escape
+  // Close with Escape
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal('modalBusinessView');
+    if (e.key === 'Escape') {
+      closeModal('modalBusinessView');
+      closeModal('updateBusinessModal');
+      closeModal('modalPaymentHistory');
+    }
   });
 
-  document.addEventListener('keydown', e => {
-    if(e.key === 'Escape') closeModal('modalBusinessEdit');  
-     });
+  // ------------------------
+  // VIEW MODAL
+  // ------------------------
+  async function openBusinessView(businessId) {
+  // Build URL via Django so the path is always correct
+  const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+  const detailUrl = detailTpl.replace("99999", businessId);
 
-  document.addEventListener('keydown', e => {
-    if(e.key === 'Escape') closeModal('modalPaymentHistory');  
-     });
+  // helper for aliases
+  const pick = (obj, keys, def = '') => {
+    for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+    return def;
+  };
+
+  try {
+    const res = await fetch(detailUrl, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    const ct = res.headers.get('content-type') || '';
+    const text = await res.text();
+    let d = {};
+    if (ct.includes('application/json')) {
+      try { d = JSON.parse(text); } catch (e) {
+        console.error('View parse error:', e, text.slice(0, 200));
+        alert('Error loading business details (could not parse).');
+        return;
+      }
+    } else {
+      console.error('View non-JSON response:', res.status, text.slice(0, 200));
+      if (res.status === 403 || /login/i.test(text)) {
+        alert('Not authenticated to view details. Please reload the page and try again.');
+      } else {
+        alert('Error loading business details (non-JSON response).');
+      }
+      return;
+    }
+
+    // Fill the modal (with alias fallbacks)
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'INPUT') el.value = val ?? '';
+      else el.textContent = val ?? '';
+    };
+
+    setVal("mbv_business_id",      pick(d, ['business_id','id']));
+    setVal("mbv_owner_name",       pick(d, ['owner_name','resident_name','owner_full_name']));
+    setVal("mbv_business_name",    pick(d, ['business_name','biz_name']));
+    setVal("mbv_business_type",    pick(d, ['business_type','type_name','business_type_name']));
+    setVal("mbv_business_status",  pick(d, ['status','business_status','business_status_name']));
+    setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
+    setVal("mbv_address",          pick(d, ['address','full_address','addr']));
+
+    const issuanceDate = pick(d, [
+      'clearance_date','clearance_date_issued','issuance_date','date_issued'
+    ], '');
+    const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
+    const clearanceRow = document.getElementById("mbv_clearance_row");
+    if (rawStatus === 'active' && issuanceDate) {
+      clearanceRow.classList.remove("hidden");
+      setVal("mbv_clearance_date", issuanceDate);
+    } else {
+      clearanceRow.classList.add("hidden");
+      setVal("mbv_clearance_date", "");
+    }
+
+    openModal("modalBusinessView");
+  } catch (err) {
+    console.error('View fetch error:', err);
+    alert("Network error while loading business details. Check console/network tab.");
+  }
+}
+ // CSRF helper (unchanged)
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+const UB = (() => {
+  const modal = document.getElementById('updateBusinessModal');
+  const form  = document.getElementById('updateBusinessForm');
+  const alertBox = document.getElementById('ub_alert');
+
+  function showAlert(ok, msg) {
+    alertBox.className = '';
+    alertBox.classList.add(
+      'text-sm','p-2','rounded-md',
+      ...(ok ? ['bg-green-100','text-green-800'] : ['bg-red-100','text-red-800'])
+    );
+    alertBox.textContent = msg;
+  }
+
+  function openModalOnly() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function reset() {
+    form.reset();
+    alertBox.className = 'hidden';
+    alertBox.textContent = '';
+    const ownerInput = document.getElementById('ub_resident_name');
+    if (ownerInput) ownerInput.value = '';
+  }
+
+  async function open(businessId) {
+  reset();
+  document.getElementById('ub_business_id').value = businessId;        // hidden (for POST)
+  document.getElementById('ub_business_id_display').value = businessId; // visible read-only
+  openModalOnly();
+
+  const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+  const detailUrl = detailTpl.replace("99999", businessId);
+
+  // helpers
+  const pick = (obj, keys, def = '') => {
+    for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+    return def;
+  };
+  const ensureSelected = (selectEl, value, labelIfMissing) => {
+    if (!selectEl || value === undefined || value === null || value === '') return;
+    const v = String(value);
+    const exists = Array.from(selectEl.options).some(o => o.value === v);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = labelIfMissing || `#${v}`;
+      if (selectEl.options.length > 0) {
+        selectEl.insertBefore(opt, selectEl.options[1] || null);
+      } else {
+        selectEl.add(opt);
+      }
+    }
+    selectEl.value = v;
+  };
+
+  try {
+    const res = await fetch(detailUrl, {
+      method: 'GET',
+      credentials: 'same-origin',            // ← send session cookie
+      headers: { 'Accept': 'application/json' }
+    });
+
+    // If server sent HTML (e.g., login redirect), bail gracefully
+    const ct = res.headers.get('content-type') || '';
+    const text = await res.text();
+    let d = {};
+    if (ct.includes('application/json')) {
+      try { d = JSON.parse(text); } catch (e) {
+        console.error('JSON parse error:', e, text.slice(0, 200));
+        showAlert(false, 'Could not parse details from server.');
+        return;
+      }
+    } else {
+      console.error('Non-JSON response for details:', res.status, text.slice(0, 200));
+      if (res.status === 403 || /login/i.test(text)) {
+        showAlert(false, 'Not authenticated for details. Please reload the page and try again.');
+      } else {
+        showAlert(false, 'Could not load details (non-JSON response).');
+      }
+      return;
+    }
+
+    // -------- text/number fields with alias fallbacks --------
+    document.getElementById('ub_business_name').value = pick(d, ['business_name','biz_name']);
+    document.getElementById('ub_nature').value       = pick(d, ['nature_of_business','nature','business_nature']);
+    document.getElementById('ub_house_number').value = pick(d, ['house_number','house_no','house_no_str']);
+    document.getElementById('ub_street').value       = pick(d, ['street','street_name']);
+    // (Barangay/City/Country are static in your UI now)
+    document.getElementById('ub_sitio_id').value     = pick(d, ['sitio_id']);
+    document.getElementById('ub_income').value       = pick(d, ['total_gross_income','gross_income','income']);
+    document.getElementById('ub_dti').value          = pick(d, ['dti_sec_cda_reg_number','reg_no','registration_no']);
+
+    // Owner placeholder
+    const ownerName = pick(d, ['owner_name','resident_name','owner_full_name']);
+    const ownerInput = document.getElementById('ub_resident_name');
+    if (ownerInput) ownerInput.placeholder = ownerName ? `Current: ${ownerName}` : 'Leave blank to keep current';
+
+    // -------- dropdowns (select current option) --------
+    const typeSel    = document.getElementById('ub_business_type_id');
+    const ownSel     = document.getElementById('ub_ownership_id');
+    const typeId     = pick(d, ['business_type_id','type_id','btype_id','business_typeid']);
+    const typeLabel  = pick(d, ['business_type','type_name','business_type_name']);
+    const ownId      = pick(d, ['ownership_id','own_id','ownershipid']);
+    const ownLabel   = pick(d, ['ownership','ownership_name','ownershiptype']);
+    ensureSelected(typeSel, typeId, typeLabel);
+    ensureSelected(ownSel,  ownId,  ownLabel);
+
+  } catch (err) {
+    console.error('Error fetching business detail:', err);
+    showAlert(false, 'Network error while loading details (check console).');
+  }
+}
+  function close() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    // optional: keep alert hidden next open
+    alertBox.className = 'hidden';
+    alertBox.textContent = '';
+  }
+
+  // Submit handler
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const businessId = document.getElementById('ub_business_id').value;
+    const formData = new FormData(form);
+
+    // Django URL for update
+    const postTpl = "{% url 'secretary_module:business_update' business_id=99999 %}";
+    const postUrl = postTpl.replace("99999", businessId);
+
+    try {
+      const res = await fetch(postUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      });
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        showAlert(true, payload.message || 'Saved.');
+        setTimeout(() => { window.location.reload(); }, 700);
+      } else {
+        showAlert(false, payload.message || 'Update failed.');
+      }
+    } catch (e2) {
+      console.error(e2);
+      showAlert(false, 'Network error while saving.');
+    }
+  });
+
+  return { open, close };
+})();
+
+
+async function closeBusiness(businessId) {
+  if (!confirm("Are you sure you want to mark this business as Closed?")) return;
+
+  const closeTpl = "{% url 'secretary_module:business_close' 99999 %}";
+  const closeUrl = closeTpl.replace("99999", businessId);
+
+  try {
+    const res = await fetch(closeUrl, {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      credentials: "same-origin"
+    });
+
+    const text = await res.text();
+    let payload = {};
+    try { payload = JSON.parse(text); } catch (_) {}
+
+    if (res.ok && payload.ok) {
+      alert(payload.message || "Business marked as Closed.");
+      window.location.reload();
+    } else {
+      alert(payload.message || text || "Failed to close business.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error while closing business.");
+  }
+}
+
 </script>
+
 
 <!-- local colors so buttons never turn white -->
 <style>

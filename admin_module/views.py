@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from .models import Admin
 from django.contrib import messages
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params
 from django.utils.timezone import localtime
@@ -14,7 +14,27 @@ from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 @custom_login_required
 @role_required('Admin')
 def admin_dashboard(request):
-    return render(request, 'admin_module/admin_dashboard.html')
+    total, active = Admin.fn_personnel_counts()
+
+    # Existing: password requests
+    password_requests = Admin.get_password_reset_requests(limit=50)
+
+    # NEW: recent activity logs mapped to your HTML's expected shape
+    recent_logins = Admin.get_recent_activity_for_ui()
+
+    try:
+        manage_url = reverse('admin_manage_personnel')
+    except NoReverseMatch:
+        manage_url = None
+
+    context = {
+        'personnel_count': total,
+        'personnel_active_count': active,
+        'manage_personnel_url': manage_url,
+        'password_requests': password_requests,
+        'recent_logins': recent_logins,  # <-- powers your "Recent Logs" section
+    }
+    return render(request, 'admin_module/admin_dashboard.html', context)
 
 @custom_login_required
 @role_required('Admin')
