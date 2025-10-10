@@ -14,8 +14,8 @@ from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
 from django.conf import settings
-from sendgrid import SendGridAPIClient           # NEW
-from sendgrid.helpers.mail import Mail  
+# from sendgrid import SendGridAPIClient           # NEW
+# from sendgrid.helpers.mail import Mail  
 
 
 def login_view(request):
