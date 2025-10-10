@@ -98,8 +98,6 @@ def _find_resident_id_by_name(query: str):
     if len(rows) > 1:
         raise ValueError("Multiple residents found. Please be more specific.")
     return rows[0][0]  # first column = resident_id
-<<<<<<< HEAD
-=======
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -157,7 +155,6 @@ def Addbusiness(request):
         'message': flash.get('message'),
         'message_level': flash.get('message_level'),
     })
->>>>>>> e94873a2bdef2ecfa6377241e4320b4e8b2c4420
 
 @custom_login_required
 @role_required('Barangay Secretary')
@@ -234,7 +231,6 @@ def businessDetail3(request):
 @custom_login_required
 @role_required('Barangay Secretary')
 def business_list(request):
-<<<<<<< HEAD
     q = (request.GET.get("q") or "").strip() or None
     status = request.GET.get("status") or None
     page = max(int(request.GET.get("page", 1)), 1)
@@ -329,9 +325,7 @@ def _to_decimal_or_none(v):
     except (InvalidOperation, ValueError):
         return None
     
-=======
     return render(request, "secretary_module/manageBusiness.html")
->>>>>>> e94873a2bdef2ecfa6377241e4320b4e8b2c4420
 
 @custom_login_required
 @role_required('Barangay Secretary')

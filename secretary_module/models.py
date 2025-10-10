@@ -1,11 +1,8 @@
 from django.db import models, connection
-<<<<<<< HEAD
 import json
 from typing import Optional, List, Dict, Any
-=======
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
->>>>>>> e94873a2bdef2ecfa6377241e4320b4e8b2c4420
 
 class Secretary(models.Model):
     class Meta:
