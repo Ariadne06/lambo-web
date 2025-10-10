@@ -1,22 +1,44 @@
 import re
 import json
 from collections.abc import Mapping
+from typing import Optional
+
+CODE_MESSAGES = {}
+
+import re
+from typing import Optional
 
 CODE_MESSAGES = {}
 
 def _clean_db_error(err: Exception) -> str:
-    text = str(err)
+    """
+    Extract the most specific DB error:
+    - Prefer the original DB error if wrapped (err.orig).
+    - Strip noisy sections (CONTEXT/DETAIL/HINT/LINE).
+    - Pick the *last* E-code (root cause) and return text after its colon.
+    - Fall back to a generic message if nothing matches.
+    """
+    # 1) unwrap common DB wrappers (psycopg/Django)
+    text = str(getattr(err, "orig", err))
 
-    if "CONTEXT:" in text:
-        text = text.split("CONTEXT:")[0].strip()
+    # 2) drop noisy trailing sections
+    text = re.split(r"\n(?:CONTEXT|DETAIL|HINT|LINE)\s*:", text, 1)[0].strip()
 
-    m = re.search(r"(E\d{4,5})\s*:\s*(.*)", text)
-    if m:
-        code, raw_msg = m.group(1), m.group(2).strip()
-        friendly = CODE_MESSAGES.get(code, raw_msg or "An error occurred.")
-        return f"{friendly}"
+    # 3) find the *last* E-code occurrence
+    last: Optional[re.Match] = None
+    for m in re.finditer(r"(E\d{4,5}[A-Z]?)\s*:", text):
+        last = m
 
+    if last:
+        code = last.group(1)
+        # Everything *after* the last code’s colon is the message we want
+        msg = text[last.end():].strip()
+        # If you maintain friendly overrides, prefer them
+        return CODE_MESSAGES.get(code, msg or "An error occurred.")
+
+    # 4) nothing matched; fall back
     return "We couldn't complete your request. Please try again."
+
 
 def _clean_params(d: dict) -> dict:
     return {k: v for k, v in d.items() if v not in (None, "")}
