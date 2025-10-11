@@ -106,7 +106,7 @@ class Household(models.Model):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                SELECT rth_id, description
+                SELECT *
                 FROM relationship_to_householdhead
             """)
                 cols = [col[0] for col in cursor.description]
@@ -120,7 +120,7 @@ class Household(models.Model):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                SELECT house_ownership_id, description
+                SELECT *
                 FROM House_Ownership
             """)
                 cols = [col[0] for col in cursor.description]
@@ -134,7 +134,7 @@ class Household(models.Model):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                SELECT house_type_id, description
+                SELECT *
                 FROM house_type
             """)
                 cols = [col[0] for col in cursor.description]
@@ -148,7 +148,7 @@ class Household(models.Model):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                SELECT sitio_id, sitio_name
+                SELECT *
                 FROM sitio
             """)
                 cols = [col[0] for col in cursor.description]
@@ -176,6 +176,7 @@ class Household(models.Model):
             barangay,
             sitio_id,
             status,
+            quarter_id,
             limit,
             offset
         ):
@@ -186,6 +187,7 @@ class Household(models.Model):
                     barangay,
                     sitio_id,
                     status,
+                    quarter_id,
                     limit,
                     offset
                 ])
@@ -196,10 +198,10 @@ class Household(models.Model):
             raise e
         
     @staticmethod
-    def sp_get_specific_household(hid):
+    def sp_get_specific_household(hid, qid):
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_specific_household', [hid])
+                cursor.callproc('get_specific_household', [hid, qid])
                 cols = [c[0] for c in cursor.description]
                 row = cursor.fetchone()
                 return dict(zip(cols, row)) if row else None
@@ -253,6 +255,44 @@ class Household(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_get_household_type():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Household_Type
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_quarter():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Quarter
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_current_quarter_id():
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc("get_current_quarter_id", [])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
 
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)
@@ -278,3 +318,121 @@ class Family(models.Model):
     class Meta:
         managed = False
         db_table = 'family'
+        
+    @staticmethod
+    def sp_insert_family(
+            household_id,
+            household_type_id,
+            family_head_id,
+            water_source_type_id,
+            toilet_facility_type_id,
+            waste_management_type_id,
+            respondent_id,
+            rtf_id,
+            head_rth_id,
+            ip_status,
+            ip_tribe,
+            nhts_status,
+            waste_other_text,
+            pid,
+            performed_by_type,
+            bhw_assignment
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_family', [
+                    household_id,
+                    household_type_id,
+                    family_head_id,
+                    water_source_type_id,
+                    toilet_facility_type_id,
+                    waste_management_type_id,
+                    respondent_id,
+                    rtf_id,
+                    head_rth_id,
+                    ip_status,
+                    ip_tribe,
+                    nhts_status,
+                    waste_other_text,
+                    pid,
+                    performed_by_type,
+                    bhw_assignment
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_water_source_type():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Water_Source_Type
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_waste_management_type():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Waste_Management_Type
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_toilet_facility_type():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Toilet_Facility_Type
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_relationship_to_family_head():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM relationship_to_familyhead
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_family_summaries_per_household(
+            hid,
+            qid
+        ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_family_summaries_per_household', [
+                    hid,
+                    qid
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        

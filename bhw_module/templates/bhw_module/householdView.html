@@ -1,6 +1,25 @@
 {% extends "base_bhw.html" %}
 
 {% block content %}
+
+<style>
+/* Keep the dialog within the viewport and stack header + form */
+#addFamilyModal > .relative.z-10 {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make only the form scroll */
+#addFamilyModal > .relative.z-10 > form {
+  overflow-y: auto;
+  flex: 1;          /* take remaining height under the header */
+  min-height: 0;    /* allow child to shrink for overflow */
+  -webkit-overflow-scrolling: touch; /* smoother on iOS */
+}
+</style>
+
+
 <div class="min-h-screen bg-gradient-to-b from-white via-red-50/40 to-white">
   <!-- Top Bar / Title -->
   <header class="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
@@ -9,14 +28,14 @@
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-3">
             <!-- Back arrow -->
-            <a href="javascript:void(0)" onclick="window.history.back()" class="inline-flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-gray-200 hover:bg-gray-50" aria-label="Back to Household List">
+            <a href="javascript:void(0)" onclick="window.location.href='{% url 'bhw_module:householdList' %}'" class="inline-flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-gray-200 hover:bg-gray-50" aria-label="Back to Household List">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M12.78 15.53a.75.75 0 0 1-1.06 0l-5-5a.75.75 0 0 1 0-1.06l5-5a.75.75 0 1 1 1.06 1.06L8.06 9.25l4.72 4.72a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd"/>
               </svg>
             </a>
             <div class="h-12 w-1.5 rounded-full bg-red-600"></div>
             <div>
-              <h1 class="text-2xl font-semibold tracking-tight">{{ results.household_number }}</h1>
+              <h1 class="text-2xl font-semibold tracking-tight">{{ household_number }}</h1>
               <p class="text-sm text-gray-500">Household Number</p>
             </div>
           </div>
@@ -40,6 +59,27 @@
     <div class="grid grid-cols-12 gap-8">
       <!-- Left Column: Household Summary -->
       <aside class="col-span-4 space-y-6">
+        <!-- Quarter -->
+        <div>
+          <form method="post" action="{% url 'bhw_module:householdView' %}">
+            {% csrf_token %}
+            <input type="hidden" name="household_id" value="{{ hid }}">
+            <input type="hidden" name="household_number" value="{{ household_number }}">
+            <label class="block text-sm font-medium text-gray-700">Quarter</label>
+            <select
+              name="quarter_id"
+              class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+              onchange="if(this.value) this.form.submit();"
+            >
+              <option value="" selected disabled>— Select Quarter —</option>
+              {% for q in quarter %}
+                <option value="{{ q.quarter_id }}" {% if q.quarter_id == results.quarter_id %}selected{% endif %}>
+                  {{ q.quarter_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
         <!-- Household card -->
         <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
           <div class="px-6 py-6">
@@ -67,6 +107,10 @@
               <div class="grid grid-cols-5 gap-4 py-3">
                 <dt class="col-span-2 text-sm text-gray-500">Relationship to Household Head</dt>
                 <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.respondent_rth }}</dd>
+              </div>
+              <div class="grid grid-cols-5 gap-4 py-3">
+                <dt class="col-span-2 text-sm text-gray-500">Date of Visit</dt>
+                <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.date_visited }}</dd>
               </div>
               <div class="flex justify-end">
                 <button id="openUpdateHouseholdModal"
@@ -98,143 +142,71 @@
           </div>
         </div>
 
-        {# Example Family Card (make these dynamic in your template loop) #}
-        <details open class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md">
-          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 transition-colors group-open:from-red-50">
-            <div class="flex items-center gap-3">
-              <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
-              <div>
-                <h3 class="font-semibold tracking-tight">FAM-002 · Family Head: Maria Santos</h3>
-                <p class="mt-1 text-xs text-gray-500">Respondent: <span class="font-medium text-gray-700">Maria Santos</span> · Relationship to Head: <span class="font-medium text-gray-700">Head</span></p>
-                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: NO</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigent: YES</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: EXTENDED</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: Level II (communal)</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: Collected by LGU</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">With blinc drainage: YES</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: Water-sealed (own)</span>
+        {# Families list #}
+        {% if families and families|length %}
+          {% for f in families %}
+            <details class="group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 group-open:from-red-50">
+                <div class="flex items-center gap-3">
+                  <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
+                  <div>
+                    <h3 class="font-semibold tracking-tight">{{ f.family_code }} · Family Head: {{ f.family_head }}</h3>
+                    <p class="mt-1 text-xs text-gray-500">
+                      Respondent: <span class="font-medium text-gray-700">{{ f.respondent }}</span>
+                      · Relationship to Head: <span class="font-medium text-gray-700">{{ f.head_rth }}</span>
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: {{ f.nhts_status|yesno:"YES,NO" }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigent: {{ f.indigent|yesno:"YES,NO" }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: {{ f.household_type }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: {{ f.water_source }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: {{ f.waste_management }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: {{ f.toilet_type }}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-          </summary>
+                <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+              </summary>
 
-          <!-- Members -->
-          <div class="px-6 pb-6 pt-2">
-            <h4 class="mb-3 text-sm font-semibold">Members</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <!-- Member: Maria -->
-              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">MS</div>
-                  <div class="text-sm font-medium">Maria Santos</div>
-                </div>
-                <button
-                  type="button"
-                  onclick="location.href='{% url 'bhw_module:genInfo' %}'"
-                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  data-member-id="RES-001"
-                  data-member-name="Maria Santos"
-                  data-member-sex="Female"
-                >
-                  Add Health Info
-                </button>
-              </div>
+              <div class="px-6 pb-6 pt-2">
+                <h4 class="mb-3 text-sm font-semibold">Members</h4>
 
-              <!-- Member: Jose -->
-              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">JS</div>
-                  <div class="text-sm font-medium">Jose Santos</div>
+                <div class="grid grid-cols-2 gap-3">
+                  {% for m in f.members %}
+                    <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                      <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">
+                          {{ m.initials }}
+                        </div>
+                        <div class="text-sm font-medium">{{ m.full_name }}</div>
+                      </div>
+                      <button
+                        type="button"
+                        class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        data-member-id="{{ m.family_member_id|default:'' }}"
+                        data-member-name="{{ m.full_name }}"
+                        data-member-sex="{{ m.sex|default:'' }}">
+                        Add Health Info
+                      </button>
+                    </div>
+                  {% empty %}
+                    <p class="text-sm text-gray-500">No members yet.</p>
+                  {% endfor %}
                 </div>
-                <button
-                  type="button"
-                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  data-member-id="RES-002"
-                  data-member-name="Jose Santos"
-                  data-member-sex="Male"
-                >
-                  Add Health Info
-                </button>
-              </div>
-            </div>
 
-
-            <div class="mt-5 flex items-center gap-2">
-              <button
-                class="openAddMemberModal rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                data-family-number="FAM-002">
-                Add Member
-              </button>
-            </div>
-          </div>
-        </details>
-
-        {# Another Sample Card #}
-        <details class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md">
-          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 transition-colors group-open:from-red-50">
-            <div class="flex items-center gap-3">
-              <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
-              <div>
-                <h3 class="font-semibold tracking-tight">FAM-003 · Family Head: Jose Santos</h3>
-                <p class="mt-1 text-xs text-gray-500">Respondent: <span class="font-medium text-gray-700">Ana Santos</span> · Relationship to Head: <span class="font-medium text-gray-700">Spouse/Partner</span></p>
-                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: YES</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigent: NO</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: NUCLEAR</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: Level III (individual)</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: Composting</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">With blinc drainage: NO</span>
-                  <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: Water-sealed (shared)</span>
+                <div class="mt-5 flex items-center gap-2">
+                  <button
+                    class="openAddMemberModal rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    data-family-number="{{ f.family_code }}">
+                    Add Member
+                  </button>
                 </div>
               </div>
-            </div>
-            <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-          </summary>
-          <div class="px-6 pb-6 pt-2">
-            <h4 class="mb-3 text-sm font-semibold">Members</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">JS</div>
-                  <div class="text-sm font-medium">Jose Santos</div>
-                </div>
-                <button
-                  type="button"
-                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  data-member-id="RES-002"
-                  data-member-name="Jose Santos"
-                  data-member-sex="Male"
-                >
-                  Add Health Info
-                </button>
-              </div>
-             <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">MS</div>
-                  <div class="text-sm font-medium">Maria Santos</div>
-                </div>
-                <button
-                  type="button"
-                  class="openGeneralHealthModal rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  data-member-id="RES-001"
-                  data-member-name="Maria Santos"
-                  data-member-sex="Female"
-                >
-                  Add Health Info
-                </button>
-              </div>
-            </div>
-            <div class="mt-5 flex items-center gap-2">
-              <button
-                class="openAddMemberModal rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                data-family-number="FAM-002">
-                Add Member
-              </button>
-            </div>
-          </div>
-        </details>
+            </details>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-gray-500">No families recorded yet.</p>
+        {% endif %}
       </section>
     </div>
   </main>
@@ -256,124 +228,155 @@
       </button>
     </div>
 
-    <form method="post" action="" class="px-6 py-5">
+    <form method="post" action="{% url 'bhw_module:familyInsert' %}" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <!-- Family Number -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Family Number</label>
-          <input name="family_number" type="text" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+
+        <!-- Family Head (typeahead like Respondent) -->
+        <div class="relative">
+          <label for="family_head_name" class="block text-sm font-medium text-gray-700">
+            Family Head <span class="text-red-600">*</span>
+          </label>
+          <input id="family_head_name" name="family_head_name" type="text" required
+                placeholder="Search resident by name"
+                autocomplete="off"
+                data-autocomplete="resident"
+                data-target-hidden="#family_head_id"
+                class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <input type="hidden" id="family_head_id" name="family_head_id">
+
+          <!-- dropdown -->
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+              data-autocomplete-list="#family_head_name"></div>
+
+          <p class="text-xs text-gray-500 mt-1">Choose the family head from registered residents.</p>
         </div>
 
-        <!-- Family Head -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Family Head</label>
-          <input name="family_head" type="text" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-        </div>
+        <!-- Respondent Name (typeahead) -->
+          <div class="relative">
+            <label for="respondent_name" class="block text-gray-700 text-sm font-medium mb-1">
+              Respondent Name <span class="text-red-600">*</span>
+            </label>
+            <input id="respondent_name" name="respondent_name" type="text" required
+              placeholder="Search resident by name"
+              autocomplete="off"
+              data-autocomplete="resident"
+              data-target-hidden="#respondent_id"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+            <input type="hidden" id="respondent_id" name="respondent_id">
 
-        <!-- Respondent Name -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Respondent Name</label>
-          <input name="respondent_name" type="text" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-        </div>
+              <!-- dropdown -->
+              <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+                   data-autocomplete-list="#respondent_name"></div>
 
-        <!-- Relationship to the Head (dropdown) -->
+              <p class="text-xs text-gray-500 mt-1">Person providing the information (may be the head).</p>
+            </div>
+
+        <!-- Relationship of Family Head to Household Head (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Relationship to the Head</label>
-          <select name="relationship_to_head" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Head</option>
-            <option>Spouse/Partner</option>
-            <option>Son/Daughter</option>
-            <option>Parent</option>
-            <option>Sibling</option>
-            <option>Relative</option>
-            <option>Non-relative</option>
-            <option>Others</option>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Family Head to HH <span class="text-red-600">*</span></label>
+          <select name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">How is the family head related to the household head</p>
         </div>
 
-        <!-- NHTS Status -->
+        <!-- Relationship of Respondent to Household Head (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">NHTS Status</label>
-          <select name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option value="YES">YES</option>
-            <option value="NO">NO</option>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Respondent to Family Head <span class="text-red-600">*</span></label>
+          <select name="respondent_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for fr in family_relationship %}
+              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">How is the respondent related to the family head</p>
         </div>
 
-        <!-- Indigent Status -->
+        <!-- Household Type -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Indigent Status</label>
-          <select name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option value="YES">YES</option>
-            <option value="NO">NO</option>
+          <label class="block text-sm font-medium text-gray-700">Household Type <span class="text-red-600">*</span></label>
+          <select name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <option value="" selected disabled>— Select Household Type —</option>
+            {% for hht in household_type %}
+              <option value="{{ hht.household_type_id }}" >{{ hht.description }}</option>
+            {% endfor %}
           </select>
-        </div>
-
-        <!-- Household Type (dropdown) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Household Type</label>
-          <select name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>NUCLEAR</option>
-            <option>EXTENDED</option>
-            <option>SINGLE PARENT</option>
-            <option>OTHERS</option>
-          </select>
-        </div>
-
-        <!-- Type of Water Source (dropdown) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Type of Water Source</label>
-          <select name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Level I (point source)</option>
-            <option>Level II (communal)</option>
-            <option>Level III (individual)</option>
-            <option>Deep well/Hand pump</option>
-            <option>Protected spring</option>
-            <option>Purchased/Delivered</option>
-            <option>Others</option>
-          </select>
+          <p class="text-xs text-gray-500 mt-1">Select the household’s classification.</p>
         </div>
 
         <!-- Type of Waste Management (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Type of Waste Management</label>
-          <select name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Collected by LGU</option>
-            <option>Composting</option>
-            <option>MRF/Segregation</option>
-            <option>Open dumping</option>
-            <option>Burning</option>
-            <option>Others</option>
+          <label class="block text-sm font-medium text-gray-700">Type of Waste Management <span class="text-red-600">*</span></label>
+          <select name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <option value="" selected disabled>— Select Waste Management Type —</option>
+            {% for wmt in waste_management %}
+              <option value="{{ wmt.waste_management_type_id }}">{{ wmt.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">Main way the household disposes of solid waste.</p>
         </div>
 
-        <!-- With blinc drainage (dropdown) -->
+        <!-- Type of Water Source (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">With blinc drainage</label>
-          <select name="with_blinc_drainage" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option value="YES">YES</option>
-            <option value="NO">NO</option>
+          <label class="block text-sm font-medium text-gray-700">Type of Water Source <span class="text-red-600">*</span></label>
+          <select name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <option value="" selected disabled>— Select Water Source Type —</option>
+            {% for ws in water_source %}
+              <option value="{{ ws.water_source_type_id }}">{{ ws.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">Primary source of drinking water.</p>
         </div>
 
         <!-- Type of Toilet Facility (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Type of Toilet Facility</label>
-          <select name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Water-sealed (own)</option>
-            <option>Water-sealed (shared)</option>
-            <option>Pit latrine</option>
-            <option>None</option>
-            <option>Others</option>
+          <label class="block text-sm font-medium text-gray-700">Type of Toilet Facility <span class="text-red-600">*</span></label>
+          <select name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <option value="" selected disabled>— Select Toilet Facility Type —</option>
+            {% for tf in toilet_facility %}
+              <option value="{{ tf.toilet_facility_type_id }}">{{ tf.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">Type of sanitation used at home.</p>
+        </div>
+
+        <!-- NHTS Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">NHTS Status <span class="text-red-600">*</span></label>
+          <select name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>Select…</option>
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Is the household listed under DSWD’s National Household Targeting System (Listahanan)?</p>
+        </div>
+
+        <!-- Indigent Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Indigent Status <span class="text-red-600">*</span></label>
+          <select name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>Select…</option>
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Select “YES” if you belong to an Indigenous Peoples (IP) group.
+            If YES, please specify your tribe.
+          </p>
+        </div>
+
+        <!-- IP Tribe (shown only when Indigenous = YES) -->
+        <div id="ip_tribe_wrap" class="mt-2 hidden">
+          <label for="ip_tribe" class="block text-sm font-medium text-gray-700">Specify Tribe <span class="text-red-600">*</span></label>
+          <input id="ip_tribe" name="ip_tribe" type="text"
+                placeholder="e.g., Manobo, Subanen"
+                class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <p class="text-xs text-gray-500 mt-1">If Indigenous = YES, specify the IP group or tribe.</p>
         </div>
       </div>
 
@@ -926,6 +929,23 @@
     });
   })();
 
+  // Add Family modal submit guard
+  const addFamilyForm = document.querySelector('#addFamilyModal form');
+  addFamilyForm?.addEventListener('submit', (e) => {
+    const checks = [
+      { input: document.getElementById('family_head_name'), hidden: document.getElementById('family_head_id'), label: 'Family Head' },
+      { input: document.getElementById('respondent_name'), hidden: document.getElementById('respondent_id'), label: 'Respondent' },
+    ];
+    for (const { input, hidden, label } of checks) {
+      if (input && hidden && input.value && !hidden.value) {
+        e.preventDefault();
+        alert(`Please select a ${label} from the suggestions so we can capture the correct ID.`);
+        input.focus();
+        return;
+      }
+    }
+  });
+
   (function() {
   // CHANGED: reuse the same API URL as in HouseholdAdd
   const SEARCH_URL = "{% url 'bhw_module:resident_search_api' %}";
@@ -1062,7 +1082,7 @@
   // CHANGED: attach to the two inputs inside the update modal only
   document.addEventListener('DOMContentLoaded', () => {
     document
-      .querySelectorAll('#updateHouseholdModal input[data-autocomplete="resident"]')
+      .querySelectorAll('input[data-autocomplete="resident"]')
       .forEach(attachAutocomplete);
 
     // OPTIONAL CHANGED: gentle guard on submit
@@ -1111,21 +1131,64 @@
       el?.addEventListener('click', (e) => { if (e.target === el) closeFn(); });
     }
 
-    /* =====================================
-       FAMILY MODAL (Add Family Unit)
-    ====================================== */
-    const familyModal = document.getElementById('addFamilyModal');
-    const openFamilyBtn = document.getElementById('openAddFamilyModal');
-    const closeFamilyBtn = document.getElementById('closeAddFamilyModal');
-    const cancelFamilyBtn = document.getElementById('cancelAddFamilyModal');
+/* =====================================
+   FAMILY MODAL (Add Family Unit) — same behavior as Update modal
+===================================== */
+(function () {
+  const familyModal    = document.getElementById('addFamilyModal');
+  const openFamilyBtn  = document.getElementById('openAddFamilyModal');
+  const closeFamilyBtn = document.getElementById('closeAddFamilyModal');
+  const cancelFamilyBtn= document.getElementById('cancelAddFamilyModal');
+  const addFamilyForm  = familyModal?.querySelector('form');
 
-    const openFamilyModal = () => openModal(familyModal);
-    const closeFamilyModal = () => closeModal(familyModal);
+  function resetFamilyModal() {
+    // 1) reset form fields to initial HTML values
+    addFamilyForm?.reset();
 
-    openFamilyBtn?.addEventListener('click', openFamilyModal);
-    closeFamilyBtn?.addEventListener('click', closeFamilyModal);
-    cancelFamilyBtn?.addEventListener('click', closeFamilyModal);
-    bindBackdropClose(familyModal, closeFamilyModal);
+    // 2) clear hidden respondent id
+    const respHidden = familyModal?.querySelector('#respondent_id');
+    if (respHidden) respHidden.value = '';
+
+    // 3) collapse any autocomplete dropdowns inside this modal
+    familyModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+    });
+  }
+
+  function openFamily() {
+    resetFamilyModal();     // fresh state on open
+    openModal(familyModal);
+  }
+  function closeFamily() {
+    resetFamilyModal();     // discard unsaved edits
+    closeModal(familyModal);
+  }
+
+  openFamilyBtn?.addEventListener('click', openFamily);
+  closeFamilyBtn?.addEventListener('click', closeFamily);
+  cancelFamilyBtn?.addEventListener('click', closeFamily);
+
+  // backdrop click closes & resets
+  familyModal?.addEventListener('click', (e) => { if (e.target === familyModal) closeFamily(); });
+
+  // ESC closes & resets (keeps it consistent with Update modal)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && familyModal && !familyModal.classList.contains('hidden')) closeFamily();
+  });
+
+  // Submit guard: require a suggestion selection to capture correct respondent_id
+  addFamilyForm?.addEventListener('submit', (e) => {
+    const input  = familyModal?.querySelector('#respondent_name');
+    const hidden = familyModal?.querySelector('#respondent_id');
+    if (input && hidden && input.value && !hidden.value) {
+      e.preventDefault();
+      alert('Please select a respondent from the suggestions so we can capture the correct ID.');
+      input.focus();
+      return;
+    }
+  });
+})();
 
     /* =====================================
        MEMBER MODAL (Add Member)
@@ -1226,6 +1289,62 @@
       if (familyModal && !familyModal.classList.contains('hidden')) return closeFamilyModal();
     });
   })();
-</script>
 
+  (() => {
+  // Inside Add Family modal
+  const famModal = document.getElementById('addFamilyModal');
+  const select   = famModal?.querySelector('select[name="indigent_status"]');
+  const wrap     = famModal?.querySelector('#ip_tribe_wrap');
+  const input    = famModal?.querySelector('#ip_tribe');
+
+  if (!select || !wrap) return;
+
+  function syncIPField() {
+    // Your options use value="true"/"false"
+    const show = select.value === 'true';
+    wrap.classList.toggle('hidden', !show);
+    if (input) {
+      input.required = show;     // require when visible
+      if (!show) input.value = ''; // clear when hidden
+    }
+  }
+
+  select.addEventListener('change', syncIPField);
+  // Initialize on load (handles pre-filled forms)
+  syncIPField();
+})();
+
+(() => {
+  const famModal = document.getElementById('addFamilyModal');
+  if (!famModal) return;
+
+  const form   = famModal.querySelector('form');
+  const select = famModal.querySelector('select[name="indigent_status"]'); // your IP toggle
+  const wrap   = famModal.querySelector('#ip_tribe_wrap');
+  const input  = famModal.querySelector('#ip_tribe');
+
+  if (!form || !select || !wrap) return;
+
+  function syncIPField() {
+    const show = select.value === 'true';     // YES option uses value="true"
+    wrap.classList.toggle('hidden', !show);
+    if (input) {
+      input.required = show;                  // required only when shown
+      if (!show) input.value = '';            // clear when hidden
+    }
+  }
+
+  // Show/hide on change
+  select.addEventListener('change', syncIPField);
+
+  // Ensure it hides again whenever the modal is reset (your close/cancel calls form.reset())
+  form.addEventListener('reset', () => {
+    // Defer a tick so the browser applies the reset values first
+    setTimeout(syncIPField, 0);
+  });
+
+  // Initialize once on load (covers pre-filled cases too)
+  syncIPField();
+})();
+</script>
 {% endblock %}
