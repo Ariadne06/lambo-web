@@ -66,7 +66,7 @@ def bhw_dashboard(request):
         "age_labels_pct": age_labels_pct,  # optional pretty legend
         "age_data": age_data,
     }
-    return render(request, "secretary_module/secretary_dashboard.html", ctx)
+    return render(request, "bhw_module/bhw_dashboard.html", ctx)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
