@@ -1,176 +1,157 @@
 {% extends "base_admin.html" %}
 
 {% block content %}
-<div class="p-4 lg:p-6">
+<div class="p-4 lg:p-6 mx-auto max-w-7xl space-y-4">
 
-  <!-- DASHBOARD CARD (height capped) -->
-  <div class="relative mx-auto max-w-7xl bg-white border border-gray-200 rounded-2xl shadow-sm
-              h-[calc(100vh-2rem)] overflow-hidden">
-
-    <!-- Sticky header inside the card -->
-    <div class="sticky top-0 z-10 bg-white/95 backdrop-blur border-b rounded-t-2xl px-5 py-3">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-base md:text-lg font-semibold text-gray-900">Admin Dashboard</h1>
-          <p class="text-xs text-gray-500">Welcome back! Here’s what’s happening today.</p>
-        </div>
-
-        <!-- quick status -->
-        <div class="hidden sm:flex items-center gap-2">
-          <span class="text-[11px] px-2 py-1 rounded-full bg-green-100 text-green-700">System Online</span>
-          <span class="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-700">Last backup: May 05, 11:40 AM</span>
-        </div>
-      </div>
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-base md:text-lg font-semibold text-gray-900">Admin Dashboard</h1>
+      <p class="text-xs text-gray-500">Personnel, password requests, and recent logs.</p>
     </div>
+    <span class="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full bg-green-100 text-green-700">
+      <span class="h-1.5 w-1.5 rounded-full bg-green-600"></span> Online
+    </span>
+  </div>
 
-    <!-- Scrollable body -->
-    <div class="p-4 md:p-6 space-y-5 max-h-[calc(100%-3.25rem)] overflow-y-auto">
+  <!-- Grid: Left = Logs (wide), Right = Cards (rail) -->
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
 
-      <!-- KPIs -->
-      <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <!-- Residents -->
-        <div class="bg-white border rounded-xl shadow-sm p-4 flex items-center gap-3">
-          <div class="rounded-lg bg-red-50 text-red-600 p-2.5">👥</div>
+    
+    <!-- RIGHT RAIL -->
+    <div class="xl:col-span-4 2xl:col-span-3 space-y-4">
+
+      <!-- Personnel Accounts -->
+      <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">🧑‍⚕️</div>
           <div>
-            <p class="text-[11px] text-gray-500">Total Residents</p>
-            <p class="text-xl font-bold leading-tight">12,487</p>
-            <p class="text-[11px] text-green-600">+124 this month</p>
+            <h2 class="text-sm font-semibold text-gray-900">Personnel Accounts</h2>
+            <p class="text-xs text-gray-500">Registered users</p>
           </div>
         </div>
 
-        <!-- Households -->
-        <div class="bg-white border rounded-xl shadow-sm p-4 flex items-center gap-3">
-          <div class="rounded-lg bg-red-50 text-red-600 p-2.5">🏠</div>
-          <div>
-            <p class="text-[11px] text-gray-500">Households</p>
-            <p class="text-xl font-bold leading-tight">3,248</p>
-            <p class="text-[11px] text-green-600">+22 this week</p>
-          </div>
-        </div>
+        <div class="text-right">
+          {% if personnel_count is not None %}
+            <div class="text-2xl font-bold text-gray-900 leading-none">
+              {{ personnel_count|default:0 }}
+            </div>
+          {% else %}
+            <div class="h-7 w-16 bg-gray-100 rounded animate-pulse inline-block"></div>
+          {% endif %}
 
-        <!-- Personnel -->
-        <div class="bg-white border rounded-xl shadow-sm p-4 flex items-center gap-3">
-          <div class="rounded-lg bg-red-50 text-red-600 p-2.5">🧑‍⚕️</div>
-          <div>
-            <p class="text-[11px] text-gray-500">Personnel Accounts</p>
-            <p class="text-xl font-bold leading-tight">5</p>
-            <p class="text-[11px] text-gray-500">Active • 0 pending</p>
-          </div>
-        </div>
+          {% if personnel_active_count is not None %}
+            <div class="mt-1 text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 inline-block">
+              {{ personnel_active_count }} active
+            </div>
+          {% endif %}
 
-        <!-- Pending -->
-        <div class="bg-white border rounded-xl shadow-sm p-4 flex items-center gap-3">
-          <div class="rounded-lg bg-red-50 text-red-600 p-2.5">📩</div>
-          <div>
-            <p class="text-[11px] text-gray-500">Pending Requests</p>
-            <p class="text-xl font-bold text-red-600 leading-tight">4</p>
-            <p class="text-[11px] text-gray-500">Needs review</p>
-          </div>
+          {% if manage_personnel_url %}
+            <div class="mt-2">
+              <a href="{{ manage_personnel_url }}" class="text-[11px] text-red-700 hover:text-red-800 px-2 py-1 rounded border border-red-200 hover:border-red-300">
+                Manage
+              </a>
+            </div>
+          {% endif %}
         </div>
       </section>
 
-      <!-- Two-up: Password Requests • Quick Actions -->
-      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <!-- Password requests -->
-        <div class="bg-white border rounded-xl shadow-sm p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="font-semibold text-sm flex items-center gap-2">🔔 Password Requests</h2>
-            <a href="#" class="text-xs text-red-600 hover:underline">Mark all read</a>
+      <!-- Password Requests -->
+      <section class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col">
+        <div class="px-4 py-3 border-b flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold">🔒 Password Requests</h2>
+            <span class="text-[11px] text-gray-500">
+              {% if password_requests %}{{ password_requests|length }} pending{% else %}0 pending{% endif %}
+            </span>
           </div>
+        </div>
 
-          <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
-            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-[13px]"><span class="font-medium">Maria Santos</span> (Treasurer) • 2 mins ago</p>
-              <div class="flex gap-2 shrink-0">
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-green-600 text-white hover:bg-green-700">Approve</button>
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-red-600 text-white hover:bg-red-700">Deny</button>
+        <div class="p-3 space-y-2 max-h-[420px] overflow-y-auto pr-1">
+          {% for req in password_requests %}
+            <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition px-3 py-2">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="h-8 w-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-semibold">
+                  {{ req.name|first }}{{ req.name|slice:"1:2" }}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-[13px] font-medium text-gray-900 truncate">{{ req.name }}</p>
+                  <p class="text-[12px] text-gray-500">
+                    {% if req.role %}{{ req.role }} • {% endif %}{{ req.when }}
+                  </p>
+                </div>
               </div>
+              {% if req.requested_at %}
+                <span class="text-[11px] text-gray-500 whitespace-nowrap">
+                  {{ req.requested_at|date:"M j, Y g:i A" }}
+                </span>
+              {% endif %}
             </div>
-
-            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-[13px]"><span class="font-medium">John Cruz</span> (Staff) • 10 mins ago</p>
-              <div class="flex gap-2 shrink-0">
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-green-600 text-white hover:bg-green-700">Approve</button>
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-red-600 text-white hover:bg-red-700">Deny</button>
-              </div>
+          {% empty %}
+            <div class="rounded-lg bg-gray-50 px-3 py-6 text-center text-[13px] text-gray-500">
+              📭 No pending password requests
             </div>
-
-            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-[13px]"><span class="font-medium">Eric Dela Peña</span> (Nurse) • Yesterday</p>
-              <div class="flex gap-2 shrink-0">
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-green-600 text-white hover:bg-green-700">Approve</button>
-                <button class="px-2.5 py-1 text-[11px] rounded-md bg-red-600 text-white hover:bg-red-700">Deny</button>
-              </div>
-            </div>
-          </div>
+          {% endfor %}
         </div>
       </section>
 
-      <!-- Two-up: Activity • Logins -->
-      <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <!-- Activity -->
-        <div class="bg-white border rounded-xl shadow-sm p-4">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="font-semibold text-sm">🗂️ Recent Activity</h2>
-            <a href="#" class="text-xs text-red-600 hover:underline">View all</a>
-          </div>
+    </div>
+    <!-- /RIGHT RAIL -->
+     <!-- LEFT: Recent Logs -->
+    <section class="xl:col-span-8 2xl:col-span-9 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <h2 class="text-sm font-semibold">🧾 Recent Logs</h2>
+        <span class="text-[11px] text-gray-500">Last 10 entries</span>
+      </div>
 
-          <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-            <div class="bg-gray-50 rounded-lg px-3 py-2 text-[13px]">
-              <span class="text-gray-900 font-medium">[May 5, 11:40 AM]</span>
-              <span class="text-gray-600"> Exported health records • by Admin</span>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2 text-[13px]">
-              <span class="text-gray-900 font-medium">[May 5, 10:40 AM]</span>
-              <span class="text-gray-600"> Updated resident profile • by Staff</span>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2 text-[13px]">
-              <span class="text-gray-900 font-medium">[May 5, 10:30 AM]</span>
-              <span class="text-gray-600"> New household added • by Nurse</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Logins -->
-        <div class="bg-white border rounded-xl shadow-sm p-4">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="font-semibold text-sm">🔑 Recent Logins</h2>
-            <span class="text-[11px] text-gray-500">Last 24h</span>
-          </div>
-
+      <!-- Scroll containers: vertical + horizontal -->
+      <div class="p-3">
+        <div class="max-h-[520px] overflow-y-auto rounded-lg border border-gray-100">
           <div class="overflow-x-auto">
-            <table class="w-full text-[13px]">
-              <thead class="bg-gray-50">
-                <tr class="text-left text-gray-600">
-                  <th class="py-2 px-3">User</th>
-                  <th class="py-2 px-3">Role</th>
-                  <th class="py-2 px-3">When</th>
-                  <th class="py-2 px-3">IP</th>
-                  <th class="py-2 px-3">Status</th>
+            <table class="w-full text-left text-[13px]">
+              <thead class="sticky top-0 bg-white z-10">
+                <tr class="text-gray-600 border-b">
+                  <th class="py-2 pr-3 font-semibold whitespace-nowrap">Date &amp; Time</th>
+                  <th class="py-2 font-semibold">Activity Summary</th>
                 </tr>
               </thead>
-              <tbody class="divide-y">
-                <tr>
-                  <td class="py-2 px-3">John Cruz</td>
-                  <td class="py-2 px-3">Staff</td>
-                  <td class="py-2 px-3">12 mins ago</td>
-                  <td class="py-2 px-3">10.0.0.17</td>
-                  <td class="py-2 px-3"><span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">OK</span></td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3">Eric Dela Peña</td>
-                  <td class="py-2 px-3">Nurse</td>
-                  <td class="py-2 px-3">Yesterday</td>
-                  <td class="py-2 px-3">10.0.0.31</td>
-                  <td class="py-2 px-3"><span class="text-[11px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Timeout</span></td>
-                </tr>
+              <tbody class="divide-y divide-gray-100">
+                {% for log in recent_logins %}
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-2 pr-3 align-top whitespace-nowrap">
+                      <span class="font-mono text-gray-800">
+                        {{ log.ts_label|default:log.when|default:"—" }}
+                      </span>
+                    </td>
+                    <td class="py-2 align-top">
+                      <div class="text-gray-900 truncate">
+                        {{ log.summary|default:log.user }}
+                      </div>
+                      {% if log.role %}
+                        <div class="text-[12px] text-gray-500">
+                          {{ log.role }}
+                          {% if log.ip and log.ip != '—' %} • <span class="font-mono text-gray-600">{{ log.ip }}</span>{% endif %}
+                        </div>
+                      {% elif log.ip and log.ip != '—' %}
+                        <div class="text-[12px] text-gray-500">
+                          <span class="font-mono text-gray-600">{{ log.ip }}</span>
+                        </div>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="2" class="py-6 text-center text-[13px] text-gray-500">No recent activity.</td>
+                  </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-    </div> <!-- /scrollable body -->
-  </div> <!-- /card -->
+
+  </div>
 </div>
 {% endblock %}
