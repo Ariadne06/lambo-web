@@ -1,11 +1,10 @@
 from django.shortcuts import render, redirect
+from httpx import request
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
 from .models import Dashboard
-
-# Create your views herevenv\Scripts\activate
-from household_module.models import Household
+from household_module.models import Household, Family
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from django.http import JsonResponse
@@ -13,6 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from utils.constants import LIMIT_OPTIONS
 from django.utils.http import urlencode
 from django.urls import reverse
+import json
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -80,7 +80,17 @@ def householdList(request):
     query = (request.GET.get('query') or '').strip()
     status = (request.GET.get('status') or 'all').strip()
     raw_sitio = request.GET.get('sitio_id')
+    quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    current_quarter_id = Household.sp_get_current_quarter_id()
     
+    if quarter_id:
+        quarter_id = int(quarter_id)
+    elif current_quarter_id:
+        quarter_id = int(current_quarter_id)
+    else:
+        quarter_id = None  # or some default value if needed
+
+
     try:
         sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
     except ValueError:
@@ -108,6 +118,7 @@ def householdList(request):
             barangay=None,
             sitio_id=sitio_id,
             status=status,
+            quarter_id=quarter_id,
             limit=limit + 1,
             offset=offset,
         )
@@ -133,6 +144,8 @@ def householdList(request):
 
     
     sitio = Household.sp_get_sitio()
+    quarter = Household.sp_get_quarter()
+    
     flash = get_flash(request)
     return render(request, 'bhw_module/householdList.html',{
         "results": final_result,
@@ -148,6 +161,8 @@ def householdList(request):
         "limit_urls": limit_urls,
         'query': query,
         'sitio': sitio,
+        'quarter': quarter,
+        'quarter_id': quarter_id,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -290,13 +305,78 @@ def update_household(request):
 
     return redirect_to_view()
 
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def insert_family(request):
+    hid = int(request.POST.get('household_id') or 0)
+    pid = int(request.session.get('personnel_id') or 0)
 
+    def redirect_to_view():
+        url = reverse('bhw_module:householdView') + "?" + urlencode({"household_id": hid})
+        return redirect(url)
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+    
+    if request.method == 'POST':
+        family_head_id = int(request.POST.get('family_head_id'))
+        respondent_id = int(request.POST.get('respondent_id'))
+        fam_head_rel = int(request.POST.get('fam_head_rel'))
+        respondent_rel = int(request.POST.get('respondent_rel'))
+        household_type = int(request.POST.get('household_type'))
+        waste_management_type = int(request.POST.get('waste_management_type'))
+        water_source_type = int(request.POST.get('water_source_type'))
+        toilet_facility_type = int(request.POST.get('toilet_facility_type'))
+        nhts_status     = (request.POST.get('nhts_status') == 'true')
+        indigent_status = (request.POST.get('indigent_status') == 'true')
+        ip_tribe        = (request.POST.get('ip_tribe') or '').strip()
+        waste_other_text = ''
+        performed_by_type = 'personnel'
+        bhw_assignment = False
+    
+        try:
+            Family.sp_insert_family(
+                hid,
+                household_type,
+                family_head_id,
+                water_source_type,
+                toilet_facility_type,
+                waste_management_type,
+                respondent_id,
+                respondent_rel,
+                fam_head_rel,
+                indigent_status,
+                ip_tribe,
+                nhts_status,
+                waste_other_text,
+                pid,
+                performed_by_type,
+                bhw_assignment
+            )
+            set_flash(request, f"Family Profile added successfully.", "success")
+        except Exception as e:
+            set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdView(request):
-    # Accept id from GET (?hid=) or POST (household_id)
-    raw_hid = request.GET.get('hid') or request.POST.get('household_id')
+    # Read from GET first (links / reloads), then POST (form submits)
+    raw_hid = (
+        request.GET.get('household_id')
+        or request.POST.get('household_id')
+        or request.GET.get('hid')          # fallback for older links
+    )
+    qid_raw = request.GET.get('quarter_id') or request.POST.get('quarter_id')
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
     if not raw_hid:
         set_flash(request, "No household selected.", "error")
         return redirect('bhw_module:householdList')
@@ -307,9 +387,17 @@ def householdView(request):
         set_flash(request, "Invalid household id.", "error")
         return redirect('bhw_module:householdList')
 
-    # Always load the record so `results` is defined
+    # Parse quarter id if present
+    qid = None
     try:
-        result = Household.sp_get_specific_household(hid)
+        if qid_raw not in (None, ""):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None  # fall back to whatever your SP treats as "current quarter"
+
+    try:
+        result   = Household.sp_get_specific_household(hid, qid)
+        rows_raw = Family.sp_get_family_summaries_per_household(hid, qid)
         if not result:
             set_flash(request, "Household not found.", "error")
             return redirect('bhw_module:householdList')
@@ -317,11 +405,59 @@ def householdView(request):
         set_flash(request, _clean_db_error(e), "error")
         return redirect('bhw_module:householdList')
 
-    # Reference lists
-    relationship    = Household.sp_get_relationship_to_household_head()
-    house_ownership = Household.sp_get_house_ownership()
-    house_type      = Household.sp_get_house_type()
-    sitio           = Household.sp_get_sitio()
+    # Build families list and decode JSONB members
+    families = []
+    for r in rows_raw or []:
+        # Skip sentinel row from your SQL (family_id = 0)
+        if not r.get('family_id'):
+            continue
+
+        members = r.get('family_members') or []
+        if isinstance(members, str):
+            try:
+                members = json.loads(members)
+            except Exception:
+                members = []
+
+        # add initials for chips (optional)
+        for m in members:
+            name = (m.get('full_name') or '').strip()
+            parts = [p for p in name.split() if p]
+            m['initials'] = (''.join(p[0] for p in parts[:2]) or 'NA').upper()
+
+        families.append({
+            'family_id':               r.get('family_id'),
+            'family_code':             r.get('family_code') or '',
+            'family_head':             r.get('family_head') or '',
+            'respondent':              r.get('respondent_name') or '',
+            'head_rth':                r.get('respondent_relationship') or '',
+            'nhts_status':             bool(r.get('nhts_status')),
+            'indigent':                bool(r.get('indigent')),
+            'household_type':          r.get('household_type') or '',
+            'water_source':            r.get('water_source') or '',
+            'waste_management':        r.get('waste_management') or '',
+            'toilet_type':             r.get('toilet_type') or '',
+            'members':                 members,
+        })
+
+    # reflect chosen quarter in result (your existing bit) …
+    if qid is not None:
+        try:
+            setattr(result, 'quarter_id', qid)
+        except Exception:
+            if isinstance(result, dict):
+                result['quarter_id'] = qid
+
+    relationship     = Household.sp_get_relationship_to_household_head()
+    house_ownership  = Household.sp_get_house_ownership()
+    house_type       = Household.sp_get_house_type()
+    sitio            = Household.sp_get_sitio()
+    household_type   = Household.sp_get_household_type()
+    water_source     = Family.sp_get_water_source_type()
+    quarter          = Household.sp_get_quarter()
+    waste_management = Family.sp_get_waste_management_type()
+    toilet_facility  = Family.sp_get_toilet_facility_type()
+    family_relationship = Family.sp_get_relationship_to_family_head()
 
     flash = get_flash(request)
     return render(request, 'bhw_module/householdView.html', {
@@ -329,7 +465,16 @@ def householdView(request):
         'house_ownership': house_ownership,
         'house_type': house_type,
         'sitio': sitio,
+        'household_type': household_type,
+        'water_source': water_source,
+        'quarter': quarter,
+        'household_number': household_number,
+        'waste_management': waste_management,
+        'toilet_facility': toilet_facility,
+        'hid': hid,
+        'family_relationship': family_relationship,
         'results': result,
+        'families': families,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })

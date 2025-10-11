@@ -9,6 +9,7 @@ urlpatterns = [
      path('householdView/', views.householdView, name='householdView'),
      path('householdVisit/', views.householdVisit, name='householdVisit'),
      path('household/update/', views.update_household, name='householdUpdate'),
+     path('family/insert/', views.insert_family, name='familyInsert'),
      path("household/visit/mark/", views.mark_household_visit, name="householdVisitMark"),
      path('residentList/', views.residentList),
      path('residentAdd1/', views.residentAdd1),

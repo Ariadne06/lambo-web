@@ -38,6 +38,20 @@
                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
       </div>
 
+      <label for="limit" class="text-gray-600">Quarter: </label>
+      <select
+        name="quarter_id"
+        class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+        onchange="if(this.value) this.form.submit();"
+      >
+        <option value="" selected disabled>— Select Quarter —</option>
+        {% for q in quarter %}
+          <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
+            {{ q.quarter_name }}
+          </option>
+        {% endfor %}
+      </select>
+
       <div class="flex items-center gap-2 text-sm">
         <label for="limit" class="text-gray-600">Rows per page:</label>
         <div class="relative inline-block">
@@ -142,6 +156,7 @@
                 <form method="post" action="{% url 'bhw_module:householdView' %}">
                   {% csrf_token %}
                   <input type="hidden" name="household_id" value="{{ person.household_id }}">
+                  <input type="hidden" name="household_number" value="{{ person.household_number }}">
                   <button type="submit" class="btn-action btn-view" title="View">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C5 5 1.73 12 1.73 12S5 19 12 19s10.27-7 10.27-7S19 5 12 5Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg>
                     <span>View</span>
