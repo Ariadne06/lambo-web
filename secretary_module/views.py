@@ -4,7 +4,7 @@ from django.utils.http import urlencode
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
-from .models import Secretary, Business, Dashboard
+from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
@@ -352,11 +352,6 @@ def applications(request):
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
-def price_update(request):
-    return render(request, 'secretary_module/priceUpdate.html')
-
-@custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def announcement(request):
     return render(request, 'secretary_module/announcement.html')
 
@@ -490,3 +485,269 @@ def approval(request):
         'message_level': flash['message_level'],
         'session_personnel_id': request.session.get('personnel_id'),
     })
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def businessFee(request):
+    try:
+        categories = BusinessFee.sp_get_all_business_clearance_cat()
+    except Exception as e:
+        messages.error(request, f"Could not load fee categories: {e}")
+        categories = []
+    return render(request, 'secretary_module/businessFee.html', {"categories": categories})
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def business_fee_update(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    def to_decimal(val):
+        if val in (None, "", "null", "None"):
+            return None
+        try:
+            return Decimal(val)
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError("Invalid decimal value")
+
+    def to_int(val):
+        if val in (None, "", "null", "None"):
+            return None
+        return int(val)
+
+    try:
+        cid = int(request.POST.get("clearance_category_id"))
+        base_fee = to_decimal(request.POST.get("base_fee"))
+        addl = to_decimal(request.POST.get("additional_fee_per_unit"))
+        min_units = to_int(request.POST.get("minimum_units"))
+
+        # ✅ pull personnel_id from session (consistent with other views)
+        try:
+            updated_by = int(request.session.get("personnel_id") or 0)
+        except (TypeError, ValueError):
+            updated_by = 0
+        if not updated_by:
+            return JsonResponse({"ok": False, "error": "No personnel ID in session."}, status=400)
+
+        message = BusinessFee.sp_update_business_clearance_category(
+            cid, base_fee, addl, min_units, updated_by
+        )
+
+        row = BusinessFee.sp_get_specific_business_clearance_cat(cid)
+
+        from datetime import date, datetime
+        from decimal import Decimal as D
+        def ser(v):
+            if isinstance(v, D): return float(v)
+            if isinstance(v, (date, datetime)): return v.isoformat()
+            return v
+
+        row = {k: ser(v) for k, v in (row or {}).items()}
+        return JsonResponse({"ok": True, "message": message, "row": row})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+# --- List page
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def amusement(request):
+    try:
+        devices = AmusementDeviceType.sp_get_all_amusement_device_type()
+    except Exception as e:
+        messages.error(request, f"Could not load amusement device types: {e}")
+        devices = []
+    return render(request, 'secretary_module/amusement.html', {"devices": devices})
+
+# --- Update endpoint (Fee per unit)
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def amusement_update(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    def to_decimal(val):
+        if val in (None, "", "null", "None"):
+            return None
+        from decimal import Decimal, InvalidOperation
+        try:
+            return Decimal(val)
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError("Invalid decimal value")
+
+    try:
+        raw_id = request.POST.get("device_type_id")
+        try:
+            device_type_id = int(raw_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "Invalid or missing device_type_id."}, status=400)
+
+        fee_per_unit = to_decimal(request.POST.get("fee_per_unit"))
+
+        # who’s updating?
+        updated_by = (lambda s: int(s) if s and str(s).isdigit() else None)(request.session.get("personnel_id"))
+        if not updated_by:
+            return JsonResponse({"ok": False, "error": "No personnel ID in session."}, status=400)
+
+        message = AmusementDeviceType.sp_update_amusement_device_type(
+            device_type_id, fee_per_unit, updated_by
+        )
+
+        row = AmusementDeviceType.sp_get_specific_amusement_device_type(device_type_id)
+
+        from datetime import date, datetime
+        from decimal import Decimal as D
+        def ser(v):
+            if isinstance(v, D): return float(v)
+            if isinstance(v, (date, datetime)): return v.isoformat()
+            return v
+        row = {k: ser(v) for k, v in (row or {}).items()}
+
+        return JsonResponse({"ok": True, "message": message, "row": row})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def other_clearances(request):
+    try:
+        rows = OtherClearanceType.sp_get_all_other_barangay_clearance_type()
+    except Exception as e:
+        messages.error(request, f"Could not load other clearances: {e}")
+        rows = []
+    return render(request, "secretary_module/otherClearances.html", {"rows": rows})
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def other_clearances_update(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    def to_decimal(val):
+        if val in (None, "", "null", "None"):
+            return None
+        try:
+            return Decimal(val)
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError("Invalid decimal value")
+
+    try:
+        raw_id = request.POST.get("clearance_type_id")
+        try:
+            clearance_type_id = int(raw_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "Invalid or missing clearance_type_id."}, status=400)
+
+        fee = to_decimal(request.POST.get("fee"))
+
+        updated_by = _get_personnel_id(request)
+        if not updated_by:
+            return JsonResponse({"ok": False, "error": "No personnel ID in session."}, status=400)
+
+        message = OtherClearanceType.sp_update_other_barangay_clearance_type(
+            clearance_type_id, fee, updated_by
+        )
+
+        # fresh row
+        row = OtherClearanceType.sp_get_specific_other_barangay_clearance_type(clearance_type_id)
+
+        # serialize Decimals/Datetimes
+        from datetime import date, datetime
+        from decimal import Decimal as D
+        def ser(v):
+            if isinstance(v, D): return float(v)
+            if isinstance(v, (date, datetime)): return v.isoformat()
+            return v
+        row = {k: ser(v) for k, v in (row or {}).items()}
+
+        return JsonResponse({"ok": True, "message": message, "row": row})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    
+def _get_personnel_id(request):
+    try:
+        pid = int(request.session.get("personnel_id") or 0)
+        return pid if pid > 0 else None
+    except (TypeError, ValueError):
+        return None
+    
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def tax_penalties(request):
+    try:
+        cfg = BusinessTaxConfig.sp_get_current_business_tax_config() or {}
+    except Exception as e:
+        messages.error(request, f"Could not load tax configuration: {e}")
+        cfg = {}
+    months = list(range(1, 13))
+    return render(request, "secretary_module/taxPenalties.html", {"cfg": cfg, "months": months})
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def tax_penalties_update(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    def dec_or_none(v):
+        if v in (None, "", "null", "None"):
+            return None
+        from decimal import Decimal, InvalidOperation
+        try:
+            return Decimal(str(v))
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError("Invalid number.")
+
+    def int_or_none(v):
+        if v in (None, "", "null", "None"):
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            raise ValueError("Invalid integer.")
+
+    try:
+        # inputs (blank -> None so SQL treats them as "no change")
+        th   = dec_or_none(request.POST.get("threshold_amount"))
+        at   = dec_or_none(request.POST.get("rate_percent_at_or_below"))
+        abv  = dec_or_none(request.POST.get("rate_percent_above"))
+        winS = int_or_none(request.POST.get("window_month_start"))
+        winE = int_or_none(request.POST.get("window_month_end"))
+        mir  = dec_or_none(request.POST.get("monthly_interest_percent"))
+
+        # who is updating?
+        pid = request.session.get("personnel_id")
+        try:
+            pid = int(pid) if pid else None
+        except (TypeError, ValueError):
+            pid = None
+        if not pid:
+            return JsonResponse({"ok": False, "error": "No personnel ID in session."}, status=400)
+
+        # get config_id (from current row or hidden input)
+        cfg = BusinessTaxConfig.sp_get_current_business_tax_config() or {}
+        config_id = cfg.get("config_id") or request.POST.get("config_id")
+        try:
+            config_id = int(config_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "No config to update. Seed a row first."}, status=400)
+
+        # call SP: (config_id FIRST)
+        message = BusinessTaxConfig.sp_update_business_tax_config(
+            config_id,
+            th, at, abv, winS, winE, mir, pid
+        )
+
+        # return fresh row
+        row = BusinessTaxConfig.sp_get_current_business_tax_config() or {}
+        from datetime import date, datetime
+        from decimal import Decimal as D
+        def ser(v):
+            if isinstance(v, D): return float(v)
+            if isinstance(v, (date, datetime)): return v.isoformat()
+            return v
+        row = {k: ser(v) for k, v in row.items()}
+        return JsonResponse({"ok": True, "message": message, "row": row})
+
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)

@@ -1,0 +1,225 @@
+{% extends 'base_sec.html' %}
+{% block title %}Tax & Penalties{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto p-4">
+  <div class="mb-5">
+    <h1 class="text-2xl font-semibold text-gray-900">Business Tax & Penalties</h1>
+    <p class="mt-1 text-sm text-gray-500">Configure threshold, rates, window months, and monthly interest.</p>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="h-1 bg-red-600"></div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr class="text-left text-gray-700">
+            <th class="px-4 py-3 font-semibold">Threshold Amount (₱)</th>
+            <th class="px-4 py-3 font-semibold">Rate % at/below</th>
+            <th class="px-4 py-3 font-semibold">Rate % above</th>
+            <th class="px-4 py-3 font-semibold">Window Month Start</th>
+            <th class="px-4 py-3 font-semibold">Window Month End</th>
+            <th class="px-4 py-3 font-semibold">Monthly Interest %</th>
+            <th class="px-4 py-3 font-semibold text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-row-id="{{ cfg.config_id|default:'' }}">
+            <td class="px-4 py-3 font-medium text-gray-900" data-cell="threshold_amount">
+              {% if cfg.threshold_amount is not None %}₱{{ cfg.threshold_amount|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3" data-cell="rate_percent_at_or_below">{{ cfg.rate_percent_at_or_below|default:"—" }}</td>
+            <td class="px-4 py-3" data-cell="rate_percent_above">{{ cfg.rate_percent_above|default:"—" }}</td>
+            <td class="px-4 py-3" data-cell="window_month_start">{{ cfg.window_month_start|default:"—" }}</td>
+            <td class="px-4 py-3" data-cell="window_month_end">{{ cfg.window_month_end|default:"—" }}</td>
+            <td class="px-4 py-3" data-cell="monthly_interest_percent">{{ cfg.monthly_interest_percent|default:"—" }}</td>
+            <td class="px-4 py-3 text-center">
+              <button
+                type="button"
+                class="js-open-update inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                data-config-id="{{ cfg.config_id|default:'' }}"
+                data-threshold-amount="{{ cfg.threshold_amount|default:'' }}"
+                data-rate-at-or-below="{{ cfg.rate_percent_at_or_below|default:'' }}"
+                data-rate-above="{{ cfg.rate_percent_above|default:'' }}"
+                data-window-start="{{ cfg.window_month_start|default:'' }}"
+                data-window-end="{{ cfg.window_month_end|default:'' }}"
+                data-monthly-interest="{{ cfg.monthly_interest_percent|default:'' }}"
+                aria-label="Update tax & penalties"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M13.586 3.586a2 2 0 0 1 2.828 2.828l-.793.793-2.828-2.828.793-.793zM12.379 4.793 4 13.172V16h2.828l8.38-8.379-2.829-2.828z" />
+                </svg>
+                Update
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {% if cfg.effective_at %}
+      <div class="px-4 py-3 text-xs text-gray-500 border-t">
+        Effective: {{ cfg.effective_at }} · Last updated: {{ cfg.updated_at }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<form id="__csrf">{% csrf_token %}</form>
+
+<!-- Modal -->
+<div id="updateModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" data-close></div>
+  <div class="mx-auto mt-24 w-full max-w-xl rounded-xl bg-white shadow-xl relative">
+    <div class="h-1 bg-red-600 rounded-t-xl"></div>
+    <div class="p-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Update Tax & Penalties</h2>
+          <p class="text-sm text-gray-500">Enter new values; a new active configuration will be saved.</p>
+        </div>
+        <button class="rounded-md p-1 text-gray-500 hover:text-gray-700" type="button" data-close aria-label="Close">✕</button>
+      </div>
+
+      <form id="updateForm" class="mt-4 grid gap-4">
+        <input type="hidden" name="config_id" id="modalConfigId" />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="thAmount">Threshold Amount (₱)</label>
+            <input id="thAmount" name="threshold_amount" type="number" step="0.01" min="0" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="rateAt">Rate % at/below</label>
+            <input id="rateAt" name="rate_percent_at_or_below" type="number" step="0.001" min="0" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="rateAbove">Rate % above</label>
+            <input id="rateAbove" name="rate_percent_above" type="number" step="0.001" min="0" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="winStart">Window Month Start</label>
+           <select id="winStart" name="window_month_start" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500">
+  {% for m in months %}
+    <option value="{{ m }}" {% if cfg.window_month_start == m %}selected{% endif %}>{{ m }}</option>
+  {% endfor %}
+</select>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="winEnd">Window Month End</label>
+            <select id="winEnd" name="window_month_end" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500">
+  {% for m in months %}
+    <option value="{{ m }}" {% if cfg.window_month_end == m %}selected{% endif %}>{{ m }}</option>
+  {% endfor %}
+</select>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="mi">Monthly Interest %</label>
+            <input id="mi" name="monthly_interest_percent" type="number" step="0.001" min="0" class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+        </div>
+
+        <div id="modalError" class="hidden rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+        <div class="mt-2 flex items-center justify-end gap-3">
+          <button type="button" class="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50" data-close>Cancel</button>
+          <button id="saveBtn" type="submit" class="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+            <span data-text>Save changes</span>
+            <span class="hidden animate-pulse" data-spinner>Saving…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="pageMeta" data-update-url="{% url 'secretary_module:tax_penalties_update' %}"></div>
+
+<script>
+(function(){
+  const $  = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+  const modal = $("#updateModal");
+  const form  = $("#updateForm");
+  const csrftoken = document.querySelector("#__csrf input[name=csrfmiddlewaretoken]").value;
+
+  const idEl = $("#modalConfigId");
+  const thEl = $("#thAmount");
+  const atEl = $("#rateAt");
+  const abEl = $("#rateAbove");
+  const wsEl = $("#winStart");
+  const weEl = $("#winEnd");
+  const miEl = $("#mi");
+  const errBox = $("#modalError");
+  const saveBtn = $("#saveBtn");
+  const saveText = saveBtn.querySelector("[data-text]");
+  const saveSpin  = saveBtn.querySelector("[data-spinner]");
+
+  function openModal(btn){
+    idEl.value = btn.dataset.configId || "";
+    thEl.value = btn.dataset.thresholdAmount || "";
+    atEl.value = btn.dataset.rateAtOrBelow || "";
+    abEl.value = btn.dataset.rateAbove || "";
+    wsEl.value = btn.dataset.windowStart || "1";
+    weEl.value = btn.dataset.windowEnd || "12";
+    miEl.value = btn.dataset.monthlyInterest || "";
+
+    errBox.classList.add("hidden");
+    errBox.textContent = "";
+    modal.classList.remove("hidden");
+  }
+  function closeModal(){ modal.classList.add("hidden"); }
+  function setSaving(s){ saveBtn.disabled=s; saveText.classList.toggle("hidden",s); saveSpin.classList.toggle("hidden",!s); }
+
+  $$(".js-open-update").forEach(b => b.addEventListener("click", () => openModal(b)));
+  $$("[data-close]").forEach(b => b.addEventListener("click", closeModal));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setSaving(true); errBox.classList.add("hidden"); errBox.textContent = "";
+
+    try {
+      const formData = new FormData(form);
+      const resp = await fetch("{% url 'secretary_module:tax_penalties_update' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        body: formData,
+        credentials: "same-origin",
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error || "Update failed");
+
+      const row = document.querySelector("tbody tr");
+      if (row && data.row) {
+        const peso = (v) => (v==null||v==="") ? "—" : `₱${Number(v).toFixed(2)}`;
+        const set = (key, val) => { const el = row.querySelector(`[data-cell="${key}"]`); if (el) el.textContent = val; };
+
+        set("threshold_amount",         peso(data.row.threshold_amount));
+        set("rate_percent_at_or_below", data.row.rate_percent_at_or_below ?? "—");
+        set("rate_percent_above",       data.row.rate_percent_above ?? "—");
+        set("window_month_start",       data.row.window_month_start ?? "—");
+        set("window_month_end",         data.row.window_month_end ?? "—");
+        set("monthly_interest_percent", data.row.monthly_interest_percent ?? "—");
+
+        const btn = row.querySelector(".js-open-update");
+        if (btn) {
+          btn.dataset.configId        = data.row.config_id ?? "";
+          btn.dataset.thresholdAmount = data.row.threshold_amount ?? "";
+          btn.dataset.rateAtOrBelow   = data.row.rate_percent_at_or_below ?? "";
+          btn.dataset.rateAbove       = data.row.rate_percent_above ?? "";
+          btn.dataset.windowStart     = data.row.window_month_start ?? "";
+          btn.dataset.windowEnd       = data.row.window_month_end ?? "";
+          btn.dataset.monthlyInterest = data.row.monthly_interest_percent ?? "";
+        }
+      }
+
+      closeModal();
+    } catch (err) {
+      errBox.textContent = err.message || String(err);
+      errBox.classList.remove("hidden");
+    } finally {
+      setSaving(false);
+    }
+  });
+})();
+</script>
+{% endblock %}
