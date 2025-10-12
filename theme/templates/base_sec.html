@@ -107,18 +107,32 @@
     <span>Applications</span>
   </a>
 
-<a href="{% url 'secretary_module:price_update' %}"
-     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-            {% if request.resolver_match.url_name == 'households_view' %}
-              bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-              hover:bg-red-800/80
-            {% endif %}">
-    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
-         class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
-    <span>Price Update</span>
-  </a>
+<!-- Price Update submenu -->
+<button id="price-toggle"
+        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+               {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %}
+                   bg-white text-red-700 font-semibold shadow-sm
+               {% else %}
+                   hover:bg-red-800/80
+               {% endif %}">
+  <img src="{% static 'images/manage.svg' %}" alt="Price Update Icon"
+       class="h-5 w-5 {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} invert {% endif %}">
+  <span>Price Update</span>
+  <svg id="price-arrow" xmlns="http://www.w3.org/2000/svg"
+       class="h-5 w-5 ml-auto transition-transform duration-300
+              {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} rotate-180 {% endif %}"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+  </svg>
+</button>
+
+<div id="price-submenu" class="{% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Business Fee</a>
+  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Amusement Fee</a>
+  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Other Clearances Fee</a>
+  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Tax & Penalties</a>
+</div>
+
 
   <a href="{% url 'secretary_module:approval' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
@@ -179,6 +193,7 @@
   const ACCORDION = [
     { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
     { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
+    { btn: 'price-toggle',  panel: 'price-submenu',  arrow: 'price-arrow'  },
   ];
 
   function getEl(id){ return document.getElementById(id); }
