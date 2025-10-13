@@ -494,3 +494,14 @@ class Family(models.Model):
         except Exception as e:
             raise e
         
+    @staticmethod
+    def sp_get_specific_family(hid, qid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_specific_family', [hid, qid])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
