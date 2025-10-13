@@ -436,3 +436,72 @@ class Family(models.Model):
         except Exception as e:
             raise e
         
+    @staticmethod
+    def sp_get_philhealth_category():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Philhealth_Category
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_nutrition_status():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Nutrition_Status
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise
+        
+    @staticmethod
+    def sp_insert_family_member(
+            resident_id,
+            family_id,
+            rth_id,
+            rtf_id,
+            philhealth_number,
+            membership_type,
+            philhealth_category,
+            nutrition_status,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_family_member', [
+                resident_id,
+                family_id,
+                rth_id,
+                rtf_id,
+                philhealth_number,
+                membership_type,
+                philhealth_category,
+                nutrition_status,
+                pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_specific_family(hid, qid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_specific_family', [hid, qid])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        

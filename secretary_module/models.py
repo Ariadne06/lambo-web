@@ -30,16 +30,6 @@ class Secretary(models.Model):
             raise e
 
     @staticmethod
-    def sp_register_verified_via_guardian_doc(rid, doc_type_id, review_status, review_notes, pid):
-        try:
-            with connection.cursor() as cursor:
-                cursor.callproc('register_verified_via_guardian_doc', [rid, doc_type_id, review_status, review_notes, pid])
-                result = cursor.fetchone()
-                return result[0]
-        except Exception as e:
-            raise e
-
-    @staticmethod
     def sp_register_business(
         resident_id,
         business_name,
