@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from httpx import request
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
@@ -207,25 +206,45 @@ def mark_household_visit(request):
 
     return redirect(back_url)
 
-    
 @custom_login_required
 @role_required('Barangay Health Worker')
 @require_POST
 def update_household(request):
-    hid = int(request.POST.get('household_id') or 0)
+    hid = int(request.POST.get('household_id'))
     pid = int(request.session.get('personnel_id') or 0)
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+    
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
 
     def redirect_to_view():
-        url = reverse('bhw_module:householdView') + "?" + urlencode({"hid": hid}) if hid else reverse('bhw_module:householdList')
-        return redirect(url)
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
 
     if not pid:
         set_flash(request, "Missing personnel id.", "error")
         return redirect('bhw_module:householdList')
 
-    # pull current row to compare against
+    # pull current row to compare against (NOTE: now passing qid)
     try:
-        prev = Household.sp_get_specific_household(hid)
+        prev = Household.sp_get_specific_household(hid, qid)
         if not prev:
             set_flash(request, "Household not found.", "error")
             return redirect('bhw_module:householdList')
@@ -305,16 +324,37 @@ def update_household(request):
 
     return redirect_to_view()
 
+
 @custom_login_required
 @role_required('Barangay Health Worker')
 @require_POST
 def insert_family(request):
-    hid = int(request.POST.get('household_id') or 0)
+    hid = int(request.POST.get('household_id'))
     pid = int(request.session.get('personnel_id') or 0)
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
 
     def redirect_to_view():
-        url = reverse('bhw_module:householdView') + "?" + urlencode({"household_id": hid})
-        return redirect(url)
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
 
     if not pid:
         set_flash(request, "Missing personnel id.", "error")
@@ -367,10 +407,31 @@ def insert_family(request):
 def insert_family_member(request):
     hid = int(request.POST.get('household_id') or 0)
     pid = int(request.session.get('personnel_id') or 0)
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
 
     def redirect_to_view():
-        url = reverse('bhw_module:householdView') + "?" + urlencode({"household_id": hid})
-        return redirect(url)
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
 
     if not pid:
         set_flash(request, "Missing personnel id.", "error")
@@ -456,6 +517,7 @@ def householdView(request):
     try:
         result   = Household.sp_get_specific_household(hid, qid)
         rows_raw = Family.sp_get_family_summaries_per_household(hid, qid)
+        
         if not result:
             set_flash(request, "Household not found.", "error")
             return redirect('bhw_module:householdList')
@@ -504,7 +566,7 @@ def householdView(request):
             setattr(result, 'quarter_id', qid)
         except Exception:
             if isinstance(result, dict):
-                result['quarter_id'] = qid
+                result['quarter_id'] = qid     
 
     relationship     = Household.sp_get_relationship_to_household_head()
     house_ownership  = Household.sp_get_house_ownership()
