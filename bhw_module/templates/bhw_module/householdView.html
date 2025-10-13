@@ -207,6 +207,7 @@
         {% else %}
           <p class="text-sm text-gray-500">No families recorded yet.</p>
         {% endif %}
+
       </section>
     </div>
   </main>
@@ -589,116 +590,120 @@
       </button>
     </div>
 
-    <form method="post" action="" class="px-6 py-5">
+    <form method="post" action="{% url 'bhw_module:familyMemberInsert' %}" class="px-6 py-5">
       {% csrf_token %}
 
       <!-- family hook (filled by JS when opening the modal) -->
-      <input type="hidden" name="family_number" id="member_family_number">
+      <input type="hidden" name="family_id" id="member_family_number">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
 
       <!-- --------------- Identity ---------------- -->
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <!-- Full Name (search in residents) -->
-        <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">Full Name (search residents)</label>
-          <input name="resident_full_name" id="resident_full_name" list="residentList"
-                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-                 autocomplete="off" placeholder="Type to search…">
-          <!-- Store selected resident_id here if you map it in JS -->
+        <div class="sm:col-span-2 relative">
+          <label for="resident_full_name" class="block text-sm font-medium text-gray-700">
+            Full Name <span class="text-red-600">*</span>
+          </label>
+
+          <input
+            id="resident_full_name"
+            name="resident_full_name"
+            type="text"
+            autocomplete="off"
+            placeholder="Search resident by name"
+            data-autocomplete="resident"
+            data-target-hidden="#resident_id"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+
           <input type="hidden" name="resident_id" id="resident_id">
-          <!-- Build this datalist from context (optional) -->
-          <datalist id="residentList">
-            {% if residents %}
-              {% for r in residents %}
-                <option data-id="{{ r.id }}" value="{{ r.full_name }}"></option>
-              {% endfor %}
-            {% endif %}
-          </datalist>
+
+          <!-- suggestions dropdown for this input -->
+          <div
+            class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+            data-autocomplete-list="#resident_full_name"></div>
+
+          <p class="mt-1 text-xs text-gray-500">Choose a resident from the suggestions so the ID is captured.</p>
         </div>
 
-        <!-- Date of Birth -->
+        <!-- Relationship of Family Member to Household Head (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
-          <input name="dob" type="date" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <label class="block text-sm font-medium text-gray-700">Relationship of Family Member to Household Head <span class="text-red-600">*</span></label>
+          <select name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">How is the family member related to the household head</p>
         </div>
 
-        <!-- Sex -->
+        <!-- Relationship of Family Member to Family Head (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Sex</label>
-          <select name="sex" id="sex" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Female</option>
-            <option>Male</option>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Respondent to Family Head <span class="text-red-600">*</span></label>
+          <select name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for fr in family_relationship %}
+              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">How is the family member related to the family head</p>
+        </div>
+
+        <!-- PhilHealth Number (OPTIONAL by default) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            PhilHealth Number
+          </label>
+          <input id="philhealth_number" name="philhealth_number" type="text"
+                placeholder="e.g., 12-345678901-2"
+                class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <p class="text-xs text-gray-500 mt-1">Leave blank if none.</p>
+        </div>
+
+        <!-- Membership Type (OPTIONAL unless PhilHealth number provided) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="membership_type">
+            PhilHealth Membership Type
+            <span id="membership_required_star" class="text-red-600 ml-0.5 hidden">*</span>
+          </label>
+          <select id="membership_type" name="membership_type"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="" selected disabled>— Membership Type —</option>
+            <option value="M">Member</option>
+            <option value="D">Dependent</option>
           </select>
         </div>
 
-        <!-- Relationship to the Head -->
+        <!-- PhilHealth Category (OPTIONAL unless PhilHealth number provided) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Relationship to the Head</label>
-          <select name="relationship_to_head" required class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Head</option>
-            <option>Spouse/Partner</option>
-            <option>Son/Daughter</option>
-            <option>Parent</option>
-            <option>Sibling</option>
-            <option>Relative</option>
-            <option>Non-relative</option>
-            <option>Others</option>
+          <label class="block text-sm font-medium text-gray-700" for="philhealth_category">
+            PhilHealth Category
+            <span id="category_required_star" class="text-red-600 ml-0.5 hidden">*</span>
+          </label>
+          <select id="philhealth_category" name="philhealth_category"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="" selected disabled>— Select Category —</option>
+            {% for pc in philhealth_category %}
+              <option value="{{ pc.philhealth_category_id }}">{{ pc.description }}</option>
+            {% endfor %}
           </select>
+          <p class="text-xs text-gray-500 mt-1">Select only if a PhilHealth number is entered.</p>
         </div>
 
-        <!-- Civil Status -->
+        <!-- Nutritional Status (dropdown) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700">Civil Status</label>
-          <select name="civil_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Single</option>
-            <option>Married</option>
-            <option>Separated</option>
-            <option>Widowed</option>
-            <option>Live-in</option>
-            <option>Others</option>
+          <label class="block text-sm font-medium text-gray-700">Nutritional Status</label>
+          <select name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="" selected disabled>— Select Status —</option>
+            {% for ns in nutrition_status %}
+              <option value="{{ ns.nutrition_status_id }}">{{ ns.description }}</option>
+            {% endfor %}
           </select>
-        </div>
-
-        <!-- Religion -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Religion</label>
-          <select name="religion" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Roman Catholic</option>
-            <option>INC</option>
-            <option>Evangelical</option>
-            <option>Iglesia Baptista</option>
-            <option>Muslim</option>
-            <option>None</option>
-            <option>Others</option>
-          </select>
-        </div>
-
-        <!-- PhilHealth ID -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">PhilHealth ID</label>
-          <input name="philhealth_id" type="text" placeholder="e.g., 12-345678901-2"
-                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-        </div>
-
-        <!-- Membership Type -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">PhilHealth Membership Type</label>
-          <select name="membership_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="">Select…</option>
-            <option>Member</option>
-            <option>Dependent</option>
-            <option>Sponsored</option>
-            <option>Indigent</option>
-            <option>Senior Citizen</option>
-            <option>None</option>
-          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Choose the member’s current nutritional status based on the latest assessment.
+          </p>
         </div>
       </div>
-
-
       <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
         <button type="button" id="cancelAddMemberModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
         <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Member</button>
@@ -1190,54 +1195,115 @@
   });
 })();
 
-    /* =====================================
-       MEMBER MODAL (Add Member)
-    ====================================== */
-    const memberModal = document.getElementById('addMemberModal');
-    const openMemberBtns = document.querySelectorAll('.openAddMemberModal');
-    const closeMemberBtn = document.getElementById('closeAddMemberModal');
-    const cancelMemberBtn = document.getElementById('cancelAddMemberModal');
-    const memberFamilyField = document.getElementById('member_family_number');
-
-    function openMemberModal(familyNum) {
-      if (memberFamilyField) memberFamilyField.value = familyNum || '';
-      openModal(memberModal);
+// Add Member modal submit guard
+(function () {
+  const form = document.querySelector('#addMemberModal form');
+  form?.addEventListener('submit', (e) => {
+    // must choose a suggestion so resident_id is captured
+    const input  = document.getElementById('resident_full_name');
+    const hidden = document.getElementById('resident_id');
+    if (input && hidden && input.value && !hidden.value) {
+      e.preventDefault();
+      alert('Please select a resident from the suggestions so we can capture the correct ID.');
+      input.focus();
+      return;
     }
-    const closeMemberModal = () => closeModal(memberModal);
 
-    openMemberBtns.forEach(btn => {
-      btn.addEventListener('click', () => openMemberModal(btn.dataset.familyNumber));
-    });
-    closeMemberBtn?.addEventListener('click', closeMemberModal);
-    cancelMemberBtn?.addEventListener('click', closeMemberModal);
-    bindBackdropClose(memberModal, closeMemberModal);
+    // If PhilHealth Number is provided, Membership Type & Category become required
+    const phNumber      = document.getElementById('philhealth_number');
+    const membershipSel = document.getElementById('membership_type');
+    const categorySel   = document.getElementById('philhealth_category');
 
-    /* female-only fields (Add Member modal) */
-    const sexSel = document.getElementById('sex');
-    const lmpWrap = document.getElementById('lmp_wrap');
-    const menarcheWrap = document.getElementById('menarche_wrap');
-    function toggleFemaleOnly() {
-      const isFemale = sexSel?.value === 'Female';
-      lmpWrap?.classList.toggle('hidden', !isFemale);
-      menarcheWrap?.classList.toggle('hidden', !isFemale);
-    }
-    sexSel?.addEventListener('change', toggleFemaleOnly);
-    toggleFemaleOnly();
-
-    /* Name datalist -> resident_id mapping (Add Member modal) */
-    const nameInput = document.getElementById('resident_full_name');
-    const hiddenId = document.getElementById('resident_id');
-    nameInput?.addEventListener('change', () => {
-      const list = document.getElementById('residentList');
-      const opts = list ? list.children : [];
-      if (hiddenId) hiddenId.value = '';
-      for (const o of opts) {
-        if (o.value === nameInput.value && o.dataset.id) {
-          hiddenId.value = o.dataset.id;
-          break;
-        }
+    const hasPh = (phNumber?.value || '').trim().length > 0;
+    if (hasPh) {
+      if (membershipSel && !membershipSel.value) {
+        e.preventDefault();
+        alert('Please select a PhilHealth membership type.');
+        membershipSel.focus();
+        return;
       }
-    });
+      if (categorySel && !categorySel.value) {
+        e.preventDefault();
+        alert('Please select a PhilHealth category.');
+        categorySel.focus();
+        return;
+      }
+    }
+  });
+})();
+
+
+/* =====================================
+   MEMBER MODAL (Add Member)
+===================================== */
+const memberModal = document.getElementById('addMemberModal');
+const openMemberBtns = document.querySelectorAll('.openAddMemberModal');
+const closeMemberBtn = document.getElementById('closeAddMemberModal');
+const cancelMemberBtn = document.getElementById('cancelAddMemberModal');
+const memberFamilyField = document.getElementById('member_family_number');
+const addMemberForm = memberModal?.querySelector('form');
+
+const phNumber       = memberModal?.querySelector('#philhealth_number');
+const membershipSel  = memberModal?.querySelector('#membership_type');
+const categorySel    = memberModal?.querySelector('#philhealth_category');
+const membershipStar = memberModal?.querySelector('#membership_required_star');
+const categoryStar   = memberModal?.querySelector('#category_required_star');
+
+function syncPhilHealthRequirements() {
+  const hasPh = (phNumber?.value || '').trim().length > 0;
+
+  if (membershipSel) {
+    membershipSel.required = hasPh;
+    membershipStar?.classList.toggle('hidden', !hasPh);
+  }
+  if (categorySel) {
+    categorySel.required = hasPh;
+    categoryStar?.classList.toggle('hidden', !hasPh);
+  }
+}
+
+function resetAddMemberModal() {
+  // 1) reset fields
+  addMemberForm?.reset();
+
+  // 2) clear hidden resident id
+  const hiddenResId = memberModal?.querySelector('#resident_id');
+  if (hiddenResId) hiddenResId.value = '';
+
+  // 3) collapse autocomplete dropdowns inside this modal
+  memberModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+    el.innerHTML = '';
+    el.classList.add('hidden');
+  });
+
+  // 4) restore conditional-required to default (optional)
+  syncPhilHealthRequirements();
+}
+
+function openMemberModal(familyNum) {
+  resetAddMemberModal();                     // fresh state each open
+  if (memberFamilyField) memberFamilyField.value = familyNum || '';
+  openModal(memberModal);
+}
+const closeMemberModal = () => {             // discard unsaved edits on close
+  resetAddMemberModal();
+  closeModal(memberModal);
+};
+
+openMemberBtns.forEach(btn => {
+  btn.addEventListener('click', () => openMemberModal(btn.dataset.familyNumber));
+});
+closeMemberBtn?.addEventListener('click', closeMemberModal);
+cancelMemberBtn?.addEventListener('click', closeMemberModal);
+bindBackdropClose(memberModal, closeMemberModal);
+
+// Keep conditional-required in sync while user types
+phNumber?.addEventListener('input',  syncPhilHealthRequirements);
+phNumber?.addEventListener('change', syncPhilHealthRequirements);
+
+// After form.reset(), re-sync (defer so browser applies reset first)
+addMemberForm?.addEventListener('reset', () => setTimeout(syncPhilHealthRequirements, 0));
+
 
     /* =====================================
        GENERAL HEALTH MODAL (per member)
