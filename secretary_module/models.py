@@ -238,3 +238,182 @@ class Dashboard(models.Model):
             import json
             return json.loads(val)
         return []
+    
+
+
+class BusinessFee(models.Model):
+    """
+    Thin wrapper that fetches rows from get_all_business_clearance_cat().
+    Returns a list[dict] so templates can access keys directly.
+    """
+    class Meta:
+        managed = False  # no ORM migrations; we’re calling a function
+
+    @staticmethod
+    def sp_get_all_business_clearance_cat():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_all_business_clearance_cat()")
+            cols = [c[0] for c in cursor.description]
+            return [dict(zip(cols, r)) for r in cursor.fetchall()]
+
+    @staticmethod
+    def sp_get_specific_business_clearance_cat(clearance_category_id: int):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM get_specific_business_clearance_cat(%s)",
+                [clearance_category_id],
+            )
+            cols = [c[0] for c in cursor.description]
+            row = cursor.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def sp_update_business_clearance_category(
+        clearance_category_id: int,
+        base_fee,
+        additional_fee_per_unit,
+        minimum_units,
+        updated_by: int,
+    ) -> str:
+        """
+        Calls update_business_clearance_category(...) which returns TEXT.
+        Pass None for any field you don't want to change.
+        """
+        with connection.cursor() as cursor:
+            cursor.callproc(
+                "update_business_clearance_category",
+                [clearance_category_id, base_fee, additional_fee_per_unit, minimum_units, updated_by],
+            )
+            msg = cursor.fetchone()[0]  # function returns TEXT
+            return msg
+        
+class AmusementDeviceType(models.Model):
+    """
+    Thin wrapper around your Postgres functions.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_all_amusement_device_type():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_all_amusement_device_type()")
+            cols = [c[0] for c in cursor.description]
+            return [dict(zip(cols, r)) for r in cursor.fetchall()]
+
+    @staticmethod
+    def sp_get_specific_amusement_device_type(device_type_id: int):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM get_specific_amusement_device_type(%s)",
+                [device_type_id],
+            )
+            cols = [c[0] for c in cursor.description]
+            row = cursor.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def sp_update_amusement_device_type(
+        device_type_id: int,
+        fee_per_unit,
+        updated_by: int,
+    ) -> str:
+        """
+        Calls update_amusement_device_type(...) which returns TEXT.
+        Pass None for any field you don't want to change (only fee_per_unit here).
+        """
+        with connection.cursor() as cursor:
+            cursor.callproc(
+                "update_amusement_device_type",
+                [device_type_id, fee_per_unit, updated_by],
+            )
+            msg = cursor.fetchone()[0]
+            return msg
+        
+class OtherClearanceType(models.Model):
+    """
+    Wrapper over Postgres functions for 'other barangay clearances'.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_all_other_barangay_clearance_type():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_all_other_barangay_clearance_type()")
+            cols = [c[0] for c in cursor.description]
+            return [dict(zip(cols, r)) for r in cursor.fetchall()]
+
+    @staticmethod
+    def sp_get_specific_other_barangay_clearance_type(clearance_type_id: int):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM get_specific_other_barangay_clearance_type(%s)",
+                [clearance_type_id],
+            )
+            cols = [c[0] for c in cursor.description]
+            row = cursor.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def sp_update_other_barangay_clearance_type(
+        clearance_type_id: int,
+        fee,
+        updated_by: int,
+    ) -> str:
+        with connection.cursor() as cursor:
+            cursor.callproc(
+                "update_other_barangay_clearance_type",
+                [clearance_type_id, fee, updated_by],
+            )
+            return cursor.fetchone()[0]  # TEXT message
+        
+class BusinessTaxConfig(models.Model):
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_current_business_tax_config():
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_current_business_tax_config()")
+            cols = [c[0] for c in cur.description]
+            row = cur.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def sp_update_business_tax_config(
+        config_id,
+        threshold_amount,
+        rate_percent_at_or_below,
+        rate_percent_above,
+        window_month_start,  # int or None
+        window_month_end,    # int or None
+        monthly_interest_percent,
+        updated_by
+    ) -> str:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT update_business_tax_config(
+                    %s::int,
+                    %s::numeric,
+                    %s::numeric,
+                    %s::numeric,
+                    %s::smallint,
+                    %s::smallint,
+                    %s::numeric,
+                    %s::int
+                )
+                """,
+                [
+                    config_id,
+                    threshold_amount,
+                    rate_percent_at_or_below,
+                    rate_percent_above,
+                    window_month_start,   # cast to ::smallint in SQL
+                    window_month_end,     # cast to ::smallint in SQL
+                    monthly_interest_percent,
+                    updated_by,
+                ],
+            )
+            return cur.fetchone()[0]

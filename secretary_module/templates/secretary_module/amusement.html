@@ -1,0 +1,196 @@
+{% extends 'base_sec.html' %}
+{% block title %}Amusement Device Types{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-4">
+  <!-- Header -->
+  <div class="mb-5">
+    <h1 class="text-2xl font-semibold text-gray-900">Amusement Device Types</h1>
+    <p class="mt-1 text-sm text-gray-500">View and manage fees per device type.</p>
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="h-1 bg-red-600"></div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr class="text-left text-gray-700">
+            <th class="px-4 py-3 font-semibold">Device Name</th>
+            <th class="px-4 py-3 font-semibold text-right">Fee Per Unit</th>
+            <th class="px-4 py-3 font-semibold text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for d in devices %}
+            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors"
+                data-row-id="{{ d.device_type_id }}">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ d.device_name }}</td>
+              <td class="px-4 py-3 text-right tabular-nums font-medium text-gray-900" data-cell="fee_per_unit">
+                ₱{{ d.fee_per_unit|floatformat:2 }}
+              </td>
+              <td class="px-4 py-3 text-center">
+                <button
+                  type="button"
+                 class="js-open-update inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                 data-device-type-id="{{ d.device_type_id }}"
+                 data-device-name="{{ d.device_name }}"
+                 data-fee-per-unit="{{ d.fee_per_unit }}"
+                 aria-label="Update {{ d.device_name }}"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M13.586 3.586a2 2 0 0 1 2.828 2.828l-.793.793-2.828-2.828.793-.793zM12.379 4.793 4 13.172V16h2.828l8.38-8.379-2.829-2.828z" />
+                  </svg>
+                  Update
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" class="px-4 py-10 text-center text-gray-500">No device types found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<form id="__csrf">{% csrf_token %}</form>
+
+<!-- Modal -->
+<div id="updateModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" data-close></div>
+
+  <div class="mx-auto mt-24 w-full max-w-lg rounded-xl bg-white shadow-xl relative">
+    <div class="h-1 bg-red-600 rounded-t-xl"></div>
+
+    <div class="p-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Update Fee</h2>
+          <p class="text-sm text-gray-500">Device: <span id="modalDeviceName" class="font-medium text-gray-900"></span></p>
+        </div>
+        <button class="rounded-md p-1 text-gray-500 hover:text-gray-700" type="button" data-close aria-label="Close">✕</button>
+      </div>
+
+      <form id="updateForm" class="mt-4">
+        <input type="hidden" name="device_type_id" id="modalDeviceId">
+
+        <div class="grid gap-4">
+          <div>
+            <label for="modalFee" class="mb-1 block text-sm font-medium text-gray-700">Fee Per Unit</label>
+            <input id="modalFee" name="fee_per_unit" type="number" step="0.01" min="0"
+                   class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+        </div>
+
+        <div id="modalError" class="mt-3 hidden rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button type="button" class="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50" data-close>Cancel</button>
+          <button id="saveBtn" type="submit" class="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+            <span class="inline-block" data-text>Save changes</span>
+            <span class="hidden animate-pulse" data-spinner>Saving…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="pageMeta" data-update-url="{% url 'secretary_module:amusement_update' %}"></div>
+
+<script>
+(function(){
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  const modal = $("#updateModal");
+  const form = $("#updateForm");
+  const csrfForm = $("#__csrf");
+  const csrftoken = csrfForm.querySelector("input[name=csrfmiddlewaretoken]").value;
+
+  const idEl = $("#modalDeviceId");
+  const nameEl = $("#modalDeviceName");
+  const feeEl = $("#modalFee");
+  const errBox = $("#modalError");
+  const saveBtn = $("#saveBtn");
+  const saveText = saveBtn.querySelector("[data-text]");
+  const saveSpin = saveBtn.querySelector("[data-spinner]");
+
+ function openModal(btn) {
+  // Try the button's data attr first
+  let id = btn.getAttribute("data-device-type-id");
+  if (!id) {
+    // Fallback to the nearest <tr data-row-id="...">
+    const tr = btn.closest("tr");
+    id = tr ? tr.getAttribute("data-row-id") : "";
+  }
+
+  idEl.value = id || "";                         // <-- now reliably set
+  nameEl.textContent = btn.dataset.deviceName || "";
+  feeEl.value = btn.dataset.feePerUnit || "";
+
+  errBox.classList.add("hidden");
+  errBox.textContent = "";
+  modal.classList.remove("hidden");
+}
+
+  function closeModal() { modal.classList.add("hidden"); }
+
+  function setSaving(isSaving) {
+    saveBtn.disabled = isSaving;
+    saveText.classList.toggle("hidden", isSaving);
+    saveSpin.classList.toggle("hidden", !isSaving);
+  }
+
+  $$(".js-open-update").forEach(b => b.addEventListener("click", () => openModal(b)));
+  $$("[data-close]").forEach(b => b.addEventListener("click", closeModal));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!idEl.value) {                     // ← guard so we never post ''
+    errBox.textContent = "Missing device id. Please reopen the modal and try again.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+    setSaving(true);
+
+    try {
+      const formData = new FormData(form);
+      const resp = await fetch("{% url 'secretary_module:amusement_update' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        body: formData,
+        credentials: "same-origin",
+      });
+
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error || "Update failed");
+
+      const row = document.querySelector(`tr[data-row-id="${idEl.value}"]`);
+      if (row && data.row) {
+        const fmtPeso = (v) => (v === null || v === undefined || v === "") ? "—" : `₱${Number(v).toFixed(2)}`;
+        const feeCell = row.querySelector('[data-cell="fee_per_unit"]');
+        if (feeCell) feeCell.textContent = fmtPeso(data.row.fee_per_unit);
+
+        const btn = row.querySelector(".js-open-update");
+        if (btn) {
+          btn.dataset.feePerUnit = data.row.fee_per_unit ?? "";
+        }
+      }
+
+      closeModal();
+    } catch (err) {
+      errBox.textContent = err.message || String(err);
+      errBox.classList.remove("hidden");
+    } finally {
+      setSaving(false);
+    }
+  });
+})();
+</script>
+{% endblock %}
