@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import HouseOwnershipType, HouseType, HouseholdType, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
+from .models import MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
 from resident_profiling_module.models import Resident, Address
 from .services.household_service import HouseholdService
+from .utils.database_helpers import insert_family_member, save_general_health_for_member
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -43,6 +44,37 @@ class AddressSerializer(serializers.ModelSerializer):
         model = Address
         fields = ['house_number', 'street', 'barangay', 'sitio', 'city_municipality', 'country']
 
+class PhilhealthCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhilhealthCategory
+        fields = ['philhealth_category_id', 'code', 'description']
+
+class NutritionStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NutritionStatus
+        fields = ['nutrition_status_id', 'description']
+
+
+class MedicalHistoryTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalHistoryType
+        fields = ['medical_history_type_id', 'description']
+
+class ClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Class
+        fields = ['class_id', 'class_description']
+
+class FPMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FPMethod
+        fields = ['fp_method_id', 'code', 'description']
+
+class FPStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FPStatus
+        fields = ['fp_status_id', 'code', 'description']
+
 
 class FamilyCreateSerializer(serializers.ModelSerializer):
 
@@ -50,21 +82,22 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
     family_head_id = serializers.IntegerField(write_only=True, required=True)  # REQUIRED!
     respondent_id = serializers.IntegerField(write_only=True, required=True)
     respondent_relationship_to_fh_id = serializers.IntegerField(write_only=True, required=False, default=1)
+    head_rth_id = serializers.IntegerField(write_only=True, required=True)
     ip_status = serializers.BooleanField(write_only=True, required=False, default=False)
     ip_tribe = serializers.CharField(write_only=True, required=False, allow_blank=True)
     nhts_status = serializers.BooleanField(write_only=True, required=False, default=False)
     water_source_type_id = serializers.IntegerField(write_only=True, required=True)
     toilet_facility_type_id = serializers.IntegerField(write_only=True, required=True)
     waste_management_type_id = serializers.IntegerField(write_only=True, required=True)
-    waste_other_text = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     
     class Meta:
         model = Family
         fields = [
             'family_code', 'is_visited', 'quarter', 'year', 'created_at',
             'household_type_id', 'family_head_id', 'respondent_id', 
-            'respondent_relationship_to_fh_id', 'ip_status', 'ip_tribe', 'nhts_status',
-            'water_source_type_id', 'toilet_facility_type_id', 'waste_management_type_id', 'waste_other_text'
+            'respondent_relationship_to_fh_id', 'head_rth_id', 'ip_status', 'ip_tribe', 'nhts_status',
+            'water_source_type_id', 'toilet_facility_type_id', 'waste_management_type_id',
         ]
         read_only_fields = ['family_code', 'is_visited', 'quarter', 'year', 'created_at']
     
@@ -73,19 +106,26 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         # Ensure family_head_id is provided
         if not data.get('family_head_id'):
             raise serializers.ValidationError({'family_head_id': 'Family head is required.'})
+        
+        if not data.get('head_rth_id'):
+            raise serializers.ValidationError({'head_rth_id': 'Family head relationship to household head is required.'})
         return data
     
     def create(self, validated_data):
-        """Create family using service - """
+        """Create family using service"""
         try:
             request = self.context.get('request')
-            personnel_id = request.user.personnel.personnel_id
-            household_id = self.context.get('household_id')  
+            household_id = self.context.get('household_id')
             
             if not household_id:
                 raise serializers.ValidationError("Household ID is required")
             
-            print(f"Creating family for household: {household_id}")
+            personnel_id = request.data.get('personnel_id')
+            
+            if not personnel_id:
+                raise serializers.ValidationError("Personnel ID is required")
+            
+            print(f"Creating family for household: {household_id} by personnel: {personnel_id}")
             
             family_id = HouseholdService.create_new_family(household_id, validated_data, personnel_id)
             
@@ -103,7 +143,6 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         except Exception as e:
             print(f"Family creation failed: {str(e)}")
             raise serializers.ValidationError(f"Family creation failed: {str(e)}")
-
 
 
 # class RelationshipListSerializer(serializers.Serializer):
@@ -139,3 +178,102 @@ class HouseholdInsertSerializer(serializers.Serializer):
         # Call the service to execute the SQL function
         household_id = HouseholdService.insert_household(validated_data)
         return {'household_id': household_id}
+    
+class FamilyMemberCreateSerializer(serializers.Serializer):
+    resident_id = serializers.IntegerField(required=True)
+    rth_id = serializers.IntegerField(required=True)
+    rtf_id = serializers.IntegerField(required=True)
+    philhealthid_number = serializers.CharField(required=False, allow_blank=True, default='')
+    membership_type = serializers.CharField(required=False, allow_blank=True, default='M')
+    philhealth_category_id = serializers.IntegerField(required=False, allow_null=True)
+    nutrition_status_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        if not data.get('resident_id'):
+            raise serializers.ValidationError({'resident_id': 'Resident is required'})
+        if not data.get('rth_id'):
+            raise serializers.ValidationError({'rth_id': 'Relationship to household head is required'})
+        if not data.get('rtf_id'):
+            raise serializers.ValidationError({'rtf_id': 'Relationship to family head is required'})
+        return data
+    
+    def create(self, validated_data):
+        try:
+            family_id = self.context.get('family_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not family_id or not personnel_id:
+                raise serializers.ValidationError("Missing family_id or personnel_id")
+            
+           
+            member_id = insert_family_member(
+                family_id=family_id,
+                resident_id=validated_data['resident_id'],
+                rth_id=validated_data['rth_id'],
+                rtf_id=validated_data['rtf_id'],
+                philhealthid_number=validated_data.get('philhealthid_number', ''),
+                membership_type=validated_data.get('membership_type', 'M'),
+                philhealth_category_id=validated_data.get('philhealth_category_id'),
+                nutrition_status_id=validated_data.get('nutrition_status_id'),
+                personnel_id=personnel_id
+            )
+            
+            return {'family_member_id': member_id}
+                
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to add family member: {str(e)}")
+        
+
+class GeneralHealthCreateSerializer(serializers.Serializer):
+    # Common fields
+    class_id = serializers.IntegerField(required=True)
+    medical_history_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True
+    )
+    
+    # Female-only fields
+    wra_lmp = serializers.DateField(required=False, allow_null=True)
+    fp_method_yn = serializers.BooleanField(required=False, allow_null=True)
+    fp_method_id = serializers.IntegerField(required=False, allow_null=True)
+    fp_status_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        if not data.get('class_id'):
+            raise serializers.ValidationError({'class_id': 'Class/Population Group is required'})
+        
+        if data.get('fp_method_yn') is True:
+            if not data.get('fp_method_id'):
+                raise serializers.ValidationError({'fp_method_id': 'FP Method is required when using family planning'})
+            if not data.get('fp_status_id'):
+                raise serializers.ValidationError({'fp_status_id': 'FP Status is required when using family planning'})
+        
+        return data
+    
+    def create(self, validated_data):
+        """Create general health record """
+        try:
+            family_member_id = self.context.get('family_member_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not family_member_id:
+                raise serializers.ValidationError("Missing family_member_id")
+            if not personnel_id:
+                raise serializers.ValidationError("Missing personnel_id")
+            
+            gh_id = save_general_health_for_member(
+                family_member_id=family_member_id,
+                class_id=validated_data['class_id'],
+                medical_history_ids=validated_data.get('medical_history_ids'),
+                wra_lmp=validated_data.get('wra_lmp'),
+                fp_method_yn=validated_data.get('fp_method_yn'),
+                fp_method_id=validated_data.get('fp_method_id'),
+                fp_status_id=validated_data.get('fp_status_id'),
+                personnel_id=personnel_id
+            )
+            
+            return {'gh_id': gh_id}
+                
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to save general health: {str(e)}")
