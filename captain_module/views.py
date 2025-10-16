@@ -2,16 +2,67 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params
-from .models import Captain
+from .models import Captain, Dashboard
 from django.utils.http import urlencode
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
+from django.contrib import messages
 
 
 
 @custom_login_required
 @role_required('Barangay Captain')
 def captain_dashboard(request):
-    return render(request, 'captain_module/captain_dashboard.html')
+    barangay = request.GET.get("barangay") or None
+    city     = request.GET.get("city") or None
+
+    # Totals
+    try:
+        totals = Dashboard.sp_dashboard_totals(barangay=barangay, city=city)
+    except Exception as e:
+        messages.error(request, f"Failed loading totals: {e}")
+        totals = {"total_resident": 0, "total_non_resident": 0, "total_pending": 0, "total_male": 0, "total_female": 0}
+
+    # Residents per sitio (no params)
+    try:
+        per_sitio_rows = Dashboard.sp_residents_per_sitio_json()
+        print("DEBUG per_sitio_rows:", per_sitio_rows)  # check console once
+        per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
+        per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
+    except Exception as e:
+        messages.error(request, f"Failed loading per-sitio data: {e}")
+        per_sitio_labels, per_sitio_data = [], []
+
+    # --- Age brackets (Pie) ---
+    try:
+        age_rows = Dashboard.sp_age_bracket_distribution()  # no params
+
+        # unwrap if each item is {"jsonb_build_object": {...}}
+        cleaned = []
+        for item in age_rows or []:
+            if isinstance(item, dict) and "jsonb_build_object" in item:
+                cleaned.append(item["jsonb_build_object"])
+            else:
+                cleaned.append(item)
+
+        age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
+        age_data   = [int(r.get("count") or 0) for r in cleaned]
+
+        total = sum(age_data) or 1
+        age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
+    except Exception as e:
+        messages.error(request, f"Failed loading age distribution: {e}")
+        age_labels, age_data, age_labels_pct = [], [], []
+
+    ctx = {
+        "totals": totals,
+        "per_sitio_labels": per_sitio_labels,
+        "per_sitio_data": per_sitio_data,
+        "age_labels": age_labels,
+        "age_labels_pct": age_labels_pct,  # optional pretty legend
+        "age_data": age_data,
+    }
+    return render(request, "secretary_module/secretary_dashboard.html", ctx)
+
 
 @custom_login_required
 @role_required('Barangay Captain')

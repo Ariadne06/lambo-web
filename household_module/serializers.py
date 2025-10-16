@@ -153,6 +153,57 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
 #     def get_results():
 #         return Household.sp_get_relationship_to_household_head()
 
+    def to_representation(self, instance):
+        # instance is ignored; we pull directly from the DB
+        return {"results": self.get_results()}
+    
+class HouseOwnershipSerializer(serializers.Serializer):
+    house_ownership_id = serializers.IntegerField()
+    description = serializers.CharField()
+
+class HouseOwnershipListSerializer(serializers.Serializer):
+    # This wraps the list returned by your static method
+    results = HouseOwnershipSerializer(many=True, read_only=True)
+
+    @staticmethod
+    def get_results():
+        return Household.sp_get_house_ownership()
+
+    def to_representation(self, instance):
+        # instance is ignored; we pull directly from the DB
+        return {"results": self.get_results()}
+    
+class HouseTypeSerializer(serializers.Serializer):
+    house_type_id = serializers.IntegerField()
+    description = serializers.CharField()
+
+class HouseTypeListSerializer(serializers.Serializer):
+    # This wraps the list returned by your static method
+    results = HouseTypeSerializer(many=True, read_only=True)
+
+    @staticmethod
+    def get_results():
+        return Household.sp_get_house_type()
+
+    def to_representation(self, instance):
+        # instance is ignored; we pull directly from the DB
+        return {"results": self.get_results()}
+
+class SitioSerializer(serializers.Serializer):
+    sitio_id = serializers.IntegerField()
+    sitio_name = serializers.CharField()
+
+class SitioListSerializer(serializers.Serializer):
+    # This wraps the list returned by your static method
+    results = SitioSerializer(many=True, read_only=True)
+
+    @staticmethod
+    def get_results():
+        return Household.sp_get_sitio()
+
+    def to_representation(self, instance):
+        # instance is ignored; we pull directly from the DB
+        return {"results": self.get_results()}
 #     def to_representation(self, instance):
 #         # instance is ignored; we pull directly from the DB
 #         return {"results": self.get_results()}
@@ -174,6 +225,48 @@ class HouseholdInsertSerializer(serializers.Serializer):
     performed_by_type = serializers.CharField(required=False, default='personnel')
     enforce_bhw_assignment = serializers.BooleanField(required=False, default=False)
 
+    # Return value from SP
+    household_id = serializers.IntegerField(read_only=True)
+
+    def create(self, validated):
+        new_id = Household.sp_insert_household(
+            house_ownership_id=validated.get("house_ownership_id"),
+            house_type_id=validated.get("house_type_id"),
+            barangay=validated["barangay"],
+            city_municipality=validated["city_municipality"],
+            sitio_id=validated.get("sitio_id"),
+            personnel_id=validated["personnel_id"],
+            house_number=validated.get("house_number"),
+            street=validated.get("street"),
+            country=validated["country"],
+            household_head_id=validated["household_head_id"],
+            respondent_id=validated["respondent_id"],
+            respondent_relationship_to_hh_id=validated.get("respondent_relationship_to_hh_id"),
+            performed_by_id=validated["performed_by_id"],
+            performed_by_type=validated["performed_by_type"],
+            enforce_bhw_assignment=validated.get("enforce_bhw_assignment", True),
+        )
+        return {"household_id": new_id}
+
+    def to_representation(self, instance):
+        # instance is {"household_id": <int>}
+        return {"household_id": instance.get("household_id")}
+    
+class ResidentSearchResultSerializer(serializers.Serializer):
+    resident_id = serializers.IntegerField()
+    resident_code = serializers.CharField()
+    full_name = serializers.CharField()
+    is_verified = serializers.BooleanField()
+    resident_status = serializers.CharField()
+    
+
+class ResidentSearchListSerializer(serializers.Serializer):
+    results = serializers.SerializerMethodField()
+
+    def get_results(self, obj):
+        q = (self.context or {}).get("query", "")
+        rows = Household.sp_search_resident(q)
+        return ResidentSearchResultSerializer(rows, many=True).data
     def create(self, validated_data):
         # Call the service to execute the SQL function
         household_id = HouseholdService.insert_household(validated_data)

@@ -9,6 +9,9 @@ from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFa
 from .serializers import (
     FamilyMemberCreateSerializer, HouseOwnershipTypeSerializer, HouseTypeSerializer, HouseholdTypeSerializer, NutritionStatusSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
+    HouseholdCreateSerializer, FamilyCreateSerializer, HouseholdListSerializer,
+    RelationshipListSerializer, HouseholdInsertSerializer, HouseOwnershipListSerializer,
+    HouseTypeListSerializer, SitioListSerializer, ResidentSearchListSerializer
     HouseholdInsertSerializer, FamilyCreateSerializer, RelationshipToHouseholdHeadSerializer, PhilhealthCategorySerializer, MedicalHistoryTypeSerializer, ClassSerializer, 
     FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer
 )
@@ -426,6 +429,49 @@ class FamilyDetailView(APIView):
             return Response({
                 'success': False,
                 'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+class RelationshipViewSet(ViewSet):
+    def list(self, request):
+        s = RelationshipListSerializer(instance={})
+        return Response(s.data)
+    
+class HouseOwnershipViewSet(ViewSet):
+    def list(self, request):
+        s = HouseOwnershipListSerializer(instance={})
+        return Response(s.data)
+    
+class HouseTypeViewSet(ViewSet):
+    def list(self, request):
+        s = HouseTypeListSerializer(instance={})
+        return Response(s.data)
+    
+class SitioViewSet(ViewSet):
+    def list(self, request):
+        s = SitioListSerializer(instance={})
+        return Response(s.data)
+    
+class InsertHouseholdView(APIView):
+    parser_classes = (JSONParser,)
+
+    def get(self, request):
+        # lets DRF render the browsable page
+        return Response({"detail": "POST to this URL to insert a household."})
+
+    def post(self, request):
+        s = HouseholdInsertSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        instance = s.save()
+        return Response({"success": True, **instance}, status=201)
+    
+class ResidentSearchView(APIView):
+    def get(self, request):
+        q = request.query_params.get("q", "").strip()
+        s = ResidentSearchListSerializer(instance={}, context={"query": q})
+        return Response(s.data)
+    
+    
+
             }, status=500)
 
 
