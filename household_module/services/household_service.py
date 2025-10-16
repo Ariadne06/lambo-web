@@ -39,3 +39,34 @@ class HouseholdService:
         Get all households 
         """
         return get_all_households()
+    
+    @staticmethod
+    def create_new_family(household_id, data, personnel_id):
+        """
+        Create a new family for a household using SQL function
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_family', [
+                     household_id,                                     
+                    data['household_type_id'],                      
+                    data['family_head_id'],                                                  
+                    data['water_source_type_id'],                    
+                    data['toilet_facility_type_id'],                  
+                    data['waste_management_type_id'],                      
+                    data['respondent_id'],                             
+                    data.get('respondent_relationship_to_fh_id', 1),         
+                    data.get('head_rth_id', 1),                       
+                    data.get('ip_status', False),                      
+                    data.get('ip_tribe', ''),                         
+                    data.get('nhts_status', False),                   
+                    None,                                                 
+                    personnel_id,                                    
+                    'personnel',                                       
+                    False,                                                
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Database error creating family: {str(e)}")
+            raise Exception(f"Database operation failed: {str(e)}")
