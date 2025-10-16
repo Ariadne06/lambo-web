@@ -18,6 +18,7 @@ router.register(r'medical-history-types', views.MedicalHistoryTypeViewSet)
 router.register(r'classes', views.ClassViewSet)
 router.register(r'fp-methods', views.FPMethodViewSet)
 router.register(r'fp-statuses', views.FPStatusViewSet)
+import django.contrib.admin as admin
 
 app_name = 'household_module'
 
@@ -39,4 +40,5 @@ urlpatterns = [
     path('families/<int:family_id>/members/add/', views.FamilyMemberCreateView.as_view(), name='add-family-member'),
     path('family-members/<int:family_member_id>/', views.FamilyMemberDetailView.as_view(), name='family-member-detail'),
     path('family-members/<int:family_member_id>/general-health/create/', views.GeneralHealthCreateView.as_view(), name='create-general-health'),
+    path('admin/', admin.site.urls),
 ]
