@@ -1,0 +1,271 @@
+{% extends 'base_sec.html' %}
+{% block title %}Business Fee{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-4">
+  <!-- Header -->
+  <div class="mb-5">
+    <h1 class="text-2xl font-semibold text-gray-900">Business Fee Categories</h1>
+    <p class="mt-1 text-sm text-gray-500">View and manage clearance categories and fee structure.</p>
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <!-- Single, consistent red accent -->
+    <div class="h-1 bg-red-600"></div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr class="text-left text-gray-700">
+            <th class="px-4 py-3 font-semibold">Category Name</th>
+            <th class="px-4 py-3 font-semibold">Description</th>
+            <th class="px-4 py-3 font-semibold text-right">Base Fee</th>
+            <th class="px-4 py-3 font-semibold text-right">Additional Fee Per Unit</th>
+            <th class="px-4 py-3 font-semibold text-right">Minimum Unit</th>
+            <th class="px-4 py-3 font-semibold text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for c in categories %}
+            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors"
+                data-row-id="{{ c.clearance_category_id }}">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ c.category_name }}</td>
+              <td class="px-4 py-3 text-gray-700">{{ c.description|default:"—" }}</td>
+              <td class="px-4 py-3 text-right tabular-nums font-medium text-gray-900" data-cell="base_fee">₱{{ c.base_fee|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums" data-cell="additional_fee_per_unit">
+                {% if c.supported_units and c.additional_fee_per_unit %}
+                  ₱{{ c.additional_fee_per_unit|floatformat:2 }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-right" data-cell="minimum_units">
+                {% if c.supported_units and c.minimum_units %}
+                  {{ c.minimum_units }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-center">
+                <!-- Clean red Update button -->
+                <button
+                  type="button"
+                  class="js-open-update inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  data-category-id="{{ c.clearance_category_id }}"
+                  data-category-name="{{ c.category_name }}"
+                  data-base-fee="{{ c.base_fee }}"
+                  data-additional-fee-per-unit="{{ c.additional_fee_per_unit }}"
+                  data-minimum-units="{{ c.minimum_units }}"
+                  data-supported-units="{{ c.supported_units }}"
+                  aria-label="Update {{ c.category_name }}"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M13.586 3.586a2 2 0 0 1 2.828 2.828l-.793.793-2.828-2.828.793-.793zM12.379 4.793 4 13.172V16h2.828l8.38-8.379-2.829-2.828z" />
+                  </svg>
+                  Update
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-4 py-10 text-center text-gray-500">No categories found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# --- Modal + CSRF + Script --- #}
+<form id="__csrf">{% csrf_token %}</form>
+
+<!-- Modal -->
+<div id="updateModal" class="fixed inset-0 z-50 hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" data-close></div>
+
+  <!-- Panel -->
+  <div class="mx-auto mt-24 w-full max-w-lg rounded-xl bg-white shadow-xl relative">
+    <!-- Red accent -->
+    <div class="h-1 bg-red-600 rounded-t-xl"></div>
+
+    <div class="p-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Update Category</h2>
+          <p class="text-sm text-gray-500">Editing: <span id="modalCategoryName" class="font-medium text-gray-900"></span></p>
+        </div>
+        <button class="rounded-md p-1 text-gray-500 hover:text-gray-700" type="button" data-close aria-label="Close">✕</button>
+      </div>
+
+      <form id="updateForm" class="mt-4">
+        <input type="hidden" name="clearance_category_id" id="modalCategoryId">
+
+        <div class="grid gap-4">
+          <div>
+            <label for="modalBaseFee" class="mb-1 block text-sm font-medium text-gray-700">Base Fee</label>
+            <input id="modalBaseFee" name="base_fee" type="number" step="0.01" min="0"
+                   class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+          </div>
+
+          <div id="unitFields" class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="modalAddl" class="mb-1 block text-sm font-medium text-gray-700">Additional Fee Per Unit</label>
+              <input id="modalAddl" name="additional_fee_per_unit" type="number" step="0.01" min="0"
+                     class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+            </div>
+            <div>
+              <label for="modalMinUnits" class="mb-1 block text-sm font-medium text-gray-700">Minimum Units</label>
+              <input id="modalMinUnits" name="minimum_units" type="number" min="0"
+                     class="w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500" />
+            </div>
+          </div>
+
+          <p id="unitNote" class="hidden text-xs text-gray-500">
+            This category doesn’t support units; only <span class="font-medium">Base Fee</span> can be updated.
+          </p>
+        </div>
+
+        <div id="modalError" class="mt-3 hidden rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button type="button" class="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50" data-close>Cancel</button>
+          <button id="saveBtn" type="submit" class="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+            <span class="inline-block" data-text>Save changes</span>
+            <span class="hidden animate-pulse" data-spinner>Saving…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="pageMeta" data-update-url="{% url 'secretary_module:business_fee_update' %}"></div>
+
+
+<script>
+(function(){
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  const modal = $("#updateModal");
+  const form = $("#updateForm");
+  const csrfForm = $("#__csrf");
+  const csrftoken = csrfForm.querySelector("input[name=csrfmiddlewaretoken]").value;
+
+  const idEl = $("#modalCategoryId");
+  const nameEl = $("#modalCategoryName");
+  const baseEl = $("#modalBaseFee");
+  const addlEl = $("#modalAddl");
+  const minEl = $("#modalMinUnits");
+  const unitFields = $("#unitFields");
+  const unitNote = $("#unitNote");
+  const errBox = $("#modalError");
+  const saveBtn = $("#saveBtn");
+  const saveText = saveBtn.querySelector("[data-text]");
+  const saveSpin = saveBtn.querySelector("[data-spinner]");
+
+  function toggleUnitFields(supported) {
+    unitFields.classList.toggle("hidden", !supported);
+    unitNote.classList.toggle("hidden", supported);
+    if (!supported) {
+      addlEl.value = "";
+      minEl.value = "";
+    }
+  }
+
+  function openModal(btn) {
+    idEl.value = btn.dataset.categoryId;
+    nameEl.textContent = btn.dataset.categoryName || "";
+    baseEl.value = btn.dataset.baseFee || "";
+    addlEl.value = btn.dataset.additionalFeePerUnit || "";
+    minEl.value = btn.dataset.minimumUnits || "";
+    const supported = (btn.dataset.supportedUnits || "").toLowerCase() === "true";
+    toggleUnitFields(supported);
+
+    errBox.classList.add("hidden");
+    errBox.textContent = "";
+    modal.classList.remove("hidden");
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+  }
+
+  function setSaving(isSaving) {
+    saveBtn.disabled = isSaving;
+    saveText.classList.toggle("hidden", isSaving);
+    saveSpin.classList.toggle("hidden", !isSaving);
+  }
+
+  // Bind open/close
+  $$(".js-open-update").forEach(b => b.addEventListener("click", () => openModal(b)));
+  $$("[data-close]").forEach(b => b.addEventListener("click", closeModal));
+
+  // Submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errBox.classList.add("hidden");
+    errBox.textContent = "";
+    setSaving(true);
+
+    try {
+      const formData = new FormData(form); // allow blanks => NULL on server
+      const resp = await fetch("{% url 'secretary_module:business_fee_update' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        body: formData
+        });
+
+      const data = await resp.json();
+      if (!data.ok) {
+        throw new Error(data.error || "Update failed");
+      }
+
+      // Patch row values without reload
+      const row = document.querySelector(`tr[data-row-id="${idEl.value}"]`);
+      if (row && data.row) {
+        const fmtPeso = (v) => (v === null || v === undefined || v === "") ? "—" : `₱${Number(v).toFixed(2)}`;
+        const baseCell = row.querySelector('[data-cell="base_fee"]');
+        const addlCell = row.querySelector('[data-cell="additional_fee_per_unit"]');
+        const minCell  = row.querySelector('[data-cell="minimum_units"]');
+
+        if (baseCell) baseCell.textContent = fmtPeso(data.row.base_fee);
+
+        if (data.row.supported_units) {
+          if (addlCell) addlCell.textContent = fmtPeso(data.row.additional_fee_per_unit);
+          if (minCell) {
+            minCell.textContent = (data.row.minimum_units ?? "—");
+            minCell.classList.remove("text-gray-400");
+          }
+        } else {
+          if (addlCell) addlCell.innerHTML = '<span class="text-gray-400">—</span>';
+          if (minCell) {
+            minCell.innerHTML = '<span class="text-gray-400">—</span>';
+          }
+        }
+
+        // Also refresh the button's dataset (so subsequent edits show latest)
+        const btn = row.querySelector(".js-open-update");
+        if (btn) {
+          btn.dataset.baseFee = data.row.base_fee ?? "";
+          btn.dataset.additionalFeePerUnit = data.row.additional_fee_per_unit ?? "";
+          btn.dataset.minimumUnits = data.row.minimum_units ?? "";
+          btn.dataset.supportedUnits = String(!!data.row.supported_units);
+        }
+      }
+
+      closeModal();
+    } catch (err) {
+      errBox.textContent = err.message || String(err);
+      errBox.classList.remove("hidden");
+    } finally {
+      setSaving(false);
+    }
+  });
+})();
+</script>
+{% endblock %}

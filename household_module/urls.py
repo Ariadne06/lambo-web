@@ -18,6 +18,10 @@ router.register(r'medical-history-types', views.MedicalHistoryTypeViewSet)
 router.register(r'classes', views.ClassViewSet)
 router.register(r'fp-methods', views.FPMethodViewSet)
 router.register(r'fp-statuses', views.FPStatusViewSet)
+router.register(r'relationships', views.RelationshipViewSet, basename="relationships")
+router.register(r'house-ownerships', views.HouseOwnershipViewSet, basename="house-ownerships")
+router.register(r'house-types', views.HouseTypeViewSet, basename="house-types")
+router.register(r'sitios', views.SitioViewSet, basename="sitios")
 
 app_name = 'household_module'
 
@@ -31,6 +35,8 @@ urlpatterns = [
     path('search-resident/', views.ResidentSearchView.as_view(), name='search-resident'),
     # path('households/create/', views.HouseholdCreateView.as_view(), name='household-create'),
     path('households/<int:household_id>/families/create/', views.FamilyCreateView.as_view(), name='create_family'),
+    path('household-lookup-data/', views.LookupDataView.as_view(), name='lookup_data'),
+    path("residents/search/", views.ResidentSearchView.as_view(), name="resident-search"),
     # path("relationships/", views.RelationshipViewSet.as_view({"get": "list_relationships"}), name="household-relationships"),
     path('households/<int:household_id>/details/', views.HouseholdDetailView.as_view(), name='household-detail'),
     path('households/<int:household_id>/families/', views.HouseholdFamiliesView.as_view(), name='household-families'),
