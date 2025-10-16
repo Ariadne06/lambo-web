@@ -70,7 +70,6 @@ def bhw_dashboard(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdList(request):
-    
     limit = None
     offset = None
     results = []
@@ -81,19 +80,23 @@ def householdList(request):
     raw_sitio = request.GET.get('sitio_id')
     quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
     current_quarter_id = Household.sp_get_current_quarter_id()
-    
+
     if quarter_id:
         quarter_id = int(quarter_id)
     elif current_quarter_id:
         quarter_id = int(current_quarter_id)
     else:
-        quarter_id = None  # or some default value if needed
+        quarter_id = None
 
+    # ✅ Are we looking at the current quarter?
+    is_current_quarter = bool(
+        current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
+    )
 
     try:
         sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
     except ValueError:
-        sitio_id = None  # ignore bad input
+        sitio_id = None
     
     try:
         limit = int(request.GET.get("limit", 25))
@@ -136,12 +139,14 @@ def householdList(request):
     }
     if sitio_id is not None:
         base_params["sitio_id"] = sitio_id
+    # ✅ keep quarter in pagination / limit links
+    if quarter_id is not None:
+        base_params["quarter_id"] = quarter_id
 
     prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
     next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
     limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
 
-    
     sitio = Household.sp_get_sitio()
     quarter = Household.sp_get_quarter()
     
@@ -162,9 +167,13 @@ def householdList(request):
         'sitio': sitio,
         'quarter': quarter,
         'quarter_id': quarter_id,
+        # ✅ expose these to the template
+        'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
+        'is_current_quarter': is_current_quarter,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
+
     
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -336,6 +345,18 @@ def insert_family(request):
         or request.session.get('household_number')
         or request.POST.get('household_number')
     )
+    
+    def _to_bool(v, default=False):
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return default
+        s = str(v).strip().lower()
+        if s in {"1", "true", "t", "yes", "y", "on"}:
+            return True
+        if s in {"0", "false", "f", "no", "n", "off"}:
+            return False
+        return default
 
     # get quarter id if present (else None)
     qid = None
@@ -369,12 +390,16 @@ def insert_family(request):
         waste_management_type = int(request.POST.get('waste_management_type'))
         water_source_type = int(request.POST.get('water_source_type'))
         toilet_facility_type = int(request.POST.get('toilet_facility_type'))
-        nhts_status     = (request.POST.get('nhts_status') == 'true')
-        indigent_status = (request.POST.get('indigent_status') == 'true')
         ip_tribe        = (request.POST.get('ip_tribe') or '').strip()
         waste_other_text = ''
         performed_by_type = 'personnel'
         bhw_assignment = False
+        
+        nhts_status_raw     = request.POST.get('nhts_status')
+        ip_status_raw = request.POST.get('ip_status')
+
+        nhts_status     = _to_bool(nhts_status_raw)
+        ip_status = _to_bool(ip_status_raw)
     
         try:
             Family.sp_insert_family(
@@ -387,7 +412,7 @@ def insert_family(request):
                 respondent_id,
                 respondent_rel,
                 fam_head_rel,
-                indigent_status,
+                ip_status,
                 ip_tribe,
                 nhts_status,
                 waste_other_text,
@@ -445,7 +470,7 @@ def insert_family_member(request):
         philhealth_number = (request.POST.get('philhealth_number') or '').strip()
         membership_type = (request.POST.get('membership_type') or '').strip()
         philhealth_category = request.POST.get('philhealth_category')
-        nutrition_status = request.POST.get('nutrition_status')
+        nutrition_status = request.POST.get('nutritional_status')
         
         if membership_type == '':
             membership_type = None
@@ -476,13 +501,282 @@ def insert_family_member(request):
             )
             set_flash(request, f"Family member added successfully.", "success")
         except Exception as e:
-            set_flash(request, str(e), "error")
+            set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def mark_family_visit(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    fid = int(request.POST.get('family_id'))
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Family.sp_mark_family_visited(fid, pid)
+        set_flash(request, "Family marked as visited.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_family(request):
+    # --- ids / context ---
+    try:
+        family_id = int(request.POST.get('family_id'))
+        hid       = int(request.POST.get('household_id'))
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid household/family id.", "error")
+        return redirect('bhw_module:householdList')
+
+    pid = int(request.session.get('personnel_id') or 0)
+
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # quarter (optional)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+        params = {"hid": hid, "household_number": household_number}
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+
+    # --- fetch previous row for comparison ---
+    try:
+        prev = Family.sp_get_specific_family(family_id, qid)
+        if not prev:
+            set_flash(request, "Family not found.", "error")
+            return redirect_to_view()
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect_to_view()
+
+    # helpers
+    def _to_int(val, default=None):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    def _to_bool(val):
+        if val is None:
+            return None
+        s = str(val).strip().lower()
+        if s in ("true", "1", "yes", "y"):  return True
+        if s in ("false", "0", "no", "n"):  return False
+        return None
+
+    def _norm_str(s):
+        return (s or "").strip()
+
+    # --- current (normalize) ---
+    curr_head_id   = _to_int(prev.get('family_head_id'), 0)
+    curr_resp_id   = _to_int(prev.get('respondent_id'), 0)
+    curr_rtf_id    = _to_int(prev.get('respondent_rtf_id'), 0) 
+    curr_hht_id    = _to_int(prev.get('household_type_id'), 0)
+    curr_wmt_id    = _to_int(prev.get('waste_management_type_id'), 0)
+    curr_ws_id     = _to_int(prev.get('water_source_type_id'), 0)
+    curr_tf_id     = _to_int(prev.get('toilet_facility_type_id'), 0)
+    curr_nhts      = bool(prev.get('nhts_status')) if prev.get('nhts_status') is not None else None
+    curr_indigent  = bool(prev.get('ip_status')) if prev.get('ip_status') is not None else None
+    curr_ip_tribe  = _norm_str(prev.get('ip_tribe'))
+
+    # --- posted (convert) ---
+    try:
+        new_head_id  = _to_int(request.POST.get('family_head_id'))
+        new_resp_id  = _to_int(request.POST.get('respondent_id'))
+        new_rtf_id   = _to_int(request.POST.get('respondent_rel'))
+        new_hht_id   = _to_int(request.POST.get('household_type'))
+        new_wmt_id   = _to_int(request.POST.get('waste_management_type'))
+        new_ws_id    = _to_int(request.POST.get('water_source_type'))
+        new_tf_id    = _to_int(request.POST.get('toilet_facility_type'))
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid numeric field(s).", "error")
+        return redirect_to_view()
+
+    # booleans can come as "true"/"false"
+    nhts_status     = _to_bool(request.POST.get('nhts_status'))
+    # accept either 'indigent_status' (update modal) or 'ip_status' (older naming)
+    indigent_status = _to_bool(request.POST.get('indigent_status'))
+    if indigent_status is None:
+        indigent_status = _to_bool(request.POST.get('ip_status'))
+
+    ip_tribe = _norm_str(request.POST.get('ip_tribe'))
+
+    # optional validation: require tribe if indigent/IP == True
+    if indigent_status is True and not ip_tribe:
+        set_flash(request, "Please specify the IP Tribe when Indigenous/Indigent = YES.", "error")
+        return redirect_to_view()
+
+    # guard: ensure required ints are present
+    required_ints = [
+        ("Family Head", new_head_id),
+        ("Respondent", new_resp_id),
+        ("Relationship (Respondent → Family Head)", new_rtf_id),
+        ("Household Type", new_hht_id),
+        ("Waste Management", new_wmt_id),
+        ("Water Source", new_ws_id),
+        ("Toilet Facility", new_tf_id),
+    ]
+    missing = [label for label, val in required_ints if val is None]
+    if missing:
+        set_flash(request, f"Missing/invalid fields: {', '.join(missing)}.", "error")
+        return redirect_to_view()
+
+    # --- compare for “Changed:” summary ---
+    changed = []
+    if new_head_id != curr_head_id: changed.append("Family head")
+    if new_resp_id != curr_resp_id: changed.append("Respondent")
+    if new_rtf_id  != curr_rtf_id:  changed.append("Rel (Respondent→Family Head)")
+    if new_hht_id  != curr_hht_id:  changed.append("Household type")
+    if new_wmt_id  != curr_wmt_id:  changed.append("Waste management")
+    if new_ws_id   != curr_ws_id:   changed.append("Water source")
+    if new_tf_id   != curr_tf_id:   changed.append("Toilet facility")
+    if nhts_status is not None and nhts_status != curr_nhts:         changed.append("NHTS status")
+    if indigent_status is not None and indigent_status != curr_indigent: changed.append("Indigenous/Indigent status")
+    if _norm_str(ip_tribe).casefold() != curr_ip_tribe.casefold():   changed.append("IP Tribe")
+
+    if not changed:
+        set_flash(request, "No changes detected — nothing to update.", "info")
+        return redirect_to_view()
+
+    # --- persist ---
+    try:
+        # Adjust to your actual stored proc / ORM method signature.
+        Family.sp_update_family(
+            family_id,
+            pid,
+            hid,
+            new_hht_id,
+            new_head_id,
+            new_resp_id,
+            new_rtf_id,
+            indigent_status,
+            ip_tribe or None,
+            nhts_status,
+            new_ws_id,
+            new_tf_id,
+            new_wmt_id,
+            waste_other_text=None,
+        )
+        set_flash(request, f"Family updated successfully. Changed: {', '.join(changed)}.", "success")
+    except Exception as e:
+        set_flash(request, str(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def deactivate_family(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    fid = int(request.POST.get('family_id'))
+    reason = (request.POST.get('reason') or '').strip()
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Family.sp_deactivate_family(fid, pid, reason)
+        set_flash(request, "Family marked as inactive.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
 
     return redirect_to_view()
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdView(request):
+    
+    def _to_bool(v):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, (int, float)):
+            return v != 0
+        if isinstance(v, str):
+            return v.strip().lower() in {"true", "t", "1", "yes", "y"}
+        return False
 
     raw_hid = (
         request.GET.get('household_id')
@@ -550,13 +844,26 @@ def householdView(request):
             'family_code':             r.get('family_code') or '',
             'family_head':             r.get('family_head') or '',
             'respondent':              r.get('respondent_name') or '',
-            'head_rth':                r.get('respondent_relationship') or '',
-            'nhts_status':             bool(r.get('nhts_status')),
-            'indigent':                bool(r.get('indigent')),
+            'rtf':                     r.get('respondent_relationship') or '',
+            'nhts_status':             _to_bool(r.get('nhts_status')),
+            'indigent':                _to_bool(r.get('indigent')),
             'household_type':          r.get('household_type') or '',
             'water_source':            r.get('water_source') or '',
             'waste_management':        r.get('waste_management') or '',
+            'is_visited':               _to_bool(r.get('is_visited')),
+            'date_visited':             r.get('date_visited'),
             'toilet_type':             r.get('toilet_type') or '',
+            'family_head_id':          r.get('family_head_id'),
+            'respondent_id':           r.get('respondent_id'),
+            'rth':                     r.get('relationship_of_family_head_to_hh ') or '',
+            'rth_id':                  r.get('relationship_of_family_head_to_hh_id'),
+            'rtf_id':                  r.get('relationship_of_respondent_to_family_head_id'),
+            'household_type_id':       r.get('household__type_id'),
+            'waste_management_id':     r.get('waste_management_id'),
+            'water_source_id':         r.get('water_source_id'),
+            'toilet_type_id':          r.get('toilet_type_id'),
+            'ip_tribe':                r.get('ip_tribe') or '',
+            'quarter_id':              r.get('quarter_id'),
             'members':                 members,
         })
 
