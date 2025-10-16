@@ -495,13 +495,73 @@ class Family(models.Model):
             raise e
         
     @staticmethod
-    def sp_get_specific_family(hid, qid):
+    def sp_get_specific_family(fid, qid):
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_specific_family', [hid, qid])
+                cursor.callproc('get_specific_family', [fid, qid])
                 cols = [c[0] for c in cursor.description]
                 row = cursor.fetchone()
                 return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_mark_family_visited(fid, pid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('mark_family_visited', [fid, pid])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_update_family(
+            fid,
+            pid,
+            hid,
+            household_type_id,
+            family_head_id,
+            respondent_id,
+            rtf_id,
+            ip_status,
+            ip_tribe,
+            nhts_status,
+            water_source_type_id,
+            toilet_facility_type_id,
+            waste_management_type_id,
+            waste_other_text,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_family', [
+                    fid,
+                    pid,
+                    hid,
+                    household_type_id,
+                    family_head_id,
+                    respondent_id,
+                    rtf_id,
+                    ip_status,
+                    ip_tribe,
+                    nhts_status,
+                    water_source_type_id,
+                    toilet_facility_type_id,
+                    waste_management_type_id,
+                    waste_other_text,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_deactivate_family(fid, pid, reason):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('deactivate_family', [fid, pid, reason])
+                result = cursor.fetchone()
+                return result[0] if result else None 
         except Exception as e:
             raise e
         
