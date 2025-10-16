@@ -1,4 +1,6 @@
 from django.db import models, connection
+from resident_profiling_module.models import Address
+
 
 
 class HouseOwnershipType(models.Model):
@@ -8,6 +10,14 @@ class HouseOwnershipType(models.Model):
     class Meta:
         managed = False
         db_table = 'house_ownership'
+
+class HouseType(models.Model):
+    house_type_id = models.AutoField(primary_key=True)
+    description = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        managed = False
+        db_table = 'house_type'
 
 class HouseholdType(models.Model):
     household_type_id = models.AutoField(primary_key=True)               
@@ -44,13 +54,127 @@ class WasteManagementType(models.Model):
         managed = False
         db_table = 'waste_management_type'
 
+class RelationshipToHouseholdHead(models.Model):
+    rth_id = models.AutoField(primary_key=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'relationship_to_householdhead'
+
+class FamilyMember(models.Model):
+    family_member_id = models.AutoField(primary_key=True)
+    family_member_code = models.CharField(max_length=20, unique=True)
+    family_id = models.IntegerField()
+    resident_id = models.IntegerField()
+    rth_id = models.IntegerField()  
+    rtf_id = models.IntegerField() 
+    philhealthid_number = models.CharField(max_length=50, null=True, blank=True)
+    membership_type = models.CharField(max_length=1, null=True, blank=True) 
+    philhealth_category_id = models.IntegerField(null=True, blank=True)
+    nutrition_status_id = models.IntegerField(null=True, blank=True)
+    date_added = models.DateTimeField(auto_now_add=True)
+    added_by = models.IntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = 'family_member'
+
+class PhilhealthCategory(models.Model):
+    philhealth_category_id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=5)
+    description = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'philhealth_category'
+
+class NutritionStatus(models.Model):
+    nutrition_status_id = models.AutoField(primary_key=True)
+    description = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'nutrition_status'
+
+
+class MedicalHistoryType(models.Model):
+    medical_history_type_id = models.AutoField(primary_key=True)
+    description = models.TextField()
+    
+    class Meta:
+        managed = False
+        db_table = 'medical_history_type'
+
+class Class(models.Model):
+    class_id = models.AutoField(primary_key=True)
+    class_description = models.TextField()
+    
+    class Meta:
+        managed = False
+        db_table = 'class'
+
+class FPMethod(models.Model):
+    fp_method_id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=20)
+    description = models.TextField()
+    
+    class Meta:
+        managed = False
+        db_table = 'fp_method'
+
+class FPStatus(models.Model):
+    fp_status_id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=20)
+    description = models.TextField()
+    
+    class Meta:
+        managed = False
+        db_table = 'fp_status'
+
+class GeneralHealthMale(models.Model):
+    ghtm_id = models.AutoField(primary_key=True)
+    family_member_id = models.IntegerField()
+    quarter_id = models.IntegerField()
+    medical_history_ids = models.JSONField(null=True, blank=True)
+    age = models.IntegerField(null=True, blank=True)
+    class_id = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    added_by = models.IntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = 'general_health_male'
+
+class GeneralHealthFemale(models.Model):
+    ghtf_id = models.AutoField(primary_key=True)
+    family_member_id = models.IntegerField()
+    quarter_id = models.IntegerField()
+    medical_history_ids = models.JSONField(null=True, blank=True)
+    last_menstrual_period = models.DateField(null=True, blank=True)
+    fp_method_yn = models.BooleanField(null=True, blank=True)
+    fp_method_id = models.IntegerField(null=True, blank=True)
+    fp_status_id = models.IntegerField(null=True, blank=True)
+    age = models.IntegerField(null=True, blank=True)
+    class_id = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    added_by = models.IntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = 'general_health_female'
+
+
 # Main tables 
 class Household(models.Model):
     household_id = models.AutoField(primary_key=True)
-    household_code = models.CharField(max_length=20, unique=True)
-    house_ownership_type_id = models.IntegerField(null=True, blank=True)
+    household_number = models.CharField(max_length=20, unique=True)
+    house_ownership_id = models.IntegerField(null=True, blank=True)
+    house_type_id = models.IntegerField(null=True, blank=True)
     house_number = models.CharField(max_length=50, null=True, blank=True)
-    address_id = models.IntegerField()
+    address = models.ForeignKey('resident_profiling_module.Address', on_delete=models.SET_NULL, null=True, db_column='address_id')
     household_head_id = models.IntegerField()
     respondent_id = models.IntegerField()
     respondent_relationship_to_hh_id = models.IntegerField(null=True, blank=True)
@@ -299,7 +423,7 @@ class Family(models.Model):
     family_code = models.CharField(max_length=20, unique=True)
     household_id = models.IntegerField()
     household_type_id = models.IntegerField()
-    family_head_id = models.IntegerField()  # REQUIRED!
+    family_head_id = models.IntegerField()  
     respondent_id = models.IntegerField()
     respondent_relationship_to_fh_id = models.IntegerField(null=True, blank=True)
     ip_status = models.BooleanField(default=False)
