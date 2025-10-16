@@ -63,3 +63,27 @@ def change_personnel_password(personnel_id, old_password, new_password):
             return result
     except Exception as e:
         raise Exception(f"Password change failed: {str(e)}")
+    
+def resubmit_supporting_certificate(resident_id, identity_doc_type_id, new_file_path, note='resubmit photo'):
+    """Call the SQL function for resubmission."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT resubmit_resident_supporting_certificate(%s, %s, %s, %s)",
+                [resident_id, identity_doc_type_id, new_file_path, note]
+            )
+            return cursor.fetchone()[0]
+    except Exception as e:
+        raise Exception(f"Resubmission failed: {str(e)}")
+
+def re_register_resident(resident_id, performed_by=None, performed_by_type='resident', reason='details_mismatch'):
+    """Call the SQL function for re-register."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT re_register_resident(%s, %s, %s, %s)",
+                [resident_id, performed_by or resident_id, performed_by_type, reason]
+            )
+            return cursor.fetchone()[0]
+    except Exception as e:
+        raise Exception(f"Re-registration failed: {str(e)}")
