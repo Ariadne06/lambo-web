@@ -1,6 +1,7 @@
 from django.db import models, connection
 import json
 from typing import Optional, List, Dict, Any
+from datetime import datetime, date
 
 # Create your models here.
 class Dashboard(models.Model):
@@ -74,32 +75,79 @@ class Dashboard(models.Model):
     
 class AnnouncementRepo(models.Model):
     """
-    Thin wrapper around your SQL functions:
-      - insert_announcement(title, details, image_path, created_by, audience) -> INT
-      - get_all_announcement(q, date_from, date_to, created_by, sort, limit, offset, audience) -> rows
-      - get_specific_announcement(id) -> row (includes audience)
-      - update_announcement(id, updated_by, title?, details?, image_path?, audience?) -> BOOLEAN
-      - delete_announcement(id, deleted_by) -> BOOLEAN
+    SQL wrappers for announcements with audience support.
     """
     class Meta:
         managed = False
         db_table = 'Announcement'
-    
-    @staticmethod
-    def latest_for_residents(limit=3, offset=0, q=None, date_from=None, date_to=None):
-        with connection.cursor() as cur:
-            cur.execute(
-                "SELECT * FROM get_latest_announcements_for_residents(%s,%s,%s,%s,%s)",
-                [limit, offset, q, date_from, date_to]
-            )
-            return AnnouncementRepo._dictfetchall(cur)
 
-    # NEW: latest for personnel (SQL: get_latest_announcements_for_personnel)
+    # ---------- helpers ----------
     @staticmethod
-    def latest_for_personnel(limit=3, offset=0, q=None, date_from=None, date_to=None):
+    def _dictfetchall(cur) -> List[Dict]:
+        cols = [c[0] for c in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def _norm_audience(val: Optional[str]) -> str:
+        v = (val or "").strip().lower()
+        if v in ("", "both", "everyone", "everybody", "all"): return "both"
+        if v in ("resident", "residents"): return "resident"
+        if v in ("personnel", "staff", "employee", "employees"): return "personnel"
+        return v
+
+    @staticmethod
+    def _postprocess(rows: List[Dict]) -> List[Dict]:
+        out = []
+        for a in rows or []:
+            a["audience"] = AnnouncementRepo._norm_audience(a.get("audience") or a.get("p_audience"))
+            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+            out.append(a)
+        return out
+
+    # ---------- queries ----------
+    @staticmethod
+    def list_all(q: Optional[str] = None,
+                 date_from: Optional[date] = None,
+                 date_to: Optional[date] = None,
+                 created_by: Optional[int] = None,
+                 sort: str = 'date_desc',
+                 limit: int = 100, offset: int = 0,
+                 audience: Optional[str] = None) -> List[Dict]:
         with connection.cursor() as cur:
-            cur.execute(
-                "SELECT * FROM get_latest_announcements_for_personnel(%s,%s,%s,%s,%s)",
-                [limit, offset, q, date_from, date_to]
-            )
-            return AnnouncementRepo._dictfetchall(cur)
+            # Updated function has audience param (8 args). If your DB still has the old one, this falls back.
+            try:
+                cur.execute(
+                    "SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s,%s)",
+                    [q, date_from, date_to, created_by, sort, limit, offset, audience]
+                )
+            except Exception:
+                cur.execute(
+                    "SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s)",
+                    [q, date_from, date_to, created_by, sort, limit, offset]
+                )
+            rows = AnnouncementRepo._dictfetchall(cur)
+        return AnnouncementRepo._postprocess(rows)
+
+    @staticmethod
+    def latest_for_personnel(limit: int = 3) -> List[Dict]:
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SELECT * FROM get_latest_announcements_for_personnel()")
+                rows = AnnouncementRepo._dictfetchall(cur)
+        except Exception:
+            rows = AnnouncementRepo.list_all(sort='date_desc', limit=50, audience=None)
+        rows = AnnouncementRepo._postprocess(rows)
+        out = [a for a in rows if a["audience"] in ("both", "personnel")]
+        return out[:limit]
+
+    @staticmethod
+    def latest_for_residents(limit: int = 3) -> List[Dict]:
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SELECT * FROM get_latest_announcements_for_residents()")
+                rows = AnnouncementRepo._dictfetchall(cur)
+        except Exception:
+            rows = AnnouncementRepo.list_all(sort='date_desc', limit=50, audience=None)
+        rows = AnnouncementRepo._postprocess(rows)
+        out = [a for a in rows if a["audience"] in ("both", "resident")]
+        return out[:limit]

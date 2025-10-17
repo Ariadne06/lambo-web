@@ -126,15 +126,18 @@
                 <h4 class="font-semibold text-gray-900 line-clamp-2">{{ a.header_title }}</h4>
                 <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
               </div>
+
+              {# ---- AUDIENCE BADGE (recent) ---- #}
               {% with aud=a.audience|default:"both"|lower %}
-              <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
-                {% if aud == 'personnel' %} bg-blue-100 text-blue-700
-                {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
-                {% else %} bg-gray-100 text-gray-700 {% endif %}">
-                {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
-              </span>
+                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
+                  {% if aud == 'personnel' %} bg-blue-100 text-blue-700
+                  {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
+                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                  {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
+                </span>
               {% endwith %}
             </div>
+
             {% if a.details %}
               <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ a.details }}</p>
             {% endif %}
@@ -237,15 +240,18 @@
                 <h4 class="font-semibold text-gray-900">{{ a.header_title }}</h4>
                 <p class="text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
               </div>
+
+              {# ---- AUDIENCE BADGE (modal row) ---- #}
               {% with aud=a.audience|default:"both"|lower %}
-              <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
-                {% if aud == 'personnel' %} bg-blue-100 text-blue-700
-                {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
-                {% else %} bg-gray-100 text-gray-700 {% endif %}">
-                {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
-              </span>
+                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
+                  {% if aud == 'personnel' %} bg-blue-100 text-blue-700
+                  {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
+                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                  {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
+                </span>
               {% endwith %}
             </div>
+
             {% if a.details %}
               <p class="mt-2 text-sm text-gray-600">{{ a.details|truncatechars:220 }}</p>
             {% endif %}
