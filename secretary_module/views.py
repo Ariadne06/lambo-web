@@ -4,7 +4,7 @@ from django.utils.http import urlencode
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
-from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig
+from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig, AnnouncementRepo
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
@@ -13,6 +13,10 @@ from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
+from django.conf import settings
+from django.core.files.storage import default_storage
+from datetime import datetime
+from django.views.decorators.http import require_POST
 
 
 @custom_login_required
@@ -102,13 +106,18 @@ def _find_resident_id_by_name(query: str):
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def Addbusiness(request):
+    # load dropdown options
+    try:
+        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
+    except Exception as e:
+        clearance_categories = []
+        set_flash(request, f"Could not load clearance categories: {e}", "error")
+
     if request.method == "POST":
         try:
-
             resident_name = request.POST.get("resident_name")
             resident_id = _find_resident_id_by_name(resident_name)
 
-            # Collect the rest
             business_name         = request.POST.get("business_name")
             business_type_id      = int(request.POST.get("business_type_id"))
             nature_of_business    = request.POST.get("nature_of_business")
@@ -120,33 +129,18 @@ def Addbusiness(request):
             city_municipality     = request.POST.get("city_municipality")
             country               = request.POST.get("country") or "Philippines"
             total_gross_income    = request.POST.get("total_gross_income")
-            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number")
+            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number") or None  # optional
+            clearance_category_id = int(request.POST.get("clearance_category_id"))       # from dropdown
             clearance_date_issued = request.POST.get("clearance_date_issued") or None
             personnel_id          = int(request.session.get("personnel_id"))
 
-            # Call your stored procedure
-            result = Secretary.sp_register_business(
-                resident_id,
-                business_name,
-                business_type_id,
-                nature_of_business,
-                ownership_id,
-                house_number,
-                street,
-                barangay,
-                sitio_id,
-                city_municipality,
-                country,
-                total_gross_income,
-                dti_sec_cda_reg_num,
-                clearance_date_issued,
-                personnel_id,
+            Secretary.sp_register_business(
+                resident_id, business_name, business_type_id, nature_of_business, ownership_id,
+                house_number, street, barangay, sitio_id, city_municipality, country,
+                total_gross_income, dti_sec_cda_reg_num, clearance_category_id,
+                clearance_date_issued, personnel_id
             )
-
             set_flash(request, "Successfully Submitted", "success")
-
-        except ValueError as ve:
-            set_flash(request, str(ve), "error")
         except Exception as e:
             set_flash(request, str(e), "error")
 
@@ -154,7 +148,9 @@ def Addbusiness(request):
     return render(request, "secretary_module/Addbusiness.html", {
         'message': flash.get('message'),
         'message_level': flash.get('message_level'),
+        'clearance_categories': clearance_categories,
     })
+
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -279,18 +275,44 @@ def business_update(request, business_id: int):
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
+        # Current state (for rule checks)
+        current = Business.sp_get_business_detail(business_id) or {}
+        curr_own = int(current.get('ownership_id') or 0)
+        curr_cat = int(current.get('clearance_category_id') or 0)
+
         # Optional owner transfer via name (uses your resolver)
         resident_name = (request.POST.get("resident_name") or "").strip()
         resident_id = None
         if resident_name:
+            # Owner change only if NOT sole proprietorship (id=1)
+            if curr_own == 1:
+                return JsonResponse({"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."}, status=400)
             resident_id = _find_resident_id_by_name(resident_name)
 
+        # New (requested) clearance category
+        new_cat = _to_int_or_none(request.POST.get("clearance_category_id"))
+
+        # Rule: Clearance Category can change only:
+        # - Sole Prop (3/4): within {3,4}
+        # - Lessor (6..10): within 6..10
+        # - Others: cannot change
+        if new_cat is not None and new_cat != curr_cat:
+            if curr_cat in (3, 4):
+                if new_cat not in (3, 4):
+                    return JsonResponse({"ok": False, "message": "Sole Proprietorship may switch only between categories 3 and 4."}, status=400)
+            elif 6 <= curr_cat <= 10:
+                if not (6 <= new_cat <= 10):
+                    return JsonResponse({"ok": False, "message": "Lessor categories may switch only within 6–10."}, status=400)
+            else:
+                return JsonResponse({"ok": False, "message": "This clearance category cannot be changed."}, status=400)
+
+        # Build payload (leave non-editables as None so proc won’t touch them)
         payload = {
             "business_name":          _none_if_blank(request.POST.get("business_name")),
-            "business_type_id":       _to_int_or_none(request.POST.get("business_type_id")),
+            "business_type_id":       None,  # not editable
             "nature_of_business":     _none_if_blank(request.POST.get("nature_of_business")),
-            "ownership_id":           _to_int_or_none(request.POST.get("ownership_id")),
-            "resident_id":            resident_id,  # only when provided
+            "ownership_id":           None,  # not editable
+            "resident_id":            resident_id,  # only when provided and allowed
             "house_number":           _none_if_blank(request.POST.get("house_number")),
             "street":                 _none_if_blank(request.POST.get("street")),
             "barangay":               _none_if_blank(request.POST.get("barangay")),
@@ -298,7 +320,8 @@ def business_update(request, business_id: int):
             "city_municipality":      _none_if_blank(request.POST.get("city_municipality")),
             "country":                _none_if_blank(request.POST.get("country")),
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
-            "dti_sec_cda_reg_number": _none_if_blank(request.POST.get("dti_sec_cda_reg_number")),
+            "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
+            "dti_sec_cda_reg_number": None,      # not editable
         }
 
         result = Business.sp_update_business(
@@ -308,27 +331,30 @@ def business_update(request, business_id: int):
         )
         msg = coerce_message(result)
         return JsonResponse({"ok": True, "message": msg})
+
     except ValueError as ve:
         return JsonResponse({"ok": False, "message": str(ve)}, status=400)
     except Exception as e:
-        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)
-
+        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)\
+        
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
-@require_http_methods(["POST"])
+@require_POST
 def business_close(request, business_id: int):
+    """
+    Marks a business as Closed via the SQL function.
+    Only Secretary / Assistant Secretary can do this (enforced here and in SQL).
+    """
     try:
         personnel_id = int(request.session.get("personnel_id") or 0)
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
-        result = Business.sp_set_closed_business(business_id, personnel_id)
-        return JsonResponse({"ok": True, "message": result})
+        msg = Business.sp_set_closed_business(business_id, personnel_id)
+        return JsonResponse({"ok": True, "message": msg})
     except Exception as e:
-        import traceback
-        print("Error in business_close:", traceback.format_exc())
+        # Return DB error (your SQL has nice messages)
         return JsonResponse({"ok": False, "message": str(e)}, status=400)
-
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -751,3 +777,124 @@ def tax_penalties_update(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    
+
+def _acting_personnel_id(request) -> int:
+    return (
+        getattr(getattr(request, 'user', None), 'personnel_id', None)
+        or request.session.get('personnel_id')
+        or 1
+    )
+
+def _public_url(request, path: str | None):
+    """
+    Normalize DB-stored image paths so the template always gets a usable URL.
+    - absolute http(s): return as-is
+    - root-relative (starts with /): build absolute (so it works in emails or iframes)
+    - plain relative like 'announcements/x.jpg': prefix MEDIA_URL and build absolute
+    """
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    return request.build_absolute_uri(base + path.lstrip('/'))
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def announcement(request):
+    ctx = {'errors': []}
+    personnel_id = _acting_personnel_id(request)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action in ('create', 'update'):
+            header_title = (request.POST.get('header_title') or '').strip()
+            details = (request.POST.get('details') or '').strip()
+            event_date_str = (request.POST.get('announcement_at_date') or '').strip()
+            event_date = None
+            if event_date_str:
+                try:
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    ctx['errors'].append('Invalid Event Date.')
+
+            # optional image upload
+            image_db_path = None
+            f = request.FILES.get('image')
+            if f:
+                saved = default_storage.save(f"announcements/{f.name}", f)  # store relative path
+                image_db_path = saved
+
+            try:
+                if action == 'create':
+                    if not header_title: ctx['errors'].append('Title is required.')
+                    if not details: ctx['errors'].append('Content is required.')
+                    if not ctx['errors']:
+                        new_id = AnnouncementRepo.create(
+                            header_title=header_title,
+                            details=details,
+                            image_path=image_db_path,        # relative path in DB
+                            created_by=personnel_id,
+                            event_date=event_date
+                        )
+                        return redirect(f"{request.path}?id={new_id}")
+
+                elif action == 'update':
+                    upd_id = request.POST.get('announcement_id')
+                    if not upd_id: ctx['errors'].append('Missing announcement id.')
+                    if not header_title: ctx['errors'].append('Title is required.')
+                    if not details: ctx['errors'].append('Content is required.')
+                    if not ctx['errors']:
+                        AnnouncementRepo.update(
+                            announcement_id=int(upd_id),
+                            updated_by=personnel_id,
+                            header_title=header_title,
+                            details=details,
+                            image_path=image_db_path,
+                            event_date=event_date
+                        )
+                        return redirect(f"{request.path}?id={upd_id}")
+
+            except Exception as e:
+                ctx['errors'].append(str(e))
+                ctx['post_data'] = {
+                    'header_title': header_title,
+                    'details': details,
+                    'announcement_at_date': event_date_str,
+                }
+
+        elif action == 'delete':
+            try:
+                del_id = int(request.POST.get('announcement_id'))
+                AnnouncementRepo.delete(del_id, personnel_id)
+                return redirect(request.path)  # no id -> will show latest or empty
+            except Exception as e:
+                ctx['errors'].append(str(e))
+
+    # GET: list + selected
+    selected_id = request.GET.get('id')
+    announcements = AnnouncementRepo.list_all(sort='date_desc', limit=100)
+    selected = None
+    if selected_id:
+        selected = AnnouncementRepo.get_one(int(selected_id))
+    elif announcements:
+        selected = AnnouncementRepo.get_one(int(announcements[0]['announcement_id']))
+
+    # normalize image URL for the selected item
+    if selected and 'announcement_image_path' in selected:
+        selected['image_url'] = _public_url(request, selected.get('announcement_image_path'))
+
+    ctx.update({'announcements': announcements, 'selected': selected})
+    return render(request, 'secretary_module/announcement.html', ctx)
+
+
+
+
+
+    

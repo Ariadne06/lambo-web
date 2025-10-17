@@ -1,244 +1,345 @@
 {% extends 'base_sec.html' %}
 
-{% block title %}
-    Secretary
-{% endblock %}
+{% block title %}Secretary{% endblock %}
 
 {% block content %}
 <div class="px-8 py-10">
+
+  {% if errors %}
+    <div class="max-w-3xl mx-auto mb-6 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3">
+      <ul class="list-disc ml-5 text-sm">
+        {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
     
-    <!-- LEFT SIDE: Full Announcement Detail -->
+    <!-- LEFT: Full Announcement Detail -->
     <div class="lg:col-span-2">
       <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        
-        <!-- Header -->
-          <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-            <h2 class="text-base font-semibold">Full Announcement</h2>
-            <button type="button"
-                    class="rounded-md bg-red-700 px-4 py-1 text-sm font-semibold hover:bg-red-800"
-                    onclick="openModal('modalAnnouncementCreate')">
-              Add
-            </button>
-          </div>
 
+        <!-- Header -->
+        <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Full Announcement</h2>
+          <button type="button" class="rounded-md bg-red-700 px-4 py-1 text-sm font-semibold hover:bg-red-800"
+                  onclick="openModal('modalAnnouncementCreate')">
+            Add
+          </button>
+        </div>
 
         <!-- Body -->
         <div class="px-10 py-8 space-y-6 text-gray-800">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Headline</label>
-            <div class="border border-gray-300 rounded-lg px-4 py-3 bg-gray-50">
-              🎉 ANNOUNCEMENT: UPCOMING EVENT IN OUR BARANGAY! 🎉
+          {% if selected %}
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Headline</label>
+              <div class="border border-gray-300 rounded-lg px-4 py-3 bg-gray-50">
+                {{ selected.header_title }}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Context</label>
-            <div class="border border-gray-300 rounded-lg px-4 py-3 bg-gray-50 leading-relaxed text-sm">
-              We’re excited to invite everyone to our upcoming [Event Name] happening this [day], [date], at [venue/location], starting at [time]!  
-              <br><br>
-              🌟 Expect a day filled with fun, food, entertainment, and community spirit!  
-              ✅ Games for kids  
-              ✅ Raffle prizes  
-              ✅ Live performances  
-              ✅ Special guest (if any)  
-              <br><br>
-              📣 Don’t forget to share and spread the word. See you there! ❤️  
-              <span class="text-gray-500 text-xs">#BarangayEvent #CommunityFirst</span>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Context</label>
+              <div class="border border-gray-300 rounded-lg px-4 py-3 bg-gray-50 leading-relaxed text-sm whitespace-pre-line">
+                {{ selected.details }}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Event Date</label>
-            <div class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50">02/02/2028</div>
-          </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Created On</label>
+                <div class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50">
+                  {{ selected.created_by|default:"Personnel" }} • {{ selected.updated_at|date:"m/d/Y H:i" }}
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Event Date</label>
+                <div class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50">
+                  {% if selected.date %}{{ selected.date|date:"m/d/Y" }}{% else %}-{% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Audience (view) -->
+<div>
+  <label class="block text-sm font-semibold text-gray-700 mb-1">Audience</label>
+  {% with aud=selected.audience|default:"EVERYONE" %}
+    {% if aud == "PERSONNEL" %}
+      <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold">
+        Personnel only
+      </span>
+    {% elif aud == "RESIDENTS" %}
+      <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold">
+        Resident only
+      </span>
+    {% else %}
+      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-semibold">
+        Everyone
+      </span>
+    {% endif %}
+  {% endwith %}
+</div>
+
+            {% if selected.announcement_image_path %}
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Photo</label>
+              <img src="{{ selected.announcement_image_path }}" alt="Announcement image"
+                   class="rounded-lg border border-gray-200 max-h-72 object-cover">
+            </div>
+            {% endif %}
+          {% else %}
+            <div class="text-gray-500">No announcements yet. Click “Add”.</div>
+          {% endif %}
         </div>
 
         <!-- Footer -->
         <div class="px-10 py-5 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-sm">
-          <span class="text-gray-500">Last Updated: 05/05/2025</span>
-          <div class="flex gap-4">
-            <button class="rounded-md bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300">Edit</button>
-            <button class="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-red-700">Delete</button>
-          </div>
-        </div>
+  <span class="text-gray-500">
+    Last Updated: {% if selected and selected.updated_at %}{{ selected.updated_at|date:"m/d/Y H:i" }}{% else %}-{% endif %}
+  </span>
+  <div class="flex gap-4">
+    {% if selected %}
+      <button class="rounded-md bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+              onclick="openModal('modalAnnouncementEdit')">
+        Edit
+      </button>
+
+      <form method="post" action="{{ request.path }}" onsubmit="return confirm('Delete this announcement?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete"/>
+        <input type="hidden" name="announcement_id" value="{{ selected.announcement_id }}"/>
+        <button class="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-red-700">
+          Delete
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
       </div>
     </div>
 
-    <!-- RIGHT SIDE: Announcements List -->
+    <!-- RIGHT: Announcements List -->
     <div>
       <div class="bg-red-600 text-white px-6 py-4 rounded-t-2xl">
         <h2 class="text-base font-semibold">Announcements</h2>
       </div>
       <div class="bg-white border border-gray-200 rounded-b-2xl shadow-sm divide-y divide-gray-200">
-        
-        <!-- Small announcement -->
-        <div class="px-6 py-5">
-          <p class="font-medium text-gray-800 mb-2">🎉 UPCOMING EVENT 🎉</p>
-          <p class="text-sm text-gray-700 leading-relaxed">
-            🌟 Expect a day filled with fun, food, entertainment, and community spirit!
-          </p>
-          <p class="mt-3 text-xs text-gray-500">Date: 02/02/2028</p>
-        </div>
-
-        <div class="px-6 py-5">
-          <p class="font-medium text-gray-800 mb-2">🎉 ANNOUNCEMENT 🎉</p>
-          <p class="text-sm text-gray-700 leading-relaxed">
-            Let’s come together and celebrate the spirit of Barangay. Everyone is welcome! ❤️
-          </p>
-          <p class="mt-3 text-xs text-gray-500">Date: 05/05/2028</p>
-        </div>
+        {% for a in announcements %}
+        <a href="{{ request.path }}?id={{ a.announcement_id }}" class="block px-6 py-5 hover:bg-gray-50">
+          <p class="font-medium text-gray-800 mb-1">{{ a.header_title }}</p>
+          <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"m/d/Y" }}</p>
+        </a>
+        {% empty %}
+        <div class="px-6 py-5 text-gray-500">No announcements found.</div>
+        {% endfor %}
       </div>
     </div>
   </div>
 
-<!-- Create Announcement Modal -->
-<div id="modalAnnouncementCreate" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="modalAnnouncementCreate_title">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
-       onclick="closeModal('modalAnnouncementCreate')"></div>
+  <!-- Create Announcement Modal -->
+  <div id="modalAnnouncementCreate" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="modalAnnouncementCreate_title">
+    <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalAnnouncementCreate')"></div>
+    <div class="relative mx-auto my-10 w-[96%] max-w-6xl">
+      <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
+      <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
 
-  <!-- Panel wrapper -->
-  <div class="relative mx-auto my-10 w-[96%] max-w-6xl">
-    <!-- Soft glow -->
-    <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
-
-    <!-- Panel -->
-    <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
-         data-panel>
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M19 4H5a2 2 0 0 0-2 2v12l4-2 5 2 5-2 4 2V6a2 2 0 0 0-2-2Z"/>
-          </svg>
-          <h2 id="modalAnnouncementCreate_title" class="text-base font-semibold tracking-wide">Create New Announcement</h2>
+        <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4H5a2 2 0 0 0-2 2v12l4-2 5 2 5-2 4 2V6a2 2 0 0 0-2-2Z"/></svg>
+            <h2 id="modalAnnouncementCreate_title" class="text-base font-semibold tracking-wide">Create New Announcement</h2>
+          </div>
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalAnnouncementCreate')">&times;</button>
         </div>
-        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
-                aria-label="Close" onclick="closeModal('modalAnnouncementCreate')">&times;</button>
-      </div>
 
-      <!-- Body -->
-      <div class="px-10 py-10">
-        <form class="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 text-sm">
-          <!-- LEFT: Title + Content -->
-          <div class="lg:col-span-2 space-y-8">
-            <!-- Title -->
-            <div>
-              <label class="block text-gray-800 font-medium mb-2">Title</label>
-              <input type="text" placeholder="Enter title"
-                     class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600">
-              <p class="mt-1.5 text-xs text-gray-500">Keep it short and punchy (max 100 characters works best).</p>
-            </div>
+        <div class="px-10 py-10">
+          <form class="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 text-sm"
+                method="post" action="{{ request.path }}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create"/>
 
-            <!-- Content -->
-            <div>
-              <label class="block text-gray-800 font-medium mb-2">Content</label>
-              <textarea rows="12" placeholder="Enter content"
-                        class="w-full rounded-xl border border-gray-300 px-4 py-3 resize-y focus:outline-none focus:ring-2 focus:ring-red-600"></textarea>
-              <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
-                <span>Tip: Bullets, emojis, and clear times help people scan fast.</span>
-                <span>0 / 1000</span>
+            <div class="lg:col-span-2 space-y-8">
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Title</label>
+                <input name="header_title" type="text" placeholder="Enter title"
+                       class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       value="{{ post_data.header_title|default_if_none:'' }}">
+              </div>
+
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Content</label>
+                <textarea name="details" rows="12" placeholder="Enter content"
+                          class="w-full rounded-xl border border-gray-300 px-4 py-3 resize-y focus:outline-none focus:ring-2 focus:ring-red-600">{{ post_data.details|default_if_none:'' }}</textarea>
               </div>
             </div>
-          </div>
 
-          <!-- RIGHT: Meta (Date + Photo) -->
-          <div class="space-y-8">
-            <!-- Event Date -->
-            <div>
-              <label class="block text-gray-800 font-medium mb-2">Event Date</label>
-              <div class="relative">
-                <input type="date"
-                       class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-600">
-                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm14 8H3v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10Z"/>
-                </svg>
+            <div class="space-y-8">
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Event Date</label>
+                <input name="announcement_at_date" type="date"
+                       class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       value="{{ post_data.announcement_at_date|default_if_none:'' }}">
+                <p class="mt-1.5 text-xs text-gray-500">Leave blank if it’s a general announcement.</p>
               </div>
-              <p class="mt-1.5 text-xs text-gray-500">Leave blank if it’s a general announcement.</p>
-            </div>
 
-            <!-- Photo Upload -->
-            <div>
-              <label class="block text-gray-800 font-medium mb-2">Photo</label>
-              <label class="group block rounded-2xl border-2 border-dashed border-gray-300 hover:border-red-400 bg-gray-50 px-4 py-6 text-center cursor-pointer">
-                <div class="flex flex-col items-center gap-2">
-                  <svg class="h-8 w-8 text-gray-400 group-hover:text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3 7 8h3v6h4V8h3l-5-5ZM5 18h14v2H5v-2Z"/>
-                  </svg>
-                <div class="text-gray-700">
-                    <span class="font-semibold">Click to upload</span>
-                    <span class="text-gray-500"> or drag & drop</span>
-                  </div>
-                  <span class="text-xs text-gray-500">PNG, JPG up to 5MB</span>
-                </div>
-                <input type="file" class="hidden" />
-              </label>
-            </div>
-
-            <!-- Preview -->
-            <div class="rounded-xl border border-gray-200 bg-white p-3">
-              <div class="aspect-video w-full rounded-lg bg-gray-100 grid place-content-center text-gray-400">
-                Image preview
-              </div>
-            </div>
-          </div>
-
-          <!-- ACTIONS -->
-          <div class="lg:col-span-3">
-            <div class="flex items-center justify-end gap-4">
-              <button type="button"
-                      class="inline-flex items-center rounded-xl bg-gray-100 px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
-                      onclick="closeModal('modalAnnouncementCreate')">
-                Cancel
-              </button>
-              <button type="submit"
-                      class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-7 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14l4-4 4 2 4-2 4 2V7l-2-2ZM7 7h8v4H7V7Z"/></svg>
-                Save
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+              <div>
+  <label class="block text-gray-800 font-medium mb-2">Audience</label>
+  <select name="audience"
+          class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+    <option value="EVERYONE" selected>Everyone</option>
+    <option value="PERSONNEL">Personnel only</option>
+    <option value="RESIDENTS">Resident only</option>
+  </select>
+  <p class="mt-1.5 text-xs text-gray-500">Choose who should see this announcement.</p>
 </div>
 
-<script>
-  // add once per page
-  function openModal(id){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Photo</label>
+                <label class="group block rounded-2xl border-2 border-dashed border-gray-300 hover:border-red-400 bg-gray-50 px-4 py-6 text-center cursor-pointer">
+                  <div class="flex flex-col items-center gap-2">
+                    <svg class="h-8 w-8 text-gray-400 group-hover:text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 7 8h3v6h4V8h3l-5-5ZM5 18h14v2H5v-2Z"/></svg>
+                    <div class="text-gray-700"><span class="font-semibold">Click to upload</span><span class="text-gray-500"> or drag & drop</span></div>
+                    <span class="text-xs text-gray-500">PNG, JPG up to 5MB</span>
+                  </div>
+                  <input name="image" type="file" class="hidden" accept="image/*"/>
+                </label>
+              </div>
+
+              <div class="rounded-xl border border-gray-200 bg-white p-3">
+                <div class="aspect-video w-full rounded-lg bg-gray-100 grid place-content-center text-gray-400">
+                  Image preview
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-3">
+              <div class="flex items-center justify-end gap-4">
+                <button type="button" class="inline-flex items-center rounded-xl bg-gray-100 px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                        onclick="closeModal('modalAnnouncementCreate')">Cancel</button>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-7 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700">
+                  Save
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal (only if something is selected) -->
+  {% if selected %}
+  <div id="modalAnnouncementEdit" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="modalAnnouncementEdit_title">
+    <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalAnnouncementEdit')"></div>
+    <div class="relative mx-auto my-10 w-[96%] max-w-6xl">
+      <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
+      <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
+
+        <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
+          <h2 id="modalAnnouncementEdit_title" class="text-base font-semibold tracking-wide">Edit Announcement</h2>
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalAnnouncementEdit')">&times;</button>
+        </div>
+
+        <div class="px-10 py-10">
+          <form class="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 text-sm"
+                method="post" action="{{ request.path }}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update"/>
+            <input type="hidden" name="announcement_id" value="{{ selected.announcement_id }}"/>
+
+            <div class="lg:col-span-2 space-y-8">
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Title</label>
+                <input name="header_title" type="text" class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       value="{{ selected.header_title }}">
+              </div>
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Content</label>
+                <textarea name="details" rows="12" class="w-full rounded-xl border border-gray-300 px-4 py-3 resize-y focus:outline-none focus:ring-2 focus:ring-red-600">{{ selected.details }}</textarea>
+              </div>
+            </div>
+
+            <div class="space-y-8">
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Event Date</label>
+                <input name="announcement_at_date" type="date" class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       value="{% if selected.date %}{{ selected.date|date:'Y-m-d' }}{% endif %}">
+                <p class="mt-1.5 text-xs text-gray-500">Leave blank to clear.</p>
+              </div>
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Replace Photo</label>
+                <input name="image" type="file" accept="image/*" class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3">
+              </div>
+            </div>
+
+            <!-- Audience (Edit) -->
+<div>
+  <label class="block text-gray-800 font-medium mb-2">Audience</label>
+  {% with current_audience=selected.audience|default:"EVERYONE" %}
+  <select name="audience"
+          class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+    <option value="EVERYONE" {% if current_audience == "EVERYONE" %}selected{% endif %}>Everyone</option>
+    <option value="PERSONNEL" {% if current_audience == "PERSONNEL" %}selected{% endif %}>Personnel only</option>
+    <option value="RESIDENTS" {% if current_audience == "RESIDENTS" %}selected{% endif %}>Resident only</option>
+  </select>
+  {% endwith %}
+  <p class="mt-1.5 text-xs text-gray-500">Who should see this announcement.</p>
+</div>
+
+            <div class="lg:col-span-3">
+              <div class="flex items-center justify-end gap-4">
+                <button type="button" class="inline-flex items-center rounded-xl bg-gray-100 px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                        onclick="closeModal('modalAnnouncementEdit')">Cancel</button>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-7 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700">
+                  Update
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <script>
+    // Modal helpers (unchanged)
+    function openModal(id){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+        const panel = el.querySelector('[data-panel]');
+        if(panel){
+          panel.classList.remove('scale-95','opacity-0');
+          panel.classList.add('scale-100','opacity-100');
+        }
+      });
+    }
+    function closeModal(id){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
       const panel = el.querySelector('[data-panel]');
       if(panel){
-        panel.classList.remove('scale-95','opacity-0');
-        panel.classList.add('scale-100','opacity-100');
+        panel.classList.add('scale-95','opacity-0');
+        panel.classList.remove('scale-100','opacity-100');
       }
-    });
-  }
-  function closeModal(id){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
-    const panel = el.querySelector('[data-panel]');
-    if(panel){
-      panel.classList.add('scale-95','opacity-0');
-      panel.classList.remove('scale-100','opacity-100');
+      setTimeout(() => el.classList.add('hidden'), 180);
     }
-    setTimeout(() => el.classList.add('hidden'), 180);
-  }
-  // ESC to close
-  document.addEventListener('keydown', (e) => {
-    if(e.key !== 'Escape') return;
-    const m = document.getElementById('modalAnnouncementCreate');
-    if(m && !m.classList.contains('hidden')) closeModal('modalAnnouncementCreate');
-  });
-</script>
+    document.addEventListener('keydown', (e) => {
+      if(e.key !== 'Escape') return;
+      const m1 = document.getElementById('modalAnnouncementCreate');
+      const m2 = document.getElementById('modalAnnouncementEdit');
+      if(m1 && !m1.classList.contains('hidden')) closeModal('modalAnnouncementCreate');
+      if(m2 && !m2.classList.contains('hidden')) closeModal('modalAnnouncementEdit');
+    });
+  </script>
 
 </div>
-
 {% endblock %}
