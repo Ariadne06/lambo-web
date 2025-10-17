@@ -559,6 +559,7 @@ class FamilyMemberDetailView(APIView):
 class GeneralHealthCreateView(APIView):
     """Add general health profile for a family member"""
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+
     
     def post(self, request, family_member_id):
         try:
