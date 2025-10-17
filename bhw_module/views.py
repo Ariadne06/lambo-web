@@ -28,14 +28,11 @@ _SQL_TO_UI_AUDIENCE = {
 
 
 @custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@role_required('Barangay Health Worker')  # add more personnel roles if needed
 def bhw_dashboard(request):
-    barangay = request.GET.get("barangay") or None
-    city     = request.GET.get("city") or None
-
-    # ---- Totals (KPIs) ----
+    # ---- KPIs ----
     try:
-        totals = Dashboard.sp_dashboard_totals(barangay=barangay, city=city)
+        totals = Dashboard.sp_dashboard_totals(barangay=None, city=None)
     except Exception as e:
         messages.error(request, f"Failed loading totals: {e}")
         totals = {
@@ -43,7 +40,7 @@ def bhw_dashboard(request):
             "total_male": 0, "total_female": 0
         }
 
-    # ---- Residents per sitio (bar chart) ----
+    # ---- Bar (per sitio) ----
     try:
         per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
         per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
@@ -52,15 +49,12 @@ def bhw_dashboard(request):
         messages.error(request, f"Failed loading per-sitio data: {e}")
         per_sitio_labels, per_sitio_data = [], []
 
-    # ---- Age distribution (pie) ----
+    # ---- Pie (age) ----
     try:
         age_rows = Dashboard.sp_age_bracket_distribution()
         cleaned = []
         for item in age_rows or []:
-            if isinstance(item, dict) and "jsonb_build_object" in item:
-                cleaned.append(item["jsonb_build_object"])
-            else:
-                cleaned.append(item)
+            cleaned.append(item.get("jsonb_build_object", item))
         age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
         age_data   = [int(r.get("count") or 0) for r in cleaned]
         total = sum(age_data) or 1
@@ -69,33 +63,25 @@ def bhw_dashboard(request):
         messages.error(request, f"Failed loading age distribution: {e}")
         age_labels, age_data, age_labels_pct = [], [], []
 
-    # ===========================
-    # Announcements (Secretary sees personnel + both)
-    # ===========================
-    ALLOWED = {"personnel", "both"}
-
-    # Pull a few recent then filter to ALLOWED and take top 3
+    # === Recent announcements (use list_all so we surely have 'audience') ===
     try:
-        # ask for more than 3, then slice after filtering to ensure we still get 3
-        rows = AnnouncementRepo.list_all(sort='date_desc', limit=12, audience=None)
+        raw_latest = AnnouncementRepo.list_all(sort='date_desc', limit=20, audience=None)
         latest_announcements = []
-        for a in rows:
-            # normalize aliases
-            if 'created_date' in a and 'announcement_date' not in a:
-                a['announcement_date'] = a['created_date']
-            aud = (a.get('audience') or 'both').lower()
-            if aud in ALLOWED:
-                a['audience'] = aud
+        for a in raw_latest:
+            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
+            a["audience"] = aud
+            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+            if aud in ("personnel", "both"):     # BHW sees Personnel + Everyone
                 latest_announcements.append(a)
             if len(latest_announcements) >= 3:
                 break
     except Exception as e:
-        messages.error(request, f"Failed loading latest announcements: {e}")
+        messages.error(request, f"Failed loading recent announcements: {e}")
         latest_announcements = []
 
-    # Modal filters (GET -> ann_*)
+    # ---- Modal filters ----
     ann_q        = (request.GET.get('ann_q') or '').strip() or None
-    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None  # '', resident, personnel, both
+    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None
     ann_from_str = (request.GET.get('ann_from') or '').strip()
     ann_to_str   = (request.GET.get('ann_to') or '').strip()
 
@@ -108,26 +94,23 @@ def bhw_dashboard(request):
     except ValueError:
         messages.warning(request, 'Invalid date filter for announcements.')
 
-    # Full list for the modal (server filter + enforce secretary scope)
+    # ---- Full list for modal (restricted to personnel scope) ----
     try:
-        announcements_all = AnnouncementRepo.list_all(
+        rows = AnnouncementRepo.list_all(
             q=ann_q, date_from=ann_from, date_to=ann_to,
             created_by=None, sort='date_desc', limit=200, offset=0,
-            audience=ann_aud or None   # None = DB shows all audiences
+            audience=ann_aud or None
         )
-        filtered = []
-        for a in announcements_all:
-            if 'created_date' in a and 'announcement_date' not in a:
-                a['announcement_date'] = a['created_date']
-            a['audience'] = (a.get('audience') or 'both').lower()
-            if a['audience'] in ALLOWED:
-                filtered.append(a)
-        announcements_all = filtered
+        announcements_all = []
+        for a in rows:
+            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
+            a["audience"] = aud
+            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+            if aud in ("personnel", "both"):   # enforce BHW scope
+                announcements_all.append(a)
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
-
-    ann_open = request.GET.get('ann_open') == '1'
 
     ctx = {
         "totals": totals,
@@ -136,18 +119,18 @@ def bhw_dashboard(request):
         "age_labels": age_labels,
         "age_labels_pct": age_labels_pct,
         "age_data": age_data,
-
         "latest_announcements": latest_announcements,
         "announcements_all": announcements_all,
         "ann_filters": {
             "q": ann_q or "",
-            "audience": (ann_aud or ""),
+            "audience": ann_aud or "",
             "from": ann_from_str,
             "to": ann_to_str,
         },
-        "ann_open": ann_open,
+        "ann_open": request.GET.get('ann_open') == '1',
     }
-    return render(request, "secretary_module/secretary_dashboard.html", ctx)
+    return render(request, "bhw_module/bhw_dashboard.html", ctx)
+
 
 
 @custom_login_required
