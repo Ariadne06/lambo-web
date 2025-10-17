@@ -71,3 +71,35 @@ class Dashboard(models.Model):
             import json
             return json.loads(val)
         return []
+    
+class AnnouncementRepo(models.Model):
+    """
+    Thin wrapper around your SQL functions:
+      - insert_announcement(title, details, image_path, created_by, audience) -> INT
+      - get_all_announcement(q, date_from, date_to, created_by, sort, limit, offset, audience) -> rows
+      - get_specific_announcement(id) -> row (includes audience)
+      - update_announcement(id, updated_by, title?, details?, image_path?, audience?) -> BOOLEAN
+      - delete_announcement(id, deleted_by) -> BOOLEAN
+    """
+    class Meta:
+        managed = False
+        db_table = 'Announcement'
+    
+    @staticmethod
+    def latest_for_residents(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_residents(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+
+    # NEW: latest for personnel (SQL: get_latest_announcements_for_personnel)
+    @staticmethod
+    def latest_for_personnel(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_personnel(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
+            )
+            return AnnouncementRepo._dictfetchall(cur)

@@ -61,29 +61,29 @@
             </div>
 
             <!-- Audience (view) -->
-<div>
-  <label class="block text-sm font-semibold text-gray-700 mb-1">Audience</label>
-  {% with aud=selected.audience|default:"EVERYONE" %}
-    {% if aud == "PERSONNEL" %}
-      <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold">
-        Personnel only
-      </span>
-    {% elif aud == "RESIDENTS" %}
-      <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold">
-        Resident only
-      </span>
-    {% else %}
-      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-semibold">
-        Everyone
-      </span>
-    {% endif %}
-  {% endwith %}
-</div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Audience</label>
+              {% with aud=selected.audience|default:"EVERYONE"|upper %}
+                {% if aud == "PERSONNEL" %}
+                  <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold">
+                    Personnel only
+                  </span>
+                {% elif aud == "RESIDENTS" %}
+                  <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold">
+                    Resident only
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-semibold">
+                    Everyone
+                  </span>
+                {% endif %}
+              {% endwith %}
+            </div>
 
-            {% if selected.announcement_image_path %}
+            {% if selected.announcement_image_path or selected.image_url %}
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">Photo</label>
-              <img src="{{ selected.announcement_image_path }}" alt="Announcement image"
+              <img src="{{ selected.image_url|default:selected.announcement_image_path }}" alt="Announcement image"
                    class="rounded-lg border border-gray-200 max-h-72 object-cover">
             </div>
             {% endif %}
@@ -94,27 +94,27 @@
 
         <!-- Footer -->
         <div class="px-10 py-5 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-sm">
-  <span class="text-gray-500">
-    Last Updated: {% if selected and selected.updated_at %}{{ selected.updated_at|date:"m/d/Y H:i" }}{% else %}-{% endif %}
-  </span>
-  <div class="flex gap-4">
-    {% if selected %}
-      <button class="rounded-md bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
-              onclick="openModal('modalAnnouncementEdit')">
-        Edit
-      </button>
+          <span class="text-gray-500">
+            Last Updated: {% if selected and selected.updated_at %}{{ selected.updated_at|date:"m/d/Y H:i" }}{% else %}-{% endif %}
+          </span>
+          <div class="flex gap-4">
+            {% if selected %}
+              <button class="rounded-md bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                      onclick="openModal('modalAnnouncementEdit')">
+                Edit
+              </button>
 
-      <form method="post" action="{{ request.path }}" onsubmit="return confirm('Delete this announcement?');">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="delete"/>
-        <input type="hidden" name="announcement_id" value="{{ selected.announcement_id }}"/>
-        <button class="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-red-700">
-          Delete
-        </button>
-      </form>
-    {% endif %}
-  </div>
-</div>
+              <form method="post" action="{{ request.path }}" onsubmit="return confirm('Delete this announcement?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="announcement_id" value="{{ selected.announcement_id }}"/>
+                <button class="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-red-700">
+                  Delete
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
 
       </div>
     </div>
@@ -182,16 +182,19 @@
                 <p class="mt-1.5 text-xs text-gray-500">Leave blank if it’s a general announcement.</p>
               </div>
 
+              <!-- Audience (Create) -->
               <div>
-  <label class="block text-gray-800 font-medium mb-2">Audience</label>
-  <select name="audience"
-          class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
-    <option value="EVERYONE" selected>Everyone</option>
-    <option value="PERSONNEL">Personnel only</option>
-    <option value="RESIDENTS">Resident only</option>
-  </select>
-  <p class="mt-1.5 text-xs text-gray-500">Choose who should see this announcement.</p>
-</div>
+                <label class="block text-gray-800 font-medium mb-2">Audience</label>
+                {% with sel=post_data.audience|default:"EVERYONE" %}
+                <select name="audience"
+                        class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+                  <option value="EVERYONE" {% if sel == "EVERYONE" %}selected{% endif %}>Everyone</option>
+                  <option value="PERSONNEL" {% if sel == "PERSONNEL" %}selected{% endif %}>Personnel only</option>
+                  <option value="RESIDENTS" {% if sel == "RESIDENTS" %}selected{% endif %}>Resident only</option>
+                </select>
+                {% endwith %}
+                <p class="mt-1.5 text-xs text-gray-500">Choose who should see this announcement.</p>
+              </div>
 
               <div>
                 <label class="block text-gray-800 font-medium mb-2">Photo</label>
@@ -268,25 +271,26 @@
                        value="{% if selected.date %}{{ selected.date|date:'Y-m-d' }}{% endif %}">
                 <p class="mt-1.5 text-xs text-gray-500">Leave blank to clear.</p>
               </div>
+
+              <!-- Audience (Edit) -->
+              <div>
+                <label class="block text-gray-800 font-medium mb-2">Audience</label>
+                {% with current_audience=selected.audience|default:"EVERYONE"|upper %}
+                <select name="audience"
+                        class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
+                  <option value="EVERYONE" {% if current_audience == "EVERYONE" %}selected{% endif %}>Everyone</option>
+                  <option value="PERSONNEL" {% if current_audience == "PERSONNEL" %}selected{% endif %}>Personnel only</option>
+                  <option value="RESIDENTS" {% if current_audience == "RESIDENTS" %}selected{% endif %}>Resident only</option>
+                </select>
+                {% endwith %}
+                <p class="mt-1.5 text-xs text-gray-500">Who should see this announcement.</p>
+              </div>
+
               <div>
                 <label class="block text-gray-800 font-medium mb-2">Replace Photo</label>
                 <input name="image" type="file" accept="image/*" class="w-full rounded-xl border border-gray-300 pl-4 pr-12 py-3">
               </div>
             </div>
-
-            <!-- Audience (Edit) -->
-<div>
-  <label class="block text-gray-800 font-medium mb-2">Audience</label>
-  {% with current_audience=selected.audience|default:"EVERYONE" %}
-  <select name="audience"
-          class="w-full rounded-xl border border-gray-300 px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-600">
-    <option value="EVERYONE" {% if current_audience == "EVERYONE" %}selected{% endif %}>Everyone</option>
-    <option value="PERSONNEL" {% if current_audience == "PERSONNEL" %}selected{% endif %}>Personnel only</option>
-    <option value="RESIDENTS" {% if current_audience == "RESIDENTS" %}selected{% endif %}>Resident only</option>
-  </select>
-  {% endwith %}
-  <p class="mt-1.5 text-xs text-gray-500">Who should see this announcement.</p>
-</div>
 
             <div class="lg:col-span-3">
               <div class="flex items-center justify-end gap-4">
