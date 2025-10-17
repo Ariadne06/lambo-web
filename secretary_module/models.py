@@ -30,16 +30,6 @@ class Secretary(models.Model):
             raise e
 
     @staticmethod
-    def sp_register_verified_via_guardian_doc(rid, doc_type_id, review_status, review_notes, pid):
-        try:
-            with connection.cursor() as cursor:
-                cursor.callproc('register_verified_via_guardian_doc', [rid, doc_type_id, review_status, review_notes, pid])
-                result = cursor.fetchone()
-                return result[0]
-        except Exception as e:
-            raise e
-
-    @staticmethod
     def sp_register_business(
         resident_id,
         business_name,
@@ -473,10 +463,11 @@ class BusinessTaxConfig(models.Model):
 class AnnouncementRepo(models.Model):
     """
     Thin wrapper around your SQL functions:
-      - insert_announcement(title, details, image_path, created_by) -> INT
-      - get_all_announcement(q, date_from, date_to, created_by, sort, limit, offset) -> rows
-      - get_specific_announcement(id) -> single row (id, header_title, details, announcement_image_path, date, updated_at, created_by)
-      - update_announcement(id, updated_by, title?, details?, image_path?) -> BOOLEAN
+      - insert_announcement(title, details, image_path, created_by, audience) -> INT
+      - get_all_announcement(q, date_from, date_to, created_by, sort, limit, offset, audience) -> rows
+      - get_specific_announcement(id) -> row (includes audience)
+      - update_announcement(id, updated_by, title?, details?, image_path?, audience?) -> BOOLEAN
+      - delete_announcement(id, deleted_by) -> BOOLEAN
     """
     class Meta:
         managed = False
@@ -493,11 +484,31 @@ class AnnouncementRepo(models.Model):
                  date_to: Optional[date] = None,
                  created_by: Optional[int] = None,
                  sort: str = 'date_desc',
-                 limit: int = 100, offset: int = 0) -> List[Dict]:
+                 limit: int = 100, offset: int = 0,
+                 audience: Optional[str] = None) -> List[Dict]:
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s)",
-                [q, date_from, date_to, created_by, sort, limit, offset]
+                "SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s,%s)",
+                [q, date_from, date_to, created_by, sort, limit, offset, audience]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+        
+    @staticmethod
+    def latest_for_residents(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_residents(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+
+    # NEW: latest for personnel (SQL: get_latest_announcements_for_personnel)
+    @staticmethod
+    def latest_for_personnel(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_personnel(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
             )
             return AnnouncementRepo._dictfetchall(cur)
 
@@ -512,15 +523,17 @@ class AnnouncementRepo(models.Model):
     def create(header_title: str, details: str,
                image_path: Optional[str],
                created_by: int,
-               event_date: Optional[date] = None) -> int:
+               event_date: Optional[date] = None,
+               audience: Optional[str] = None) -> int:
         """
+        audience: 'resident' | 'personnel' | 'both'
         Insert uses CURRENT_DATE for `date`. If an event_date is provided,
         we set it right after insert via direct UPDATE.
         """
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT insert_announcement(%s,%s,%s,%s)",
-                [header_title, details, image_path, created_by]
+                "SELECT insert_announcement(%s,%s,%s,%s,%s)",
+                [header_title, details, image_path, created_by, audience]
             )
             new_id = cur.fetchone()[0]
             if event_date:
@@ -532,31 +545,26 @@ class AnnouncementRepo(models.Model):
                header_title: Optional[str] = None,
                details: Optional[str] = None,
                image_path: Optional[str] = None,
-               event_date: Optional[date] = None) -> bool:
+               event_date: Optional[date] = None,
+               audience: Optional[str] = None) -> bool:
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT update_announcement(%s,%s,%s,%s,%s)",
-                [announcement_id, updated_by, header_title, details, image_path]
+                "SELECT update_announcement(%s,%s,%s,%s,%s,%s)",
+                [announcement_id, updated_by, header_title, details, image_path, audience]
             )
             changed = cur.fetchone()[0]
             if event_date is not None:   # allow clearing by sending empty
                 cur.execute("UPDATE Announcement SET date=%s WHERE announcement_id=%s", [event_date, announcement_id])
         return changed
-    
+
     @staticmethod
     def delete(announcement_id: int, deleted_by: int) -> bool:
-        """
-        Tries to call stored function delete_announcement(id, deleted_by).
-        If it doesn't exist, falls back to soft delete (if columns exist) or hard delete.
-        """
         with connection.cursor() as cur:
-            # 1) try stored function
             try:
                 cur.execute("SELECT delete_announcement(%s,%s)", [announcement_id, deleted_by])
                 row = cur.fetchone()
                 return bool(row[0]) if row else True
             except Exception:
-                # 2) try soft delete (if columns exist)
                 try:
                     cur.execute("""
                         UPDATE Announcement
@@ -567,9 +575,5 @@ class AnnouncementRepo(models.Model):
                     """, [deleted_by, announcement_id])
                     return True
                 except Exception:
-                    # 3) hard delete
                     cur.execute("DELETE FROM Announcement WHERE announcement_id = %s", [announcement_id])
                     return True
-
-
-
