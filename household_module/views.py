@@ -10,7 +10,7 @@ from .serializers import (
     FamilyMemberCreateSerializer, HouseOwnershipTypeSerializer, HouseTypeSerializer, HouseholdTypeSerializer, NutritionStatusSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
     HouseholdInsertSerializer, FamilyCreateSerializer, RelationshipToHouseholdHeadSerializer, PhilhealthCategorySerializer, MedicalHistoryTypeSerializer, ClassSerializer, 
-    FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer
+    FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer, GeneralHealthUpdateSerializer
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -495,9 +495,10 @@ class FamilyMembersListView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=500)
-        
+
+# family member details w/ general health        
 class FamilyMemberDetailView(APIView):
-    """Get family member detail"""
+    """Get family member detail WITH General Health"""
     
     def get(self, request, family_member_id):
         try:
@@ -513,6 +514,7 @@ class FamilyMemberDetailView(APIView):
                 })
             
             with connection.cursor() as cursor:
+                #  Step 1: Get basic member info (includes sex)
                 cursor.execute(
                     "SELECT * FROM get_specific_family_member(%s, %s)",
                     [family_member_id, quarter_id]
@@ -528,9 +530,8 @@ class FamilyMemberDetailView(APIView):
                 
                 data = dict(zip(columns, row))
                 
-                #  Ensure 'sex' field is included in response
+                #  Ensure sex is present
                 if not data.get('sex'):
-                    # Fallback: fetch from resident table if not in snapshot
                     cursor.execute(
                         "SELECT sex FROM resident WHERE resident_id = %s",
                         [data.get('resident_id')]
@@ -539,9 +540,81 @@ class FamilyMemberDetailView(APIView):
                     if sex_row:
                         data['sex'] = sex_row[0]
                 
+                #  Step 2: Try to get General Health data
+                try:
+                    cursor.execute(
+                        "SELECT * FROM get_specific_family_member_genhealth(%s, %s)",
+                        [family_member_id, quarter_id]
+                    )
+                    
+                    gh_row = cursor.fetchone()
+                    
+                    #  CRITICAL FIX: Check if GH record actually exists
+                    if gh_row:
+                        gh_columns = [col[0] for col in cursor.description]
+                        gh_data = dict(zip(gh_columns, gh_row))
+                        
+                        #  IMPORTANT: Only set has_general_health to True if record_id is valid
+                        # record_id will be NULL or 0 if no GH exists
+                        gh_record_id = gh_data.get('record_id')
+                        
+                        if gh_record_id and gh_record_id > 0:
+                            #  Valid GH record found
+                            # Format dates
+                            if gh_data.get('last_menstrual_period'):
+                                gh_data['last_menstrual_period'] = gh_data['last_menstrual_period'].isoformat()
+                            if gh_data.get('created_at'):
+                                gh_data['created_at'] = gh_data['created_at'].isoformat()
+                            if gh_data.get('updated_at'):
+                                gh_data['updated_at'] = gh_data['updated_at'].isoformat()
+                            
+                            #  Add GH fields to response
+                            data['has_general_health'] = True
+                            data['gh_id'] = gh_data.get('record_id')
+                            data['gh_class_id'] = gh_data.get('class_id')
+                            data['gh_class_description'] = gh_data.get('class_description')
+                            data['gh_medical_history_ids'] = gh_data.get('medical_history_ids')
+                            data['gh_medical_history_names'] = gh_data.get('medical_history_names')
+                            data['gh_age'] = gh_data.get('age')
+                            
+                            # Female-specific fields
+                            if data.get('sex', '').lower() == 'female':
+                                data['gh_last_menstrual_period'] = gh_data.get('last_menstrual_period')
+                                data['gh_fp_method_yn'] = gh_data.get('fp_method_yn')
+                                data['gh_fp_method_id'] = gh_data.get('fp_method_id')
+                                data['gh_fp_method_name'] = gh_data.get('fp_method_name')
+                                data['gh_fp_status_id'] = gh_data.get('fp_status_id')
+                                data['gh_fp_status_name'] = gh_data.get('fp_status_name')
+                            
+                            print(f" Valid GH found for member {family_member_id} (gh_id: {gh_record_id})")
+                        else:
+                            #  No valid GH record (record_id is NULL or 0)
+                            data['has_general_health'] = False
+                            data['gh_id'] = None
+                            print(f" No GH record for member {family_member_id} (record_id was {gh_record_id})")
+                    else:
+                        #  No row returned at all
+                        data['has_general_health'] = False
+                        data['gh_id'] = None
+                        print(f" No GH record for member {family_member_id} (no row returned)")
+                        
+                except Exception as gh_error:
+                    #  Error fetching GH - treat as no GH exists
+                    print(f" GH function error for member {family_member_id}: {gh_error}")
+                    data['has_general_health'] = False
+                    data['gh_id'] = None
+                
+                # Format member dates
                 if data.get('date_added'):
                     data['date_added'] = data['date_added'].isoformat()
                 
+                # ✅ Log the response for debugging
+                print(f" Sending response for member {family_member_id}:")
+                print(f"   - has_general_health: {data.get('has_general_health')}")
+                print(f"   - gh_id: {data.get('gh_id')}")
+                print(f"   - sex: {data.get('sex')}")
+                
+                # Cache for 10 minutes
                 cache.set(cache_key, data, 600)
                 
                 return Response({
@@ -550,7 +623,9 @@ class FamilyMemberDetailView(APIView):
                 })
                 
         except Exception as e:
-            print(f" Error: {e}")
+            print(f"❌ Error: {e}")
+            import traceback
+            traceback.print_exc()
             return Response({
                 'success': False,
                 'error': str(e)
@@ -579,6 +654,25 @@ class GeneralHealthCreateView(APIView):
                 }, status=400)
             
             result = serializer.save()
+        
+            #  Clear member cache
+            cache_key_member = f'family_member_detail_{family_member_id}_None'
+            cache.delete(cache_key_member)
+            print(f" Cleared cache for member {family_member_id}")
+            
+            #  CRITICAL: Clear family cache to update members_json
+            # First, get the family_id for this member
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT family_id FROM family_member WHERE family_member_id = %s",
+                    [family_member_id]
+                )
+                row = cursor.fetchone()
+                if row:
+                    family_id = row[0]
+                    cache_key_family = f'family_detail_{family_id}'
+                    cache.delete(cache_key_family)
+                    print(f" Cleared cache for family {family_id}")
             
             return Response({
                 'success': True,
@@ -587,7 +681,72 @@ class GeneralHealthCreateView(APIView):
             }, status=201)
             
         except Exception as e:
-            print(f"Error: {e}")
+            print(f" Error: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+class GeneralHealthUpdateView(APIView):
+    """Update general health profile for a family member"""
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    
+    def put(self, request, family_member_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'personnel_id is required'
+                }, status=400)
+            
+            serializer = GeneralHealthUpdateSerializer(
+                data=request.data,
+                context={
+                    'family_member_id': family_member_id,
+                    'personnel_id': personnel_id
+                }
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'errors': serializer.errors
+                }, status=400)
+            
+            # Perform update
+            result = serializer.update(None, serializer.validated_data)
+            
+            #  Clear member cache
+            cache_key_member = f'family_member_detail_{family_member_id}_None'
+            cache.delete(cache_key_member)
+            
+            #  CRITICAL: Clear family cache to update members_json
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT family_id FROM family_member WHERE family_member_id = %s",
+                    [family_member_id]
+                )
+                row = cursor.fetchone()
+                if row:
+                    family_id = row[0]
+                    cache_key_family = f'family_detail_{family_id}'
+                    cache.delete(cache_key_family)
+                    print(f" Cleared cache for family {family_id}")
+            
+            return Response({
+                'success': True,
+                'gh_id': result['gh_id'],
+                'message': 'General health profile updated successfully'
+            }, status=200)
+            
+        except Exception as e:
+            print(f" Error: {e}")
+            import traceback
+            traceback.print_exc()
             return Response({
                 'success': False,
                 'error': str(e)
