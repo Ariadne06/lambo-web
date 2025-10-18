@@ -225,12 +225,15 @@ class FamilyMemberCreateSerializer(serializers.Serializer):
         
 
 class GeneralHealthCreateSerializer(serializers.Serializer):
+    """Serializer for creating General Health records"""
+    
     # Common fields
     class_id = serializers.IntegerField(required=True)
     medical_history_ids = serializers.ListField(
         child=serializers.IntegerField(),
-        required=False,
-        allow_empty=True
+        required=False, 
+        allow_empty=True,  
+        allow_null=True 
     )
     
     # Female-only fields
@@ -240,9 +243,15 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
     fp_status_id = serializers.IntegerField(required=False, allow_null=True)
     
     def validate(self, data):
+        """Validate create data"""
         if not data.get('class_id'):
             raise serializers.ValidationError({'class_id': 'Class/Population Group is required'})
         
+        #  FIX: Accept empty/null medical history
+        if data.get('medical_history_ids') is None:
+            data['medical_history_ids'] = []  # Convert None to empty array
+        
+        # FP validation (only if fp_method_yn is True)
         if data.get('fp_method_yn') is True:
             if not data.get('fp_method_id'):
                 raise serializers.ValidationError({'fp_method_id': 'FP Method is required when using family planning'})
@@ -252,7 +261,7 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
         return data
     
     def create(self, validated_data):
-        """Create general health record """
+        """Create general health record"""
         try:
             family_member_id = self.context.get('family_member_id')
             personnel_id = self.context.get('personnel_id')
@@ -262,10 +271,15 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
             if not personnel_id:
                 raise serializers.ValidationError("Missing personnel_id")
             
+            #  FIX: Handle empty medical history
+            medical_history_ids = validated_data.get('medical_history_ids')
+            if not medical_history_ids or len(medical_history_ids) == 0:
+                medical_history_ids = None  # Pass NULL to SQL function if empty
+            
             gh_id = save_general_health_for_member(
                 family_member_id=family_member_id,
                 class_id=validated_data['class_id'],
-                medical_history_ids=validated_data.get('medical_history_ids'),
+                medical_history_ids=medical_history_ids,  
                 wra_lmp=validated_data.get('wra_lmp'),
                 fp_method_yn=validated_data.get('fp_method_yn'),
                 fp_method_id=validated_data.get('fp_method_id'),
@@ -277,3 +291,79 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
                 
         except Exception as e:
             raise serializers.ValidationError(f"Failed to save general health: {str(e)}")
+        
+
+class GeneralHealthUpdateSerializer(serializers.Serializer):
+    """Serializer for updating General Health records"""
+    
+    # Class (optional - only update if provided)
+    class_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    # Medical History (optional - only update if apply_med_hist=True)
+    apply_med_hist = serializers.BooleanField(default=False)
+    medical_history_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_null=True,
+        allow_empty=True
+    )
+    
+    # Family Planning (optional - only update if apply_fp=True)
+    apply_fp = serializers.BooleanField(default=False)
+    wra_lmp = serializers.DateField(required=False, allow_null=True)
+    fp_method_yn = serializers.BooleanField(required=False, allow_null=True)
+    fp_method_id = serializers.IntegerField(required=False, allow_null=True)
+    fp_status_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        """Validate update data"""
+        
+        # If updating medical history, validate it's applied
+        if data.get('medical_history_ids') is not None and not data.get('apply_med_hist'):
+            raise serializers.ValidationError({
+                'apply_med_hist': 'Must be True when updating medical history'
+            })
+        
+        # If updating FP, validate required fields
+        if data.get('apply_fp'):
+            if data.get('fp_method_yn') is True:
+                if not data.get('fp_method_id') or not data.get('fp_status_id'):
+                    raise serializers.ValidationError({
+                        'fp_method_id': 'Required when fp_method_yn is True',
+                        'fp_status_id': 'Required when fp_method_yn is True'
+                    })
+        
+        return data
+    
+    def update(self, instance, validated_data):
+        """Update General Health record"""
+        try:
+            family_member_id = self.context.get('family_member_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not family_member_id:
+                raise serializers.ValidationError("Missing family_member_id")
+            if not personnel_id:
+                raise serializers.ValidationError("Missing personnel_id")
+            
+            # Import here to avoid circular dependency
+            from .utils.database_helpers import update_general_health_for_member
+            
+            gh_id = update_general_health_for_member(
+                family_member_id=family_member_id,
+                class_id=validated_data.get('class_id'),
+                apply_med_hist=validated_data.get('apply_med_hist', False),
+                medical_history_ids=validated_data.get('medical_history_ids'),
+                apply_fp=validated_data.get('apply_fp', False),
+                wra_lmp=validated_data.get('wra_lmp'),
+                fp_method_yn=validated_data.get('fp_method_yn'),
+                fp_method_id=validated_data.get('fp_method_id'),
+                fp_status_id=validated_data.get('fp_status_id'),
+                personnel_id=personnel_id
+            )
+            
+            return {'gh_id': gh_id}
+                
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to update general health: {str(e)}")
+    
