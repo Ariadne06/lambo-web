@@ -293,6 +293,26 @@ class Household(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_reactivate_household(hid, pid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('reactivate_household', [hid, pid])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_deactivate_household(hid, reason, pid):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('deactivate_household', [hid, reason, pid,])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
 
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)
@@ -564,4 +584,53 @@ class Family(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_update_family_member(
+            fm_id,
+            pid,
+            rth_id,
+            rtf_id,
+            philhealthid_number,
+            membership_type,
+            philhealth_category_id,
+            nutrition_status_id,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_family_member', [
+                    fm_id,
+                    pid,
+                    rth_id,
+                    rtf_id,
+                    philhealthid_number,
+                    membership_type,
+                    philhealth_category_id,
+                    nutrition_status_id,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_specific_family_member(fm_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_specific_family_member', [fm_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    def sp_remove_family_member_from_family(rid, fid, pid, performed_by_type, assignment, reason):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('remove_family_member_from_family', [rid, fid, pid, performed_by_type, assignment, reason])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e        
         
