@@ -12,6 +12,7 @@ from utils.constants import LIMIT_OPTIONS
 from django.utils.http import urlencode
 from django.urls import reverse
 import json
+import re 
 from datetime import datetime
 
 _UI_TO_SQL_AUDIENCE = {
@@ -538,6 +539,11 @@ def insert_family_member(request):
         philhealth_category = request.POST.get('philhealth_category')
         nutrition_status = request.POST.get('nutritional_status')
         
+        if philhealth_number and not re.fullmatch(r"[0-9\-]+", philhealth_number):
+            set_flash(request, "PhilHealth Number should contain only digits and dashes.", "error")
+            return redirect_to_view()
+
+        
         if membership_type == '':
             membership_type = None
         
@@ -833,6 +839,273 @@ def deactivate_family(request):
 
 @custom_login_required
 @role_required('Barangay Health Worker')
+@require_POST
+def deactivate_household(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    reason = (request.POST.get('reason') or '').strip()
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Household.sp_deactivate_household(hid, reason, pid)
+        set_flash(request, "Household marked as inactive.", "success")
+        return redirect('bhw_module:householdList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def reactivate_household(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Household.sp_reactivate_household(hid, pid)
+        set_flash(request, "Household marked as inactive.", "success")
+        return redirect('bhw_module:householdList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_family_member(request):
+    try:
+        fm_id = int(request.POST.get('family_member_id'))
+        hid   = int(request.POST.get('household_id'))
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid household/member id.", "error")
+        return redirect('bhw_module:householdList')
+
+    pid = int(request.session.get('personnel_id') or 0)
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+        params = {"hid": hid, "household_number": household_number}
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    # ---------- helpers ----------
+    def _to_int(val, default=None):
+        try:
+            if val in (None, "", "None"):
+                return default
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    def _norm_str(s):
+        return (s or "").strip()
+
+    def _norm_choice(s, allowed):
+        v = _norm_str(s).upper()
+        return v if v in allowed else None
+
+    try:
+        prev = Family.sp_get_specific_family_member(fm_id)
+        if not prev:
+            set_flash(request, "Family member not found.", "error")
+            return redirect_to_view()
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect_to_view()
+
+    curr_rth_id   = _to_int(prev.get('rth_id'), 0)
+    curr_rtf_id   = _to_int(prev.get('rtf_id'), 0)
+    curr_ph_no    = _norm_str(prev.get('philhealthid_number'))
+    curr_mtype    = _norm_str(prev.get('membership_type')).upper() if prev.get('membership_type') else ""
+    curr_pcat_id  = _to_int(prev.get('philhealth_category_id'), None)
+    curr_nut_id   = _to_int(prev.get('nutrition_status_id'), None)
+
+    new_rth_id  = _to_int(request.POST.get('mem_rel_hh'))
+    new_rtf_id  = _to_int(request.POST.get('mem_rel_fh'))
+    ph_no_raw   = _norm_str(request.POST.get('philhealth_number'))
+    new_mtype   = _norm_choice(request.POST.get('membership_type'), {"M", "D"})
+    new_pcat_id = _to_int(request.POST.get('philhealth_category'))
+    new_nut_id  = _to_int(request.POST.get('nutritional_status'))
+
+    # Required ints
+    missing = []
+    if new_rth_id is None: missing.append("Relationship to Household Head")
+    if new_rtf_id is None: missing.append("Relationship to Family Head")
+    if missing:
+        set_flash(request, f"Missing/invalid fields: {', '.join(missing)}.", "error")
+        return redirect_to_view()
+
+    if ph_no_raw:
+        if not new_mtype or new_pcat_id is None:
+            set_flash(request,
+                      "If a PhilHealth Number is provided, please select the Membership Type and Category.",
+                      "error")
+            return redirect_to_view()
+        import re
+        if not re.fullmatch(r"[0-9\-]+", ph_no_raw):
+            set_flash(request, "PhilHealth Number should contain only digits and dashes.", "error")
+            return redirect_to_view()
+        ph_no = ph_no_raw
+    else:
+        ph_no = None
+        new_mtype = None
+        new_pcat_id = None
+
+    changed = []
+    if new_rth_id != curr_rth_id: changed.append("Rel (Member→Household Head)")
+    if new_rtf_id != curr_rtf_id: changed.append("Rel (Member→Family Head)")
+    if (ph_no or "") != (curr_ph_no or ""): changed.append("PhilHealth Number")
+    if (new_mtype or "") != (curr_mtype or ""): changed.append("PhilHealth Membership Type")
+    if (new_pcat_id or None) != (curr_pcat_id or None): changed.append("PhilHealth Category")
+    if (new_nut_id or None) != (curr_nut_id or None): changed.append("Nutritional Status")
+
+    if not changed:
+        set_flash(request, "No changes detected — nothing to update.", "info")
+        return redirect_to_view()
+
+    try:
+        Family.sp_update_family_member(
+            fm_id,
+            pid,
+            new_rth_id,
+            new_rtf_id,
+            ph_no,
+            new_mtype,
+            new_pcat_id,
+            new_nut_id,
+        )
+        set_flash(request, f"Family member updated successfully. Changed: {', '.join(changed)}.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def remove_family_member(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    rid = int(request.POST.get('resident_id'))
+    fid = int(request.POST.get('family_id'))
+    reason = (request.POST.get('reason') or '').strip()
+    performed_by_type = 'personnel'
+    assignment_bhw = False
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Family.sp_remove_family_member_from_family(rid, fid, pid, performed_by_type, assignment_bhw, reason)
+        set_flash(request, "Family member removed successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
 def householdView(request):
     
     def _to_bool(v):
@@ -953,6 +1226,7 @@ def householdView(request):
     family_relationship = Family.sp_get_relationship_to_family_head()
     philhealth_category = Family.sp_get_philhealth_category()
     nutrition_status = Family.sp_get_nutrition_status()
+    current_quarter = Household.sp_get_current_quarter_id()
 
     flash = get_flash(request)
     return render(request, 'bhw_module/householdView.html', {
@@ -971,6 +1245,7 @@ def householdView(request):
         'philhealth_category': philhealth_category,
         'nutrition_status': nutrition_status,
         'results': result,
+        'current_quarter': current_quarter,
         'families': families,
         'message': flash['message'],
         'message_level': flash['message_level'],
