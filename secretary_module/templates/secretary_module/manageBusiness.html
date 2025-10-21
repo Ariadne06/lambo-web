@@ -98,13 +98,14 @@
                   Edit
                 </button>
                 <button type="button"
-                        class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5 text-red-600"
-                        onclick="closeBusiness('{{ r.business_id }}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                  Close
-                </button>
+                      class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5 text-red-600"
+                      onclick="closeBusiness('{{ r.business_id }}')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Close
+              </button>
+
               </div>
             </td>
           </tr>
@@ -195,6 +196,12 @@
           <span id="mbv_business_type" class="text-gray-800"></span>
         </div>
 
+        <!-- Clearance Category (NEW) -->
+        <div class="flex justify-between border-b pb-2">
+          <span class="font-semibold text-gray-600">Clearance Category:</span>
+          <span id="mbv_clearance_category" class="text-gray-800"></span>
+        </div>
+
         <!-- Business Status -->
         <div class="flex justify-between border-b pb-2">
           <span class="font-semibold text-gray-600">Business Status:</span>
@@ -202,7 +209,7 @@
         </div>
 
         <!-- Issuance Date (only when active) -->
-        <div id="mbv_clearance_row" class="flex justify-between border-b pb-2 hidden">
+        <div id="mbv_clearance_row" class="justify-between border-b pb-2 hidden">
           <span class="font-semibold text-gray-600">Issuance Date:</span>
           <span id="mbv_clearance_date" class="text-gray-800"></span>
         </div>
@@ -342,133 +349,169 @@
 </div>
 
 <!-- Update Business Modal -->
-<div id="updateBusinessModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-  <div class="bg-white w-full max-w-3xl rounded-xl shadow-xl">
-    <div class="px-6 py-4 border-b flex items-center justify-between">
-      <h3 class="text-lg font-semibold">Update Business</h3>
-      <button type="button" class="p-2" onclick="UB.close()">✕</button>
-    </div>
-
-    <form id="updateBusinessForm" class="p-6 space-y-4">
-      <input type="hidden" name="business_id" id="ub_business_id">
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-  <!-- Business ID (read-only) -->
-  <label class="block">
-    <span class="text-sm font-medium">Business ID</span>
-    <input id="ub_business_id_display" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
-  </label>
-
-  <!-- Business name -->
-  <label class="block">
-    <span class="text-sm font-medium">Business name</span>
-    <input id="ub_business_name" name="business_name" class="mt-1 w-full border rounded-md p-2" />
-  </label>
-
-  <!-- Business Type (dropdown) -->
-  <label class="block">
-    <span class="text-sm font-medium">Business type</span>
-    <select id="ub_business_type_id" name="business_type_id"
-            class="mt-1 w-full border rounded-md p-2 bg-white">
-      <option value="">-- Select type --</option>
-      {% for t in business_types %}
-        <option value="{{ t.id }}">{{ t.name }}</option>
-      {% endfor %}
-    </select>
-  </label>
-
-  <!-- Nature of business -->
-  <label class="block md:col-span-2">
-    <span class="text-sm font-medium">Nature of business</span>
-    <textarea id="ub_nature" name="nature_of_business"
-              class="mt-1 w-full border rounded-md p-2" rows="2"></textarea>
-  </label>
-
-  <!-- Ownership (dropdown) -->
-  <label class="block">
-    <span class="text-sm font-medium">Ownership</span>
-    <select id="ub_ownership_id" name="ownership_id"
-            class="mt-1 w-full border rounded-md p-2 bg-white">
-      <option value="">-- Select ownership --</option>
-      {% for o in ownerships %}
-        <option value="{{ o.id }}">{{ o.name }}</option>
-      {% endfor %}
-    </select>
-  </label>
-
-  <!-- Change owner (manual search) -->
-  <label class="block">
-    <span class="text-sm font-medium">Change owner (type name)</span>
-    <input id="ub_resident_name" name="resident_name" class="mt-1 w-full border rounded-md p-2"
-           placeholder="Leave blank to keep current" />
-  </label>
-
-  <!-- House # -->
-  <label class="block">
-    <span class="text-sm font-medium">House #</span>
-    <input id="ub_house_number" name="house_number" class="mt-1 w-full border rounded-md p-2" />
-  </label>
-
-  <!-- Street -->
-  <label class="block">
-    <span class="text-sm font-medium">Street</span>
-    <input id="ub_street" name="street" class="mt-1 w-full border rounded-md p-2" />
-  </label>
-
-  <!-- Barangay (read-only) -->
-  <label class="block">
-    <span class="text-sm font-medium">Barangay</span>
-    <input value="Cansaga" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
-  </label>
-
-  <!-- Sitio ID -->
-  <label class="block">
-    <span class="text-sm font-medium">Sitio (ID)</span>
-    <input id="ub_sitio_id" name="sitio_id" class="mt-1 w-full border rounded-md p-2" placeholder="e.g. 5" />
-  </label>
-
-  <!-- City/Municipality (read-only, always Consolacion) -->
-  <label class="block">
-    <span class="text-sm font-medium">City/Municipality</span>
-    <input value="Consolacion" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
-  </label>
-
-  <!-- Country (read-only, always Philippines) -->
-  <label class="block">
-    <span class="text-sm font-medium">Country</span>
-    <input value="Philippines" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
-  </label>
-
-  <!-- Total gross income -->
-  <label class="block">
-    <span class="text-sm font-medium">Total gross income</span>
-    <input id="ub_income" name="total_gross_income" class="mt-1 w-full border rounded-md p-2" />
-  </label>
-
-  <!-- DTI/SEC/CDA Reg # -->
-  <label class="block">
-    <span class="text-sm font-medium">DTI/SEC/CDA Reg. #</span>
-    <input id="ub_dti" name="dti_sec_cda_reg_number" class="mt-1 w-full border rounded-md p-2" />
-  </label>
-
-</div>
-
-
-      <div id="ub_alert" class="hidden text-sm p-2 rounded-md"></div>
-
-      <div class="flex justify-end gap-3 pt-2">
-        <button type="button" class="px-4 py-2 rounded-md border" onclick="UB.close()">Cancel</button>
-        <button type="submit" class="px-4 py-2 rounded-md bg-red-600 text-white">Save changes</button>
+<div id="updateBusinessModal"
+     class="fixed inset-0 z-50 hidden bg-black/50 overflow-y-auto p-4"> <!-- ← allow overlay to scroll -->
+  <div class="mx-auto my-6 w-full max-w-3xl">
+    <div class="bg-white rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col"> <!-- ← constrain & stack -->
+      <div class="px-6 py-4 border-b flex items-center justify-between flex-none">
+        <h3 class="text-lg font-semibold">Update Business</h3>
+        <button type="button" class="p-2" onclick="UB.close()">✕</button>
       </div>
-    </form>
+
+      <!-- Form body (scrolls) -->
+      <form id="updateBusinessForm" class="p-6 space-y-4 overflow-y-auto"> <!-- ← scroll here -->
+        <input type="hidden" name="business_id" id="ub_business_id">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Business ID (read-only) -->
+          <label class="block">
+            <span class="text-sm font-medium">Business ID</span>
+            <input id="ub_business_id_display" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+          </label>
+
+          <!-- Business name -->
+          <label class="block">
+            <span class="text-sm font-medium">Business name</span>
+            <input id="ub_business_name" name="business_name" class="mt-1 w-full border rounded-md p-2" />
+          </label>
+
+          <!-- Business Type (not editable) -->
+          <label class="block">
+            <span class="text-sm font-medium">Business type <span class="text-xs text-gray-500">(not editable)</span></span>
+            <select id="ub_business_type_id" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled>
+              <option value="">-- Select type --</option>
+              {% for t in business_types %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <!-- Nature of business -->
+          <label class="block md:col-span-2">
+            <span class="text-sm font-medium">Nature of business</span>
+            <textarea id="ub_nature" name="nature_of_business"
+                      class="mt-1 w-full border rounded-md p-2" rows="2"></textarea>
+          </label>
+
+          <!-- Ownership (not editable) -->
+          <label class="block">
+            <span class="text-sm font-medium">Ownership <span class="text-xs text-gray-500">(not editable)</span></span>
+            <select id="ub_ownership_id" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled>
+              <option value="">-- Select ownership --</option>
+              {% for o in ownerships %}
+                <option value="{{ o.id }}">{{ o.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <!-- Change owner -->
+          <label class="block">
+            <span class="text-sm font-medium">Change owner (type name)</span>
+            <input id="ub_resident_name" name="resident_name" class="mt-1 w-full border rounded-md p-2"
+                   placeholder="Leave blank to keep current" />
+          </label>
+
+          <!-- Address -->
+          <label class="block">
+            <span class="text-sm font-medium">House #</span>
+            <input id="ub_house_number" name="house_number" class="mt-1 w-full border rounded-md p-2" />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">Street</span>
+            <input id="ub_street" name="street" class="mt-1 w-full border rounded-md p-2" />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">Barangay</span>
+            <input value="Cansaga" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">Sitio (ID)</span>
+            <input id="ub_sitio_id" name="sitio_id" class="mt-1 w-full border rounded-md p-2" placeholder="e.g. 5" />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">City/Municipality</span>
+            <input value="Consolacion" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">Country</span>
+            <input value="Philippines" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium">Total gross income</span>
+            <input id="ub_income" name="total_gross_income" class="mt-1 w-full border rounded-md p-2" />
+          </label>
+
+          <!-- DTI (not editable) -->
+          <label class="block">
+            <span class="text-sm font-medium">DTI/SEC/CDA Reg. # <span class="text-xs text-gray-500">(not editable)</span></span>
+            <input id="ub_dti" class="mt-1 w-full border rounded-md p-2 bg-gray-100 text-gray-600" disabled />
+          </label>
+
+          <!-- Clearance Category -->
+          <label class="block md:col-span-2">
+            <span class="text-sm font-medium">Clearance Category</span>
+            <select id="ub_clearance_category_id" name="clearance_category_id"
+                    class="mt-1 w-full border rounded-md p-2 bg-white">
+              <option value="">-- Select Clearance Category --</option>
+              {% for c in clearance_categories %}
+                <option value="{{ c.clearance_category_id }}">{{ c.category_name }}</option>
+              {% endfor %}
+            </select>
+            <p id="ub_clr_note" class="mt-1 text-xs text-gray-500"></p>
+          </label>
+        </div>
+
+        <div id="ub_alert" class="hidden text-sm p-2 rounded-md"></div>
+      </form>
+
+      <!-- Footer (fixed) -->
+      <div class="flex justify-end gap-3 p-4 border-t flex-none">
+        <button type="button" class="px-4 py-2 rounded-md border" onclick="UB.close()">Cancel</button>
+        <button type="submit" form="updateBusinessForm" class="px-4 py-2 rounded-md bg-red-600 text-white">Save changes</button>
+      </div>
+    </div>
   </div>
 </div>
 
 
 <script>
-  function openModal(id){ document.getElementById(id)?.classList.remove('hidden'); }
-  function closeModal(id){ document.getElementById(id)?.classList.add('hidden'); }
+  function openModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    // lock page scroll while any modal is open
+    document.documentElement.classList.add('overflow-hidden');
+  }
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    // if all modals are closed, restore page scroll
+    const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden)');
+    if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
+  }
+
+  // Fallback labels in case the API only returns an ID
+  const CLEARANCE_CATEGORY_LABELS = {
+    "1": "Corporation",
+    "2": "Partnership",
+    "3": "Sole Proprietorship (≤ ₱30,000)",
+    "4": "Sole Proprietorship (> ₱30,000)",
+    "5": "Market Vendor / Stall Owner",
+    "6": "Lessor – Commercial / Subdivision",
+    "7": "Lessor – Apartment (Light Materials ≤ 5 units)",
+    "8": "Lessor – Apartment (Concrete ≤ 5 units)",
+    "9": "Lessor – Bed Spacer / Room Rentals",
+    "10": "Lessor – Lot Property",
+    "11": "Internet Café",
+    "12": "Amusement",
+  };
 
   // Close with Escape
   window.addEventListener('keydown', (e) => {
@@ -483,270 +526,336 @@
   // VIEW MODAL
   // ------------------------
   async function openBusinessView(businessId) {
-  // Build URL via Django so the path is always correct
-  const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
-  const detailUrl = detailTpl.replace("99999", businessId);
+    const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+    const detailUrl = detailTpl.replace("99999", businessId);
 
-  // helper for aliases
-  const pick = (obj, keys, def = '') => {
-    for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
-    return def;
-  };
-
-  try {
-    const res = await fetch(detailUrl, {
-      method: 'GET',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    });
-
-    const ct = res.headers.get('content-type') || '';
-    const text = await res.text();
-    let d = {};
-    if (ct.includes('application/json')) {
-      try { d = JSON.parse(text); } catch (e) {
-        console.error('View parse error:', e, text.slice(0, 200));
-        alert('Error loading business details (could not parse).');
-        return;
-      }
-    } else {
-      console.error('View non-JSON response:', res.status, text.slice(0, 200));
-      if (res.status === 403 || /login/i.test(text)) {
-        alert('Not authenticated to view details. Please reload the page and try again.');
-      } else {
-        alert('Error loading business details (non-JSON response).');
-      }
-      return;
-    }
-
-    // Fill the modal (with alias fallbacks)
-    const setVal = (id, val) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (el.tagName === 'INPUT') el.value = val ?? '';
-      else el.textContent = val ?? '';
+    const pick = (obj, keys, def = '') => {
+      for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+      return def;
     };
 
-    setVal("mbv_business_id",      pick(d, ['business_id','id']));
-    setVal("mbv_owner_name",       pick(d, ['owner_name','resident_name','owner_full_name']));
-    setVal("mbv_business_name",    pick(d, ['business_name','biz_name']));
-    setVal("mbv_business_type",    pick(d, ['business_type','type_name','business_type_name']));
-    setVal("mbv_business_status",  pick(d, ['status','business_status','business_status_name']));
-    setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
-    setVal("mbv_address",          pick(d, ['address','full_address','addr']));
+    try {
+      const res = await fetch(detailUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
 
-    const issuanceDate = pick(d, [
-      'clearance_date','clearance_date_issued','issuance_date','date_issued'
-    ], '');
-    const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
-    const clearanceRow = document.getElementById("mbv_clearance_row");
-    if (rawStatus === 'active' && issuanceDate) {
-      clearanceRow.classList.remove("hidden");
-      setVal("mbv_clearance_date", issuanceDate);
-    } else {
-      clearanceRow.classList.add("hidden");
-      setVal("mbv_clearance_date", "");
-    }
-
-    openModal("modalBusinessView");
-  } catch (err) {
-    console.error('View fetch error:', err);
-    alert("Network error while loading business details. Check console/network tab.");
-  }
-}
- // CSRF helper (unchanged)
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
-const UB = (() => {
-  const modal = document.getElementById('updateBusinessModal');
-  const form  = document.getElementById('updateBusinessForm');
-  const alertBox = document.getElementById('ub_alert');
-
-  function showAlert(ok, msg) {
-    alertBox.className = '';
-    alertBox.classList.add(
-      'text-sm','p-2','rounded-md',
-      ...(ok ? ['bg-green-100','text-green-800'] : ['bg-red-100','text-red-800'])
-    );
-    alertBox.textContent = msg;
-  }
-
-  function openModalOnly() {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  }
-
-  function reset() {
-    form.reset();
-    alertBox.className = 'hidden';
-    alertBox.textContent = '';
-    const ownerInput = document.getElementById('ub_resident_name');
-    if (ownerInput) ownerInput.value = '';
-  }
-
-  async function open(businessId) {
-  reset();
-  document.getElementById('ub_business_id').value = businessId;        // hidden (for POST)
-  document.getElementById('ub_business_id_display').value = businessId; // visible read-only
-  openModalOnly();
-
-  const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
-  const detailUrl = detailTpl.replace("99999", businessId);
-
-  // helpers
-  const pick = (obj, keys, def = '') => {
-    for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
-    return def;
-  };
-  const ensureSelected = (selectEl, value, labelIfMissing) => {
-    if (!selectEl || value === undefined || value === null || value === '') return;
-    const v = String(value);
-    const exists = Array.from(selectEl.options).some(o => o.value === v);
-    if (!exists) {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = labelIfMissing || `#${v}`;
-      if (selectEl.options.length > 0) {
-        selectEl.insertBefore(opt, selectEl.options[1] || null);
+      const ct = res.headers.get('content-type') || '';
+      const text = await res.text();
+      let d = {};
+      if (ct.includes('application/json')) {
+        try { d = JSON.parse(text); } catch (e) {
+          console.error('View parse error:', e, text.slice(0, 200));
+          alert('Error loading business details (could not parse).');
+          return;
+        }
       } else {
-        selectEl.add(opt);
-      }
-    }
-    selectEl.value = v;
-  };
-
-  try {
-    const res = await fetch(detailUrl, {
-      method: 'GET',
-      credentials: 'same-origin',            // ← send session cookie
-      headers: { 'Accept': 'application/json' }
-    });
-
-    // If server sent HTML (e.g., login redirect), bail gracefully
-    const ct = res.headers.get('content-type') || '';
-    const text = await res.text();
-    let d = {};
-    if (ct.includes('application/json')) {
-      try { d = JSON.parse(text); } catch (e) {
-        console.error('JSON parse error:', e, text.slice(0, 200));
-        showAlert(false, 'Could not parse details from server.');
+        console.error('View non-JSON response:', res.status, text.slice(0, 200));
+        if (res.status === 403 || /login/i.test(text)) {
+          alert('Not authenticated to view details. Please reload the page and try again.');
+        } else {
+          alert('Error loading business details (non-JSON response).');
+        }
         return;
       }
-    } else {
-      console.error('Non-JSON response for details:', res.status, text.slice(0, 200));
-      if (res.status === 403 || /login/i.test(text)) {
-        showAlert(false, 'Not authenticated for details. Please reload the page and try again.');
+
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName === 'INPUT') el.value = val ?? '';
+        else el.textContent = val ?? '';
+      };
+
+      setVal("mbv_business_id",        pick(d, ['business_id','id']));
+      setVal("mbv_owner_name",         pick(d, ['owner_name','resident_name','owner_full_name']));
+      setVal("mbv_business_name",      pick(d, ['business_name','biz_name']));
+      setVal("mbv_business_type",      pick(d, ['business_type','type_name','business_type_name']));
+      
+      // Clearance Category (prefer name, fallback to ID -> label map)
+      const catText = pick(d, ['clearance_category_name', 'clearance_category', 'category_name'], '');
+      if (catText) {
+        setVal('mbv_clearance_category', catText);
       } else {
-        showAlert(false, 'Could not load details (non-JSON response).');
+        const catId = String(pick(d, ['clearance_category_id', 'clearance_categoryid'], ''));
+        setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[catId] || '—');
       }
-      return;
+
+      setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
+      setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
+      setVal("mbv_address",            pick(d, ['address','full_address','addr']));
+
+      const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
+      const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
+      const clearanceRow = document.getElementById("mbv_clearance_row");
+      if (rawStatus === 'active' && issuanceDate) {
+        clearanceRow.classList.remove("hidden");
+        setVal("mbv_clearance_date", issuanceDate);
+      } else {
+        clearanceRow.classList.add("hidden");
+        setVal("mbv_clearance_date", "");
+      }
+
+      openModal("modalBusinessView");
+    } catch (err) {
+      console.error('View fetch error:', err);
+      alert("Network error while loading business details. Check console/network tab.");
     }
-
-    // -------- text/number fields with alias fallbacks --------
-    document.getElementById('ub_business_name').value = pick(d, ['business_name','biz_name']);
-    document.getElementById('ub_nature').value       = pick(d, ['nature_of_business','nature','business_nature']);
-    document.getElementById('ub_house_number').value = pick(d, ['house_number','house_no','house_no_str']);
-    document.getElementById('ub_street').value       = pick(d, ['street','street_name']);
-    // (Barangay/City/Country are static in your UI now)
-    document.getElementById('ub_sitio_id').value     = pick(d, ['sitio_id']);
-    document.getElementById('ub_income').value       = pick(d, ['total_gross_income','gross_income','income']);
-    document.getElementById('ub_dti').value          = pick(d, ['dti_sec_cda_reg_number','reg_no','registration_no']);
-
-    // Owner placeholder
-    const ownerName = pick(d, ['owner_name','resident_name','owner_full_name']);
-    const ownerInput = document.getElementById('ub_resident_name');
-    if (ownerInput) ownerInput.placeholder = ownerName ? `Current: ${ownerName}` : 'Leave blank to keep current';
-
-    // -------- dropdowns (select current option) --------
-    const typeSel    = document.getElementById('ub_business_type_id');
-    const ownSel     = document.getElementById('ub_ownership_id');
-    const typeId     = pick(d, ['business_type_id','type_id','btype_id','business_typeid']);
-    const typeLabel  = pick(d, ['business_type','type_name','business_type_name']);
-    const ownId      = pick(d, ['ownership_id','own_id','ownershipid']);
-    const ownLabel   = pick(d, ['ownership','ownership_name','ownershiptype']);
-    ensureSelected(typeSel, typeId, typeLabel);
-    ensureSelected(ownSel,  ownId,  ownLabel);
-
-  } catch (err) {
-    console.error('Error fetching business detail:', err);
-    showAlert(false, 'Network error while loading details (check console).');
-  }
-}
-  function close() {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    // optional: keep alert hidden next open
-    alertBox.className = 'hidden';
-    alertBox.textContent = '';
   }
 
-  // Submit handler
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const businessId = document.getElementById('ub_business_id').value;
-    const formData = new FormData(form);
+  // CSRF helper
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
 
-    // Django URL for update
-    const postTpl = "{% url 'secretary_module:business_update' business_id=99999 %}";
-    const postUrl = postTpl.replace("99999", businessId);
+  // ------------------------
+  // UPDATE MODAL
+  // ------------------------
+  const UB = (() => {
+    const modal = document.getElementById('updateBusinessModal');
+    const form  = document.getElementById('updateBusinessForm');
+    const alertBox = document.getElementById('ub_alert');
 
-    try {
-      const res = await fetch(postUrl, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') },
-        body: formData
-      });
-      const payload = await res.json();
-      if (res.ok && payload.ok) {
-        showAlert(true, payload.message || 'Saved.');
-        setTimeout(() => { window.location.reload(); }, 700);
-      } else {
-        showAlert(false, payload.message || 'Update failed.');
-      }
-    } catch (e2) {
-      console.error(e2);
-      showAlert(false, 'Network error while saving.');
+    function showAlert(ok, msg) {
+      alertBox.className = '';
+      alertBox.classList.add(
+        'text-sm','p-2','rounded-md',
+        ...(ok ? ['bg-green-100','text-green-800'] : ['bg-red-100','text-red-800'])
+      );
+      alertBox.textContent = msg;
     }
-  });
 
-  return { open, close };
-})();
+    function openModalOnly() {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.documentElement.classList.add('overflow-hidden');
+    }
 
+    function reset() {
+      form.reset();
+      alertBox.className = 'hidden';
+      alertBox.textContent = '';
+      const ownerInput = document.getElementById('ub_resident_name');
+      if (ownerInput) ownerInput.value = '';
+    }
 
-async function closeBusiness(businessId) {
-  if (!confirm("Are you sure you want to mark this business as Closed?")) return;
+    async function open(businessId) {
+      reset();
+      document.getElementById('ub_business_id').value = businessId;        // hidden (for POST)
+      document.getElementById('ub_business_id_display').value = businessId; // visible read-only
+      openModalOnly();
 
-  const closeTpl = "{% url 'secretary_module:business_close' 99999 %}";
-  const closeUrl = closeTpl.replace("99999", businessId);
+      const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+      const detailUrl = detailTpl.replace("99999", businessId);
 
-  try {
-    const res = await fetch(closeUrl, {
-      method: "POST",
-      headers: { "X-CSRFToken": getCookie("csrftoken") },
-      credentials: "same-origin"
+      // helpers
+      const pick = (obj, keys, def = '') => {
+        for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+        return def;
+      };
+      const ensureSelected = (selectEl, value, labelIfMissing) => {
+        if (!selectEl || value === undefined || value === null || value === '') return;
+        const v = String(value);
+        const exists = Array.from(selectEl.options).some(o => o.value === v);
+        if (!exists) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = labelIfMissing || `#${v}`;
+          if (selectEl.options.length > 0) {
+            selectEl.insertBefore(opt, selectEl.options[1] || null);
+          } else {
+            selectEl.add(opt);
+          }
+        }
+        selectEl.value = v;
+      };
+      // Restrict clearance-category choices based on current category
+      function restrictClearanceOptions(selectEl, currentId) {
+        const note = document.getElementById('ub_clr_note');
+        if (!selectEl) return;
+
+        // Always ensure current option is present/selected
+        ensureSelected(selectEl, currentId, CLEARANCE_CATEGORY_LABELS[String(currentId)]);
+
+        // Work out allowed set
+        const allow = new Set();
+        if (currentId === 3 || currentId === 4) {
+          ['3','4'].forEach(v => allow.add(v));
+          selectEl.disabled = false;
+          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          if (note) note.textContent = 'Sole Proprietorship: you may switch only between categories 3 and 4.';
+        } else if (currentId >= 6 && currentId <= 10) {
+          for (let i=6;i<=10;i++) allow.add(String(i));
+          selectEl.disabled = false;
+          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          if (note) note.textContent = 'Lessor: you may switch only among categories 6–10.';
+        } else {
+          // Not allowed to change
+          selectEl.disabled = true;
+          selectEl.classList.add('bg-gray-100','text-gray-600');
+          if (note) note.textContent = 'This clearance category cannot be changed.';
+        }
+
+        // Hide disallowed options (keep placeholder)
+        Array.from(selectEl.options).forEach(opt => {
+          if (!opt.value) return;
+          opt.hidden = (allow.size > 0) ? !allow.has(opt.value) : false;
+        });
+      }
+
+      try {
+        const res = await fetch(detailUrl, {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        const ct = res.headers.get('content-type') || '';
+        const text = await res.text();
+        let d = {};
+        if (ct.includes('application/json')) {
+          try { d = JSON.parse(text); } catch (e) {
+            console.error('JSON parse error:', e, text.slice(0, 200));
+            showAlert(false, 'Could not parse details from server.');
+            return;
+          }
+        } else {
+          console.error('Non-JSON response for details:', res.status, text.slice(0, 200));
+          if (res.status === 403 || /login/i.test(text)) {
+            showAlert(false, 'Not authenticated for details. Please reload the page and try again.');
+          } else {
+            showAlert(false, 'Could not load details (non-JSON response).');
+          }
+          return;
+        }
+
+        // -------- text/number fields with alias fallbacks --------
+        document.getElementById('ub_business_name').value = pick(d, ['business_name','biz_name']);
+        document.getElementById('ub_nature').value       = pick(d, ['nature_of_business','nature','business_nature']);
+        document.getElementById('ub_house_number').value = pick(d, ['house_number','house_no','house_no_str']);
+        document.getElementById('ub_street').value       = pick(d, ['street','street_name']);
+        document.getElementById('ub_sitio_id').value     = pick(d, ['sitio_id']);
+        document.getElementById('ub_income').value       = pick(d, ['total_gross_income','gross_income','income']);
+        document.getElementById('ub_dti').value          = pick(d, ['dti_sec_cda_reg_number','reg_no','registration_no']);
+
+        // Owner placeholder + rule (owner change only if NOT Sole Proprietorship)
+        const ownerName  = pick(d, ['owner_name','resident_name','owner_full_name']);
+        const ownerInput = document.getElementById('ub_resident_name');
+        const ownId      = pick(d, ['ownership_id','own_id','ownershipid']);
+        if (String(ownId) === '1') {
+          ownerInput.disabled = true;
+          ownerInput.placeholder = 'Owner cannot be changed for Sole Proprietorship.';
+        } else {
+          ownerInput.disabled = false;
+          ownerInput.placeholder = ownerName ? `Current: ${ownerName}` : 'Type a name to change owner';
+        }
+
+        // Dropdowns (Business Type/Ownership are not editable but we select current)
+        const typeSel    = document.getElementById('ub_business_type_id');
+        const typeId     = pick(d, ['business_type_id','type_id','btype_id','business_typeid']);
+        const typeLabel  = pick(d, ['business_type','type_name','business_type_name']);
+        ensureSelected(typeSel, typeId, typeLabel);
+
+        const ownSel     = document.getElementById('ub_ownership_id');
+        const ownLabel   = pick(d, ['ownership','ownership_name','ownershiptype']);
+        ensureSelected(ownSel,  ownId,  ownLabel);
+
+        // Clearance Category (editable with conditions)
+        const clrSel   = document.getElementById('ub_clearance_category_id');
+        if (clrSel) {
+          const clrId    = Number(pick(d, ['clearance_category_id']));
+          const clrLabel = pick(d, ['clearance_category_name']) || CLEARANCE_CATEGORY_LABELS[String(clrId)];
+          ensureSelected(clrSel, clrId, clrLabel);
+          restrictClearanceOptions(clrSel, clrId);
+        }
+
+      } catch (err) {
+        console.error('Error fetching business detail:', err);
+        showAlert(false, 'Network error while loading details (check console).');
+      }
+    }
+
+    function close() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      alertBox.className = 'hidden';
+      alertBox.textContent = '';
+      // if all modals are closed, restore page scroll
+      const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden)');
+      if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
+    }
+
+    // Submit handler
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const businessId = document.getElementById('ub_business_id').value;
+      const formData = new FormData(form);
+
+      const postTpl = "{% url 'secretary_module:business_update' business_id=99999 %}";
+      const postUrl = postTpl.replace("99999", businessId);
+
+      try {
+        const res = await fetch(postUrl, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          body: formData
+        });
+        const payload = await res.json();
+        if (res.ok && payload.ok) {
+          showAlert(true, payload.message || 'Saved.');
+          setTimeout(() => { window.location.reload(); }, 700);
+        } else {
+          showAlert(false, payload.message || 'Update failed.');
+        }
+      } catch (e2) {
+        console.error(e2);
+        showAlert(false, 'Network error while saving.');
+      }
     });
 
-    const text = await res.text();
-    let payload = {};
-    try { payload = JSON.parse(text); } catch (_) {}
+    return { open, close };
+  })();
 
-    if (res.ok && payload.ok) {
-      alert(payload.message || "Business marked as Closed.");
-      window.location.reload();
-    } else {
-      alert(payload.message || text || "Failed to close business.");
+  // ------------------------
+  // CLOSE BUSINESS
+  // ------------------------
+  async function closeBusiness(businessId) {
+    if (!businessId) { alert("Missing business id."); return; }
+    if (!confirm("Are you sure you want to mark this business as Closed?")) return;
+
+    const closeTpl = "{% url 'secretary_module:business_close' 99999 %}";
+    const closeUrl = closeTpl.replace("99999", businessId);
+
+    try {
+      const res = await fetch(closeUrl, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        credentials: "same-origin"
+      });
+
+      const text = await res.text();
+      let payload = {};
+      try { payload = JSON.parse(text); } catch (_) {}
+
+      if (res.ok && payload.ok) {
+        alert(payload.message || "Business marked as Closed.");
+        // close any open modals, then refresh
+        closeModal('modalBusinessView');
+        window.location.reload();
+      } else {
+        alert((payload && payload.message) || text || "Failed to close business.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error while closing business.");
     }
-  } catch (err) {
-    console.error(err);
-    alert("Network error while closing business.");
   }
-}
-
 </script>
+
+
+
 
 
 <!-- local colors so buttons never turn white -->
