@@ -43,10 +43,15 @@ class Secretary(models.Model):
         city_municipality,
         country,
         total_gross_income,
-        dti_sec_cda_reg_number,
-        clearance_date_issued,
+        dti_sec_cda_reg_number,   # optional (can be None)
+        clearance_category_id,    # NEW required param
+        clearance_date_issued,    # optional
         created_by,
     ):
+        """
+        Calls register_business(...) which expects p_clearance_category_id
+        immediately after p_dti_sec_cda_reg_number.
+        """
         try:
             with connection.cursor() as cursor:
                 cursor.callproc(
@@ -64,8 +69,9 @@ class Secretary(models.Model):
                         city_municipality,
                         country,
                         total_gross_income,
-                        dti_sec_cda_reg_number,
-                        clearance_date_issued,
+                        dti_sec_cda_reg_number,  # may be None
+                        clearance_category_id,   # <-- inserted here
+                        clearance_date_issued,   # may be None
                         created_by,
                     ],
                 )
@@ -73,11 +79,39 @@ class Secretary(models.Model):
                 return result[0]
         except Exception as e:
             raise e
-
+    
 
 class Business(models.Model):
     class Meta:
         managed = False
+
+    @staticmethod
+    def sp_business_clearance_category():
+        """
+        Returns [(clearance_category_id, category_name), ...]
+        from business_clearance_category().
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('business_clearance_category', [])
+                cols = [c[0] for c in cursor.description]
+                return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_business_clearance_categories_for_select():
+        """
+        Calls get_business_clearance_categories_for_select()
+        and returns a list of dicts with clearance_category_id, category_name.
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_business_clearance_categories_for_select', [])
+                cols = [c[0] for c in cursor.description]
+                return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            raise e
 
     @staticmethod
     def sp_get_all_businesses(query=None, status=None, type_id=None, ownership_id=None, owner_id=None, limit=10, offset=0):
@@ -116,10 +150,10 @@ class Business(models.Model):
     def sp_update_business(
         business_id: int,
         business_name=None,
-        business_type_id=None,
+        business_type_id=None,       # kept for server-side rule checks (not editable)
         nature_of_business=None,
-        ownership_id=None,
-        resident_id=None,          # optional owner transfer
+        ownership_id=None,           # kept for server-side rule checks (not editable)
+        resident_id=None,            # optional owner transfer (only if allowed)
         house_number=None,
         street=None,
         barangay=None,
@@ -127,29 +161,32 @@ class Business(models.Model):
         city_municipality=None,
         country=None,
         total_gross_income=None,
-        dti_sec_cda_reg_number=None,
+        clearance_category_id=None,  # <-- NEW param (can be None)
+        dti_sec_cda_reg_number=None, # not editable; pass None
         updated_by: int = None,
     ):
         try:
             with connection.cursor() as cursor:
+                # ORDER MUST MATCH THE SQL FUNCTION SIGNATURE
                 cursor.callproc(
                     'update_business',
                     [
-                        business_id,
-                        business_name,
-                        business_type_id,
-                        nature_of_business,
-                        ownership_id,
-                        resident_id,
-                        house_number,
-                        street,
-                        barangay,
-                        sitio_id,
-                        city_municipality,
-                        country,
-                        total_gross_income,
-                        dti_sec_cda_reg_number,
-                        updated_by,
+                        business_id,            # p_business_id
+                        business_name,          # p_business_name
+                        nature_of_business,     # p_nature_of_business
+                        business_type_id,       # p_business_type_id (NOT editable by rule)
+                        ownership_id,           # p_ownership_id     (NOT editable by rule)
+                        dti_sec_cda_reg_number, # p_dti_sec_cda_reg_number (NOT editable)
+                        resident_id,            # p_resident_id
+                        house_number,           # p_house_number
+                        street,                 # p_street
+                        barangay,               # p_barangay
+                        sitio_id,               # p_sitio_id
+                        city_municipality,      # p_city_municipality
+                        country,                # p_country
+                        total_gross_income,     # p_total_gross_income
+                        clearance_category_id,  # p_clearance_category_id
+                        updated_by,             # p_updated_by
                     ],
                 )
                 row = cursor.fetchone()
@@ -159,14 +196,18 @@ class Business(models.Model):
         
     @staticmethod
     def sp_set_closed_business(business_id: int, updated_by: int):
+        """
+        Calls set_closed_business(p_business_id, p_updated_by) in PostgreSQL.
+        Returns the TEXT message from the function.
+        """
         try:
             with connection.cursor() as cursor:
                 cursor.callproc("set_closed_business", [business_id, updated_by])
                 row = cursor.fetchone()
-                if row and len(row) > 0:
-                    return str(row[0])
-                return "Business marked as Closed"
+                # DB function returns TEXT message
+                return str(row[0]) if row and len(row) > 0 else "Business marked as Closed"
         except Exception as e:
+            # Bubble up so the view can format a clean error
             raise e
         
         
@@ -417,3 +458,122 @@ class BusinessTaxConfig(models.Model):
                 ],
             )
             return cur.fetchone()[0]
+        
+
+class AnnouncementRepo(models.Model):
+    """
+    Thin wrapper around your SQL functions:
+      - insert_announcement(title, details, image_path, created_by, audience) -> INT
+      - get_all_announcement(q, date_from, date_to, created_by, sort, limit, offset, audience) -> rows
+      - get_specific_announcement(id) -> row (includes audience)
+      - update_announcement(id, updated_by, title?, details?, image_path?, audience?) -> BOOLEAN
+      - delete_announcement(id, deleted_by) -> BOOLEAN
+    """
+    class Meta:
+        managed = False
+        db_table = 'Announcement'
+
+    @staticmethod
+    def _dictfetchall(cur) -> List[Dict]:
+        cols = [c[0] for c in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def list_all(q: Optional[str] = None,
+                 date_from: Optional[date] = None,
+                 date_to: Optional[date] = None,
+                 created_by: Optional[int] = None,
+                 sort: str = 'date_desc',
+                 limit: int = 100, offset: int = 0,
+                 audience: Optional[str] = None) -> List[Dict]:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s,%s)",
+                [q, date_from, date_to, created_by, sort, limit, offset, audience]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+        
+    @staticmethod
+    def latest_for_residents(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_residents(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+
+    # NEW: latest for personnel (SQL: get_latest_announcements_for_personnel)
+    @staticmethod
+    def latest_for_personnel(limit=3, offset=0, q=None, date_from=None, date_to=None):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_latest_announcements_for_personnel(%s,%s,%s,%s,%s)",
+                [limit, offset, q, date_from, date_to]
+            )
+            return AnnouncementRepo._dictfetchall(cur)
+
+    @staticmethod
+    def get_one(announcement_id: int) -> Optional[Dict]:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_specific_announcement(%s)", [announcement_id])
+            rows = AnnouncementRepo._dictfetchall(cur)
+            return rows[0] if rows else None
+
+    @staticmethod
+    def create(header_title: str, details: str,
+               image_path: Optional[str],
+               created_by: int,
+               event_date: Optional[date] = None,
+               audience: Optional[str] = None) -> int:
+        """
+        audience: 'resident' | 'personnel' | 'both'
+        Insert uses CURRENT_DATE for `date`. If an event_date is provided,
+        we set it right after insert via direct UPDATE.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT insert_announcement(%s,%s,%s,%s,%s)",
+                [header_title, details, image_path, created_by, audience]
+            )
+            new_id = cur.fetchone()[0]
+            if event_date:
+                cur.execute("UPDATE Announcement SET date=%s WHERE announcement_id=%s", [event_date, new_id])
+        return new_id
+
+    @staticmethod
+    def update(announcement_id: int, updated_by: int,
+               header_title: Optional[str] = None,
+               details: Optional[str] = None,
+               image_path: Optional[str] = None,
+               event_date: Optional[date] = None,
+               audience: Optional[str] = None) -> bool:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT update_announcement(%s,%s,%s,%s,%s,%s)",
+                [announcement_id, updated_by, header_title, details, image_path, audience]
+            )
+            changed = cur.fetchone()[0]
+            if event_date is not None:   # allow clearing by sending empty
+                cur.execute("UPDATE Announcement SET date=%s WHERE announcement_id=%s", [event_date, announcement_id])
+        return changed
+
+    @staticmethod
+    def delete(announcement_id: int, deleted_by: int) -> bool:
+        with connection.cursor() as cur:
+            try:
+                cur.execute("SELECT delete_announcement(%s,%s)", [announcement_id, deleted_by])
+                row = cur.fetchone()
+                return bool(row[0]) if row else True
+            except Exception:
+                try:
+                    cur.execute("""
+                        UPDATE Announcement
+                           SET is_deleted = TRUE,
+                               deleted_by = %s,
+                               deleted_at = LOCALTIMESTAMP
+                         WHERE announcement_id = %s
+                    """, [deleted_by, announcement_id])
+                    return True
+                except Exception:
+                    cur.execute("DELETE FROM Announcement WHERE announcement_id = %s", [announcement_id])
+                    return True
