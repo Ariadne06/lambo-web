@@ -4,7 +4,7 @@ from django.utils.http import urlencode
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
-from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig
+from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig, AnnouncementRepo
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
@@ -13,6 +13,22 @@ from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
+from django.conf import settings
+from django.core.files.storage import default_storage
+from datetime import datetime
+from django.views.decorators.http import require_POST
+
+_UI_TO_SQL_AUDIENCE = {
+    'EVERYONE': 'both',
+    'PERSONNEL': 'personnel',
+    'RESIDENTS': 'resident',
+    'both': 'both', 'personnel': 'personnel', 'resident': 'resident',  # tolerate lowercase
+}
+_SQL_TO_UI_AUDIENCE = {
+    'both': 'EVERYONE',
+    'personnel': 'PERSONNEL',
+    'resident': 'RESIDENTS',
+}
 
 
 @custom_login_required
@@ -21,51 +37,119 @@ def secretary_dashboard(request):
     barangay = request.GET.get("barangay") or None
     city     = request.GET.get("city") or None
 
-    # Totals
+    # ---- Totals (KPIs) ----
     try:
         totals = Dashboard.sp_dashboard_totals(barangay=barangay, city=city)
     except Exception as e:
         messages.error(request, f"Failed loading totals: {e}")
-        totals = {"total_resident": 0, "total_non_resident": 0, "total_pending": 0, "total_male": 0, "total_female": 0}
+        totals = {
+            "total_resident": 0, "total_non_resident": 0, "total_pending": 0,
+            "total_male": 0, "total_female": 0
+        }
 
-    # Residents per sitio (no params)
+    # ---- Residents per sitio (bar chart) ----
     try:
-        per_sitio_rows = Dashboard.sp_residents_per_sitio_json()
-        print("DEBUG per_sitio_rows:", per_sitio_rows)  # check console once
+        per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
         per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
         per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
     except Exception as e:
         messages.error(request, f"Failed loading per-sitio data: {e}")
         per_sitio_labels, per_sitio_data = [], []
 
-    # --- Age brackets (Pie) ---
+    # ---- Age distribution (pie) ----
     try:
-        age_rows = Dashboard.sp_age_bracket_distribution()  # no params
-
-        # unwrap if each item is {"jsonb_build_object": {...}}
+        age_rows = Dashboard.sp_age_bracket_distribution()
         cleaned = []
         for item in age_rows or []:
             if isinstance(item, dict) and "jsonb_build_object" in item:
                 cleaned.append(item["jsonb_build_object"])
             else:
                 cleaned.append(item)
-
         age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
         age_data   = [int(r.get("count") or 0) for r in cleaned]
-
         total = sum(age_data) or 1
         age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
     except Exception as e:
         messages.error(request, f"Failed loading age distribution: {e}")
         age_labels, age_data, age_labels_pct = [], [], []
 
+    # ===========================
+    # Announcements (Secretary sees personnel + both)
+    # ===========================
+    ALLOWED = {"personnel", "both"}
+
+    # Pull a few recent then filter to ALLOWED and take top 3
+    try:
+        # ask for more than 3, then slice after filtering to ensure we still get 3
+        rows = AnnouncementRepo.list_all(sort='date_desc', limit=12, audience=None)
+        latest_announcements = []
+        for a in rows:
+            # normalize aliases
+            if 'created_date' in a and 'announcement_date' not in a:
+                a['announcement_date'] = a['created_date']
+            aud = (a.get('audience') or 'both').lower()
+            if aud in ALLOWED:
+                a['audience'] = aud
+                latest_announcements.append(a)
+            if len(latest_announcements) >= 3:
+                break
+    except Exception as e:
+        messages.error(request, f"Failed loading latest announcements: {e}")
+        latest_announcements = []
+
+    # Modal filters (GET -> ann_*)
+    ann_q        = (request.GET.get('ann_q') or '').strip() or None
+    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None  # '', resident, personnel, both
+    ann_from_str = (request.GET.get('ann_from') or '').strip()
+    ann_to_str   = (request.GET.get('ann_to') or '').strip()
+
+    ann_from = ann_to = None
+    try:
+        if ann_from_str:
+            ann_from = datetime.strptime(ann_from_str, '%Y-%m-%d').date()
+        if ann_to_str:
+            ann_to = datetime.strptime(ann_to_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.warning(request, 'Invalid date filter for announcements.')
+
+    # Full list for the modal (server filter + enforce secretary scope)
+    try:
+        announcements_all = AnnouncementRepo.list_all(
+            q=ann_q, date_from=ann_from, date_to=ann_to,
+            created_by=None, sort='date_desc', limit=200, offset=0,
+            audience=ann_aud or None   # None = DB shows all audiences
+        )
+        filtered = []
+        for a in announcements_all:
+            if 'created_date' in a and 'announcement_date' not in a:
+                a['announcement_date'] = a['created_date']
+            a['audience'] = (a.get('audience') or 'both').lower()
+            if a['audience'] in ALLOWED:
+                filtered.append(a)
+        announcements_all = filtered
+    except Exception as e:
+        messages.error(request, f"Failed loading announcements list: {e}")
+        announcements_all = []
+
+    ann_open = request.GET.get('ann_open') == '1'
+
     ctx = {
         "totals": totals,
         "per_sitio_labels": per_sitio_labels,
         "per_sitio_data": per_sitio_data,
         "age_labels": age_labels,
-        "age_labels_pct": age_labels_pct,  # optional pretty legend
+        "age_labels_pct": age_labels_pct,
         "age_data": age_data,
+
+        "latest_announcements": latest_announcements,
+        "announcements_all": announcements_all,
+        "ann_filters": {
+            "q": ann_q or "",
+            "audience": (ann_aud or ""),
+            "from": ann_from_str,
+            "to": ann_to_str,
+        },
+        "ann_open": ann_open,
     }
     return render(request, "secretary_module/secretary_dashboard.html", ctx)
 
@@ -102,13 +186,18 @@ def _find_resident_id_by_name(query: str):
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def Addbusiness(request):
+    # load dropdown options
+    try:
+        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
+    except Exception as e:
+        clearance_categories = []
+        set_flash(request, f"Could not load clearance categories: {e}", "error")
+
     if request.method == "POST":
         try:
-
             resident_name = request.POST.get("resident_name")
             resident_id = _find_resident_id_by_name(resident_name)
 
-            # Collect the rest
             business_name         = request.POST.get("business_name")
             business_type_id      = int(request.POST.get("business_type_id"))
             nature_of_business    = request.POST.get("nature_of_business")
@@ -120,33 +209,18 @@ def Addbusiness(request):
             city_municipality     = request.POST.get("city_municipality")
             country               = request.POST.get("country") or "Philippines"
             total_gross_income    = request.POST.get("total_gross_income")
-            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number")
+            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number") or None  # optional
+            clearance_category_id = int(request.POST.get("clearance_category_id"))       # from dropdown
             clearance_date_issued = request.POST.get("clearance_date_issued") or None
             personnel_id          = int(request.session.get("personnel_id"))
 
-            # Call your stored procedure
-            result = Secretary.sp_register_business(
-                resident_id,
-                business_name,
-                business_type_id,
-                nature_of_business,
-                ownership_id,
-                house_number,
-                street,
-                barangay,
-                sitio_id,
-                city_municipality,
-                country,
-                total_gross_income,
-                dti_sec_cda_reg_num,
-                clearance_date_issued,
-                personnel_id,
+            Secretary.sp_register_business(
+                resident_id, business_name, business_type_id, nature_of_business, ownership_id,
+                house_number, street, barangay, sitio_id, city_municipality, country,
+                total_gross_income, dti_sec_cda_reg_num, clearance_category_id,
+                clearance_date_issued, personnel_id
             )
-
             set_flash(request, "Successfully Submitted", "success")
-
-        except ValueError as ve:
-            set_flash(request, str(ve), "error")
         except Exception as e:
             set_flash(request, str(e), "error")
 
@@ -154,7 +228,9 @@ def Addbusiness(request):
     return render(request, "secretary_module/Addbusiness.html", {
         'message': flash.get('message'),
         'message_level': flash.get('message_level'),
+        'clearance_categories': clearance_categories,
     })
+
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -279,18 +355,44 @@ def business_update(request, business_id: int):
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
+        # Current state (for rule checks)
+        current = Business.sp_get_business_detail(business_id) or {}
+        curr_own = int(current.get('ownership_id') or 0)
+        curr_cat = int(current.get('clearance_category_id') or 0)
+
         # Optional owner transfer via name (uses your resolver)
         resident_name = (request.POST.get("resident_name") or "").strip()
         resident_id = None
         if resident_name:
+            # Owner change only if NOT sole proprietorship (id=1)
+            if curr_own == 1:
+                return JsonResponse({"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."}, status=400)
             resident_id = _find_resident_id_by_name(resident_name)
 
+        # New (requested) clearance category
+        new_cat = _to_int_or_none(request.POST.get("clearance_category_id"))
+
+        # Rule: Clearance Category can change only:
+        # - Sole Prop (3/4): within {3,4}
+        # - Lessor (6..10): within 6..10
+        # - Others: cannot change
+        if new_cat is not None and new_cat != curr_cat:
+            if curr_cat in (3, 4):
+                if new_cat not in (3, 4):
+                    return JsonResponse({"ok": False, "message": "Sole Proprietorship may switch only between categories 3 and 4."}, status=400)
+            elif 6 <= curr_cat <= 10:
+                if not (6 <= new_cat <= 10):
+                    return JsonResponse({"ok": False, "message": "Lessor categories may switch only within 6–10."}, status=400)
+            else:
+                return JsonResponse({"ok": False, "message": "This clearance category cannot be changed."}, status=400)
+
+        # Build payload (leave non-editables as None so proc won’t touch them)
         payload = {
             "business_name":          _none_if_blank(request.POST.get("business_name")),
-            "business_type_id":       _to_int_or_none(request.POST.get("business_type_id")),
+            "business_type_id":       None,  # not editable
             "nature_of_business":     _none_if_blank(request.POST.get("nature_of_business")),
-            "ownership_id":           _to_int_or_none(request.POST.get("ownership_id")),
-            "resident_id":            resident_id,  # only when provided
+            "ownership_id":           None,  # not editable
+            "resident_id":            resident_id,  # only when provided and allowed
             "house_number":           _none_if_blank(request.POST.get("house_number")),
             "street":                 _none_if_blank(request.POST.get("street")),
             "barangay":               _none_if_blank(request.POST.get("barangay")),
@@ -298,7 +400,8 @@ def business_update(request, business_id: int):
             "city_municipality":      _none_if_blank(request.POST.get("city_municipality")),
             "country":                _none_if_blank(request.POST.get("country")),
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
-            "dti_sec_cda_reg_number": _none_if_blank(request.POST.get("dti_sec_cda_reg_number")),
+            "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
+            "dti_sec_cda_reg_number": None,      # not editable
         }
 
         result = Business.sp_update_business(
@@ -308,27 +411,30 @@ def business_update(request, business_id: int):
         )
         msg = coerce_message(result)
         return JsonResponse({"ok": True, "message": msg})
+
     except ValueError as ve:
         return JsonResponse({"ok": False, "message": str(ve)}, status=400)
     except Exception as e:
-        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)
-
+        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)\
+        
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
-@require_http_methods(["POST"])
+@require_POST
 def business_close(request, business_id: int):
+    """
+    Marks a business as Closed via the SQL function.
+    Only Secretary / Assistant Secretary can do this (enforced here and in SQL).
+    """
     try:
         personnel_id = int(request.session.get("personnel_id") or 0)
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
-        result = Business.sp_set_closed_business(business_id, personnel_id)
-        return JsonResponse({"ok": True, "message": result})
+        msg = Business.sp_set_closed_business(business_id, personnel_id)
+        return JsonResponse({"ok": True, "message": msg})
     except Exception as e:
-        import traceback
-        print("Error in business_close:", traceback.format_exc())
+        # Return DB error (your SQL has nice messages)
         return JsonResponse({"ok": False, "message": str(e)}, status=400)
-
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -751,3 +857,143 @@ def tax_penalties_update(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    
+
+def _acting_personnel_id(request) -> int:
+    return (
+        getattr(getattr(request, 'user', None), 'personnel_id', None)
+        or request.session.get('personnel_id')
+        or 1
+    )
+
+def _public_url(request, path: str | None):
+    """
+    Normalize DB-stored image paths so the template always gets a usable URL.
+    - absolute http(s): return as-is
+    - root-relative (starts with /): build absolute (so it works in emails or iframes)
+    - plain relative like 'announcements/x.jpg': prefix MEDIA_URL and build absolute
+    """
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    return request.build_absolute_uri(base + path.lstrip('/'))
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def announcement(request):
+    ctx = {'errors': []}
+    personnel_id = _acting_personnel_id(request)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action in ('create', 'update'):
+            header_title = (request.POST.get('header_title') or '').strip()
+            details = (request.POST.get('details') or '').strip()
+            event_date_str = (request.POST.get('announcement_at_date') or '').strip()
+            raw_audience = (request.POST.get('audience') or 'EVERYONE').strip()
+            audience = _UI_TO_SQL_AUDIENCE.get(raw_audience)
+
+            event_date = None
+            if event_date_str:
+                try:
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    ctx['errors'].append('Invalid Event Date.')
+
+            if audience is None:
+                ctx['errors'].append('Invalid audience selection.')
+            if not header_title:
+                ctx['errors'].append('Title is required.')
+            if not details:
+                ctx['errors'].append('Content is required.')
+
+            # optional image upload
+            image_db_path = None
+            f = request.FILES.get('image')
+            if f:
+                saved = default_storage.save(f"announcements/{f.name}", f)  # store relative path
+                image_db_path = saved
+
+            try:
+                if action == 'create' and not ctx['errors']:
+                    new_id = AnnouncementRepo.create(
+                        header_title=header_title,
+                        details=details,
+                        image_path=image_db_path,
+                        created_by=personnel_id,
+                        event_date=event_date,
+                        audience=audience
+                    )
+                    return redirect(f"{request.path}?id={new_id}")
+
+                elif action == 'update' and not ctx['errors']:
+                    upd_id = request.POST.get('announcement_id')
+                    if not upd_id:
+                        ctx['errors'].append('Missing announcement id.')
+                    else:
+                        AnnouncementRepo.update(
+                            announcement_id=int(upd_id),
+                            updated_by=personnel_id,
+                            header_title=header_title,
+                            details=details,
+                            image_path=image_db_path,
+                            event_date=event_date,
+                            audience=audience
+                        )
+                        return redirect(f"{request.path}?id={upd_id}")
+
+            except Exception as e:
+                ctx['errors'].append(str(e))
+                # fall through to re-render with errors
+
+            ctx['post_data'] = {
+                'header_title': header_title,
+                'details': details,
+                'announcement_at_date': event_date_str,
+                'audience': raw_audience,
+            }
+
+        elif action == 'delete':
+            try:
+                del_id = int(request.POST.get('announcement_id'))
+                AnnouncementRepo.delete(del_id, personnel_id)
+                return redirect(request.path)  # no id -> will show latest or empty
+            except Exception as e:
+                ctx['errors'].append(str(e))
+
+    # GET: list + selected
+    selected_id = request.GET.get('id')
+    # (optional) list filter: ?audience=resident|personnel|both
+    list_audience = request.GET.get('audience')
+    announcements = AnnouncementRepo.list_all(sort='date_desc', limit=100, audience=list_audience)
+
+    selected = None
+    if selected_id:
+        selected = AnnouncementRepo.get_one(int(selected_id))
+    elif announcements:
+        selected = AnnouncementRepo.get_one(int(announcements[0]['announcement_id']))
+
+    # normalize image URL for the selected item (keeps your existing behavior)
+    if selected and 'announcement_image_path' in selected:
+        selected['image_url'] = _public_url(request, selected.get('announcement_image_path'))
+
+    # normalize audience to what your template expects (EVERYONE | PERSONNEL | RESIDENTS)
+    if selected and selected.get('audience'):
+        selected['audience'] = _SQL_TO_UI_AUDIENCE.get(selected['audience'], 'EVERYONE')
+
+    # compatibility aliases if your SQL returns created_date instead of date / announcement_date
+    if selected and 'created_date' in selected and 'date' not in selected:
+        selected['date'] = selected['created_date']
+    for a in announcements:
+        if 'created_date' in a and 'announcement_date' not in a:
+            a['announcement_date'] = a['created_date']
+
+    ctx.update({'announcements': announcements, 'selected': selected})
+    return render(request, 'secretary_module/announcement.html', ctx)

@@ -11,7 +11,7 @@
   .btn-view{ background:#2563eb; }
   .btn-view:hover{ background:#1d4ed8; }
 
-  /* Visit should be GREEN whether enabled or disabled */
+  /* Visit is GREEN whether enabled or disabled */
   .btn-visit{ background:#16a34a; }
   .btn-visit:hover{ background:#15803d; }
 
@@ -128,7 +128,7 @@
           <th class="py-3 px-4 border">Household No.</th>
           <th class="py-3 px-4 border">Household Head</th>
           <th class="py-3 px-4 border">Full Address</th>
-          <th class="py-3 px-4 border">Visitation Status</th>
+          <th class="py-3 px-4 border">Active Status</th>
           <th class="py-3 px-4 border text-center">Action</th>
         </tr>
       </thead>
@@ -154,19 +154,19 @@
               <td class="px-6 py-3">{{ person.household_head }}</td>
               <td class="px-6 py-3">{{ person.full_address }}</td>
               <td class="px-6 py-3">
-                {% if person.is_visited %}
+                {% if person.is_active %}
                   <span class="inline-flex w-28 items-center justify-center gap-1.5 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold leading-none text-white whitespace-nowrap">
                     <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
                       <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.333a1 1 0 0 1-1.44.02L3.29 9.59a1 1 0 1 1 1.42-1.41l3.07 3.09 6.54-6.61a1 1 0 0 1 1.384-.37Z" clip-rule="evenodd"/>
                     </svg>
-                    Visited
+                    Active
                   </span>
                 {% else %}
                   <span class="inline-flex w-28 items-center justify-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold leading-none text-white whitespace-nowrap">
                     <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
                       <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 1 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/>
                     </svg>
-                    Not&nbsp;visited
+                    Inactive
                   </span>
                 {% endif %}
               </td>
@@ -183,30 +183,12 @@
                       <span>View</span>
                     </button>
                   </form>
-                  {% if not is_current_quarter %}
+
+                  {# ===================== VISIT BUTTON LOGIC ===================== #}
+                  {% if not person.is_active %}
+                    {# Inactive households #}
                     {% if person.is_visited %}
-                      <button type="button"
-                              class="btn-action btn-visited"
-                              title="Already visited (editing disabled outside current quarter)"
-                              disabled aria-disabled="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
-                        </svg>
-                        <span>Visited</span>
-                      </button>
-                    {% else %}
-                      <button type="button"
-                              class="btn-action btn-visit"
-                              title="Visit is disabled — only available in the current quarter"
-                              disabled aria-disabled="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
-                        </svg>
-                        <span>Visit</span>
-                      </button>
-                    {% endif %}
-                  {% else %}
-                    {% if person.is_visited %}
+                      <!-- Inactive + already visited: standard gray disabled -->
                       <button type="button"
                               class="btn-action btn-visited"
                               title="Already visited"
@@ -217,20 +199,75 @@
                         <span>Visited</span>
                       </button>
                     {% else %}
+                      <!-- Inactive + NOT visited: keep Visit GREEN but disabled -->
                       <button type="button"
-                              class="btn-action btn-visit openVisitModal"
-                              title="Visit"
-                              data-hid="{{ person.household_id }}"
-                              data-head="{{ person.household_head|escape }}"
-                              data-number="{{ person.household_number|escape }}"
-                              data-visited="0">
+                              class="btn-action btn-visit"
+                              title="Household is inactive — visiting disabled"
+                              disabled aria-disabled="true">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
                         </svg>
                         <span>Visit</span>
                       </button>
                     {% endif %}
+
+                  {% else %}
+                    {# Active households #}
+                    {% if not is_current_quarter %}
+                      {% if person.is_visited %}
+                        <!-- Active + not current quarter + visited: gray disabled -->
+                        <button type="button"
+                                class="btn-action btn-visited"
+                                title="Already visited (editing disabled outside current quarter)"
+                                disabled aria-disabled="true">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
+                          </svg>
+                          <span>Visited</span>
+                        </button>
+                      {% else %}
+                        <!-- Active + not current quarter + NOT visited: green but disabled -->
+                        <button type="button"
+                                class="btn-action btn-visit"
+                                title="Visit is disabled — only available in the current quarter"
+                                disabled aria-disabled="true">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
+                          </svg>
+                          <span>Visit</span>
+                        </button>
+                      {% endif %}
+                    {% else %}
+                      {% if person.is_visited %}
+                        <!-- Active + current quarter + visited: gray disabled -->
+                        <button type="button"
+                                class="btn-action btn-visited"
+                                title="Already visited"
+                                disabled aria-disabled="true">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
+                          </svg>
+                          <span>Visited</span>
+                        </button>
+                      {% else %}
+                        <!-- Active + current quarter + NOT visited: green enabled -->
+                        <button type="button"
+                                class="btn-action btn-visit openVisitModal"
+                                title="Visit"
+                                data-hid="{{ person.household_id }}"
+                                data-head="{{ person.household_head|escape }}"
+                                data-number="{{ person.household_number|escape }}"
+                                data-visited="0">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3 3 10h2v9h6v-6h2v6h6v-9h2L12 3Z"/>
+                          </svg>
+                          <span>Visit</span>
+                        </button>
+                      {% endif %}
+                    {% endif %}
                   {% endif %}
+                  {# =================== END VISIT BUTTON LOGIC =================== #}
+
                 </div>
               </td>
             </tr>

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard
+from .models import Dashboard, AnnouncementRepo
 from household_module.models import Household, Family
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
@@ -12,60 +12,127 @@ from utils.constants import LIMIT_OPTIONS
 from django.utils.http import urlencode
 from django.urls import reverse
 import json
+import re 
+from datetime import datetime
+
+_UI_TO_SQL_AUDIENCE = {
+    'EVERYONE': 'both',
+    'PERSONNEL': 'personnel',
+    'RESIDENTS': 'resident',
+    'both': 'both', 'personnel': 'personnel', 'resident': 'resident',  # tolerate lowercase
+}
+_SQL_TO_UI_AUDIENCE = {
+    'both': 'EVERYONE',
+    'personnel': 'PERSONNEL',
+    'resident': 'RESIDENTS',
+}
+
 
 @custom_login_required
-@role_required('Barangay Health Worker')
+@role_required('Barangay Health Worker')  # add more personnel roles if needed
 def bhw_dashboard(request):
-    barangay = request.GET.get("barangay") or None
-    city     = request.GET.get("city") or None
-
-    # Totals
+    # ---- KPIs ----
     try:
-        totals = Dashboard.sp_dashboard_totals(barangay=barangay, city=city)
+        totals = Dashboard.sp_dashboard_totals(barangay=None, city=None)
     except Exception as e:
         messages.error(request, f"Failed loading totals: {e}")
-        totals = {"total_resident": 0, "total_non_resident": 0, "total_pending": 0, "total_male": 0, "total_female": 0}
+        totals = {
+            "total_resident": 0, "total_non_resident": 0, "total_pending": 0,
+            "total_male": 0, "total_female": 0
+        }
 
-    # Residents per sitio (no params)
+    # ---- Bar (per sitio) ----
     try:
-        per_sitio_rows = Dashboard.sp_residents_per_sitio_json()
-        print("DEBUG per_sitio_rows:", per_sitio_rows)  # check console once
+        per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
         per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
         per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
     except Exception as e:
         messages.error(request, f"Failed loading per-sitio data: {e}")
         per_sitio_labels, per_sitio_data = [], []
 
-    # --- Age brackets (Pie) ---
+    # ---- Pie (age) ----
     try:
-        age_rows = Dashboard.sp_age_bracket_distribution()  # no params
-
-        # unwrap if each item is {"jsonb_build_object": {...}}
+        age_rows = Dashboard.sp_age_bracket_distribution()
         cleaned = []
         for item in age_rows or []:
-            if isinstance(item, dict) and "jsonb_build_object" in item:
-                cleaned.append(item["jsonb_build_object"])
-            else:
-                cleaned.append(item)
-
+            cleaned.append(item.get("jsonb_build_object", item))
         age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
         age_data   = [int(r.get("count") or 0) for r in cleaned]
-
         total = sum(age_data) or 1
         age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
     except Exception as e:
         messages.error(request, f"Failed loading age distribution: {e}")
         age_labels, age_data, age_labels_pct = [], [], []
 
+    # === Recent announcements (use list_all so we surely have 'audience') ===
+    try:
+        raw_latest = AnnouncementRepo.list_all(sort='date_desc', limit=20, audience=None)
+        latest_announcements = []
+        for a in raw_latest:
+            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
+            a["audience"] = aud
+            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+            if aud in ("personnel", "both"):     # BHW sees Personnel + Everyone
+                latest_announcements.append(a)
+            if len(latest_announcements) >= 3:
+                break
+    except Exception as e:
+        messages.error(request, f"Failed loading recent announcements: {e}")
+        latest_announcements = []
+
+    # ---- Modal filters ----
+    ann_q        = (request.GET.get('ann_q') or '').strip() or None
+    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None
+    ann_from_str = (request.GET.get('ann_from') or '').strip()
+    ann_to_str   = (request.GET.get('ann_to') or '').strip()
+
+    ann_from = ann_to = None
+    try:
+        if ann_from_str:
+            ann_from = datetime.strptime(ann_from_str, '%Y-%m-%d').date()
+        if ann_to_str:
+            ann_to = datetime.strptime(ann_to_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.warning(request, 'Invalid date filter for announcements.')
+
+    # ---- Full list for modal (restricted to personnel scope) ----
+    try:
+        rows = AnnouncementRepo.list_all(
+            q=ann_q, date_from=ann_from, date_to=ann_to,
+            created_by=None, sort='date_desc', limit=200, offset=0,
+            audience=ann_aud or None
+        )
+        announcements_all = []
+        for a in rows:
+            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
+            a["audience"] = aud
+            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+            if aud in ("personnel", "both"):   # enforce BHW scope
+                announcements_all.append(a)
+    except Exception as e:
+        messages.error(request, f"Failed loading announcements list: {e}")
+        announcements_all = []
+
     ctx = {
         "totals": totals,
         "per_sitio_labels": per_sitio_labels,
         "per_sitio_data": per_sitio_data,
         "age_labels": age_labels,
-        "age_labels_pct": age_labels_pct,  # optional pretty legend
+        "age_labels_pct": age_labels_pct,
         "age_data": age_data,
+        "latest_announcements": latest_announcements,
+        "announcements_all": announcements_all,
+        "ann_filters": {
+            "q": ann_q or "",
+            "audience": ann_aud or "",
+            "from": ann_from_str,
+            "to": ann_to_str,
+        },
+        "ann_open": request.GET.get('ann_open') == '1',
     }
     return render(request, "bhw_module/bhw_dashboard.html", ctx)
+
+
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -472,6 +539,11 @@ def insert_family_member(request):
         philhealth_category = request.POST.get('philhealth_category')
         nutrition_status = request.POST.get('nutritional_status')
         
+        if philhealth_number and not re.fullmatch(r"[0-9\-]+", philhealth_number):
+            set_flash(request, "PhilHealth Number should contain only digits and dashes.", "error")
+            return redirect_to_view()
+
+        
         if membership_type == '':
             membership_type = None
         
@@ -767,6 +839,273 @@ def deactivate_family(request):
 
 @custom_login_required
 @role_required('Barangay Health Worker')
+@require_POST
+def deactivate_household(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    reason = (request.POST.get('reason') or '').strip()
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Household.sp_deactivate_household(hid, reason, pid)
+        set_flash(request, "Household marked as inactive.", "success")
+        return redirect('bhw_module:householdList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def reactivate_household(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Household.sp_reactivate_household(hid, pid)
+        set_flash(request, "Household marked as inactive.", "success")
+        return redirect('bhw_module:householdList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_family_member(request):
+    try:
+        fm_id = int(request.POST.get('family_member_id'))
+        hid   = int(request.POST.get('household_id'))
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid household/member id.", "error")
+        return redirect('bhw_module:householdList')
+
+    pid = int(request.session.get('personnel_id') or 0)
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+        params = {"hid": hid, "household_number": household_number}
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    # ---------- helpers ----------
+    def _to_int(val, default=None):
+        try:
+            if val in (None, "", "None"):
+                return default
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    def _norm_str(s):
+        return (s or "").strip()
+
+    def _norm_choice(s, allowed):
+        v = _norm_str(s).upper()
+        return v if v in allowed else None
+
+    try:
+        prev = Family.sp_get_specific_family_member(fm_id)
+        if not prev:
+            set_flash(request, "Family member not found.", "error")
+            return redirect_to_view()
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect_to_view()
+
+    curr_rth_id   = _to_int(prev.get('rth_id'), 0)
+    curr_rtf_id   = _to_int(prev.get('rtf_id'), 0)
+    curr_ph_no    = _norm_str(prev.get('philhealthid_number'))
+    curr_mtype    = _norm_str(prev.get('membership_type')).upper() if prev.get('membership_type') else ""
+    curr_pcat_id  = _to_int(prev.get('philhealth_category_id'), None)
+    curr_nut_id   = _to_int(prev.get('nutrition_status_id'), None)
+
+    new_rth_id  = _to_int(request.POST.get('mem_rel_hh'))
+    new_rtf_id  = _to_int(request.POST.get('mem_rel_fh'))
+    ph_no_raw   = _norm_str(request.POST.get('philhealth_number'))
+    new_mtype   = _norm_choice(request.POST.get('membership_type'), {"M", "D"})
+    new_pcat_id = _to_int(request.POST.get('philhealth_category'))
+    new_nut_id  = _to_int(request.POST.get('nutritional_status'))
+
+    # Required ints
+    missing = []
+    if new_rth_id is None: missing.append("Relationship to Household Head")
+    if new_rtf_id is None: missing.append("Relationship to Family Head")
+    if missing:
+        set_flash(request, f"Missing/invalid fields: {', '.join(missing)}.", "error")
+        return redirect_to_view()
+
+    if ph_no_raw:
+        if not new_mtype or new_pcat_id is None:
+            set_flash(request,
+                      "If a PhilHealth Number is provided, please select the Membership Type and Category.",
+                      "error")
+            return redirect_to_view()
+        import re
+        if not re.fullmatch(r"[0-9\-]+", ph_no_raw):
+            set_flash(request, "PhilHealth Number should contain only digits and dashes.", "error")
+            return redirect_to_view()
+        ph_no = ph_no_raw
+    else:
+        ph_no = None
+        new_mtype = None
+        new_pcat_id = None
+
+    changed = []
+    if new_rth_id != curr_rth_id: changed.append("Rel (Member→Household Head)")
+    if new_rtf_id != curr_rtf_id: changed.append("Rel (Member→Family Head)")
+    if (ph_no or "") != (curr_ph_no or ""): changed.append("PhilHealth Number")
+    if (new_mtype or "") != (curr_mtype or ""): changed.append("PhilHealth Membership Type")
+    if (new_pcat_id or None) != (curr_pcat_id or None): changed.append("PhilHealth Category")
+    if (new_nut_id or None) != (curr_nut_id or None): changed.append("Nutritional Status")
+
+    if not changed:
+        set_flash(request, "No changes detected — nothing to update.", "info")
+        return redirect_to_view()
+
+    try:
+        Family.sp_update_family_member(
+            fm_id,
+            pid,
+            new_rth_id,
+            new_rtf_id,
+            ph_no,
+            new_mtype,
+            new_pcat_id,
+            new_nut_id,
+        )
+        set_flash(request, f"Family member updated successfully. Changed: {', '.join(changed)}.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def remove_family_member(request):
+
+    hid = int(request.POST.get('household_id'))
+    pid = int(request.session.get('personnel_id'))
+    rid = int(request.POST.get('resident_id'))
+    fid = int(request.POST.get('family_id'))
+    reason = (request.POST.get('reason') or '').strip()
+    performed_by_type = 'personnel'
+    assignment_bhw = False
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdView')
+
+    try:
+        # Call your stored procedure / function
+        Family.sp_remove_family_member_from_family(rid, fid, pid, performed_by_type, assignment_bhw, reason)
+        set_flash(request, "Family member removed successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
 def householdView(request):
     
     def _to_bool(v):
@@ -887,6 +1226,7 @@ def householdView(request):
     family_relationship = Family.sp_get_relationship_to_family_head()
     philhealth_category = Family.sp_get_philhealth_category()
     nutrition_status = Family.sp_get_nutrition_status()
+    current_quarter = Household.sp_get_current_quarter_id()
 
     flash = get_flash(request)
     return render(request, 'bhw_module/householdView.html', {
@@ -905,6 +1245,7 @@ def householdView(request):
         'philhealth_category': philhealth_category,
         'nutrition_status': nutrition_status,
         'results': result,
+        'current_quarter': current_quarter,
         'families': families,
         'message': flash['message'],
         'message_level': flash['message_level'],
