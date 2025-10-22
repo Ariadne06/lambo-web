@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-
+import django.contrib.admin as admin
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -18,13 +18,14 @@ router.register(r'medical-history-types', views.MedicalHistoryTypeViewSet)
 router.register(r'classes', views.ClassViewSet)
 router.register(r'fp-methods', views.FPMethodViewSet)
 router.register(r'fp-statuses', views.FPStatusViewSet)
-import django.contrib.admin as admin
+
 
 app_name = 'household_module'
 
 urlpatterns = [
     # Include router URLs
     path('', include(router.urls)),
+    path('admin/', admin.site.urls),
     
     # APIView endpoints
     path('households/', views.HouseholdListView.as_view(), name='household_list'),
@@ -40,5 +41,6 @@ urlpatterns = [
     path('families/<int:family_id>/members/add/', views.FamilyMemberCreateView.as_view(), name='add-family-member'),
     path('family-members/<int:family_member_id>/', views.FamilyMemberDetailView.as_view(), name='family-member-detail'),
     path('family-members/<int:family_member_id>/general-health/create/', views.GeneralHealthCreateView.as_view(), name='create-general-health'),
-    path('admin/', admin.site.urls),
+    path('family-members/<int:family_member_id>/general-health/update/', views.GeneralHealthUpdateView.as_view(), name='update-general-health'),
+    
 ]
