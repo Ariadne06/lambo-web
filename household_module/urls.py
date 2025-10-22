@@ -42,5 +42,7 @@ urlpatterns = [
     path('family-members/<int:family_member_id>/', views.FamilyMemberDetailView.as_view(), name='family-member-detail'),
     path('family-members/<int:family_member_id>/general-health/create/', views.GeneralHealthCreateView.as_view(), name='create-general-health'),
     path('family-members/<int:family_member_id>/general-health/update/', views.GeneralHealthUpdateView.as_view(), name='update-general-health'),
-    
+    path('households/<int:household_id>/mark-visited/', views.HouseholdMarkVisitedView.as_view(), name='mark-household-visited'),
+    path('families/<int:family_id>/mark-visited/', views.FamilyMarkVisitedView.as_view(), name='mark-family-visited'),
+    path('families/<int:family_id>/gh-readiness/', views.FamilyGHReadinessView.as_view(), name='family-gh-readiness'),
 ]

@@ -371,7 +371,6 @@ class FamilyDetailView(APIView):
     
     def get(self, request, family_id):
         try:
-            # Check cache first
             cache_key = f'family_detail_{family_id}'
             cached_data = cache.get(cache_key)
             
@@ -381,7 +380,6 @@ class FamilyDetailView(APIView):
                     'data': cached_data
                 })
             
-            #  Fetch from database using your SQL function
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT * FROM get_specific_family(%s, NULL)",
@@ -398,23 +396,25 @@ class FamilyDetailView(APIView):
                 
                 data = dict(zip(columns, row))
                 
-                # Parse members_json if it's a string
-                if isinstance(data.get('members_json'), str):
-                    try:
-                        data['members_json'] = json.loads(data['members_json'])
-                    except:
-                        data['members_json'] = []
+                # Parse members_json if it's a JSONB string
+                if data.get('members_json'):
+                    if isinstance(data['members_json'], str):
+                        try:
+                            import json
+                            data['members_json'] = json.loads(data['members_json'])
+                        except:
+                            data['members_json'] = []
+                else:
+                    data['members_json'] = []
                 
                 # Format dates
                 if data.get('date_visited'):
                     data['date_visited'] = data['date_visited'].isoformat()
-                if data.get('updated_at'):
-                    data['updated_at'] = data['updated_at'].isoformat()
-                if data.get('date_created'):
-                    data['date_created'] = data['date_created'].isoformat()
                 
                 # Cache for 10 minutes
                 cache.set(cache_key, data, 600)
+                
+                print(f"Family {family_id} has {len(data['members_json'])} members")
                 
                 return Response({
                     'success': True,
@@ -746,6 +746,161 @@ class GeneralHealthUpdateView(APIView):
             
         except Exception as e:
             print(f" Error: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+            
+
+class HouseholdMarkVisitedView(APIView):
+    """Mark household as visited"""
+    
+    def post(self, request, household_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            enforce_bhw_assignment = request.data.get('enforce_bhw_assignment', False)
+            
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'personnel_id is required'
+                }, status=400)
+            
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT mark_household_visited(%s, %s, %s)",
+                    [household_id, personnel_id, enforce_bhw_assignment]
+                )
+                result = cursor.fetchone()
+                household_id_returned = result[0] if result else None
+            
+            if household_id_returned:
+                cache.delete(f'household_detail_{household_id}')
+                cache.delete('households_list_*')
+                
+                return Response({
+                    'success': True,
+                    'household_id': household_id_returned,
+                    'message': 'Household marked as visited'
+                }, status=200)
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'Failed to mark household as visited'
+                }, status=500)
+                
+        except Exception as e:
+            print(f"Error marking household visited: {e}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
+class FamilyMarkVisitedView(APIView):
+    """
+    Mark family as visited - STRICT GATE
+    Only allows marking if ALL members have GH data for current quarter
+    """
+    
+    def post(self, request, family_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            enforce_bhw_assignment = request.data.get('enforce_bhw_assignment', False)
+            
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'personnel_id is required'
+                }, status=400)
+            
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT mark_family_visited(%s, %s, %s)",
+                    [family_id, personnel_id, enforce_bhw_assignment]
+                )
+                result = cursor.fetchone()
+                family_id_returned = result[0] if result else None
+            
+            if family_id_returned:
+                cache.delete(f'family_detail_{family_id}')
+                cache.delete('household_families_*')
+                
+                return Response({
+                    'success': True,
+                    'family_id': family_id_returned,
+                    'message': 'Family marked as visited'
+                }, status=200)
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'Failed to mark family as visited'
+                }, status=500)
+                
+        except Exception as e:
+            error_msg = str(e)
+            
+            if 'E8815' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'incomplete_gh',
+                    'message': 'Cannot mark family as visited. Some members are missing General Health data for the current quarter.',
+                    'details': error_msg
+                }, status=400)
+            elif 'E8814' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'no_active_quarter',
+                    'message': 'No active quarter found. Please contact administrator.'
+                }, status=400)
+            elif 'E8813' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'not_assigned',
+                    'message': 'You are not assigned to this area.'
+                }, status=403)
+            else:
+                return Response({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+
+
+class FamilyGHReadinessView(APIView):
+    """Check if family is ready for visit (all members have GH data)"""
+    
+    def get(self, request, family_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT family_general_health_readiness_current(%s)",
+                    [family_id]
+                )
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                   
+                    readiness_data = result[0]
+
+                    if isinstance(readiness_data, str):
+                        readiness_data = json.loads(readiness_data)
+                    
+                    print(f" GH Readiness for family {family_id}: {readiness_data}")
+                    
+                    return Response({
+                        'success': True,
+                        'data': readiness_data
+                    })
+                else:
+                    return Response({
+                        'success': False,
+                        'error': 'Could not check family readiness'
+                    }, status=500)
+                    
+        except Exception as e:
+            print(f" Error checking family readiness: {e}")
             import traceback
             traceback.print_exc()
             return Response({
