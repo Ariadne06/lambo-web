@@ -785,7 +785,7 @@ def update_family(request):
         )
         set_flash(request, f"Family updated successfully. Changed: {', '.join(changed)}.", "success")
     except Exception as e:
-        set_flash(request, str(e), "error")
+        set_flash(request, _clean_db_error(e), "error")
 
     return redirect_to_view()
 
