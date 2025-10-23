@@ -180,8 +180,11 @@ def req_pwd_change(request):
             
             if result == "Reset request accepted. Personnel account matched.":
                 set_flash(request, result, "success")
-            else:
+            elif result == "Reset request accepted. Resident account matched.":
                 set_flash(request,  "Reset request not accepted. Please use the correct reset page for your account type.", "error")
+            
+            else:
+                set_flash(request,  result, "error")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
 
