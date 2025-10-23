@@ -1,133 +1,142 @@
 from django.db import connection
-import logging
 
-logger = logging.getLogger(__name__)
 
-def get_households_for_bhw(personnel_id):
-    """Get households for BHW - following your database_helpers pattern"""
+
+def get_all_households():
+    """
+    Get all households using SQL function
+    Returns: list of dicts
+    """
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT 
-                    h.household_id,
-                    h.household_code,
-                    h.house_number,
-                    CONCAT(hh.first_name, ' ', hh.last_name) as household_head_name,
-                    CONCAT(resp.first_name, ' ', resp.last_name) as respondent_name,
-                    CONCAT(COALESCE(a.street, ''), ', ', a.barangay, ', ', COALESCE(a.sitio, '')) as full_address,
-                    h.is_visited,
-                    COUNT(f.family_id) as family_count,
-                    COUNT(CASE WHEN f.is_visited = TRUE THEN 1 END) as visited_families,
-                    h.quarter,
-                    h.year
-                FROM household h
-                LEFT JOIN resident hh ON h.household_head_id = hh.resident_id
-                LEFT JOIN resident resp ON h.respondent_id = resp.resident_id
-                LEFT JOIN address a ON h.address_id = a.address_id
-                LEFT JOIN family f ON h.household_id = f.household_id 
-                WHERE h.quarter = (SELECT EXTRACT(QUARTER FROM CURRENT_DATE))
-                AND h.year = (SELECT EXTRACT(YEAR FROM CURRENT_DATE))
-                GROUP BY h.household_id, h.household_code, h.house_number, 
-                         hh.first_name, hh.last_name, resp.first_name, resp.last_name,
-                         a.street, a.barangay, a.sitio, h.is_visited, h.quarter, h.year
-                ORDER BY h.household_code
+                SELECT * FROM get_all_households(
+                    NULL, NULL, NULL, 'all', NULL, 10000, 0
+                )
             """)
-            
-            return cursor.fetchall()
-            
-    except Exception as e:
-        logger.error(f"Error fetching households: {e}")
-        raise e
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
 
-def create_household(form_data, personnel_id):
-    """Create household using your database function pattern"""
+            households = []
+            for row in rows:
+                household_dict = dict(zip(columns, row))
+                if household_dict.get('date_visited'):
+                    household_dict['date_visited'] = household_dict['date_visited'].isoformat()
+                households.append(household_dict)
+
+            return households
+
+    except Exception as e:
+        print(f"Failed to get households: {str(e)}")
+        raise Exception(f"Failed to get households: {str(e)}")
+    
+
+def insert_family_member(family_id, resident_id, rth_id, rtf_id, philhealthid_number, 
+                        membership_type, philhealth_category_id, nutrition_status_id, 
+                        personnel_id):
+    """Insert family member using SQL function"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT insert_household(%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, [
-                form_data.get('house_ownership_type_id'),
-                form_data.get('house_number', ''),
-                form_data.get('address_id'),
-                form_data.get('household_head_id'),
-                form_data.get('respondent_id'),
-                form_data.get('respondent_relationship_to_hh_id', 1),
+            cursor.callproc('insert_family_member', [
+                resident_id,
+                family_id,
+                rth_id,
+                rtf_id,
+                philhealthid_number or '',
+                membership_type or 'M',
+                philhealth_category_id,
+                nutrition_status_id,
                 personnel_id,
-                # Quarter and year will be handled by the database function
-                None,  # quarter - let DB function handle
-                None   # year - let DB function handle
+                'personnel'
             ])
-            
             result = cursor.fetchone()
             return result[0] if result else None
-            
     except Exception as e:
-        logger.error(f"Error creating household: {e}")
-        raise e
+        print(f"Failed to insert family member: {str(e)}")
+        raise Exception(f"Failed to insert family member: {str(e)}")
 
-def create_family(household_id, form_data, personnel_id):
-    """Create family using your database function pattern"""
+
+def save_general_health_for_member(family_member_id, class_id, medical_history_ids, 
+                                   wra_lmp, fp_method_yn, fp_method_id, 
+                                   fp_status_id, personnel_id):
+    """
+    Save general health profile for a family member
+    """
     try:
-        # Validate that family_head_id is provided - REQUIRED!
-        if not form_data.get('family_head_id'):
-            raise ValueError("Family head is required")
-            
         with connection.cursor() as cursor:
+            #  FIX: Convert empty list to None for PostgreSQL
+            if medical_history_ids is not None and len(medical_history_ids) == 0:
+                medical_history_ids = None
+            
             cursor.execute("""
-                SELECT insert_family(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                SELECT save_general_health_for_member(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
             """, [
-                household_id,
-                form_data.get('household_type_id'),
-                form_data.get('family_head_id'),  # REQUIRED!
-                form_data.get('respondent_id'),
-                form_data.get('respondent_relationship_to_fh_id', 1),
-                form_data.get('ip_status', False),
-                form_data.get('ip_tribe', ''),
-                form_data.get('nhts_status', False),
-                form_data.get('water_source_type_id'),
-                form_data.get('toilet_facility_type_id'),
-                form_data.get('waste_management_type_id'),
-                form_data.get('waste_other_text', ''),
-                None,  # quarter - let DB function handle
-                None   # year - let DB function handle
+                family_member_id,
+                class_id,
+                medical_history_ids,  
+                wra_lmp,             
+                fp_method_yn,       
+                fp_method_id,        
+                fp_status_id,        
+                personnel_id,
+                'personnel'           
             ])
             
             result = cursor.fetchone()
-            return result[0] if result else None
+            gh_id = result[0] if result else None
+            
+            if gh_id is None:
+                raise Exception("SQL function returned NULL - check database logs")
+            
+            return gh_id
             
     except Exception as e:
-        logger.error(f"Error creating family: {e}")
-        raise e
+        print(f" Failed to save general health: {str(e)}")
+        raise Exception(f"Failed to save general health: {str(e)}")
 
-def get_lookup_data():
-    """Get all lookup data - following your pattern"""
+
+def update_general_health_for_member(
+    family_member_id, 
+    class_id=None,
+    apply_med_hist=False, 
+    medical_history_ids=None,
+    apply_fp=False,
+    wra_lmp=None,
+    fp_method_yn=None,
+    fp_method_id=None,
+    fp_status_id=None,
+    personnel_id=None
+):
     try:
-        data = {}
-        
         with connection.cursor() as cursor:
-            # Get residents
             cursor.execute("""
-                SELECT resident_id, first_name, last_name,
-                       CONCAT(first_name, ' ', last_name) as full_name
-                FROM resident 
-                WHERE status_id IN (SELECT status_id FROM resident_status WHERE status_name = 'Active')
-                ORDER BY last_name, first_name
-            """)
-            columns = [col[0] for col in cursor.description]
-            data['residents'] = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                SELECT update_general_health_for_member(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, [
+                family_member_id,
+                class_id,
+                apply_med_hist,
+                medical_history_ids,  # Will be converted to PostgreSQL array
+                apply_fp,
+                wra_lmp,
+                fp_method_yn,
+                fp_method_id,
+                fp_status_id,
+                personnel_id,
+                'personnel'
+            ])
             
-            # Get addresses
-            cursor.execute("""
-                SELECT address_id, street, barangay, sitio, city_municipality,
-                       CONCAT(COALESCE(street, ''), ', ', barangay, ', ', COALESCE(sitio, '')) as full_address
-                FROM address
-                ORDER BY barangay, sitio, street
-            """)
-            columns = [col[0] for col in cursor.description]
-            data['addresses'] = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            result = cursor.fetchone()
+            gh_id = result[0] if result else None
             
-        return data
-        
+            if gh_id is None:
+                raise Exception("SQL function returned NULL - check database logs")
+            
+            return gh_id
+            
     except Exception as e:
-        logger.error(f"Error fetching lookup data: {e}")
-        raise e
+        print(f"❌ Failed to update general health: {str(e)}")
+        raise Exception(f"Failed to update general health: {str(e)}")

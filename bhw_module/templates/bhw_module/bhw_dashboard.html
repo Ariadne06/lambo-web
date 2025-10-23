@@ -2,186 +2,385 @@
 {% block title %}Demographic Dashboard{% endblock %}
 
 {% block content %}
-<div class="px-6 py-5 space-y-5 bg-gray-50">
+{% now "M d, Y" as today_str %}
+<div class="relative">
+  <!-- Soft gradient halo -->
+  <div class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(248,113,113,0.10),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(248,113,113,0.08),_transparent_60%)]"></div>
 
-  <!-- Title chip (restyled) -->
- <div class="flex justify-center my-4">
-  <div
-    class="inline-flex items-center gap-2 rounded-2xl px-6 py-2 text-white font-semibold shadow-lg ring-1 ring-black/5"
-    style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
-    <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
-    Demographic Dashboard
+  <div class="px-6 py-8 space-y-8">
+
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <button onclick="window.print()"
+        class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-md hover:opacity-95 transition"
+        style="background-image: linear-gradient(90deg,#ef4444 0%,#dc2626 100%);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 9V2h12v7m0 4h1.5A1.5 1.5 0 0121 12.5v7a1.5 1.5 0 01-1.5 1.5H18M6 13H4.5A1.5 1.5 0 003 14.5v7A1.5 1.5 0 004.5 23H6m0-10h12v10H6V13z"/>
+        </svg>
+        Demographic Report
+      </button>
+    </header>
+
+    <!-- KPIs -->
+    <section>
+      <dl class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+
+        <!-- Non-Resident -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 18a4 4 0 00-8 0m-6 0a6 6 0 0112 0m0 0a6 6 0 0112 0m-9-9a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Non-Resident</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ totals.total_non_resident }}">{{ totals.total_non_resident }}</dd>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-rose-400/70 via-red-400/70 to-rose-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Male -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-700" aria-hidden="true">♂️</div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Male</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ totals.total_male }}">{{ totals.total_male }}</dd>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-sky-400/70 to-blue-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Female -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-pink-50 text-pink-600" aria-hidden="true">♀️</div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Female</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ totals.total_female }}">{{ totals.total_female }}</dd>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-fuchsia-400/70 to-pink-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Resident -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10.5l9-7.5 9 7.5M4.5 9v10.5a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5V9"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Resident</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ totals.total_resident }}">{{ totals.total_resident }}</dd>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-400/70 to-green-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Pending -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Pending</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ totals.total_pending }}">{{ totals.total_pending }}</dd>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-amber-400/70 to-yellow-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+      </dl>
+    </section>
+
+    <!-- Content grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left: Recent announcements -->
+      <section class="lg:col-span-1 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-800">Recent Announcements</h3>
+          <button type="button"
+                  onclick="openModal('modalAllAnnouncements')"
+                  class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">
+            View all
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          {% for a in latest_announcements %}
+          <article class="rounded-xl border border-gray-200 p-4 hover:shadow-sm transition">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h4 class="font-semibold text-gray-900 line-clamp-2">{{ a.header_title }}</h4>
+                <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
+              </div>
+
+              {# ---- AUDIENCE BADGE (recent) ---- #}
+              {% with aud=a.audience|default:"both"|lower %}
+                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
+                  {% if aud == 'personnel' %} bg-blue-100 text-blue-700
+                  {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
+                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                  {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
+                </span>
+              {% endwith %}
+            </div>
+
+            {% if a.details %}
+              <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ a.details }}</p>
+            {% endif %}
+          </article>
+          {% empty %}
+            <p class="text-sm text-gray-500">No announcements yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Right: Charts -->
+      <section class="lg:col-span-2 space-y-6">
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800">Distribution of Residents per Purok</h3>
+            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
+          </div>
+          <div class="h-64 sm:h-72 lg:h-80">
+            <canvas id="perPurokBar"></canvas>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800">Resident Age Distribution</h3>
+            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
+          </div>
+          <div class="h-64 sm:h-72 lg:h-80">
+            <canvas id="agePie"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+
   </div>
 </div>
 
-  <!-- KPIs (tighter gaps & compact height) -->
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-    <!-- Population -->
-    <div class="flex h-24 items-center gap-3 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 px-4">
-      <div class="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 text-lg">👥</div>
-      <div class="min-w-0">
-        <p class="text-[13px] font-medium text-gray-600">Population</p>
-        <p class="text-2xl font-extrabold text-gray-900 leading-none">5,120</p>
-      </div>
-    </div>
+{{ per_sitio_labels|json_script:"per-sitio-labels" }}
+{{ per_sitio_data|json_script:"per-sitio-data" }}
+{{ age_labels|json_script:"age-labels" }}
+{{ age_labels_pct|json_script:"age-labels-pct" }}
+{{ age_data|json_script:"age-data" }}
 
-    <!-- Male -->
-    <div class="flex h-24 items-center gap-3 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 px-4">
-      <div class="grid h-10 w-10 place-items-center rounded-lg bg-blue-50 text-lg">♂️</div>
-      <div class="min-w-0">
-        <p class="text-[13px] font-medium text-gray-600">Male</p>
-        <p class="text-2xl font-extrabold text-gray-900 leading-none">2,600</p>
-      </div>
-    </div>
+<!-- ===== MODAL: All Announcements with Filters ===== -->
+<div id="modalAllAnnouncements" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true" aria-labelledby="modalAllAnnouncements_title">
+  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalAllAnnouncements')"></div>
 
-    <!-- Female -->
-    <div class="flex h-24 items-center gap-3 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 px-4">
-      <div class="grid h-10 w-10 place-items-center rounded-lg bg-pink-50 text-lg">♀️</div>
-      <div class="min-w-0">
-        <p class="text-[13px] font-medium text-gray-600">Female</p>
-        <p class="text-2xl font-extrabold text-gray-900 leading-none">2,520</p>
-      </div>
-    </div>
+  <div class="relative mx-auto my-10 w-[96%] max-w-5xl">
+    <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
 
-    <!-- Voters -->
-    <div class="flex h-24 items-center gap-3 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 px-4">
-      <div class="grid h-10 w-10 place-items-center rounded-lg bg-indigo-50 text-lg">🗳️</div>
-      <div class="min-w-0">
-        <p class="text-[13px] font-medium text-gray-600">Voters</p>
-        <p class="text-2xl font-extrabold text-gray-900 leading-none">3,749</p>
+    <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
+        <h2 id="modalAllAnnouncements_title" class="text-base font-semibold tracking-wide">All Announcements</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalAllAnnouncements')">&times;</button>
       </div>
-    </div>
-  </section>
 
-  <!-- Charts -->
-  <section class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200 p-4 sm:p-5">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Bar -->
-      <div>
-        <h3 class="text-center text-sm font-semibold text-gray-700 mb-3">
-          Distribution of Residents Per Purok
-        </h3>
-        <div class="h-64 sm:h-72 lg:h-80">
-          <canvas id="perPurokBar"></canvas>
+      <!-- Body -->
+      <div class="px-8 py-6 space-y-5">
+        <!-- Filters -->
+        <form method="get" action="{{ request.path }}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input type="hidden" name="ann_open" value="1"/>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Search</label>
+            <input name="ann_q" type="text" value="{{ ann_filters.q }}"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                   placeholder="Title or content">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Audience</label>
+            <select name="ann_audience" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
+              <option value="" {% if not ann_filters.audience %}selected{% endif %}>All (my scope)</option>
+              <option value="both" {% if ann_filters.audience == "both" %}selected{% endif %}>Everyone</option>
+              <option value="personnel" {% if ann_filters.audience == "personnel" %}selected{% endif %}>Personnel</option>
+              <option value="resident" {% if ann_filters.audience == "resident" %}selected{% endif %}>Residents</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">From</label>
+            <input name="ann_from" type="date" value="{{ ann_filters.from }}"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">To</label>
+            <input name="ann_to" type="date" value="{{ ann_filters.to }}"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+          </div>
+          <div class="md:col-span-4 flex items-center justify-end gap-2">
+            <a href="{{ request.path }}" class="inline-flex items-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Reset</a>
+            <button class="inline-flex items-center rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700">Apply</button>
+          </div>
+        </form>
+
+        <!-- Results -->
+        <div class="divide-y rounded-2xl border border-gray-200 overflow-hidden bg-white">
+          {% for a in announcements_all %}
+          <article class="px-4 py-4 hover:bg-gray-50">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h4 class="font-semibold text-gray-900">{{ a.header_title }}</h4>
+                <p class="text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
+              </div>
+
+              {# ---- AUDIENCE BADGE (modal row) ---- #}
+              {% with aud=a.audience|default:"both"|lower %}
+                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
+                  {% if aud == 'personnel' %} bg-blue-100 text-blue-700
+                  {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
+                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                  {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
+                </span>
+              {% endwith %}
+            </div>
+
+            {% if a.details %}
+              <p class="mt-2 text-sm text-gray-600">{{ a.details|truncatechars:220 }}</p>
+            {% endif %}
+          </article>
+          {% empty %}
+          <div class="px-4 py-10 text-center text-gray-500">No announcements found.</div>
+          {% endfor %}
         </div>
       </div>
 
-      <!-- Donut -->
-      <div>
-        <h3 class="text-center text-sm font-semibold text-gray-700 mb-3">
-          Resident Age Distribution
-        </h3>
-        <div class="h-64 sm:h-72 lg:h-80">
-          <canvas id="ageDonut"></canvas>
-        </div>
+      <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 text-right">
+        <button type="button" class="inline-flex items-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                onclick="closeModal('modalAllAnnouncements')">Close</button>
       </div>
     </div>
-
-    <!-- Bottom-right button (brighter gradient) -->
-    <div class="mt-4 flex justify-end">
-  <button onclick="window.print()"
-    class="inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-white shadow-md hover:opacity-90 transition"
-    style="background-image: linear-gradient(90deg,#ef4444 0%,#dc2626 100%);">
-    
-    <!-- Print Icon -->
-    <svg xmlns="http://www.w3.org/2000/svg" 
-         fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-         class="w-5 h-5">
-      <path stroke-linecap="round" stroke-linejoin="round"
-            d="M6 9V2h12v7m0 4h1.5A1.5 1.5 0 0121 12.5v7a1.5 1.5 0 01-1.5 1.5H18M6 13H4.5A1.5 1.5 0 003 14.5v7A1.5 1.5 0 004.5 23H6m0-10h12v10H6V13z" />
-    </svg>
-
-    Demographic Report
-  </button>
+  </div>
 </div>
 
-
-  </section>
-</div>
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Neutral text + font
+  // Count-up for KPIs
+  (function () {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const format = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+    function animateCount(el, to) {
+      if (prefersReducedMotion || isNaN(to)) { el.textContent = format.format(to || 0); return; }
+      const duration = 900, start = performance.now(), from = 0;
+      function frame(t) {
+        const p = Math.min(1, (t - start) / duration);
+        el.textContent = format.format(Math.floor(from + (to - from) * p));
+        if (p < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        animateCount(el, Number(el.getAttribute('data-value')));
+        obs.unobserve(el);
+      });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('[data-kpi]').forEach(el => io.observe(el));
+  })();
+
+  // Chart defaults
   Chart.defaults.color = '#374151';
   Chart.defaults.font.family = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto';
 
-  // Colors
-  const gridGray = '#edf1f5';
-  const greenFill = 'rgba(74,222,128,.65)'; // green-400
-  const greenLine = '#22c55e';              // green-500
-  const donutColors = ['#60a5fa','#86efac','#fde68a','#fdba74'];
+  const gridGray   = '#edf1f5';
+  const greenFill  = 'rgba(74,222,128,.65)';
+  const greenLine  = '#22c55e';
 
-  // Bar: Residents per Purok
-  new Chart(document.getElementById('perPurokBar'), {
-    type: 'bar',
-    data: {
-      labels: ['Purok 1','Purok 2','Purok 3','Purok 4'],
-      datasets: [{
-        data: [1000, 2000, 900, 1100],
-        backgroundColor: greenFill,
-        borderColor: greenLine,
-        borderWidth: 2,
-        borderRadius: 8,
-        maxBarThickness: 48
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      layout: { padding: { top: 4 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7280' } },
-        y: {
-          min: 0, max: 2000,
-          grid: { color: gridGray },
-          ticks: { stepSize: 250, color: '#6b7280', callback: v => v.toLocaleString() }
+  // Data from server
+  const purokLabels = JSON.parse(document.getElementById('per-sitio-labels').textContent || '[]');
+  const purokData   = JSON.parse(document.getElementById('per-sitio-data').textContent   || '[]');
+  const ageLabels   = JSON.parse(document.getElementById('age-labels').textContent || '[]');
+  const ageData     = JSON.parse(document.getElementById('age-data').textContent   || '[]');
+
+  // Bar
+  const barCtx = document.getElementById('perPurokBar');
+  if (barCtx && purokLabels.length && purokData.length) {
+    new Chart(barCtx, {
+      type: 'bar',
+      data: { labels: purokLabels, datasets: [{ label: 'Residents', data: purokData,
+        backgroundColor: greenFill, borderColor: greenLine, borderWidth: 2, borderRadius: 8, maxBarThickness: 48 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 4 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#6b7280' } },
+          y: { beginAtZero: true, grid: { color: gridGray }, ticks: { precision: 0, color: '#6b7280',
+               callback: v => Number(v).toLocaleString() }, suggestedMax: Math.max(...purokData) * 1.2 || 10 }
         }
       }
-    }
-  });
+    });
+  }
 
-  // Center text plugin
-  const centerText = {
-    id: 'centerText',
-    afterDraw(chart) {
-      const {ctx, chartArea} = chart;
-      const x = (chartArea.left + chartArea.right) / 2;
-      const y = (chartArea.top + chartArea.bottom) / 2;
-      ctx.save();
-      ctx.fillStyle = '#374151';
-      ctx.font = '600 14px ui-sans-serif, system-ui';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('100% total', x, y);
-      ctx.restore();
-    }
-  };
-
-  // Donut: Age distribution
-  new Chart(document.getElementById('ageDonut'), {
-    type: 'doughnut',
-    data: {
-      labels: ['0–17 yrs. - 25%', '18–40 yrs. - 38%', '41–60 yrs. - 22%', '61+ yrs. - 16%'],
-      datasets: [{
-        data: [25, 38, 22, 16],
-        backgroundColor: donutColors,
-        borderColor: '#fff',
-        borderWidth: 4,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      cutout: '62%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 }
+  // Pie
+  const pieCtx = document.getElementById('agePie');
+  if (pieCtx && ageLabels.length && ageData.length) {
+    new Chart(pieCtx, {
+      type: 'pie',
+      data: { labels: ageLabels, datasets: [{ data: ageData,
+        backgroundColor: ['#60a5fa','#86efac','#fde68a','#fdba74'], borderColor: '#fff', borderWidth: 4, hoverOffset: 6 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 } },
+          tooltip: { callbacks: { label: (ctx) => {
+            const value = ctx.parsed || 0; const total = (ctx.dataset.data || []).reduce((a,b)=>a+b,0) || 1;
+            const pct = Math.round((value / total) * 100); return `${ctx.label}: ${value} (${pct}%)`;
+          }}}
         }
       }
-    },
-    plugins: [centerText]
+    });
+  }
+
+  // Modal helpers
+  function openModal(id){
+    const el = document.getElementById(id); if(!el) return;
+    el.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+      const panel = el.querySelector('[data-panel]');
+      if(panel){ panel.classList.remove('scale-95','opacity-0'); panel.classList.add('scale-100','opacity-100'); }
+    });
+  }
+  function closeModal(id){
+    const el = document.getElementById(id); if(!el) return;
+    el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
+    const panel = el.querySelector('[data-panel]');
+    if(panel){ panel.classList.add('scale-95','opacity-0'); panel.classList.remove('scale-100','opacity-100'); }
+    setTimeout(() => el.classList.add('hidden'), 180);
+  }
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Escape') return;
+    const m = document.getElementById('modalAllAnnouncements');
+    if(m && !m.classList.contains('hidden')) closeModal('modalAllAnnouncements');
   });
+
+  // Auto-open the modal safely after page load if ann_open=1
+  (function () {
+    const ANN_OPEN = "{{ ann_open|yesno:'1,0' }}";
+    if (ANN_OPEN === "1") {
+      window.addEventListener('load', function () {
+        if (typeof openModal === 'function') openModal('modalAllAnnouncements');
+      });
+    }
+  })();
 </script>
 {% endblock %}

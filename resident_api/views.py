@@ -39,7 +39,7 @@ from .supabase_storage import upload_file_to_supabase
 from .services.profile_service import ProfileService
 from .utils.database_helpers import (
     get_guardian_info, get_resident_profile, mobile_login, 
-    update_resident_profile, change_personnel_password
+    update_resident_profile, change_personnel_password, resubmit_supporting_certificate, re_register_resident
 )
 from .utils.validation import find_mismatches
 from .utils.ocr_processing import (
@@ -789,60 +789,6 @@ class VerifyGuardianIdFieldsView(APIView):
                 'error': f'Verification failed: {str(e)}'
             }, status=500)
         
-# Update existing VerifyGuardianView (Original)
-# class VerifyGuardianView(APIView):
-#     """
-#     Verify if a guardian username exists in the system and is verified
-#     Uses the database function get_guardian_identity_by_username
-#     """
-#     def post(self, request):
-#         try:
-#             guardian_username = request.data.get('guardian_username', '').strip()
-            
-#             if not guardian_username:
-#                 return Response({
-#                     'exists': False,
-#                     'message': 'Guardian username is required'
-#                 }, status=400)
-            
-#             # Use the database function to check guardian
-#             with connection.cursor() as cursor:
-#                 try:
-#                     cursor.execute("""
-#                         SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
-#                         FROM get_guardian_identity_by_username(%s)
-#                     """, [guardian_username])
-                    
-#                     guardian_data = cursor.fetchone()
-                    
-#                     if guardian_data:
-#                         # Guardian exists and is verified
-#                         return Response({
-#                             'exists': True,
-#                             'message': 'Guardian found and verified',
-#                             'guardian_verified': True
-#                         }, status=200)
-#                     else:
-#                         return Response({
-#                             'exists': False,
-#                             'message': 'Guardian username not found or guardian is not verified'
-#                         }, status=200)
-                        
-#                 except Exception as db_error:
-#                     # Database function raises exception if guardian not found or not verified
-#                     error_message = str(db_error)
-#                     print(f"Database error: {error_message}")
-#                     return Response({
-#                         'exists': False,
-#                         'message': 'Guardian username not found or guardian is not verified'
-#                     }, status=200)
-                        
-#         except Exception as e:
-#             print(f"Guardian verification error: {str(e)}")
-#             return Response({
-#                 'exists': False,
-#                 'error': f'Verification failed: {str(e)}'
-#             }, status=500)
 
 #Refactored
 class VerifyGuardianView(APIView):
@@ -881,79 +827,6 @@ class VerifyGuardianView(APIView):
 
 
 # MOBILE LOGIN
-#ORIGINAL
-# class MobileLoginView(APIView):
-#     """
-#     Handle login for mobile app (both personnel and residents)
-#     Uses the login_user_mobile database function
-#     """
-    
-#     def post(self, request):
-#         print("Mobile login attempt")
-        
-#         try:
-#             # Get credentials from request
-#             username = request.data.get('username', '').strip()
-#             password = request.data.get('password', '')
-            
-#             if not username or not password:
-#                 return Response({
-#                     'success': False,
-#                     'status': 'error',
-#                     'message': 'Username and password are required'
-#                 }, status=400)
-            
-#             print(f"Login attempt for username: {username}")
-            
-#             # Call the database function
-#             with connection.cursor() as cursor:
-#                 cursor.execute("""
-#                     SELECT login_user_mobile(%s, %s)
-#                 """, [username, password])
-                
-#                 result = cursor.fetchone()[0]  # Get the JSON result
-                
-#             print(f"Database response: {result}")
-            
-#             # Parse the JSON response from the database function
-#             if result['status'] == 'success':
-#                 return Response({
-#                     'success': True,
-#                     'status': 'success',
-#                     'account_type': result['account_type'],
-#                     'user_id': result.get('personnel_id') or result.get('resident_id'),
-#                     'username': result['username'],
-#                     'role_name': result.get('role_name'),  # Only for personnel
-#                     'role_id': result.get('role_id'),      # Only for personnel
-#                     'session_token': result['session_token'],
-#                     'message': 'Login successful'
-#                 }, status=200)
-                
-#             elif result['status'] == 'require_password_change':
-#                 return Response({
-#                     'success': False,
-#                     'status': 'require_password_change',
-#                     'account_type': result['account_type'],
-#                     'user_id': result.get('personnel_id') or result.get('resident_id'),
-#                     'username': result['username'],
-#                     'message': result['message']
-#                 }, status=200)
-                
-#             else:
-#                 return Response({
-#                     'success': False,
-#                     'status': 'error',
-#                     'message': result['message']
-#                 }, status=401)
-                
-#         except Exception as e:
-#             print(f"Mobile login error: {str(e)}")
-#             return Response({
-#                 'success': False,
-#                 'status': 'error',
-#                 'message': 'Login failed due to server error'
-#             }, status=500)
-
 # Refactored
 class MobileLoginView(APIView):
     """Handle mobile login."""
@@ -973,16 +846,48 @@ class MobileLoginView(APIView):
             
             if result['status'] == 'success':
               
+                # if result.get('account_type') == 'resident' and not result.get('is_verified', True):
+                #     return Response({
+                #         'success': False,
+                #         'status': 'not_verified',
+                #         'message': 'Your account is pending verification. Please wait for approval.',
+                #         'account_type': result.get('account_type'),
+                #         'username': result.get('username')
+                #     }, status=200)
+                
+                # return Response({
+                #     'success': True,
+                #     'status': 'success',
+                #     'account_type': result['account_type'],
+                #     'user_id': result.get('personnel_id') or result.get('resident_id'),
+                #     'username': result['username'],
+                #     'role_name': result.get('role_name'),
+                #     'role_id': result.get('role_id'),
+                #     'session_token': result['session_token'],  
+                #     'message': 'Login successful'
+                # }, status=200)
+
                 if result.get('account_type') == 'resident' and not result.get('is_verified', True):
-                    return Response({
+                    response_data = {
                         'success': False,
                         'status': 'not_verified',
                         'message': 'Your account is pending verification. Please wait for approval.',
                         'account_type': result.get('account_type'),
                         'username': result.get('username')
-                    }, status=200)
-                
-                
+                    }
+                    # Only add rejection_action if present
+                    if result.get('rejection_action'):
+                        response_data['rejection_action'] = result['rejection_action']
+                        response_data['review_notes'] = result.get('review_notes')
+                        # If resubmission, add identity_doc_type_id
+                        if result['rejection_action'] == 'RESUBMISSION' and result.get('identity_doc_type_id'):
+                            response_data['identity_doc_type_id'] = result['identity_doc_type_id']
+                            response_data['identity_doc_type_name'] = result.get('identity_doc_type_name')
+                    # Optionally add resident_id if present
+                    if result.get('resident_id'):
+                        response_data['resident_id'] = result['resident_id']
+                    return Response(response_data, status=200)
+
                 return Response({
                     'success': True,
                     'status': 'success',
@@ -1012,41 +917,6 @@ class MobileLoginView(APIView):
         
 
 # MOBILE RESIDENT USER PROFILE
-# original
-# class ResidentProfileView(APIView):
-#     """
-#     Get resident profile using the get_resident_profile database function
-#     """
-
-#     def get(self, request, resident_id):
-#         print(f"Fetching profile for resident_id: {resident_id}")
-
-#         try:
-#             # call db function
-#             with connection.cursor() as cursor:
-#                 cursor.execute(""" SELECT get_resident_profile(%s) """, [resident_id])
-#                 result = cursor.fetchone()[0] # get json result
-
-#             print(f"Profile data retrieved: {result}")
-
-#             if result:
-#                 return Response({
-#                     'success': True,
-#                     'profile': result
-#                 }, status=200)
-#             else:
-#                 return Response({
-#                     'success': False,
-#                     'message': 'Profile not found'
-#                 }, status=404)
-
-#         except Exception as e:
-#             print(f"Profile fetch error: {str(e)}")
-#             return Response({
-#                 'success': False,
-#                 'message': 'Failed to fetch profile'
-#             }, status=500)
-
 # Refactored
 
 class ResidentProfileView(APIView):
@@ -1075,186 +945,6 @@ class ResidentProfileView(APIView):
             }, status=500)
         
 # MOBILE UPDATE PROFILE
-# original
-# class UpdateResidentProfileView(APIView):
-#     """
-#     Update resident profile using update_resident or update_business_owner database functions
-#     """
-#     parser_classes = (MultiPartParser, FormParser)
-    
-#     def post(self, request, resident_id):
-#         print(f"Updating profile for resident_id: {resident_id}")
-        
-#         try:
-#             # Get current user session to use as request_by
-#             request_by = resident_id  # For now, user updates their own profile
-            
-#             # Get the current resident's status to determine which function to use
-#             with connection.cursor() as cursor:
-#                 cursor.execute("""
-#                     SELECT rs.status_name 
-#                     FROM Resident r 
-#                     JOIN Resident_Status rs ON r.status_id = rs.status_id 
-#                     WHERE r.resident_id = %s
-#                 """, [resident_id])
-                
-#                 result = cursor.fetchone()
-#                 if not result:
-#                     return Response({
-#                         'success': False,
-#                         'message': 'Resident not found'
-#                     }, status=404)
-                
-#                 status_name = result[0].lower()
-#                 print(f"Resident status: {status_name}")
-            
-#             # Extract form data
-#             data = request.data
-#             print(f"Update data received: {list(data.keys())}")
-            
-#             # Handle profile image upload if provided
-#             profile_image_path = None
-#             if 'profile_image' in request.FILES:
-#                 print("Profile image detected, uploading to Supabase...")
-#                 profile_image_path = self.upload_profile_image(request.FILES['profile_image'], resident_id)
-#                 print(f"Profile image uploaded: {profile_image_path}")
-            
-#             # Get current resident data for required fields
-#             with connection.cursor() as cursor:
-#                 cursor.execute("""
-#                     SELECT r.first_name, r.last_name, r.dob, r.sex, a.barangay, a.city_municipality
-#                     FROM Resident r 
-#                     LEFT JOIN Address a ON r.address_id = a.address_id
-#                     WHERE r.resident_id = %s
-#                 """, [resident_id])
-                
-#                 current_data = cursor.fetchone()
-#                 if not current_data:
-#                     return Response({
-#                         'success': False,
-#                         'message': 'Resident data not found'
-#                     }, status=404)
-                
-#                 current_first_name, current_last_name, current_dob, current_sex, current_barangay, current_city = current_data
-            
-#             # Prepare parameters based on resident type
-#             if status_name == 'non-resident':
-#                 # Use update_business_owner function for non-residents
-#                 print("Using update_business_owner function for non-resident")
-                
-#                 with connection.cursor() as cursor:
-#                     cursor.execute("""
-#                         SELECT update_business_owner(
-#                             %s, %s, %s, %s, %s, %s, %s, %s,
-#                             %s, %s, %s, %s, %s, %s, %s, %s
-#                         )
-#                     """, [
-#                         resident_id,                           # p_resident_id
-#                         request_by,                            # p_request_by
-#                         current_last_name,                     # p_last_name (unchanged)
-#                         current_first_name,                    # p_first_name (unchanged)
-#                         current_dob,                           # p_dob (unchanged)
-#                         current_sex,                           # p_sex (unchanged)
-#                         data.get('barangay', current_barangay),                # p_barangay
-#                         data.get('city_municipality', current_city),           # p_city_municipality
-#                         None,                                  # p_middle_name (unchanged for non-residents)
-#                         None,                                  # p_suffix (unchanged for non-residents)
-#                         data.get('email'),                     # p_email
-#                         data.get('phone_number'),              # p_phone_number
-#                         data.get('house_number'),              # p_house_number
-#                         data.get('street'),                    # p_street
-#                         data.get('country', 'Philippines'),    # p_country
-#                         profile_image_path                     # p_profile_image_path
-#                     ])
-#             else:
-#                 # Use update_resident function for residents (REMOVED is_voter parameter)
-#                 print("Using update_resident function for resident")
-                
-#                 with connection.cursor() as cursor:
-#                     cursor.execute("""
-#                         SELECT update_resident(
-#                             %s, %s, %s, %s, %s, %s, %s, %s,
-#                             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-#                         )
-#                     """, [
-#                         resident_id,                           # p_resident_id
-#                         request_by,                            # p_request_by
-#                         current_last_name,                     # p_last_name (unchanged)
-#                         current_first_name,                    # p_first_name (unchanged)
-#                         current_dob,                           # p_dob (unchanged)
-#                         current_sex,                           # p_sex (unchanged)
-#                         current_barangay,                      # p_barangay (unchanged for residents)
-#                         current_city,                          # p_city_municipality (unchanged for residents)
-#                         None,                                  # p_middle_name (unchanged)
-#                         None,                                  # p_suffix (unchanged)
-#                         data.get('gender'),                    # p_gender
-#                         False,                                 # p_is_voter (HIDDEN: default to False)
-#                         data.get('email'),                     # p_email
-#                         data.get('phone_number'),              # p_phone_number
-#                         data.get('religion_cat_id'),           # p_religion_cat_id
-#                         data.get('other_religion'),            # p_other_religion
-#                         data.get('civil_stat_id'),             # p_civil_stat_id
-#                         data.get('educational_attain_id'),     # p_educational_attain_id
-#                         data.get('house_number'),              # p_house_number
-#                         data.get('street'),                    # p_street
-#                         None,                                  # p_sitio_id (unchanged)
-#                         'Philippines',                         # p_country (unchanged)
-#                         profile_image_path                     # p_profile_image_path
-#                     ])
-            
-#             print("Profile update successful")
-#             return Response({
-#                 'success': True,
-#                 'message': 'Profile updated successfully',
-#                 'profile_image_url': profile_image_path if profile_image_path else None
-#             }, status=200)
-            
-#         except Exception as e:
-#             print(f" Profile update error: {str(e)}")
-#             return Response({
-#                 'success': False,
-#                 'message': f'Failed to update profile: {str(e)}'
-#             }, status=500)
-    
-#     def upload_profile_image(self, image_file, resident_id):
-#         """
-#         Upload profile image to Supabase Storage using existing upload_file_to_supabase function
-#         """
-#         try:
-#             # print(f" Starting profile image upload for resident {resident_id}")
-            
-          
-#             supabase_path = upload_file_to_supabase(
-#                 file=image_file,
-#                 bucket_name='profile-images',  
-#                 folder='profile_images'       
-#             )
-            
-#             # print(f"Supabase upload returned: {supabase_path}")
-#             # print(f"Upload result type: {type(supabase_path)}")
-            
-#             if supabase_path:
-#                 # Check if it's already a full URL or just a path
-#                 if supabase_path.startswith('http'):
-#                     # Already a full URL
-#                     public_url = supabase_path
-#                 else:
-#                     # Construct the public URL
-#                     base_url = os.getenv('SUPABASE_URL')
-#                     public_url = f"{base_url}/storage/v1/object/public/profile-images/{supabase_path}"
-                
-#                 print(f"Final public URL: {public_url}")
-#                 return public_url
-#             else:
-#                 raise Exception("Upload failed - no path returned from Supabase")
-                
-#         except ImportError as ie:
-#             print(f"Import error: {str(ie)}")
-#             raise Exception("Supabase storage function not available")
-#         except Exception as e:
-#             print(f"Image upload error: {str(e)}")
-#             raise Exception(f"Failed to upload profile image: {str(e)}")
-   
 # Refactored
 class UpdateResidentProfileView(APIView):
     """Update resident profile using ProfileService."""
@@ -1281,63 +971,6 @@ class UpdateResidentProfileView(APIView):
         }, status=result['status_code'])
 
 
-# MOBILE DEFAULT PERSONNEL CHANGE PASSWORD
-# original
-# class ChangePersonnelPasswordView(APIView):
-#     """
-#     Change personnel default password
-#     """
-#     def post(self, request):
-#         print("Personnel password change attempt")
-
-#         try:
-#             # get request data
-#             personnel_id = request.data.get('personnel_id')
-#             old_password = request.data.get('old_password')
-#             new_password = request.data.get('new_password')
-
-#             print(f"Password change for personnel_id: {personnel_id}")
-
-#             # validate required fields
-#             if not all([personnel_id, old_password, new_password]):
-#                 return Response({
-#                     'success': False,
-#                     'message': 'Personnel ID, old password, and new password are required.'
-#                 }, status=400)
-            
-#             # call database function
-#             with connection.cursor() as cursor:
-#                 cursor.execute(""" SELECT change_personnel_default_password (%s, %s, %s)""", [personnel_id, old_password, new_password])
-
-#                 result = cursor.fetchone()[0]
-#                 print(f"Password change result: {result}")
-            
-#             return Response({
-#                 'success': True,
-#                 'message': result
-#             }, status=200)
-
-
-#         except Exception as e:
-#             error_message = str(e)
-#             print(f"Password change error: {error_message}")
-
-#             # Handle specific database errors
-#             if 'E6015' in error_message:
-#                 message = 'Personnel not found'
-#             elif 'E6016' in error_message:
-#                 message = 'Incorrect current password'
-#             elif 'E6017' in error_message:
-#                 message = 'New password must be at least 8 characters'
-#             elif 'E6018' in error_message:
-#                 message = 'New password must be different from current password'
-#             else:
-#                 message = 'Failed to change password. Please try again.'
-            
-#             return Response({
-#                 'success': False,
-#                 'message': message
-#             }, status=400)
 
 # Refactored
 class ChangePersonnelPasswordView(APIView):
@@ -1368,4 +1001,75 @@ class ChangePersonnelPasswordView(APIView):
             return Response({
                 'success': False,
                 'message': str(e)
+            }, status=500)
+        
+
+class ResubmitSupportingCertificateView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        try:
+            resident_id = int(request.data.get('resident_id'))
+            identity_doc_type_id = int(request.data.get('identity_doc_type_id'))
+            note = request.data.get('note', 'resubmit photo')
+            id_image = request.FILES.get('id_image')
+
+            # OCR header validation
+            from resident_profiling_module.models import IdentityDocType
+            doc_type_obj = IdentityDocType.objects.get(identity_doc_type_id=identity_doc_type_id)
+            expected_doc_type = doc_type_obj.name
+            if not validate_document_header(id_image, expected_doc_type):
+                return Response({'success': False, 'message': f'Uploaded image does not match expected document type: {expected_doc_type}.'}, status=400)
+
+            # Upload to Supabase
+            file_path = upload_file_to_supabase(id_image, folder='id-documents')
+
+            # Call SQL function
+            result = resubmit_supporting_certificate(resident_id, identity_doc_type_id, file_path, note)
+            return Response({'success': True, 'message': result})
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=400)
+        
+class ReRegisterResidentView(APIView):
+    def post(self, request):
+        try:
+            resident_id = int(request.data.get('resident_id'))
+            # Only the owner can trigger, so performed_by = resident_id
+            result = re_register_resident(resident_id, performed_by=resident_id)
+            return Response({'success': True, 'message': result})
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=400)
+        
+
+class CheckUsernameAvailabilityView(APIView):
+    """Check if username is available."""
+    
+    def post(self, request):
+        try:
+            username = request.data.get('username', '').strip()
+            
+            if not username:
+                return Response({
+                    'available': False,
+                    'message': 'Username is required'
+                }, status=400)
+            
+            # Call the database function
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT is_username_available(%s)", [username])
+                result = cursor.fetchone()[0]
+                
+                # result is 1 if available, 0 if taken
+                is_available = result == 1
+                
+                return Response({
+                    'available': is_available,
+                    'message': 'Username is available' if is_available else 'Username is already taken'
+                }, status=200)
+                
+        except Exception as e:
+            print(f"Username check error: {str(e)}")
+            return Response({
+                'available': False,
+                'message': 'Failed to check username availability'
             }, status=500)

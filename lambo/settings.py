@@ -30,6 +30,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-pmxq2n=0rxlqw^k4cvqlz!uc*!+9(epm$y_gl=-r-4lzzldo*s'
 
+# TIMEOUT SETTINGS
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+REQUEST_TIMEOUT = 30  # 30 seconds
+
+
 load_dotenv()
 # ---- Supabase storage ----
 ENV = os.environ.get("ENV", "development")  # "development" | "production"
@@ -167,13 +173,68 @@ else:
 
             'HOST': os.getenv('DB_HOST'),
             'PORT': os.getenv('DB_PORT'),
+            'CONN_MAX_AGE': 0,  # Close connections immediately after each request
             'OPTIONS': {
                 'client_encoding': 'UTF8',
                 'sslmode': 'require',
                 'options': '-c timezone=Asia/Manila',
+                # connection settings
+                'connect_timeout': 10,
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
             },
         }
     }
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+        },
+        'household_module': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "auth.resolve": {  # matches logger name above
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') #client operations
@@ -281,3 +342,16 @@ if not DEBUG:
             'rest_framework.renderers.JSONRenderer',
         ],
     }
+
+# DJANGO CACHE CONFIGURATION - 
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # In-memory cache
+        'LOCATION': 'unique-snowflake',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,  # Maximum number of cached items
+        }
+    }
+}
+
