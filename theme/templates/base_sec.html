@@ -127,10 +127,10 @@
 </button>
 
 <div id="price-submenu" class="{% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Business Fee</a>
-  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Amusement Fee</a>
-  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Other Clearances Fee</a>
-  <a href="" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Tax & Penalties</a>
+  <a href="{% url 'secretary_module:business_fee' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Business Fee</a>
+  <a href="{% url 'secretary_module:amusement' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Amusement Fee</a>
+  <a href="{% url 'secretary_module:other_clearances' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Other Clearances Fee</a>
+  <a href="{% url 'secretary_module:tax_penalties' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Tax & Penalties</a>
 </div>
 
 
