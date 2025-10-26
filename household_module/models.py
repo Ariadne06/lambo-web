@@ -473,6 +473,7 @@ class Family(models.Model):
             waste_management_type_id,
             respondent_id,
             rtf_id,
+            rth_id,
             head_rth_id,
             ip_status,
             ip_tribe,
@@ -493,6 +494,7 @@ class Family(models.Model):
                     waste_management_type_id,
                     respondent_id,
                     rtf_id,
+                    rth_id,
                     head_rth_id,
                     ip_status,
                     ip_tribe,
@@ -756,5 +758,147 @@ class Family(models.Model):
                 result = cursor.fetchone()
                 return result[0] if result else None 
         except Exception as e:
-            raise e        
+            raise e
         
+    @staticmethod
+    def sp_link_resident_relation(
+            resident_id,
+            related_resident_id,
+            relationship_id,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('link_resident_relation', [
+                    resident_id,
+                    related_resident_id,
+                    relationship_id,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e 
+        
+    @staticmethod
+    def sp_unlink_resident_relation(
+            resident_id,
+            related_resident_id,
+            relationship_id,
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('unlink_resident_relation', [
+                    resident_id,
+                    related_resident_id,
+                    relationship_id,
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_resident_links(
+            resident_id,
+        ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_resident_links', [
+                    resident_id,
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_link_relationship():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Relationship
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_save_general_health_for_member(
+            family_member_id,
+            class_id,
+            medical_history_ids,
+            wra_lmp,
+            fp_method_yn,
+            fp_method_id,
+            fp_status_id,
+            age_of_menarche,
+            smoker,
+            alcohol_drinker,
+            sexually_active,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('save_general_health_for_member', [
+                    family_member_id,
+                    class_id,
+                    medical_history_ids,
+                    wra_lmp,
+                    fp_method_yn,
+                    fp_method_id,
+                    fp_status_id,
+                    age_of_menarche,
+                    smoker,
+                    alcohol_drinker,
+                    sexually_active,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_fp_method():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM FP_Method
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_fp_status():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM FP_Status
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_classifications():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM Class
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e

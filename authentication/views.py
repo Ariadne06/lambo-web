@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import logging
+from .models import authentication
 from django.contrib import messages
 from authentication.decorators import custom_login_required
 from django.http import HttpResponse
@@ -14,8 +14,14 @@ from django.urls import reverse
 from django.utils.html import escape
 from .tokens import make_reset_token, load_reset_token
 from django.conf import settings
-# from sendgrid import SendGridAPIClient           # NEW
-# from sendgrid.helpers.mail import Mail  
+from sendgrid import SendGridAPIClient           # NEW
+from sendgrid.helpers.mail import Mail
+
+import logging as pylogging
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
 
 
 def login_view(request):
@@ -52,7 +58,7 @@ def login_view(request):
         password = request.POST.get('password')
 
         try:
-            result = logging.sp_login_personnel_web(username, password)
+            result = authentication.sp_login_personnel_web(username, password)
 
             if not result:
                 messages.error(request, 'Login failed: No response from server.')
@@ -125,7 +131,7 @@ def logout_view(request):
     # Check if user_id exists in the session
     if 'session_token' in request.session:
         token = request.session.get('session_token')
-        result = logging.sp_logout_user(token) 
+        result = authentication.sp_logout_user(token) 
     
         storage = messages.get_messages(request)
         storage.used = True
@@ -150,7 +156,7 @@ def silent_logout(request):
     token = request.POST.get('session_token') or request.session.get('session_token')
     if token:
         try:
-            logging.sp_logout_user(token)
+            authentication.sp_logout_user(token)
             request.session.flush()
         except Exception:
             pass
@@ -170,12 +176,14 @@ def req_pwd_change(request):
             return redirect('authentication:req_pwd_change')
 
         try:
-            result = logging.sp_request_password_reset(username, email)
+            result = authentication.sp_request_password_reset(username, email)
             
             if result == "Reset request accepted. Personnel account matched.":
                 set_flash(request, result, "success")
+            elif result == "Reset request accepted. Resident account matched.":
+                set_flash(request,  "Reset request not accepted. Please use the correct reset page for your account type.", "error")
             else:
-                set_flash(request, result, "error")
+                set_flash(request,  result, "error")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
 
@@ -197,7 +205,7 @@ def reset_password(request):
             try:
                 if new_password and new_password == confirm_password:
                     # Call the stored procedure to change the password
-                    logging.sp_change_personnel_default_pwd(pid, new_password)
+                    authentication.sp_change_personnel_default_pwd(pid, new_password)
                     messages.success(request, 'Password changed successfully.')
                     request.session.flush()
                     return redirect('authentication:login')
@@ -238,7 +246,7 @@ def forgot_password(request):
 
         try:
             # print(f"[DEBUG] Attempting to reset password for user: {username} {p1}")
-            results = logging.sp_reset_resident_password_by_username(username, p1) 
+            results = authentication.sp_reset_resident_password_by_username(username, p1) 
             if not results:
                 set_flash(request, f"[DEBUG] Password reset results: {username} {results}", "error")
             set_flash(request, results, "success")
@@ -275,7 +283,7 @@ def api_forgot_password(request):
 
     # 2) Verify this pair exists in your DB (use your stored proc)
     try:
-        res = logging.sp_request_password_reset(username, email)
+        res = authentication.sp_request_password_reset(username, email)
         if not res:
             return JsonResponse({"error": "User not found for that username+email"}, status=404)
     except Exception as e:
@@ -352,3 +360,54 @@ def reset_from_link(request, token: str):
         "prefilled_username": data.get("u"),
         "prefilled_email": data.get("e"),
     })
+    
+logger = pylogging.getLogger("auth.resolve")
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def resolve_account_type(request):
+    """
+    Calls SP: identify_account_type(username, email)
+    Returns:
+      { "account_type": "resident" | "personnel" | "unknown", "raw": "<original>" }
+    Note: 'conflict' is mapped to 'personnel'
+    """
+    username = (request.data.get("username") or "").strip()
+    email = (request.data.get("email") or "").strip()
+
+    if not username or not email:
+        return Response({"error": "username_and_email_required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        logger.info("[resolve] IN username=%r email=%r", username, email)
+
+        # ✅ call your SP via the aliased class
+        raw = (authentication.sp_identify_account_type(username, email) or "").strip().lower()
+
+        logger.info("[resolve] OUT raw=%r", raw)
+
+        # 🔎 optional interactive debugger (dev only): /authentication/api/resolve_account_type/?debug=1
+        if (request.query_params.get("debug") or "").strip() == "1":
+            breakpoint()
+
+        if raw in ("personnel", "conflict"):
+            return Response({"account_type": "personnel", "raw": raw}, status=200)
+        if raw == "resident":
+            return Response({"account_type": "resident", "raw": raw}, status=200)
+        if raw == "not found":
+            return Response({"account_type": "unknown", "raw": raw}, status=200)
+
+        # Unexpected
+        return Response({"account_type": "unknown", "raw": raw}, status=200)
+
+    except Exception as e:
+        msg = str(e)
+        logger.exception("[resolve] ERROR: %s", msg)
+        if "E7201" in msg or "E7202" in msg:
+            return Response({"error": "username_and_email_required"}, status=400)
+        return Response({"error": "server_error"}, status=500)
+    
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def resolve_ping(request):
+    return Response({"ok": True}, status=200) 
