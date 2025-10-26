@@ -315,6 +315,19 @@
                         </button>
                       </div>
 
+                      <!-- NEW: Link Relation (first button) -->
+                      <button
+                        type="button"
+                        class="openLinkRelationshipModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        data-family-member-id="{{ m.family_member_id|default:'' }}"
+                        data-member-name="{{ m.full_name }}"
+                        data-resident-id="{{ m.resident_id|default:'' }}"
+                        aria-label="Link a relationship"
+                        title="Link a relationship"
+                      >
+                        Link Relationship
+                      </button>
+
                       <button
                         type="button"
                         class="openGeneralHealthModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
@@ -593,6 +606,18 @@
             {% endfor %}
           </select>
           <p class="text-xs text-gray-500 mt-1">Select the household’s classification.</p>
+        </div>
+
+        <!-- Relationship of Respondent to Household Head (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Respondent to HH <span class="text-red-600">*</span></label>
+          <select name="respondent_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">How is the respondent related to the household head</p>
         </div>
 
         <!-- Type of Waste Management (dropdown) -->
@@ -1370,6 +1395,87 @@
   </div>
 </div>
 
+<!-- Link Relationship Modal -->
+<div id="linkRelationshipModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        Link Relationship <span id="lr_title_label" class="text-gray-500"></span>
+      </h3>
+      <button id="closeLinkRelationshipModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- You can keep normal form submit as fallback; JS will intercept and AJAX it -->
+    <form id="lr_form" method="post" action="" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" id="lr_source_member_id" name="source_member_id">
+      <input type="hidden" id="lr_source_resident_id" name="source_resident_id">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Resident (typeahead) -->
+        <div class="relative sm:col-span-2">
+          <label for="lr_resident_name" class="block text-gray-700 text-sm font-medium mb-1">
+            Resident to Link <span class="text-red-600">*</span>
+          </label>
+          <input id="lr_resident_name" name="lr_resident_name" type="text" required
+                 placeholder="Search resident by name"
+                 autocomplete="off"
+                 data-autocomplete="resident"
+                 data-target-hidden="#lr_resident_id"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+          <input type="hidden" id="lr_resident_id" name="related_resident_id">
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+               data-autocomplete-list="#lr_resident_name"></div>
+          <p class="text-xs text-gray-500 mt-1">Pick from suggestions so we capture the correct resident ID.</p>
+        </div>
+
+        <!-- Relationship to the selected member -->
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">
+            Relationship to this member <span class="text-red-600">*</span>
+          </label>
+          <!-- Reusing your existing family_relationship list -->
+          <select id="lr_relationship" name="relationship_id"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for lr in link_relationship %}
+              <option value="{{ lr.relationship_id }}">{{ lr.relationship_name }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Ex: Father, Mother, Brother, Sister, Guardian, etc.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelLinkRelationshipModal"
+                class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="submit"
+                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Add Link
+        </button>
+      </div>
+
+      <!-- Live list of linked residents -->
+      <div class="mt-6">
+        <h4 class="text-sm font-semibold">Linked Residents</h4>
+        <div id="lr_list" class="mt-3 space-y-2">
+          <p class="text-xs text-gray-500">No linked residents yet.</p>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- General Health Info Modal -->
 <div id="generalHealthModal" class="fixed inset-0 z-50 hidden items-center justify-center">
   <!-- Backdrop -->
@@ -1388,11 +1494,13 @@
       </button>
     </div>
 
-    <form method="post" action="" class="px-6 py-5">
-
+    <form method="post" action="{% url 'bhw_module:insertGeneralHealth' %}" class="px-6 py-5">
+      {% csrf_token %}
       <!-- Hidden context -->
       <input type="hidden" name="member_id" id="gh_member_id">
       <input type="hidden" name="member_sex" id="gh_member_sex">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <!-- LEFT -->
@@ -1402,60 +1510,51 @@
             <legend class="text-sm font-medium text-gray-700">Medical History (select all that apply)</legend>
             <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="HPN" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500">
                 HPN – Hypertension
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="DM" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500">
                 DM – Diabetes
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="TB" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500">
                 TB – Tuberculosis
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="S" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500">
                 S – Surgery
               </label>
-              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="Asthma" class="h-4 w-4">
-                Asthma
-              </label>
-              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="Heart Disease" class="h-4 w-4">
-                Heart Disease
-              </label>
             </div>
-            <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple (server: use <code>request.POST.getlist('medical_history')</code>).</p>
           </fieldset>
 
           <!-- Smoker -->
           <div>
-            <label class="block text-sm font-medium text-gray-700">Smoker</label>
-            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <label class="block text-sm font-medium text-gray-700">Smoker <span class="text-red-600">*</span></label>
+            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
               <option value="">Select Yes/No</option>
-              <option value="YES">YES</option>
-              <option value="NO">NO</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
             </select>
           </div>
 
           <!-- Alcohol Beverage Drinker -->
           <div>
-            <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker</label>
-            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker <span class="text-red-600">*</span></label>
+            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
               <option value="">Select Yes/No</option>
-              <option value="YES">YES</option>
-              <option value="NO">NO</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
             </select>
           </div>
 
           <!-- Sexually Active -->
           <div>
-            <label class="block text-sm font-medium text-gray-700">Sexually Active</label>
-            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <label class="block text-sm font-medium text-gray-700">Sexually Active <span class="text-red-600">*</span></label>
+            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
               <option value="">Select Yes/No</option>
-              <option value="YES">YES</option>
-              <option value="NO">NO</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
             </select>
           </div>
 
@@ -1464,70 +1563,59 @@
             <label class="block text-sm font-medium text-gray-700">Last Menstrual Period</label>
             <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
           </div>
-        </div>
 
-        <!-- RIGHT -->
-        <div class="space-y-4">
           <!-- Age of Menarche (Female only) -->
           <div id="gh_menarche_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">Age of MENARCHE</label>
             <input name="age_menarche" type="number" min="8" max="20" placeholder="Enter Age"
                    class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
           </div>
+        </div>
 
-          <!-- FP Use -->
-          <div>
+        <!-- RIGHT -->
+        <div class="space-y-4">
+          <!-- FP Use (women only) -->
+          <div id="gh_fp_use_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Use</label>
             <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
               <option value="">Select Yes/No</option>
-              <option value="YES">YES</option>
-              <option value="NO">NO</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
             </select>
           </div>
 
-          <!-- Education Attainment -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Education Attainment</label>
-            <select name="education_attainment" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-              <option value="">Select One</option>
-              <option>No formal schooling</option>
-              <option>Elementary</option>
-              <option>High School</option>
-              <option>Senior High</option>
-              <option>Vocational</option>
-              <option>College</option>
-              <option>Post-graduate</option>
+          <!-- FP Method (women only) -->
+          <div id="gh_fp_method_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">FP Method <span class="text-red-600">*</span></label>
+            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Method —</option>
+              {% for fm in fp_method %}
+                <option value="{{ fm.fp_method_id }}">{{ fm.description }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- FP Status (women only) -->
+          <div id="gh_fp_status_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">FP Status <span class="text-red-600">*</span></label>
+            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Status —</option>
+              {% for fs in fp_status %}
+                <option value="{{ fs.fp_status_id }}">{{ fs.description }}</option>
+              {% endfor %}
             </select>
           </div>
 
           <!-- Classification by Age / Health Risk Group -->
-          <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-1">
-              <label class="block text-sm font-medium text-gray-700">Age</label>
-              <input name="risk_age" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" placeholder="Age">
-            </div>
-            <div class="col-span-1">
-              <label class="block text-sm font-medium text-gray-700">Quarter</label>
-              <select name="risk_quarter" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-                <option value="">Select Quarter</option>
-                <option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Classification by Age<span class="text-red-600">*</span></label>
+              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Class —</option>
+                {% for c in class %}
+                  <option value="{{ c.class_id }}">{{ c.class_description }}</option>
+                {% endfor %}
               </select>
             </div>
-            <div class="col-span-3">
-              <label class="block text-sm font-medium text-gray-700">Classification</label>
-              <select name="risk_classification" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-                <option value="">Select Classification</option>
-                <option>Pregnant</option>
-                <option>Postpartum</option>
-                <option>Senior (60+)</option>
-                <option>Child (0–14)</option>
-                <option>Adolescent (15–19)</option>
-                <option>PWD</option>
-                <option>NCD Risk</option>
-                <option>Others</option>
-              </select>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1952,49 +2040,213 @@
     phNumber?.addEventListener('change', syncPhilHealthControls);
     addMemberForm?.addEventListener('reset', () => setTimeout(syncPhilHealthControls, 0));
 
-
     /* =====================================
       GENERAL HEALTH MODAL (per member)
     ===================================== */
-    const ghModal = document.getElementById('generalHealthModal');
-    const ghCloseBtn = document.getElementById('closeGeneralHealthModal');
-    const ghCancelBtn = document.getElementById('cancelGeneralHealthModal');
+    (function () {
+      const ghModal       = document.getElementById('generalHealthModal');
+      if (!ghModal) return;
 
-    const ghMemberId = document.getElementById('gh_member_id');
-    const ghMemberSex = document.getElementById('gh_member_sex');
-    const ghMemberLabel = document.getElementById('gh_member_label');
+      const ghCloseBtn    = document.getElementById('closeGeneralHealthModal');
+      const ghCancelBtn   = document.getElementById('cancelGeneralHealthModal');
+      const ghForm        = ghModal.querySelector('form');
 
-    const ghLmpWrap = document.getElementById('gh_lmp_wrap');
-    const ghMenarcheWrap = document.getElementById('gh_menarche_wrap');
+      const ghMemberId    = document.getElementById('gh_member_id');
+      const ghMemberSex   = document.getElementById('gh_member_sex');
+      const ghMemberLabel = document.getElementById('gh_member_label');
 
-    function setFemaleOnlyVisibility(sex) {
-      const isFemale = (sex || '').toLowerCase() === 'female';
-      ghLmpWrap?.classList.toggle('hidden', !isFemale);
-      ghMenarcheWrap?.classList.toggle('hidden', !isFemale);
-    }
+      // Female-only sections already in your form
+      const ghLmpWrap       = document.getElementById('gh_lmp_wrap');
+      const ghMenarcheWrap  = document.getElementById('gh_menarche_wrap');
 
-    function openGHModal(memberId, memberName, memberSex) {
-      if (ghMemberId) ghMemberId.value = memberId || '';
-      if (ghMemberSex) ghMemberSex.value = memberSex || '';
-      if (ghMemberLabel) ghMemberLabel.textContent = memberName ? `– ${memberName}` : '';
-      setFemaleOnlyVisibility(memberSex);
-      openModal(ghModal);
-    }
-    const closeGHModal = () => closeModal(ghModal);
+      // FP wrappers (women-only) and selects
+      const ghFpUseWrap     = document.getElementById('gh_fp_use_wrap');
+      const ghFpMethodWrap  = document.getElementById('gh_fp_method_wrap');
+      const ghFpStatusWrap  = document.getElementById('gh_fp_status_wrap');
 
-    // ✅ delegated binding works even if DOM changes, and ignores <details> toggling
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.openGeneralHealthModal');
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-      openGHModal(btn.dataset.memberId, btn.dataset.memberName, btn.dataset.memberSex);
-    });
+      const ghFpUseSel      = ghModal.querySelector('select[name="fp_use"]');
+      const ghFpMethodSel   = ghModal.querySelector('select[name="fp_method"]');
+      const ghFpStatusSel   = ghModal.querySelector('select[name="fp_status"]');
 
-    ghCloseBtn?.addEventListener('click', closeGHModal);
-    ghCancelBtn?.addEventListener('click', closeGHModal);
-    ghModal?.addEventListener('click', (e) => { if (e.target === ghModal) closeGHModal(); });
+      // Fallbacks if you don't have global openModal/closeModal helpers.
+      const _open = (el) => (window.openModal ? window.openModal(el) : (el.classList.remove('hidden'), document.body.style.overflow='hidden'));
+      const _close = (el) => (window.closeModal ? window.closeModal(el) : (el.classList.add('hidden'), document.body.style.overflow=''));
 
+      const isFemale = (s) => {
+        const v = String(s || '').trim().toLowerCase();
+        return v === 'female' || v === 'f' || v === 'woman' || v === 'women';
+      };
+
+      function setWrapVisibleAndDisable(wrap, visible) {
+        if (!wrap) return;
+        wrap.classList.toggle('hidden', !visible);
+        const controls = wrap.querySelectorAll('input, select, textarea');
+        controls.forEach(ctrl => {
+          ctrl.disabled = !visible;
+          if (!visible) {
+            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') {
+              ctrl.checked = false;
+            } else if (ctrl.tagName === 'SELECT' && ctrl.multiple) {
+              Array.from(ctrl.options).forEach(o => o.selected = false);
+            } else {
+              ctrl.value = '';
+            }
+            // Also ensure hidden fields aren't "required"
+            ctrl.removeAttribute('required');
+          }
+        });
+      }
+
+      function setRequiredInWrap(wrap, required) {
+        if (!wrap) return;
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          if (required) ctrl.setAttribute('required', 'required');
+          else ctrl.removeAttribute('required');
+        });
+      }
+
+      function setFemaleOnlyVisibility(sex) {
+        const female = isFemale(sex);
+        setWrapVisibleAndDisable(ghLmpWrap,      female);
+        setWrapVisibleAndDisable(ghMenarcheWrap, female);
+        setWrapVisibleAndDisable(ghFpUseWrap,    female);
+
+        if (!female) {
+          // If switching to non-female, hide/disable FP method & status too.
+          setWrapVisibleAndDisable(ghFpMethodWrap, false);
+          setWrapVisibleAndDisable(ghFpStatusWrap, false);
+        } else {
+          // If female, FP method/status depend on FP use value
+          syncFPControls();
+        }
+      }
+
+      function syncFPControls() {
+        const female = isFemale(ghMemberSex?.value);
+        const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
+
+        setWrapVisibleAndDisable(ghFpMethodWrap, usingFp);
+        setWrapVisibleAndDisable(ghFpStatusWrap, usingFp);
+
+        setRequiredInWrap(ghFpMethodWrap, usingFp);
+        setRequiredInWrap(ghFpStatusWrap, usingFp);
+
+        if (!usingFp) {
+          if (ghFpMethodSel) ghFpMethodSel.value = '';
+          if (ghFpStatusSel) ghFpStatusSel.value = '';
+        }
+      }
+
+      // ---- Snapshot/Restore so closing discards edits ----
+      function takeSnapshot(form) {
+        const snap = {};
+        const add = (name, val) => { snap[name] = val; };
+
+        const byName = {};
+        Array.from(form.elements).forEach(el => {
+          if (!el.name || el.disabled || el.type === 'file') return;
+          (byName[el.name] ||= []).push(el);
+        });
+
+        for (const [name, els] of Object.entries(byName)) {
+          const first = els[0];
+          if (first.type === 'checkbox') {
+            add(name, els.filter(e => e.checked).map(e => e.value));
+          } else if (first.type === 'radio') {
+            const sel = els.find(e => e.checked);
+            add(name, sel ? sel.value : null);
+          } else if (first.tagName === 'SELECT' && first.multiple) {
+            add(name, Array.from(first.selectedOptions).map(o => o.value));
+          } else if (els.length > 1) {
+            add(name, els.map(e => e.value ?? ''));
+          } else {
+            add(name, first.value ?? '');
+          }
+        }
+        ghModal._snapshot = snap;
+      }
+
+      function restoreSnapshot(form) {
+        const snap = ghModal._snapshot || {};
+        // Clear first
+        form.reset();
+
+        for (const [name, val] of Object.entries(snap)) {
+          const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
+          if (!els.length) continue;
+
+          const first = els[0];
+          if (first.type === 'checkbox') {
+            const setVals = new Set(Array.isArray(val) ? val : []);
+            els.forEach(e => e.checked = setVals.has(e.value));
+          } else if (first.type === 'radio') {
+            els.forEach(e => e.checked = (val != null && e.value == val));
+          } else if (first.tagName === 'SELECT' && first.multiple) {
+            const setVals = new Set(Array.isArray(val) ? val : []);
+            Array.from(first.options).forEach(opt => opt.selected = setVals.has(opt.value));
+          } else if (els.length > 1) {
+            const arr = Array.isArray(val) ? val : [val];
+            els.forEach((e, i) => e.value = arr[i] ?? '');
+          } else {
+            first.value = (val ?? '');
+          }
+        }
+
+        // Re-apply visibility/requirements after values are back
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+      }
+
+      function openGHModal(memberId, memberName, memberSex) {
+        if (ghMemberId)    ghMemberId.value = memberId || '';
+        if (ghMemberSex)   ghMemberSex.value = memberSex || '';
+        if (ghMemberLabel) ghMemberLabel.textContent = memberName ? `– ${memberName}` : '';
+
+        setFemaleOnlyVisibility(memberSex);
+        syncFPControls();
+
+        _open(ghModal);
+        // Take the baseline after showing (so everything is laid out)
+        takeSnapshot(ghForm);
+      }
+
+      function closeGHModalDiscard() {
+        // Discard any edits the user made
+        if (ghForm) restoreSnapshot(ghForm);
+        _close(ghModal);
+      }
+
+      // Expose opener for your buttons
+      window.openGeneralHealthModal = openGHModal;
+
+      // Delegated open (optional if you prefer dataset attributes)
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.openGeneralHealthModal');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openGHModal(btn.dataset.memberId, btn.dataset.memberName, btn.dataset.memberSex);
+      });
+
+      // Wire close actions — all discard snapshot
+      ghCloseBtn?.addEventListener('click', closeGHModalDiscard);
+      ghCancelBtn?.addEventListener('click', closeGHModalDiscard);
+      ghModal?.addEventListener('click', (e) => { if (e.target === ghModal) closeGHModalDiscard(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !ghModal.classList.contains('hidden')) closeGHModalDiscard();
+      });
+
+      // Keep FP controls in sync when FP Use changes
+      ghFpUseSel?.addEventListener('change', syncFPControls);
+
+      // If the form resets for any reason, re-sync visibility/requirements
+      ghForm?.addEventListener('reset', () => {
+        setTimeout(() => {
+          setFemaleOnlyVisibility(ghMemberSex?.value || '');
+          syncFPControls();
+        }, 0);
+      });
+    })();
 
     /* =====================================
     GLOBAL: ESC closes top-most open modal
@@ -2648,6 +2900,218 @@
       alert('Actions are disabled because you are viewing a non-current quarter or the household is inactive.');
     }
   }, true);
+})();
+
+  /* =====================================
+    Link Family Relationship modal — full JS
+  ===================================== */
+(function () {
+  // ---- Endpoints (adjust if your URLs differ) ----
+  const REL_LIST_URL   = "{% url 'bhw_module:residentLinksListApi' %}";   // GET ?member_id=&resident_id=
+  const REL_ADD_URL    = "{% url 'bhw_module:residentLinkInsert' %}";     // POST
+  const REL_REMOVE_URL = "{% url 'bhw_module:residentLinkRemove' %}";     // POST
+
+  // ---- Elements ----
+  const modal       = document.getElementById('linkRelationshipModal');
+  const form        = document.getElementById('lr_form');
+  const titleLbl    = document.getElementById('lr_title_label');
+  const srcMember   = document.getElementById('lr_source_member_id');
+  const srcResident = document.getElementById('lr_source_resident_id');
+  const nameInput   = document.getElementById('lr_resident_name');
+  const idHidden    = document.getElementById('lr_resident_id');
+  const relSel      = document.getElementById('lr_relationship');
+  const listWrap    = document.getElementById('lr_list');
+
+  const openBtns    = document.querySelectorAll('.openLinkRelationshipModal');
+  const closeBtn    = document.getElementById('closeLinkRelationshipModal');
+  const cancelBtn   = document.getElementById('cancelLinkRelationshipModal');
+
+  // ---- CSRF ----
+  function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // ---- helpers ----
+  function clearForm() {
+    form?.reset();
+    if (idHidden) idHidden.value = '';
+    modal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+    });
+  }
+
+  // Expect each item from REL_LIST_URL to include:
+  // { related_resident_id, full_name, relationship_label, relationship_id }
+  function renderList(items) {
+    if (!listWrap) return;
+    if (!items || !items.length) {
+      listWrap.innerHTML = '<p class="text-xs text-gray-500">No linked residents yet.</p>';
+      return;
+    }
+    listWrap.innerHTML = items.map(it => `
+      <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+           data-related-resident-id="${it.related_resident_id}"
+           data-relationship-id="${it.relationship_id}">
+        <div class="flex flex-col">
+          <span class="font-medium text-gray-800">${it.full_name}</span>
+          <span class="text-xs text-gray-500">${it.relationship_label}</span>
+        </div>
+        <button type="button"
+          class="lr-remove rounded-lg border px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50">
+          Remove
+        </button>
+      </div>
+    `).join('');
+  }
+
+  async function loadRelations(memberId, residentId) {
+    try {
+      const url = new URL(REL_LIST_URL, window.location.origin);
+      if (memberId)  url.searchParams.set('member_id', memberId);
+      if (residentId)url.searchParams.set('resident_id', residentId);
+
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Failed to load relations');
+      const data = await res.json();
+      renderList(data.relations || []);
+    } catch (err) {
+      console.error(err);
+      renderList([]);
+    }
+  }
+
+  async function addRelation(e) {
+    e.preventDefault();
+
+    const payload = {
+      source_member_id:    srcMember?.value || '',
+      source_resident_id:  srcResident?.value || '',
+      related_resident_id: idHidden?.value || '',
+      relationship_id:     relSel?.value || ''
+    };
+
+    if (!payload.related_resident_id) return alert('Please pick a resident from the suggestions.');
+    if (!payload.relationship_id)     return alert('Please choose a relationship.');
+
+    // Prevent self-link (same person)
+    if (payload.source_resident_id && payload.source_resident_id === payload.related_resident_id) {
+      return alert('You cannot link a resident to themselves.');
+    }
+
+    // Prevent duplicates by resident_id
+    const dup = Array.from(listWrap.querySelectorAll('[data-related-resident-id]'))
+      .some(n => n.getAttribute('data-related-resident-id') === payload.related_resident_id);
+    if (dup) return alert('That resident is already linked.');
+
+    try {
+      const body = new URLSearchParams(payload);
+      const res = await fetch(REL_ADD_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      });
+      if (!res.ok) throw new Error('Add failed');
+
+      // Clear inputs and refresh list
+      nameInput.value = '';
+      idHidden.value  = '';
+      relSel.value    = '';
+      await loadRelations(srcMember?.value || '', srcResident?.value || '');
+    } catch (err) {
+      console.error(err);
+      alert('Could not add relation. Please try again.');
+    }
+  }
+
+  // Remove requires the triple that your Django view expects:
+  // source_resident_id, related_resident_id, relationship_id
+  async function removeRelation({ originId, targetId, relId }) {
+    if (!confirm('Remove this linked resident?')) return;
+    try {
+      const body = new URLSearchParams({
+        source_resident_id:  originId,
+        related_resident_id: targetId,
+        relationship_id:     relId
+      });
+
+      const res = await fetch(REL_REMOVE_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      });
+      if (!res.ok) throw new Error('Remove failed');
+      await loadRelations(srcMember?.value || '', srcResident?.value || '');
+    } catch (err) {
+      console.error(err);
+      alert('Could not remove relation. Please try again.');
+    }
+  }
+
+  function openLR(btn) {
+    clearForm();
+    const memberId   = btn.dataset.familyMemberId || '';
+    const memberName = btn.dataset.memberName || '';
+    const residentId = btn.dataset.residentId || '';
+
+    if (srcMember)   srcMember.value   = memberId;
+    if (srcResident) srcResident.value = residentId;
+    if (titleLbl)    titleLbl.textContent = memberName ? `– ${memberName}` : '';
+
+    openModal(modal);
+    loadRelations(memberId, residentId);
+  }
+
+  function closeLR() {
+    clearForm();
+    closeModal(modal);
+  }
+
+  // Openers
+  openBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      openLR(btn);
+    });
+  });
+
+  // Closers
+  closeBtn?.addEventListener('click', closeLR);
+  cancelBtn?.addEventListener('click', closeLR);
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeLR(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeLR();
+  });
+
+  // Add handler
+  form?.addEventListener('submit', addRelation);
+
+  // Delegated remove handler (pull triple from the row + source id from hidden)
+  listWrap?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.lr-remove');
+    if (!btn) return;
+
+    const row      = btn.closest('[data-related-resident-id]');
+    const originId = srcResident?.value || '';
+    const targetId = row?.dataset.relatedResidentId || '';
+    const relId    = row?.dataset.relationshipId || '';
+
+    if (!originId || !targetId || !relId) {
+      alert('Missing data to remove relation.');
+      return;
+    }
+    removeRelation({ originId, targetId, relId });
+  });
 })();
 </script>
 {% endblock %}

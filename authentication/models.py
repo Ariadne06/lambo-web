@@ -1,6 +1,8 @@
 from django.db import models, connection
 
-class logging(models.Model):
+class authentication(models.Model):
+    class Meta:
+        managed = False
     
     @staticmethod
     def sp_login_personnel_web(username, password):
@@ -88,3 +90,13 @@ class logging(models.Model):
                 return result[0]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_identify_account_type(username, email):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('identify_account_type', [username, email])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e     
