@@ -43,43 +43,42 @@ class Secretary(models.Model):
         city_municipality,
         country,
         total_gross_income,
-        dti_sec_cda_reg_number,   # optional (can be None)
-        clearance_category_id,    # NEW required param
+        dti_sec_cda_reg_number,   # optional
+        clearance_category_id,    # required
+        total_units,              # <-- NEW (optional; may be None)
         clearance_date_issued,    # optional
         created_by,
     ):
         """
-        Calls register_business(...) which expects p_clearance_category_id
-        immediately after p_dti_sec_cda_reg_number.
+        Calls register_business(...) which expects p_total_units
+        BETWEEN p_clearance_category_id and p_clearance_date_issued.
         """
-        try:
-            with connection.cursor() as cursor:
-                cursor.callproc(
-                    'register_business',
-                    [
-                        resident_id,
-                        business_name,
-                        business_type_id,
-                        nature_of_business,
-                        ownership_id,
-                        house_number,
-                        street,
-                        barangay,
-                        sitio_id,
-                        city_municipality,
-                        country,
-                        total_gross_income,
-                        dti_sec_cda_reg_number,  # may be None
-                        clearance_category_id,   # <-- inserted here
-                        clearance_date_issued,   # may be None
-                        created_by,
-                    ],
-                )
-                result = cursor.fetchone()
-                return result[0]
-        except Exception as e:
-            raise e
-    
+        with connection.cursor() as cursor:
+            cursor.callproc(
+                'register_business',
+                [
+                    resident_id,
+                    business_name,
+                    business_type_id,
+                    nature_of_business,
+                    ownership_id,
+                    house_number,
+                    street,
+                    barangay,
+                    sitio_id,
+                    city_municipality,
+                    country,
+                    total_gross_income,
+                    dti_sec_cda_reg_number,  # may be None
+                    clearance_category_id,
+                    total_units,              # <-- keep position in sync with SQL
+                    clearance_date_issued,    # may be None
+                    created_by,
+                ],
+            )
+            result = cursor.fetchone()
+            return result[0]
+        
 
 class Business(models.Model):
     class Meta:
@@ -87,17 +86,17 @@ class Business(models.Model):
 
     @staticmethod
     def sp_business_clearance_category():
-        """
-        Returns [(clearance_category_id, category_name), ...]
-        from business_clearance_category().
-        """
-        try:
-            with connection.cursor() as cursor:
-                cursor.callproc('business_clearance_category', [])
-                cols = [c[0] for c in cursor.description]
-                return [dict(zip(cols, row)) for row in cursor.fetchall()]
-        except Exception as e:
-            raise e
+            """
+            Returns [(clearance_category_id, category_name), ...]
+            from business_clearance_category().
+            """
+            try:
+                with connection.cursor() as cursor:
+                    cursor.callproc('business_clearance_category', [])
+                    cols = [c[0] for c in cursor.description]
+                    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+            except Exception as e:
+                raise e
         
     @staticmethod
     def sp_get_business_clearance_categories_for_select():
@@ -161,13 +160,13 @@ class Business(models.Model):
         city_municipality=None,
         country=None,
         total_gross_income=None,
-        clearance_category_id=None,  # <-- NEW param (can be None)
-        dti_sec_cda_reg_number=None, # not editable; pass None
+        clearance_category_id=None,  # may be None
+        dti_sec_cda_reg_number=None, # not editable
+        total_units=None,            # <-- NEW (may be None)
         updated_by: int = None,
     ):
         try:
             with connection.cursor() as cursor:
-                # ORDER MUST MATCH THE SQL FUNCTION SIGNATURE
                 cursor.callproc(
                     'update_business',
                     [
@@ -186,6 +185,7 @@ class Business(models.Model):
                         country,                # p_country
                         total_gross_income,     # p_total_gross_income
                         clearance_category_id,  # p_clearance_category_id
+                        total_units,            # p_total_units  <-- keep position in sync
                         updated_by,             # p_updated_by
                     ],
                 )

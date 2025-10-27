@@ -4,7 +4,7 @@ from django.utils.http import urlencode
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
-from .models import Secretary, Business, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig, AnnouncementRepo
+from .models import Secretary, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType, BusinessTaxConfig, AnnouncementRepo, Business
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
@@ -209,15 +209,21 @@ def Addbusiness(request):
             city_municipality     = request.POST.get("city_municipality")
             country               = request.POST.get("country") or "Philippines"
             total_gross_income    = request.POST.get("total_gross_income")
-            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number") or None  # optional
-            clearance_category_id = int(request.POST.get("clearance_category_id"))       # from dropdown
+            dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number") or None
+            clearance_category_id = int(request.POST.get("clearance_category_id"))
             clearance_date_issued = request.POST.get("clearance_date_issued") or None
+
+            # NEW: total_units (optional overall; required for unitized categories)
+            total_units_raw = request.POST.get("total_units")
+            total_units = int(total_units_raw) if (total_units_raw not in [None, ""]) else None
+
             personnel_id          = int(request.session.get("personnel_id"))
 
             Secretary.sp_register_business(
                 resident_id, business_name, business_type_id, nature_of_business, ownership_id,
                 house_number, street, barangay, sitio_id, city_municipality, country,
                 total_gross_income, dti_sec_cda_reg_num, clearance_category_id,
+                total_units,                      # <-- NEW
                 clearance_date_issued, personnel_id
             )
             set_flash(request, "Successfully Submitted", "success")
@@ -296,10 +302,17 @@ def business_list(request):
     with connection.cursor() as cur:
         cur.execute("SELECT ownership_id, ownership_name FROM ownership ORDER BY ownership_name")
         ownerships = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    # NEW: clearance categories (includes supported_units from SQL)
+    try:
+        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
+    except Exception:
+        clearance_categories = []
 
     ctx.update({
         "business_types": business_types,
         "ownerships": ownerships,
+        "clearance_categories": clearance_categories,
     })
     return render(request, "secretary_module/manageBusiness.html", ctx)
 
@@ -402,6 +415,7 @@ def business_update(request, business_id: int):
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
             "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
             "dti_sec_cda_reg_number": None,      # not editable
+            "total_units":            _to_int_or_none(request.POST.get("total_units")),
         }
 
         result = Business.sp_update_business(
