@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from supabase import create_client, Client
 
 # --- Sessions ---
 SESSION_COOKIE_AGE = 300
@@ -216,6 +215,21 @@ LOGGING = {
         'household_module': {
             'handlers': ['console'],
             'level': 'INFO',
+        },
+    },
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "auth.resolve": {  # matches logger name above
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
