@@ -23,6 +23,8 @@ urlpatterns = [
      path('api/resident-links/insert', views.resident_link_insert, name='residentLinkInsert'),
      path('api/resident-links/remove', views.resident_link_remove, name='residentLinkRemove'),
      path('family/insert/general-health/', views.insert_general_health, name='insertGeneralHealth'),
+     path('family/update/general-health/', views.update_general_health, name='updateGeneralHealth'),
+     path("general-health", views.general_health_get_api, name="generalHealthGetApi"),
      path('residentList/', views.residentList),
      path('residentAdd1/', views.residentAdd1),
      path('residentAdd2/', views.residentAdd2),
