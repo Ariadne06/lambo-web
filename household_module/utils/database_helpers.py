@@ -58,7 +58,8 @@ def insert_family_member(family_id, resident_id, rth_id, rtf_id, philhealthid_nu
 
 def save_general_health_for_member(family_member_id, class_id, medical_history_ids, 
                                    wra_lmp, fp_method_yn, fp_method_id, 
-                                   fp_status_id, personnel_id):
+                                   fp_status_id, personnel_id,smoker=None, alcohol_drinker=None, 
+                                   sexually_active=None, age_of_menarche=None):
     """
     Save general health profile for a family member
     """
@@ -70,7 +71,7 @@ def save_general_health_for_member(family_member_id, class_id, medical_history_i
             
             cursor.execute("""
                 SELECT save_general_health_for_member(
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s
+                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """, [
                 family_member_id,
@@ -79,7 +80,11 @@ def save_general_health_for_member(family_member_id, class_id, medical_history_i
                 wra_lmp,             
                 fp_method_yn,       
                 fp_method_id,        
-                fp_status_id,        
+                fp_status_id,
+                age_of_menarche,
+                smoker, 
+                alcohol_drinker,
+                sexually_active,         
                 personnel_id,
                 'personnel'           
             ])
@@ -107,13 +112,18 @@ def update_general_health_for_member(
     fp_method_yn=None,
     fp_method_id=None,
     fp_status_id=None,
+    apply_lifestyle=False,
+    smoker=None,
+    alcohol_drinker=None,
+    sexually_active=None,
+    age_of_menarche=None,
     personnel_id=None
 ):
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT update_general_health_for_member(
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """, [
                 family_member_id,
@@ -125,6 +135,11 @@ def update_general_health_for_member(
                 fp_method_yn,
                 fp_method_id,
                 fp_status_id,
+                age_of_menarche,       
+                apply_lifestyle,       
+                smoker,               
+                alcohol_drinker,       
+                sexually_active, 
                 personnel_id,
                 'personnel'
             ])
@@ -138,5 +153,5 @@ def update_general_health_for_member(
             return gh_id
             
     except Exception as e:
-        print(f"❌ Failed to update general health: {str(e)}")
+        print(f" Failed to update general health: {str(e)}")
         raise Exception(f"Failed to update general health: {str(e)}")
