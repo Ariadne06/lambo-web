@@ -18,6 +18,7 @@ router.register(r'medical-history-types', views.MedicalHistoryTypeViewSet)
 router.register(r'classes', views.ClassViewSet)
 router.register(r'fp-methods', views.FPMethodViewSet)
 router.register(r'fp-statuses', views.FPStatusViewSet)
+router.register(r'quarters', views.QuarterViewSet)
 
 
 app_name = 'household_module'
@@ -45,4 +46,6 @@ urlpatterns = [
     path('households/<int:household_id>/mark-visited/', views.HouseholdMarkVisitedView.as_view(), name='mark-household-visited'),
     path('families/<int:family_id>/mark-visited/', views.FamilyMarkVisitedView.as_view(), name='mark-family-visited'),
     path('families/<int:family_id>/gh-readiness/', views.FamilyGHReadinessView.as_view(), name='family-gh-readiness'),
+    path('households/<int:household_id>/update/', views.HouseholdUpdateView.as_view(), name='household-update'),
+    path('families/<int:family_id>/update/', views.FamilyUpdateView.as_view(), name='family-update'),
 ]
