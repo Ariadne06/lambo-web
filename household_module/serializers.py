@@ -2,11 +2,17 @@ from rest_framework import serializers
 from .models import MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
 from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
+from .utils.database_helpers import insert_family_member, save_general_health_for_member
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = HouseOwnershipType
         fields = ['house_ownership_id', 'description']
+
+class HouseTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HouseType
+        fields = ['house_type_id', 'description']
 
 class HouseholdTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,16 +34,12 @@ class WasteManagementTypeSerializer(serializers.ModelSerializer):
         model = WasteManagementType
         fields = ['waste_management_type_id', 'code', 'description']
 
+class RelationshipToHouseholdHeadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RelationshipToHouseholdHead
+        fields = ['rth_id', 'description']
 
-class HouseholdCreateSerializer(serializers.ModelSerializer):
-    # Write-only fields for creation
-    house_ownership_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    house_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    address_id = serializers.IntegerField(write_only=True, required=True)
-    household_head_id = serializers.IntegerField(write_only=True, required=True)
-    respondent_id = serializers.IntegerField(write_only=True, required=True)
-    respondent_relationship_to_hh_id = serializers.IntegerField(write_only=True, required=False, default=1)
-    
+class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         fields = ['house_number', 'street', 'barangay', 'sitio', 'city_municipality', 'country']
@@ -94,7 +96,7 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
     water_source_type_id = serializers.IntegerField(write_only=True, required=True)
     toilet_facility_type_id = serializers.IntegerField(write_only=True, required=True)
     waste_management_type_id = serializers.IntegerField(write_only=True, required=True)
-    waste_other_text = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     
     class Meta:
         model = Family
@@ -140,16 +142,20 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Create family using service - following your pattern"""
+        """Create family using service"""
         try:
             request = self.context.get('request')
-            personnel_id = request.user.personnel.personnel_id
-            household_id = self.context.get('household_id')  # Pass this from view
+            household_id = self.context.get('household_id')
             
             if not household_id:
                 raise serializers.ValidationError("Household ID is required")
             
-            print(f"Creating family for household: {household_id}")
+            personnel_id = request.data.get('personnel_id')
+            
+            if not personnel_id:
+                raise serializers.ValidationError("Personnel ID is required")
+            
+            print(f"Creating family for household: {household_id} by personnel: {personnel_id}")
             
             family_id = HouseholdService.create_new_family(household_id, validated_data, personnel_id)
             
@@ -168,46 +174,26 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
             print(f"Family creation failed: {str(e)}")
             raise serializers.ValidationError(f"Family creation failed: {str(e)}")
 
-# Simple response serializers
-class HouseholdListSerializer(serializers.Serializer):
-    """Simple serializer for household list responses"""
-    household_id = serializers.IntegerField()
-    household_code = serializers.CharField()
-    house_number = serializers.CharField(allow_blank=True, allow_null=True)
-    household_head_name = serializers.CharField()
-    respondent_name = serializers.CharField()
-    full_address = serializers.CharField()
-    is_visited = serializers.BooleanField()
-    family_count = serializers.IntegerField()
-    visited_families = serializers.IntegerField()
-    quarter = serializers.IntegerField()
-    year = serializers.IntegerField()
-    
 
-class RelationshipToHouseholdHeadSerializer(serializers.Serializer):
-    rth_id = serializers.IntegerField()
-    description = serializers.CharField()
+# class RelationshipListSerializer(serializers.Serializer):
+#     # This wraps the list returned by your static method
+#     results = RelationshipToHouseholdHeadSerializer(many=True, read_only=True)
 
-class RelationshipListSerializer(serializers.Serializer):
-    # This wraps the list returned by your static method
-    results = RelationshipToHouseholdHeadSerializer(many=True, read_only=True)
-
-    @staticmethod
-    def get_results():
-        return Household.sp_get_relationship_to_household_head()
+#     @staticmethod
+#     def get_results():
+#         return Household.sp_get_relationship_to_household_head()
 
 #     def to_representation(self, instance):
 #         # instance is ignored; we pull directly from the DB
 #         return {"results": self.get_results()}
     
 class HouseholdInsertSerializer(serializers.Serializer):
-    # Mirror the SP signature (types + nullability)
-    house_ownership_id = serializers.IntegerField(required=False, allow_null=True)
-    house_type_id = serializers.IntegerField(required=False, allow_null=True)
-    barangay = serializers.CharField()
-    city_municipality = serializers.CharField()
-    sitio_id = serializers.IntegerField(required=False, allow_null=True)
-    personnel_id = serializers.IntegerField()
+    house_ownership_id = serializers.IntegerField(required=True)
+    house_type_id = serializers.IntegerField(required=True)
+    barangay = serializers.CharField(required=True)
+    city_municipality = serializers.CharField(required=True)
+    sitio_id = serializers.IntegerField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
     house_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     street = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     country = serializers.CharField(required=False, default='Philippines')
