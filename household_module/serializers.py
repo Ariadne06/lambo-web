@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
-from resident_profiling_module.models import Resident, Address
+from .models import MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
+from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
@@ -39,46 +39,55 @@ class HouseholdCreateSerializer(serializers.ModelSerializer):
     respondent_relationship_to_hh_id = serializers.IntegerField(write_only=True, required=False, default=1)
     
     class Meta:
-        model = Household
-        fields = [
-            'household_code', 'house_number', 'is_visited', 'quarter', 'year', 'created_at',
-            'house_ownership_type_id', 'address_id', 'household_head_id', 'respondent_id', 
-            'respondent_relationship_to_hh_id'
-        ]
-        read_only_fields = ['household_code', 'is_visited', 'quarter', 'year', 'created_at']
-    
-    def create(self, validated_data):
-        """Create household using service - following your pattern"""
-        try:
+        model = Address
+        fields = ['house_number', 'street', 'barangay', 'sitio', 'city_municipality', 'country']
 
-            request = self.context.get('request')
-            personnel_id = request.user.personnel.personnel_id
-            
-            print(f"Creating household for personnel: {personnel_id}")
-            
-            household_id = HouseholdService.create_new_household(validated_data, personnel_id)
-            
-            if not household_id:
-                raise serializers.ValidationError("Failed to create household")
-            
-            # Return a mock household object for response
-            household = Household()
-            household.household_id = household_id
-            household.house_number = validated_data.get('house_number', '')
-            
-            print(f"Household created successfully with ID: {household_id}")
-            return household
-            
-        except Exception as e:
-            print(f"Household creation failed: {str(e)}")
-            raise serializers.ValidationError(f"Household creation failed: {str(e)}")
+class PhilhealthCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhilhealthCategory
+        fields = ['philhealth_category_id', 'code', 'description']
+
+class NutritionStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NutritionStatus
+        fields = ['nutrition_status_id', 'description']
+
+
+class MedicalHistoryTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalHistoryType
+        fields = ['medical_history_type_id', 'description']
+
+class ClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Class
+        fields = ['class_id', 'class_description']
+
+class FPMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FPMethod
+        fields = ['fp_method_id', 'code', 'description']
+
+class FPStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FPStatus
+        fields = ['fp_status_id', 'code', 'description']
+
+class QuarterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quarter
+        fields = ['quarter_id', 'quarter_number', 'quarter_name', 'year', 'start_date', 'end_date']
+
+
 
 class FamilyCreateSerializer(serializers.ModelSerializer):
 
     household_type_id = serializers.IntegerField(write_only=True, required=True)
-    family_head_id = serializers.IntegerField(write_only=True, required=True)  # REQUIRED!
+    family_head_id = serializers.IntegerField(write_only=True, required=True) 
     respondent_id = serializers.IntegerField(write_only=True, required=True)
     respondent_relationship_to_fh_id = serializers.IntegerField(write_only=True, required=False, default=1)
+    head_rth_id = serializers.IntegerField(write_only=True, required=True)
+    respondent_rth_id = serializers.IntegerField(write_only=True, required=True) 
     ip_status = serializers.BooleanField(write_only=True, required=False, default=False)
     ip_tribe = serializers.CharField(write_only=True, required=False, allow_blank=True)
     nhts_status = serializers.BooleanField(write_only=True, required=False, default=False)
@@ -92,8 +101,8 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         fields = [
             'family_code', 'is_visited', 'quarter', 'year', 'created_at',
             'household_type_id', 'family_head_id', 'respondent_id', 
-            'respondent_relationship_to_fh_id', 'ip_status', 'ip_tribe', 'nhts_status',
-            'water_source_type_id', 'toilet_facility_type_id', 'waste_management_type_id', 'waste_other_text'
+            'respondent_relationship_to_fh_id', 'head_rth_id', 'respondent_rth_id', 'ip_status', 'ip_tribe', 'nhts_status',
+            'water_source_type_id', 'toilet_facility_type_id', 'waste_management_type_id',
         ]
         read_only_fields = ['family_code', 'is_visited', 'quarter', 'year', 'created_at']
     
@@ -102,6 +111,32 @@ class FamilyCreateSerializer(serializers.ModelSerializer):
         # Ensure family_head_id is provided
         if not data.get('family_head_id'):
             raise serializers.ValidationError({'family_head_id': 'Family head is required.'})
+        
+        if not data.get('head_rth_id'):
+            raise serializers.ValidationError({'head_rth_id': 'Family head relationship to household head is required.'})
+
+        if data.get('family_head_id') == data.get('respondent_id'):
+            # Same person - relationships must match
+            head_rth = data.get('head_rth_id')
+            respondent_rth = data.get('respondent_rth_id')
+            
+            if respondent_rth and head_rth != respondent_rth:
+                raise serializers.ValidationError({
+                    'respondent_rth_id': f'When family head and respondent are the same person, they must have the same relationship to household head. Expected: {head_rth}, Got: {respondent_rth}'
+                })
+            
+            #  respondent_rth_id to match head_rth_id
+            if not respondent_rth:
+                data['respondent_rth_id'] = head_rth
+        
+        #  Validate respondent_rth_id when respondent ≠ family head
+        elif data.get('respondent_id') and data.get('respondent_id') != data.get('family_head_id'):
+            if not data.get('respondent_rth_id'):
+                raise serializers.ValidationError({
+                    'respondent_rth_id': 'Respondent relationship to household head is required when respondent is different from family head.'
+                })
+        
+        
         return data
     
     def create(self, validated_data):
@@ -250,15 +285,26 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
     fp_method_yn = serializers.BooleanField(required=False, allow_null=True)
     fp_method_id = serializers.IntegerField(required=False, allow_null=True)
     fp_status_id = serializers.IntegerField(required=False, allow_null=True)
+    age_of_menarche = serializers.IntegerField(required=False, allow_null=True)  
+
+    smoker = serializers.BooleanField(required=True)
+    alcohol_drinker = serializers.BooleanField(required=True)
+    sexually_active = serializers.BooleanField(required=True)
     
     def validate(self, data):
         """Validate create data"""
         if not data.get('class_id'):
             raise serializers.ValidationError({'class_id': 'Class/Population Group is required'})
         
-        #  FIX: Accept empty/null medical history
+        if data.get('smoker') is None:
+            raise serializers.ValidationError({'smoker': 'Smoker status is required'})
+        if data.get('alcohol_drinker') is None:
+            raise serializers.ValidationError({'alcohol_drinker': 'Alcohol drinker status is required'})
+        if data.get('sexually_active') is None:
+            raise serializers.ValidationError({'sexually_active': 'Sexually active status is required'})
+            
         if data.get('medical_history_ids') is None:
-            data['medical_history_ids'] = []  # Convert None to empty array
+            data['medical_history_ids'] = [] 
         
         # FP validation (only if fp_method_yn is True)
         if data.get('fp_method_yn') is True:
@@ -267,6 +313,11 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
             if not data.get('fp_status_id'):
                 raise serializers.ValidationError({'fp_status_id': 'FP Status is required when using family planning'})
         
+        if data.get('age_of_menarche') is not None:
+            age_val = data.get('age_of_menarche')
+            if age_val < 8 or age_val > 25:
+                raise serializers.ValidationError({'age_of_menarche': 'Age of menarche must be between 8 and 25 years'})
+
         return data
     
     def create(self, validated_data):
@@ -283,7 +334,7 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
             #  FIX: Handle empty medical history
             medical_history_ids = validated_data.get('medical_history_ids')
             if not medical_history_ids or len(medical_history_ids) == 0:
-                medical_history_ids = None  # Pass NULL to SQL function if empty
+                medical_history_ids = None  
             
             gh_id = save_general_health_for_member(
                 family_member_id=family_member_id,
@@ -293,6 +344,10 @@ class GeneralHealthCreateSerializer(serializers.Serializer):
                 fp_method_yn=validated_data.get('fp_method_yn'),
                 fp_method_id=validated_data.get('fp_method_id'),
                 fp_status_id=validated_data.get('fp_status_id'),
+                smoker=validated_data.get('smoker'),
+                alcohol_drinker=validated_data.get('alcohol_drinker'),
+                sexually_active=validated_data.get('sexually_active'),
+                age_of_menarche=validated_data.get('age_of_menarche'),  
                 personnel_id=personnel_id
             )
             
@@ -323,6 +378,10 @@ class GeneralHealthUpdateSerializer(serializers.Serializer):
     fp_method_yn = serializers.BooleanField(required=False, allow_null=True)
     fp_method_id = serializers.IntegerField(required=False, allow_null=True)
     fp_status_id = serializers.IntegerField(required=False, allow_null=True)
+    apply_lifestyle = serializers.BooleanField(default=False)
+    smoker = serializers.BooleanField(required=False, allow_null=True)
+    alcohol_drinker = serializers.BooleanField(required=False, allow_null=True)
+    sexually_active = serializers.BooleanField(required=False, allow_null=True)
     
     def validate(self, data):
         """Validate update data"""
@@ -342,6 +401,19 @@ class GeneralHealthUpdateSerializer(serializers.Serializer):
                         'fp_status_id': 'Required when fp_method_yn is True'
                     })
         
+        if data.get('apply_lifestyle'):
+            lifestyle_fields = ['smoker', 'alcohol_drinker', 'sexually_active']
+            if not any(data.get(field) is not None for field in lifestyle_fields):
+                raise serializers.ValidationError({
+                    'apply_lifestyle': 'At least one lifestyle field must be provided when apply_lifestyle is True'
+                })
+        
+        
+        if data.get('age_of_menarche') is not None:
+            age_val = data.get('age_of_menarche')
+            if age_val < 8 or age_val > 25:
+                raise serializers.ValidationError({'age_of_menarche': 'Age of menarche must be between 8 and 25 years'})
+        
         return data
     
     def update(self, instance, validated_data):
@@ -355,7 +427,6 @@ class GeneralHealthUpdateSerializer(serializers.Serializer):
             if not personnel_id:
                 raise serializers.ValidationError("Missing personnel_id")
             
-            # Import here to avoid circular dependency
             from .utils.database_helpers import update_general_health_for_member
             
             gh_id = update_general_health_for_member(
@@ -368,6 +439,11 @@ class GeneralHealthUpdateSerializer(serializers.Serializer):
                 fp_method_yn=validated_data.get('fp_method_yn'),
                 fp_method_id=validated_data.get('fp_method_id'),
                 fp_status_id=validated_data.get('fp_status_id'),
+                apply_lifestyle=validated_data.get('apply_lifestyle', False),
+                smoker=validated_data.get('smoker'),
+                alcohol_drinker=validated_data.get('alcohol_drinker'),
+                sexually_active=validated_data.get('sexually_active'),
+                age_of_menarche=validated_data.get('age_of_menarche'),  
                 personnel_id=personnel_id
             )
             
@@ -376,3 +452,60 @@ class GeneralHealthUpdateSerializer(serializers.Serializer):
         except Exception as e:
             raise serializers.ValidationError(f"Failed to update general health: {str(e)}")
     
+class HouseholdUpdateSerializer(serializers.Serializer):
+    """Serializer for updating household information"""
+    
+    # Required fields
+    house_ownership_id = serializers.IntegerField(required=True)
+    house_type_id = serializers.IntegerField(required=True)
+    barangay = serializers.CharField(required=True, max_length=200)
+    city_municipality = serializers.CharField(required=True, max_length=100)
+    sitio_id = serializers.IntegerField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
+    
+    # Optional fields
+    house_number = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=50)
+    street = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=200)
+    country = serializers.CharField(required=False, default='Philippines', max_length=100)
+    household_head_id = serializers.IntegerField(required=False, allow_null=True)
+    respondent_id = serializers.IntegerField(required=False, allow_null=True)
+    respondent_rth_id = serializers.IntegerField(required=False, allow_null=True)
+    performed_by_id = serializers.IntegerField(required=False, allow_null=True)
+    performed_by_type = serializers.CharField(required=False, default='personnel', max_length=20)
+    enforce_bhw_assignment = serializers.BooleanField(required=False, default=False)
+    
+    def validate(self, data):
+        """Validate the update data"""
+        
+        # Basic required field validation
+        if not data.get('house_ownership_id'):
+            raise serializers.ValidationError({'house_ownership_id': 'House ownership type is required.'})
+        
+        if not data.get('house_type_id'):
+            raise serializers.ValidationError({'house_type_id': 'House type is required.'})
+        
+        if not data.get('sitio_id'):
+            raise serializers.ValidationError({'sitio_id': 'Sitio/Purok is required.'})
+        
+        if not data.get('personnel_id'):
+            raise serializers.ValidationError({'personnel_id': 'Personnel ID is required.'})
+        
+        # Barangay and city validation
+        barangay = data.get('barangay', '').strip()
+        if not barangay:
+            raise serializers.ValidationError({'barangay': 'Barangay is required.'})
+        
+        city = data.get('city_municipality', '').strip()
+        if not city:
+            raise serializers.ValidationError({'city_municipality': 'City/Municipality is required.'})
+        
+        # Respondent validation
+        respondent_id = data.get('respondent_id')
+        respondent_rth_id = data.get('respondent_rth_id')
+        
+        if respondent_id and not respondent_rth_id:
+            raise serializers.ValidationError({
+                'respondent_rth_id': 'Respondent relationship to household head is required when respondent is provided.'
+            })
+        
+        return data

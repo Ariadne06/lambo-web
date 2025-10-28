@@ -202,6 +202,12 @@
           <span id="mbv_clearance_category" class="text-gray-800"></span>
         </div>
 
+        <!-- Total Units (shown only when present) -->
+        <div id="mbv_units_row" class="flex justify-between border-b pb-2 hidden">
+          <span class="font-semibold text-gray-600">Total Units:</span>
+          <span id="mbv_total_units" class="text-gray-800"></span>
+        </div>
+
         <!-- Business Status -->
         <div class="flex justify-between border-b pb-2">
           <span class="font-semibold text-gray-600">Business Status:</span>
@@ -457,14 +463,26 @@
           <label class="block md:col-span-2">
             <span class="text-sm font-medium">Clearance Category</span>
             <select id="ub_clearance_category_id" name="clearance_category_id"
-                    class="mt-1 w-full border rounded-md p-2 bg-white">
-              <option value="">-- Select Clearance Category --</option>
-              {% for c in clearance_categories %}
-                <option value="{{ c.clearance_category_id }}">{{ c.category_name }}</option>
-              {% endfor %}
-            </select>
+                  class="mt-1 w-full border rounded-md p-2 bg-white">
+            <option value="">-- Select Clearance Category --</option>
+            {% for c in clearance_categories %}
+              <option value="{{ c.clearance_category_id }}"
+                      data-supported-units="{{ c.supported_units|yesno:'true,false' }}">
+                {{ c.category_name }}
+              </option>
+            {% endfor %}
+          </select>
             <p id="ub_clr_note" class="mt-1 text-xs text-gray-500"></p>
           </label>
+
+          <!-- Total Units (conditionally shown) -->
+          <label id="ub_units_wrap" class="block hidden">
+            <span class="text-sm font-medium">Total Units</span>
+            <input id="ub_total_units" name="total_units" type="number" min="0" step="1"
+                  class="mt-1 w-full border rounded-md p-2" placeholder="Enter total units"/>
+            <p class="mt-1 text-xs text-gray-500">Required for categories that support units.</p>
+          </label>
+
         </div>
 
         <div id="ub_alert" class="hidden text-sm p-2 rounded-md"></div>
@@ -530,7 +548,7 @@
     const detailUrl = detailTpl.replace("99999", businessId);
 
     const pick = (obj, keys, def = '') => {
-      for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+      for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
       return def;
     };
 
@@ -583,17 +601,33 @@
 
       setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
       setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
+
+      // Total Units (show only if present)
+      const units = pick(d, ['total_units','units','unit_count'], null);
+      const unitsRow = document.getElementById('mbv_units_row');
+      if (unitsRow) {
+        if (units !== null && units !== undefined && units !== '') {
+          unitsRow.classList.remove('hidden');
+          setVal("mbv_total_units", units);
+        } else {
+          unitsRow.classList.add('hidden');
+          setVal("mbv_total_units", "");
+        }
+      }
+
       setVal("mbv_address",            pick(d, ['address','full_address','addr']));
 
       const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
       const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
       const clearanceRow = document.getElementById("mbv_clearance_row");
-      if (rawStatus === 'active' && issuanceDate) {
-        clearanceRow.classList.remove("hidden");
-        setVal("mbv_clearance_date", issuanceDate);
-      } else {
-        clearanceRow.classList.add("hidden");
-        setVal("mbv_clearance_date", "");
+      if (clearanceRow) {
+        if (rawStatus === 'active' && issuanceDate) {
+          clearanceRow.classList.remove("hidden");
+          setVal("mbv_clearance_date", issuanceDate);
+        } else {
+          clearanceRow.classList.add("hidden");
+          setVal("mbv_clearance_date", "");
+        }
       }
 
       openModal("modalBusinessView");
@@ -618,6 +652,44 @@
     const form  = document.getElementById('updateBusinessForm');
     const alertBox = document.getElementById('ub_alert');
 
+    // --- Units helpers (NEW) ---
+    function unitsSupportedForCategory(selectEl, forcedSupported = null) {
+      // If server told us explicitly, use that
+      if (forcedSupported !== null && forcedSupported !== undefined) {
+        return !!forcedSupported;
+      }
+      // Prefer data-supported-units on the selected <option>
+      const opt = selectEl && selectEl.options[selectEl.selectedIndex];
+      if (opt && Object.prototype.hasOwnProperty.call(opt, 'dataset')) {
+        if ('supportedUnits' in opt.dataset) {
+          return opt.dataset.supportedUnits === 'true';
+        }
+      }
+      // Fallback: try a global map if you render one (optional)
+      const id = selectEl ? String(selectEl.value || '') : '';
+      if (window.CLEARANCE_CATEGORIES && id && typeof window.CLEARANCE_CATEGORIES[id] !== 'undefined') {
+        return !!window.CLEARANCE_CATEGORIES[id]; // boolean
+      }
+      // Default: assume not supported
+      return false;
+    }
+    function toggleUnitsUI(forcedSupported = null) {
+      const clrSel = document.getElementById('ub_clearance_category_id');
+      const wrap   = document.getElementById('ub_units_wrap');
+      const input  = document.getElementById('ub_total_units');
+      if (!wrap || !input || !clrSel) return;
+
+      const supported = unitsSupportedForCategory(clrSel, forcedSupported);
+      if (supported) {
+        wrap.classList.remove('hidden');
+        input.required = true;
+      } else {
+        wrap.classList.add('hidden');
+        input.required = false;
+        input.value = '';
+      }
+    }
+
     function showAlert(ok, msg) {
       alertBox.className = '';
       alertBox.classList.add(
@@ -639,6 +711,8 @@
       alertBox.textContent = '';
       const ownerInput = document.getElementById('ub_resident_name');
       if (ownerInput) ownerInput.value = '';
+      // Also reset units wrapper visually
+      toggleUnitsUI(false);
     }
 
     async function open(businessId) {
@@ -652,7 +726,7 @@
 
       // helpers
       const pick = (obj, keys, def = '') => {
-        for (const k of keys) if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+        for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
         return def;
       };
       const ensureSelected = (selectEl, value, labelIfMissing) => {
@@ -703,6 +777,9 @@
           if (!opt.value) return;
           opt.hidden = (allow.size > 0) ? !allow.has(opt.value) : false;
         });
+
+        // Refresh units UI after any restriction change
+        toggleUnitsUI();
       }
 
       try {
@@ -769,6 +846,20 @@
           const clrLabel = pick(d, ['clearance_category_name']) || CLEARANCE_CATEGORY_LABELS[String(clrId)];
           ensureSelected(clrSel, clrId, clrLabel);
           restrictClearanceOptions(clrSel, clrId);
+
+          // Initialize Total Units value (if any) + toggle visibility
+          const currentUnits = pick(d, ['total_units','units','unit_count'], '');
+          const inputUnits = document.getElementById('ub_total_units');
+          if (inputUnits !== null && inputUnits !== undefined) {
+            inputUnits.value = currentUnits ?? '';
+          }
+
+          // If backend also returns whether this category supports units, respect it
+          const supportedFromDetail = pick(d, ['supported_units','units_supported','category_supports_units'], null);
+          toggleUnitsUI(supportedFromDetail);
+
+          // Re-evaluate when the category changes (uses data-supported-units on <option> if present)
+          clrSel.addEventListener('change', () => toggleUnitsUI());
         }
 
       } catch (err) {

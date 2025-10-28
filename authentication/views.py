@@ -114,7 +114,7 @@ def login_view(request):
 
             messages.error(request, 'Login failed.')
         except Exception as e:
-            messages.error(request, f'Login failed: {str(e)}')
+            messages.error(request, f'Login failed: {_clean_db_error(e)}')
 
     return render(request, 'authentication/login.html', {
         'message': flash['message'],
