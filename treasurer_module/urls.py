@@ -5,7 +5,9 @@ app_name = 'treasurer_module'
 
 urlpatterns = [
      path('', views.treasurer_dashboard, name='treasurer_dashboard'),
-     path('payments', views.payments),
-     path('summary', views.summary),
-     path('transactions', views.transactions),
+     path('payments', views.payments, name='payments'),
+     path('summary', views.summary, name='summary'),
+     path('transactions', views.transactions, name='transactions'),
+     path('applications/<int:application_id>/detail/', views.treasurer_application_detail_json, name='treasurer_application_detail_json'),
+     path('applications/<int:application_id>/paid/', views.set_application_to_paid, name='set_application_to_paid'),
 ]
