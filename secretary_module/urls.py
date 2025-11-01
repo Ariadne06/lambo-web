@@ -16,10 +16,15 @@ urlpatterns = [
     path("business_detail_json/<int:business_id>", views.business_detail_json, name="business_detail_json"),
     path("businesses/<int:business_id>/update", views.business_update, name="business_update"),
     path("business/<int:business_id>/close/", views.business_close, name="business_close"),
-    path('add_certificate/', views.add_certificate, name="add_certificate"),
-    path('manageCert1/', views.manageCert1),
-    path('manageCert2/', views.manageCert2),
+    path('applications/create/', views.add_certificate, name='create_application'),
+    path('applications/submit/', views.submit_business_application, name='submit_business_application'),
+    path('manageCert1/', views.manageCert1, name='manageCert1'),
+    path('manageCert2/', views.manageCert2, name='manageCert2'),
     path('applications/', views.applications, name="applications"),
+    path('applications/<int:application_id>/detail/', views.application_detail_json, name='application_detail_json'),
+    path('applications/<int:application_id>/for-payment/', views.set_application_to_for_payment, name='set_application_to_for_payment'),
+    path('applications/<int:application_id>/print/', views.print_application, name='print_application'),
+    path('applications/<int:application_id>/print/pdf/', views.print_application_pdf, name='print_application_pdf'),
     path('announcement/', views.announcement, name="announcement"),
     path('approval/', views.approval, name="approval"),
     path("approval/get-doc-url", views.get_doc_url, name="approval_get_doc_url"),
@@ -34,4 +39,8 @@ urlpatterns = [
     path("otherClearances/update/", views.other_clearances_update, name="other_clearances_update"),
     path("taxPenalties/", views.tax_penalties, name="tax_penalties"),
     path("taxPenalties/update/", views.tax_penalties_update, name="tax_penalties_update"),
+
+    # Dynamic AJAX endpoints for the Create Application (walk-in) UI
+    path('applications/search/', views.application_search, name='application_search'),
+    path('applications/preview/', views.preview_business_clearance, name='preview_business_clearance'),
 ]
