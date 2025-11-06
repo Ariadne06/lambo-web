@@ -38,7 +38,7 @@
         </a>
 
 <!-- Manage submenu -->
-<button id="submenu-toggle"
+<button id="submenu-toggle" type="button"
         class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
                {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
                    bg-white text-red-700 font-semibold shadow-sm
@@ -83,15 +83,32 @@
             {% endif %}">
     Business List
   </a>
-  <a href="{% url 'secretary_module:add_certificate' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'personnel_list' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Certificates
-  </a>
+  
+</div>
+
+<!-- Certificates top-level submenu -->
+<button id="cert-toggle" type="button"
+      class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+          {% if request.resolver_match.url_name in 'create_application manageCert1 manageCert2' %}
+            bg-white text-red-700 font-semibold shadow-sm
+          {% else %}
+             hover:bg-red-800/80
+          {% endif %}">
+  <span>Certificates</span>
+  <svg id="cert-arrow" xmlns="http://www.w3.org/2000/svg"
+     class="h-5 w-5 ml-auto transition-transform duration-300"
+     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+  </svg>
+</button>
+
+  <div id="cert-submenu" class="hidden ml-10 space-y-1">
+  <a href="{% url 'secretary_module:create_application' %}"
+    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">New Application (Walk‑in)</a>
+  <a href="{% url 'secretary_module:manageCert1' %}"
+    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Manage Certificates</a>
+  <a href="{% url 'secretary_module:applications' %}"
+    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Applications</a>
 </div>
 
 <a href="{% url 'secretary_module:applications' %}"
@@ -108,7 +125,7 @@
   </a>
 
 <!-- Price Update submenu -->
-<button id="price-toggle"
+<button id="price-toggle" type="button"
         class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
                {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %}
                    bg-white text-red-700 font-semibold shadow-sm
@@ -184,6 +201,21 @@
   <!-- Main content -->
   <div class="ml-64 min-h-screen">
     <div class="p-6">
+      {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for message in messages %}
+          {% with level=message.tags %}
+          <div class="px-4 py-3 rounded-lg border text-sm
+                      {% if 'success' in level %} bg-emerald-50 text-emerald-800 border-emerald-200
+                      {% elif 'error' in level %} bg-rose-50 text-rose-800 border-rose-200
+                      {% elif 'warning' in level %} bg-amber-50 text-amber-800 border-amber-200
+                      {% else %} bg-gray-50 text-gray-800 border-gray-200 {% endif %}">
+            {{ message }}
+          </div>
+          {% endwith %}
+        {% endfor %}
+      </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </div>
@@ -194,6 +226,7 @@
     { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
     { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
     { btn: 'price-toggle',  panel: 'price-submenu',  arrow: 'price-arrow'  },
+    { btn: 'cert-toggle',   panel: 'cert-submenu',   arrow: 'cert-arrow'   },
   ];
 
   function getEl(id){ return document.getElementById(id); }
