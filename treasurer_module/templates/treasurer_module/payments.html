@@ -5,91 +5,188 @@
 {% endblock %}
 
 {% block content %}
-    <div class="px-6 py-8">
+<div class="px-6 py-8">
   <h1 class="text-2xl font-semibold text-red-700 mb-6">Payments</h1>
+
+  <!-- Search -->
+  <form method="get" class="mb-4 flex items-center gap-2">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by code, name, amount" class="w-80 rounded-xl border border-gray-300 px-3 py-2 text-sm" />
+    <button class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700">Search</button>
+  </form>
 
   <div class="bg-white shadow-sm rounded-2xl border border-gray-200">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
           <tr class="text-left text-gray-600">
+            <th class="px-6 py-3 font-semibold">Code</th>
             <th class="px-6 py-3 font-semibold">Full Name</th>
-            <th class="px-6 py-3 font-semibold">Application</th>
             <th class="px-6 py-3 font-semibold">Amount</th>
-            <th class="px-6 py-3 font-semibold">Status</th>
             <th class="px-6 py-3 font-semibold text-center">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
+          {% for r in rows %}
           <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Adrianne Villarta</td>
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">
-              <span class="bg-yellow-100 text-yellow-700 text-xs px-2.5 py-1 rounded-full">Pending</span>
-            </td>
+            <td class="px-6 py-4 font-mono text-xs">{{ r.application_code }}</td>
+            <td class="px-6 py-4">{{ r.applicant_name }}</td>
+            <td class="px-6 py-4">₱{{ r.total_amount|floatformat:2 }}</td>
             <td class="px-6 py-4">
               <div class="flex items-center justify-center gap-2">
-                <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:border-green-400 hover:bg-green-50">
-                  <!-- Check icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                  </svg>
-                </button>
-                <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:border-red-400 hover:bg-red-50">
-                  <!-- X icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                  </svg>
+                <button type="button" data-app-id="{{ r.application_id }}" onclick="viewPayment(this)" class="h-8 w-8 flex items-center justify-center rounded-full border hover:border-rose-400 hover:bg-rose-50" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
                 </button>
               </div>
             </td>
           </tr>
-
-          <!-- Repeat rows -->
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Adrian Medalla</td>
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">
-              <span class="bg-yellow-100 text-yellow-700 text-xs px-2.5 py-1 rounded-full">Pending</span>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-center gap-2">
-                <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:border-green-400 hover:bg-green-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                  </svg>
-                </button>
-                <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:border-red-400 hover:bg-red-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-            </td>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="px-6 py-6 text-center text-gray-500">No applications found.</td>
           </tr>
-
-          <!-- You can duplicate more rows here as needed -->
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
-    <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
-      <span class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400 cursor-not-allowed">Prev</span>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">1</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">4</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">5</a>
-      <span class="px-3 py-1.5">...</span>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between px-4 py-4 text-sm">
+      <div>Page {{ page }} of {{ total_pages }} — {{ total }} total</div>
+      <div class="flex items-center gap-1">
+        {% if has_prev %}
+          <a href="?q={{ q }}&page={{ prev_page }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">Prev</a>
+        {% else %}
+          <span class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400">Prev</span>
+        {% endif %}
+        {% if has_next %}
+          <a href="?q={{ q }}&page={{ next_page }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">Next</a>
+        {% else %}
+          <span class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400">Next</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Reusable Modal -->
+<div id="modalPayment" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="pay_title">
+  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalPayment')"></div>
+  <div class="relative mx-auto my-16 w-[560px] max-w-[92vw]">
+    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
+    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
+      <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
+          <h3 id="pay_title" class="text-base font-semibold tracking-wide">Payment Details</h3>
+        </div>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalPayment')">&times;</button>
+      </div>
+
+      <div class="px-6 pt-5 pb-4">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Application Code</span>
+          <span id="pay-code" class="font-mono text-sm tracking-widest text-gray-900">—</span>
+        </div>
+
+        <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
+            <dd id="pay-name" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Request</dt>
+            <dd id="pay-req" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
+            <dd class="col-span-3"><span id="pay-amt" class="inline-flex items-center rounded-full bg-gray-50 px-3 py-1 text-[13px] font-semibold text-gray-800 ring-1 ring-gray-200">—</span></dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+            <dt class="col-span-2 text-sm text-gray-600">Status</dt>
+            <dd class="col-span-3"><span id="pay-status" class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1">—</span></dd>
+          </div>
+          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+            <dt class="col-span-2 text-sm text-gray-600">OR Number</dt>
+            <dd class="col-span-3"><input id="pay-or" type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Enter OR Number" /></dd>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Breakdown</h4>
+          <div id="pay-breakdown" class="text-sm text-gray-800 space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="px-6 pb-5 flex items-center justify-end gap-2">
+        <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200" onclick="closeModal('modalPayment')">Close</button>
+        <form id="paidForm" method="post" action="#">
+          {% csrf_token %}
+          <input type="hidden" name="or_number" id="paid-or-input" />
+          <button type="submit" id="btnPaid" class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700">Set Paid</button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
 
+<script>
+  function peso(n){
+    if(n==null||n===undefined) return '—';
+    const v = typeof n==='number'? n : parseFloat(n);
+    if(isNaN(v)) return '—';
+    return '₱' + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function openModal(id){
+    const el=document.getElementById(id); if(!el) return; el.classList.remove('hidden');
+    requestAnimationFrame(()=>{ el.querySelector('[data-backdrop]')?.classList.add('opacity-100'); const p=el.querySelector('[data-panel]'); if(p){ p.classList.remove('scale-95','opacity-0'); p.classList.add('scale-100','opacity-100'); } });
+  }
+  function closeModal(id){
+    const el=document.getElementById(id); if(!el) return; el.querySelector('[data-backdrop]')?.classList.remove('opacity-100'); const p=el.querySelector('[data-panel]'); if(p){ p.classList.add('scale-95','opacity-0'); p.classList.remove('scale-100','opacity-100'); } setTimeout(()=>el.classList.add('hidden'),180);
+  }
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ const el=document.getElementById('modalPayment'); if(el && !el.classList.contains('hidden')) closeModal('modalPayment'); } });
 
- 
+  async function viewPayment(btn){
+    const id = btn.getAttribute('data-app-id');
+    try{
+      const detailUrl = `{% url 'treasurer_module:treasurer_application_detail_json' 0 %}`.replace('/0/','/'+id+'/');
+      const resp = await fetch(detailUrl);
+      if(!resp.ok) throw new Error('Failed to load');
+      const d = await resp.json();
+      document.getElementById('pay-code').textContent = d.application_code || '—';
+      document.getElementById('pay-name').textContent = d.applicant_name || '—';
+      document.getElementById('pay-req').textContent  = d.request || '—';
+      document.getElementById('pay-amt').textContent  = peso(d.total_amount);
+      const st = (d.payment_status||'').toLowerCase();
+      const stEl = document.getElementById('pay-status');
+      stEl.textContent = d.payment_status || '—';
+      stEl.className = 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1 ' + (st==='paid'? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200');
+
+      // Breakdown
+      const wrap = document.getElementById('pay-breakdown');
+      wrap.innerHTML='';
+      let items = d.total_amount_details;
+      if(typeof items === 'string'){ try { items = JSON.parse(items); } catch { items = null; } }
+      const flat=[]; const push=(label, amount)=>{ if(label && amount!=null) flat.push({label, amount}); };
+      if(Array.isArray(items)) items.forEach(it=> push(it.item||it.label||it.name||'Item', it.amount||it.total||it.price||0));
+      else if(items && typeof items==='object') Object.entries(items).forEach(([k,v])=>{ if(typeof v==='number'){ push(k,v); } else if(v && typeof v==='object' && 'amount' in v){ push(k,v.amount); } });
+      if(flat.length===0) wrap.innerHTML='<div class="text-gray-500">No breakdown available.</div>';
+      else flat.forEach(row=>{ const div=document.createElement('div'); div.className='flex justify-between'; div.innerHTML=`<span>${row.label}</span><span>${peso(row.amount)}</span>`; wrap.appendChild(div); });
+
+      // Prep Set Paid form
+      const form = document.getElementById('paidForm');
+      form.action = `{% url 'treasurer_module:set_application_to_paid' 0 %}`.replace('/0/','/'+id+'/');
+      document.getElementById('pay-or').value = d.or_number || '';
+      // Sync hidden OR on submit
+      form.addEventListener('submit', (e)=>{
+        document.getElementById('paid-or-input').value = document.getElementById('pay-or').value.trim();
+      }, { once: true });
+
+      openModal('modalPayment');
+    }catch(err){
+      alert('Unable to load application details.');
+    }
+  }
+</script>
+
 {% endblock %}
