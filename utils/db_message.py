@@ -36,8 +36,19 @@ def _clean_db_error(err: Exception) -> str:
         # If you maintain friendly overrides, prefer them
         return CODE_MESSAGES.get(code, msg or "An error occurred.")
 
-    # 4) nothing matched; fall back
-    return "We couldn't complete your request. Please try again."
+    # 4) no E-code; try common 'ERROR:' prefix or return first line
+    m = re.search(r"ERROR\s*:\s*(.+)$", text, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+
+    # If text has multiple parts split by ':' take the last meaningful segment
+    if ':' in text:
+        tail = text.split(':')[-1].strip()
+        if tail:
+            return tail
+
+    # Final fallback: return trimmed original text (avoid leaking stack traces)
+    return text or "We couldn't complete your request. Please try again."
 
 
 def _clean_params(d: dict) -> dict:

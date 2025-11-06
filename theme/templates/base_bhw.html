@@ -114,10 +114,10 @@
           <p class="text-sm font-semibold truncate">{{ request.session.username }}</p>
           <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
         </div>
-       <a href="{% url 'authentication:logout' %}"
+        <a id="logout-link"
+          href="{% url 'authentication:logout' %}"
           class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
                   hover:bg-red-800 ring-1 ring-white/20 transition">
-          <!-- keep the white icon; no invert so it stays visible on dark red -->
           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
           <span class="text-xs">Logout</span>
         </a>
@@ -132,64 +132,130 @@
     </div>
   </div>
 
+{% comment %} <script>
+(function () {
+  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+  const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+  const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+
+  const TAB_FLAG    = 'tabAuth';
+  const CLOSED_KEY  = 'closed_session_token';
+  const SESSION_TOKEN = "{{ request.session.session_token|default:'' }}";
+
+  // Only arm when a real session exists on this page
+  if (!SESSION_TOKEN) return;
+
+  // First load in this tab?
+  if (!sessionStorage.getItem(TAB_FLAG)) {
+    sessionStorage.setItem(TAB_FLAG, '1');
+
+    const closedToken = localStorage.getItem(CLOSED_KEY);
+    if (closedToken) {
+      // 🚫 If the stored token equals THIS page's token, skip (race on first load)
+      if (closedToken !== SESSION_TOKEN) {
+        const body = new URLSearchParams();
+        body.set('session_token', closedToken);
+
+        try {
+          // Prefer sendBeacon when available
+          if (!navigator.sendBeacon || !navigator.sendBeacon(TAB_CLOSE_URL, body)) {
+            fetch(TAB_CLOSE_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: body.toString(),
+              credentials: 'omit',   // ← NO COOKIES, so it can't flush this Django session
+              keepalive: true
+            });
+          }
+        } catch (_) { /* ignore */ }
+      }
+      try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
+    }
+  }
+
+  // On tab/browser close: store token and ping backend WITHOUT cookies
+  function sendClosePing(token) {
+    if (!token) return;
+    const body = new URLSearchParams();
+    body.set('session_token', token);
+    try {
+      if (!navigator.sendBeacon || !navigator.sendBeacon(TAB_CLOSE_URL, body)) {
+        fetch(TAB_CLOSE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+          credentials: 'omit',
+          keepalive: true
+        });
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  addEventListener('pagehide', () => {
+    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+    sendClosePing(SESSION_TOKEN);
+  });
+
+  addEventListener('beforeunload', () => {
+    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+    sendClosePing(SESSION_TOKEN);
+  });
+
+  // Idle detection (unchanged behavior)
+  let last = Date.now(), timer;
+  function arm() {
+    clearTimeout(timer);
+    if (document.visibilityState !== 'visible') return;
+    timer = setTimeout(() => {
+      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+        window.location.replace(LOGOUT_URL); // hits logout_view, which *does* flush
+      }
+    }, IDLE_LIMIT_MS + 100);
+  }
+  function bump(){ last = Date.now(); arm(); }
+  ['mousemove','keydown','click','wheel','scroll','touchstart']
+    .forEach(evt => addEventListener(evt, bump, { passive: true }));
+  addEventListener('visibilitychange', arm, { capture: true });
+  arm();
+})();
+</script> {% endcomment %}
+
   <script>
-  // Define your accordion items once
+  // Simple accordion wiring (unchanged)
   const ACCORDION = [
     { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
     { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
   ];
-
   function getEl(id){ return document.getElementById(id); }
-
   function closeItem(item){
-    const panel = getEl(item.panel);
-    const arrow = getEl(item.arrow);
-    const btn   = getEl(item.btn);
+    const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
     if (!panel) return;
     panel.classList.add('hidden');
     arrow?.classList.remove('rotate-180');
     btn?.setAttribute('aria-expanded', 'false');
   }
-
   function openItem(item){
-    const panel = getEl(item.panel);
-    const arrow = getEl(item.arrow);
-    const btn   = getEl(item.btn);
+    const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
     if (!panel) return;
     panel.classList.remove('hidden');
     arrow?.classList.add('rotate-180');
     btn?.setAttribute('aria-expanded', 'true');
   }
-
-  // Wire up clicks so that opening one closes the others
   ACCORDION.forEach((item) => {
-    const btn = getEl(item.btn);
-    const panel = getEl(item.panel);
-
-    // Initialize aria states from the server-rendered classes
+    const btn = getEl(item.btn), panel = getEl(item.panel);
     if (btn && panel) {
       const isOpen = !panel.classList.contains('hidden');
       btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       btn.setAttribute('aria-controls', item.panel);
     }
-
     btn?.addEventListener('click', () => {
-      const currentlyOpen = !getEl(item.panel).classList.contains('hidden');
-
-      if (currentlyOpen) {
-        // Simply close this one
-        closeItem(item);
-      } else {
-        // Close all others
-        ACCORDION.forEach(other => { if (other !== item) closeItem(other); });
-        // Open the clicked one
-        openItem(item);
-      }
+      const open = !getEl(item.panel).classList.contains('hidden');
+      if (open) { closeItem(item); }
+      else { ACCORDION.forEach(other => { if (other !== item) closeItem(other); }); openItem(item); }
     });
   });
 
-  // Reminder: Make sure this Function cannot be changed or overwritten
-  // It handles idle logout and tab close detection
+  // Idle + tab close + safe manual logout
   (function () {
     const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
     const LOGOUT_URL    = "{% url 'authentication:logout' %}";
@@ -197,48 +263,56 @@
 
     const TAB_FLAG    = 'tabAuth';
     const CLOSED_KEY  = 'closed_session_token';
-    const SESSION_TOKEN = "{{ request.session.session_token }}";
+    const SESSION_TOKEN = "{{ request.session.session_token|default:'' }}";
+    if (!SESSION_TOKEN) return;
 
-    // First load in this tab?
-    if (!sessionStorage.getItem(TAB_FLAG)) {
-      sessionStorage.setItem(TAB_FLAG, '1');
+    // --- Manual logout suppression ---
+    let suppressClosePing = false;
+    // Clear any stale skip flag from a previous page
+    try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+    // Mark suppression when the visible Logout is clicked
+    document.getElementById('logout-link')?.addEventListener('click', () => {
+      suppressClosePing = true;
+      try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+    });
 
-      // If a previous tab left a token, report it and logout now
-      const closedToken = localStorage.getItem(CLOSED_KEY);
-      if (closedToken) {
-        (async () => {
-          const body = new URLSearchParams();
-          body.set('session_token', closedToken);
-
-          try {
-            await fetch(TAB_CLOSE_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: body.toString(),
-              credentials: 'same-origin',
-              keepalive: true
-            });
-          } catch (_) { /* ignore */ }
-
-          try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
-            window.location.replace(TAB_CLOSE_URL);
-        })();
-        return;
-      }
+    async function pingSilentLogout(token) {
+      if (!token) return;
+      const body = new URLSearchParams();
+      body.set('session_token', token);
+      try {
+        await fetch(TAB_CLOSE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+          credentials: 'omit',   // NO COOKIES
+          keepalive: true,
+          cache: 'no-store'
+        });
+      } catch (_) { /* ignore */ }
     }
 
-    // On tab/browser close: record token and call silent_logout
-    addEventListener('pagehide', () => {
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
+    // First load in this tab? Clean foreign leftover token (but not our own)
+    if (!sessionStorage.getItem(TAB_FLAG)) {
+      sessionStorage.setItem(TAB_FLAG, '1');
+      const closedToken = localStorage.getItem(CLOSED_KEY);
+      if (closedToken && closedToken !== SESSION_TOKEN) {
+        pingSilentLogout(closedToken);
+      }
+      try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
+    }
 
-    addEventListener('beforeunload', () => {
+    // On tab/browser close or reload
+    function handleClose() {
+      // Skip silent ping if this unload is due to manual logout
+      if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
       try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
+      pingSilentLogout(SESSION_TOKEN);
+    }
+    addEventListener('pagehide', handleClose);
+    addEventListener('beforeunload', handleClose);
 
-    // Idle detection (unchanged)
+    // Idle detection -> go to real logout
     let last = Date.now(), timer;
     function arm() {
       clearTimeout(timer);
@@ -249,13 +323,13 @@
         }
       }, IDLE_LIMIT_MS + 100);
     }
-
     function bump(){ last = Date.now(); arm(); }
-    ['mousemove','keydown','click','wheel','scroll','touchstart']
-    .forEach(evt => addEventListener(evt, bump, { passive: true }));
+    ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
+      addEventListener(evt, bump, { passive: true })
+    );
     addEventListener('visibilitychange', arm, { capture: true });
     arm();
   })();
-</script>
+  </script>
 </body>
 </html>

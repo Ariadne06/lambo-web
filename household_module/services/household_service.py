@@ -48,25 +48,83 @@ class HouseholdService:
         try:
             with connection.cursor() as cursor:
                 cursor.callproc('insert_family', [
-                     household_id,                                     
+                    household_id,                                     
                     data['household_type_id'],                      
-                    data['family_head_id'],                                                  
-                    data['water_source_type_id'],                    
-                    data['toilet_facility_type_id'],                  
-                    data['waste_management_type_id'],                      
-                    data['respondent_id'],                             
-                    data.get('respondent_relationship_to_fh_id', 1),         
-                    data.get('head_rth_id', 1),                       
-                    data.get('ip_status', False),                      
-                    data.get('ip_tribe', ''),                         
-                    data.get('nhts_status', False),                   
-                    None,                                                 
-                    personnel_id,                                    
-                    'personnel',                                       
-                    False,                                                
+                    data['family_head_id'],                        
+                    data['water_source_type_id'],                   
+                    data['toilet_facility_type_id'],               
+                    data['waste_management_type_id'],             
+                    data['respondent_id'],                          
+                    data.get('respondent_relationship_to_fh_id', 1), 
+                    data.get('respondent_rth_id'),                 
+                    data.get('head_rth_id'),                        
+                    data.get('ip_status', False),                   
+                    data.get('ip_tribe', ''),                      
+                    data.get('nhts_status', False),                 
+                    data.get('waste_other_text'),                  
+                    personnel_id,                                   
+                    'personnel',                                   
+                    False,                                           
                 ])
                 result = cursor.fetchone()
                 return result[0] if result else None
         except Exception as e:
             print(f"Database error creating family: {str(e)}")
+            raise Exception(f"Database operation failed: {str(e)}")
+
+    @staticmethod
+    def update_household(household_id, data):
+        """Update household using SQL function with proper error handling"""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_household', [
+                    household_id,                         
+                    data['personnel_id'],                   
+                    data['house_ownership_id'],          
+                    data['house_type_id'],                 
+                    data['barangay'],                    
+                    data['city_municipality'],             
+                    data.get('house_number'),             
+                    data.get('street'),                     
+                    data.get('sitio_id'),                  
+                    data.get('country', 'Philippines'),  
+                    data.get('household_head_id'),          
+                    data.get('respondent_id'),             
+                    data.get('respondent_rth_id'),         
+                    data.get('performed_by_type', 'personnel'),  
+                    data.get('enforce_bhw_assignment', False),  
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Database error updating household: {str(e)}")
+            raise Exception(f"Database operation failed: {str(e)}")
+        
+    @staticmethod
+    def update_family(family_id, data, personnel_id):
+        """Update family using SQL function"""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_family', [
+                    family_id,                          
+                    personnel_id,                        
+                    data['household_id'],               
+                    data['household_type_id'],          
+                    data.get('family_head_id'),         
+                    data.get('respondent_id'),           
+                    data.get('respondent_rtf_id'),       
+                    data.get('ip_status'),               
+                    data.get('ip_tribe'),                
+                    data.get('nhts_status'),             
+                    data.get('water_source_type_id'),    
+                    data.get('toilet_facility_type_id'), 
+                    data.get('waste_management_type_id'),
+                    data.get('waste_other_text'),    
+                    'personnel',                         
+                    data.get('enforce_bhw_assignment', False), 
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Database error updating family: {str(e)}")
             raise Exception(f"Database operation failed: {str(e)}")
