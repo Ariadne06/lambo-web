@@ -20,9 +20,9 @@
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
             <!-- Dashboard -->
-          <a href="{% url 'admin_module:admin_dashboard' %}"
+          <a href="{% url 'treasurer_module:treasurer_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -30,16 +30,16 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
           <span>Dashboard</span>
         </a>
 
-        <a href="{% url 'admin_module:admin_dashboard' %}"
+        <a href="{% url 'treasurer_module:payments' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'payments' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -47,16 +47,16 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'payments' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
           <span>Payment</span>
         </a>
 
-        <a href="{% url 'admin_module:admin_dashboard' %}"
+        <a href="{% url 'treasurer_module:transactions' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'transactions' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -64,16 +64,16 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'transactions' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
           <span>Transaction</span>
         </a>
 
-        <a href="{% url 'admin_module:admin_dashboard' %}"
+        <a href="{% url 'treasurer_module:summary' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'summary' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -81,7 +81,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'summary' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -111,6 +111,21 @@
   <!-- Main content -->
   <div class="ml-64 min-h-screen">
     <div class="p-6">
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for message in messages %}
+            {% with tag=message.tags %}
+            <div class="rounded-xl px-4 py-2 text-sm font-medium ring-1
+              {% if 'success' in tag %} bg-emerald-50 text-emerald-800 ring-emerald-200
+              {% elif 'error' in tag %} bg-rose-50 text-rose-800 ring-rose-200
+              {% elif 'warning' in tag %} bg-amber-50 text-amber-800 ring-amber-200
+              {% else %} bg-gray-50 text-gray-800 ring-gray-200 {% endif %}">
+              {{ message }}
+            </div>
+            {% endwith %}
+          {% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </div>

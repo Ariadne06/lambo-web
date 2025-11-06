@@ -13,7 +13,9 @@ from django.utils.http import urlencode
 from django.urls import reverse
 import json
 import re 
-from datetime import datetime
+from datetime import datetime, date
+from django.utils.datastructures import MultiValueDictKeyError
+from django.http import HttpResponseRedirect
 
 _UI_TO_SQL_AUDIENCE = {
     'EVERYONE': 'both',
@@ -452,6 +454,7 @@ def insert_family(request):
         family_head_id = int(request.POST.get('family_head_id'))
         respondent_id = int(request.POST.get('respondent_id'))
         fam_head_rel = int(request.POST.get('fam_head_rel'))
+        respondent_head_rel = int(request.POST.get('respondent_head_rel'))
         respondent_rel = int(request.POST.get('respondent_rel'))
         household_type = int(request.POST.get('household_type'))
         waste_management_type = int(request.POST.get('waste_management_type'))
@@ -478,6 +481,7 @@ def insert_family(request):
                 waste_management_type,
                 respondent_id,
                 respondent_rel,
+                respondent_head_rel,
                 fam_head_rel,
                 ip_status,
                 ip_tribe,
@@ -1103,6 +1107,432 @@ def remove_family_member(request):
 
     return redirect_to_view()
 
+def _ok(payload=None):  return JsonResponse({"ok": True, **(payload or {})})
+def _err(msg, code=400): return JsonResponse({"ok": False, "error": str(msg)}, status=code)
+
+def _coerce_jsonb(v):
+    # get_resident_links returns JSONB arrays for guardians/children
+    if v is None: return []
+    if isinstance(v, (list, tuple, dict)): return v
+    if isinstance(v, (bytes, bytearray, memoryview)): v = bytes(v).decode('utf-8')
+    if isinstance(v, str) and v: return json.loads(v)
+    return []
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def resident_links_list_api(request):
+    try:
+        rid = int(request.GET.get('resident_id') or 0)
+        if not rid: return _err("resident_id is required.")
+        # row with {mother_id, mother_name, mother_relationship_id, father_..., guardians, children}
+        rows = Family.sp_get_resident_links(rid)
+        row = rows[0] if rows else {}
+
+        # relationship id -> name map for labels
+        rel_rows = Family.sp_get_link_relationship()
+        rel_map = {r["relationship_id"]: r["relationship_name"] for r in rel_rows}
+
+        relations = []
+
+        if row.get("mother_id"):
+            relations.append({
+                "related_resident_id": row["mother_id"],
+                "full_name": row.get("mother_name"),
+                "relationship_id": row.get("mother_relationship_id"),
+                "relationship_label": rel_map.get(row.get("mother_relationship_id"), "Mother"),
+            })
+        if row.get("father_id"):
+            relations.append({
+                "related_resident_id": row["father_id"],
+                "full_name": row.get("father_name"),
+                "relationship_id": row.get("father_relationship_id"),
+                "relationship_label": rel_map.get(row.get("father_relationship_id"), "Father"),
+            })
+
+        for key, fallback in (("guardians", "Guardian"), ("children", "Child")):
+            for it in _coerce_jsonb(row.get(key)):
+                rel_id = it.get("relationship_id")
+                relations.append({
+                    "related_resident_id": it.get("resident_id"),
+                    "full_name": it.get("full_name"),
+                    "relationship_id": rel_id,
+                    "relationship_label": rel_map.get(rel_id, fallback),
+                })
+
+        return _ok({"relations": relations})
+    except Exception as e:
+        return _err(e)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def resident_link_insert(request):
+    try:
+        origin_id = int(request.POST["source_resident_id"])
+        target_id = int(request.POST["related_resident_id"])
+        rel_id    = int(request.POST["relationship_id"])
+        if origin_id == target_id:
+            return _err("You cannot link a resident to themselves.")
+
+        relation_id = Family.sp_link_resident_relation(origin_id, target_id, rel_id)
+        return _ok({"relation_id": relation_id})
+    except (KeyError, MultiValueDictKeyError, ValueError):
+        return _err("source_resident_id, related_resident_id and relationship_id are required.")
+    except Exception as e:
+        # surfaces E810x messages from your PL/pgSQL
+        return _err(e)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def resident_link_remove(request):
+    try:
+        origin_id = int(request.POST["source_resident_id"])
+        target_id = int(request.POST["related_resident_id"])
+        rel_id    = int(request.POST["relationship_id"])
+        closed = Family.sp_unlink_resident_relation(origin_id, target_id, rel_id)
+        return _ok({"closed": closed})
+    except (KeyError, MultiValueDictKeyError, ValueError):
+        return _err("source_resident_id, related_resident_id and relationship_id are required.")
+    except Exception as e:
+        return _err(e)
+    
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def insert_general_health(request):
+    hid = int(request.POST.get('household_id') or 0)
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # get quarter id if present (else None)
+    qid = None
+    qid_raw = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    try:
+        if qid_raw not in (None, "", "None"):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
+
+    def redirect_to_view():
+        if not hid:
+            return redirect('bhw_module:householdList')
+
+        params = {"hid": hid, "household_number": household_number}
+        
+        if qid is not None:
+            params["quarter_id"] = qid
+        return redirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+    
+    if request.method == 'POST':
+        fmid = int(request.POST.get('member_id'))
+        class_id = int(request.POST.get('class'))
+        raw_ids = request.POST.getlist("medical_history")
+        fp_method_str = request.POST.get("fp_method")
+        fp_status_str = request.POST.get("fp_status")
+        age_of_menarche_str = request.POST.get("age_menarche")
+
+        fp_method_bool = request.POST.get("fp_use")
+        smoker_bool = request.POST.get("smoker")
+        alcohol_drinker_bool = request.POST.get("alcohol_drinker")
+        sexually_active_bool = request.POST.get("sexually_active")
+        
+        age_of_menarche = int(age_of_menarche_str) if age_of_menarche_str is not None and age_of_menarche_str.strip() != "" else None
+        fp_status_id = int(fp_status_str) if fp_status_str is not None and fp_status_str.strip() != "" else None
+        fp_method_id = int(fp_method_str) if fp_method_str is not None and fp_method_str.strip() != "" else None
+        fp_method_yn = {'true': True, 'false': False}.get((fp_method_bool or '').lower(), None)
+        smoker = {'true': True, 'false': False}.get((smoker_bool or '').lower(), None)
+        alcohol_drinker = {'true': True, 'false': False}.get((alcohol_drinker_bool or '').lower(), None)
+        sexually_active = {'true': True, 'false': False}.get((sexually_active_bool or '').lower(), None)
+        
+        med_ids = sorted({int(x) for x in raw_ids if x.isdigit()})
+        med_ids_param = med_ids or None
+        
+        date_str = request.POST.get("last_menstrual_period")
+        try:
+            lmp = date.fromisoformat(date_str) if date_str else None
+        except ValueError:
+            lmp = None
+    
+        try:
+            Family.sp_save_general_health_for_member(
+                fmid,
+                class_id,
+                med_ids_param,
+                lmp,
+                fp_method_yn,
+                fp_method_id,
+                fp_status_id,
+                age_of_menarche,
+                smoker,
+                alcohol_drinker,
+                sexually_active,
+                pid,
+            )
+            set_flash(request, f"General health information added successfully.", "success")
+        except Exception as e:
+            set_flash(request, _clean_db_error(e), "error")
+
+    return redirect_to_view()
+
+def _to_list(val):
+    if val is None: return []
+    if isinstance(val, (list, tuple)): return [str(v) for v in val]
+    s = str(val).strip()
+    try:
+        j = json.loads(s)
+        if isinstance(j, list):
+            return [str(v) for v in j]
+    except Exception:
+        pass
+    return [p.strip().strip('[]{}()"\'') for p in s.split(',') if p.strip()]
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def general_health_get_api(request):
+    fm_id = request.GET.get("member_id") or request.GET.get("family_member_id")
+    if not fm_id:
+        return JsonResponse({"error": "member_id is required"}, status=400)
+    try:
+        fm_id = int(fm_id)
+    except ValueError:
+        return JsonResponse({"error": "member_id must be an integer"}, status=400)
+
+    try:
+        row = Family.sp_get_specific_family_member_genhealth(fm_id)
+    except Exception as e:
+        # Log if you have logging; return a safe message to client
+        return JsonResponse({"error": "database_error", "detail": str(e)}, status=500)
+
+    if not row:
+        return JsonResponse({"record": None, "exists": False}, status=200)
+
+    # ----- Optional normalization (keeps raw keys intact) -----
+    # Map to the keys your JS expects; fall back to whatever the SP returns.
+    record = dict(row)  # start with raw db keys
+
+    # Friendly, consistent keys your modal code handles:
+    record.setdefault("gh_id",                 row.get("record_id") or row.get("id") or row.get("general_health_id"))
+    record.setdefault("smoker",                row.get("smoker"))
+    record.setdefault("alcohol_drinker",       row.get("alcohol_drinker"))
+    record.setdefault("sexually_active",       row.get("sexually_active"))
+    record.setdefault("last_menstrual_period", row.get("last_menstrual_period"))
+    record.setdefault("age_menarche",          row.get("age_of_menarche"))
+    record.setdefault("fp_use",                row.get("fp_method_yn"))
+    record.setdefault("fp_method_id",          row.get("fp_method_id"))
+    record.setdefault("fp_status_id",          row.get("fp_status_id"))
+    record.setdefault("class_id",              row.get("class_id"))
+    # Normalize medical_history to list
+    mh = row.get("medical_history") or row.get("medical_history_ids") or row.get("mh")
+    record["medical_history"] = _to_list(mh)
+
+    return JsonResponse({"record": record, "exists": True}, status=200)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_general_health(request):
+    # ----------- helpers -----------
+    def _to_int(val, default=None):
+        try:
+            if val in (None, "", "None"):
+                return default
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    def _to_bool(val):
+        s = (val or "").strip().lower()
+        if s in ("true", "1", "yes", "y", "on"):  return True
+        if s in ("false", "0", "no", "n", "off"): return False
+        return None
+
+    def _to_date(val):
+        if not val: return None
+        try:
+            return datetime.strptime(val, "%Y-%m-%d").date()
+        except Exception:
+            return None
+
+    def _to_int_list(vals):
+        out = []
+        for v in (vals or []):
+            try: out.append(int(v))
+            except Exception: pass
+        return out
+
+    def _same_mh(a, b):
+        # treat NULL and [] as equal for "no change" UX (avoid spurious updates)
+        A = set(a or [])
+        B = set(b or [])
+        return A == B
+
+    def _redirect_back(hid, household_number):
+        if not hid:
+            return redirect('bhw_module:householdList')
+        params = {"hid": hid}
+        if household_number:
+            params["household_number"] = household_number
+        return HttpResponseRedirect(reverse('bhw_module:householdView') + "?" + urlencode(params))
+
+    # ----------- basics -----------
+    try:
+        fm_id = int(request.POST.get('member_id'))
+        hid   = int(request.POST.get('household_id'))
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid household/member id.", "error")
+        return redirect('bhw_module:householdList')
+
+    pid = int(request.session.get('personnel_id') or 0)
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:householdList')
+
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
+    )
+
+    # ----------- current row -----------
+    try:
+        cur = Family.sp_get_specific_family_member_genhealth(fm_id)
+        if not cur:
+            set_flash(request, "No General Health record for this member in the current quarter.", "error")
+            return _redirect_back(hid, household_number)
+    except Exception as e:
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+        return _redirect_back(hid, household_number)
+
+    # Normalize current values
+    sex = (cur.get("sex") or "").strip().lower()
+    is_female = (sex == "female")
+
+    cur_class_id  = _to_int(cur.get("class_id"))
+    cur_mh_ids    = cur.get("medical_history_ids") or []
+    if isinstance(cur_mh_ids, str):
+        # robust fallback if driver returns a JSON string
+        try:
+            import json
+            cur_mh_ids = [int(x) for x in json.loads(cur_mh_ids)]
+        except Exception:
+            cur_mh_ids = []
+
+    cur_smoker          = cur.get("smoker")
+    cur_alcohol         = cur.get("alcohol_drinker")
+    cur_sex_active      = cur.get("sexually_active")
+    cur_lmp             = cur.get("last_menstrual_period")
+    cur_fp_use          = cur.get("fp_method_yn")
+    cur_fp_method_id    = _to_int(cur.get("fp_method_id"))
+    cur_fp_status_id    = _to_int(cur.get("fp_status_id"))
+    cur_age_menarche    = _to_int(cur.get("age_of_menarche"))
+
+    # ----------- new (posted) values -----------
+    new_class_id       = _to_int(request.POST.get("class"))
+    new_mh_ids         = _to_int_list(request.POST.getlist("medical_history"))
+    new_smoker         = _to_bool(request.POST.get("smoker"))
+    new_alcohol        = _to_bool(request.POST.get("alcohol_drinker"))
+    new_sex_active     = _to_bool(request.POST.get("sexually_active"))
+
+    new_lmp            = _to_date(request.POST.get("last_menstrual_period"))
+    new_fp_use         = _to_bool(request.POST.get("fp_use"))
+    new_fp_method_id   = _to_int(request.POST.get("fp_method"))
+    new_fp_status_id   = _to_int(request.POST.get("fp_status"))
+    new_age_menarche   = _to_int(request.POST.get("age_menarche"))
+
+    # If fp_use is FALSE, we intend to clear method & status
+    eff_method_id = new_fp_method_id if new_fp_use else None
+    eff_status_id = new_fp_status_id if new_fp_use else None
+
+    # ----------- detect changes -----------
+    changed = []
+
+    class_changed = (new_class_id is not None and new_class_id != cur_class_id)
+    if class_changed:
+        changed.append("Classification by Age")
+
+    mh_changed = (not _same_mh(new_mh_ids, cur_mh_ids))
+    if mh_changed:
+        changed.append("Medical History")
+
+    lifestyle_changed = any([
+        new_smoker is not None and new_smoker != cur_smoker,
+        new_alcohol is not None and new_alcohol != cur_alcohol,
+        new_sex_active is not None and new_sex_active != cur_sex_active,
+    ])
+    if lifestyle_changed:
+        # split names for nicer flash
+        if new_smoker is not None and new_smoker != cur_smoker:           changed.append("Smoker")
+        if new_alcohol is not None and new_alcohol != cur_alcohol:        changed.append("Alcohol Drinker")
+        if new_sex_active is not None and new_sex_active != cur_sex_active: changed.append("Sexually Active")
+
+    fp_changed = False
+    apply_fp = False
+    if is_female:
+        fp_changed = any([
+            new_lmp is not cur_lmp and new_lmp != cur_lmp,
+            new_fp_use is not None and new_fp_use != cur_fp_use,
+            eff_method_id != cur_fp_method_id,
+            eff_status_id != cur_fp_status_id,
+            (new_age_menarche is not None and new_age_menarche != cur_age_menarche),
+        ])
+        if fp_changed:
+            apply_fp = True
+            if new_lmp is not cur_lmp and new_lmp != cur_lmp:             changed.append("Last Menstrual Period")
+            if new_fp_use is not None and new_fp_use != cur_fp_use:        changed.append("FP Use")
+            if eff_method_id != cur_fp_method_id:                          changed.append("FP Method")
+            if eff_status_id != cur_fp_status_id:                          changed.append("FP Status")
+            if new_age_menarche is not None and new_age_menarche != cur_age_menarche:
+                changed.append("Age of Menarche")
+
+    # Turn on apply flags only if their section changed
+    apply_medical_history = mh_changed
+    apply_lifestyle       = lifestyle_changed
+
+    # If nothing changed at all, short-circuit.
+    if not any([class_changed, apply_medical_history, apply_lifestyle, apply_fp]):
+        set_flash(request, "No changes detected — nothing to update.", "info")
+        return _redirect_back(hid, household_number)
+
+    # ----------- call SP -----------
+    try:
+        Family.sp_update_general_health_for_member(
+            family_member_id   = fm_id,
+            class_id           = (new_class_id if class_changed else None),
+
+            apply_medical_history = apply_medical_history,
+            medical_history_ids   = (new_mh_ids if apply_medical_history else None),
+
+            apply_fp          = apply_fp,
+            wra_lmp           = (new_lmp if apply_fp else None),
+            fp_method_yn      = (new_fp_use if apply_fp else None),
+            fp_method_id      = (eff_method_id if apply_fp else None),
+            fp_status_id      = (eff_status_id if apply_fp else None),
+            age_of_menarche   = (new_age_menarche if apply_fp else None),
+
+            apply_lifestyle   = apply_lifestyle,
+            smoker            = (new_smoker if apply_lifestyle else None),
+            alcohol_drinker   = (new_alcohol if apply_lifestyle else None),
+            sexually_active   = (new_sex_active if apply_lifestyle else None),
+
+            pid               = pid
+        )
+        set_flash(request, f"General Health updated. Changed: {', '.join(changed)}.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+
+    return _redirect_back(hid, household_number)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -1227,6 +1657,10 @@ def householdView(request):
     philhealth_category = Family.sp_get_philhealth_category()
     nutrition_status = Family.sp_get_nutrition_status()
     current_quarter = Household.sp_get_current_quarter_id()
+    link_relationship = Family.sp_get_link_relationship()
+    fp_method = Family.sp_get_fp_method()
+    fp_status = Family.sp_get_fp_status()
+    classification = Family.sp_get_classifications()
 
     flash = get_flash(request)
     return render(request, 'bhw_module/householdView.html', {
@@ -1244,7 +1678,11 @@ def householdView(request):
         'family_relationship': family_relationship,
         'philhealth_category': philhealth_category,
         'nutrition_status': nutrition_status,
+        'fp_method': fp_method,
+        'fp_status': fp_status,
+        'class': classification,
         'results': result,
+        'link_relationship': link_relationship,
         'current_quarter': current_quarter,
         'families': families,
         'message': flash['message'],
@@ -1309,7 +1747,90 @@ def childView(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def genInfo(request):
-    return render(request, 'bhw_module/genInfo.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    current_quarter_id = Household.sp_get_current_quarter_id()
+
+    if quarter_id:
+        quarter_id = int(quarter_id)
+    elif current_quarter_id:
+        quarter_id = int(current_quarter_id)
+    else:
+        quarter_id = None
+
+    # ✅ Are we looking at the current quarter?
+    is_current_quarter = bool(
+        current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
+    )
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Family.sp_view_all_general_health(
+            query=query,
+            quarter_id=quarter_id,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, str(e), "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    # ✅ keep quarter in pagination / limit links
+    if quarter_id is not None:
+        base_params["quarter_id"] = quarter_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    quarter = Household.sp_get_quarter()
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/genInfo.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'quarter': quarter,
+        'quarter_id': quarter_id,
+        'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
+        'is_current_quarter': is_current_quarter,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')

@@ -114,7 +114,7 @@ def login_view(request):
 
             messages.error(request, 'Login failed.')
         except Exception as e:
-            messages.error(request, f'Login failed: {str(e)}')
+            messages.error(request, f'Login failed: {_clean_db_error(e)}')
 
     return render(request, 'authentication/login.html', {
         'message': flash['message'],
@@ -151,15 +151,55 @@ def logout_view(request):
 
     return redirect('authentication:login')
 
+# @csrf_exempt
+# def silent_logout(request):
+#     """
+#     Logout a *server-side* session token sent by JS on tab close.
+#     IMPORTANT:
+#       - We NEVER touch request.session here (no flush, no read),
+#         so this request cannot interrupt another in-flight view.
+#       - Callers must send the token in the POST body.
+#       - Clients should send this WITHOUT cookies (credentials:'omit').
+#     """
+#     if request.method != "POST":
+#         return HttpResponse(status=405)
+
+#     token = request.POST.get("session_token", "").strip()
+#     if not token:
+#         return JsonResponse({"error": "missing token"}, status=400)
+
+#     try:
+#         # Only invalidate the DB/token layer for that token.
+#         # Do NOT read/flush Django's session here.
+#         authentication.sp_logout_user(token)
+#     except Exception:
+#         # Swallow errors: this is a best-effort cleanup
+#         pass
+
+#     return HttpResponse(status=204)
+
+@csrf_exempt
 def silent_logout(request):
-    
-    token = request.POST.get('session_token') or request.session.get('session_token')
+    """
+    Best-effort server-side token invalidation used on tab close.
+    - Never reads/modifies request.session (prevents SessionInterrupted).
+    - Accepts POST form or GET query (?session_token=...).
+    - Always returns 204, even if token missing or invalid.
+    """
+    token = ""
+    if request.method == "POST":
+        # Only parse x-www-form-urlencoded keys; ignore JSON/beacon plain text
+        token = (request.POST.get("session_token") or "").strip()
+    elif request.method == "GET":
+        token = (request.GET.get("session_token") or "").strip()
+
     if token:
         try:
             authentication.sp_logout_user(token)
-            request.session.flush()
         except Exception:
+            # Ignore: best-effort cleanup
             pass
+
     return HttpResponse(status=204)
 
 def req_pwd_change(request):
@@ -182,7 +222,6 @@ def req_pwd_change(request):
                 set_flash(request, result, "success")
             elif result == "Reset request accepted. Resident account matched.":
                 set_flash(request,  "Reset request not accepted. Please use the correct reset page for your account type.", "error")
-            
             else:
                 set_flash(request,  result, "error")
         except Exception as e:
