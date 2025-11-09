@@ -215,26 +215,35 @@ def Addbusiness(request):
             ownership_id          = int(request.POST.get("ownership_id"))
             house_number          = request.POST.get("house_number")
             street                = request.POST.get("street")
-            barangay              = request.POST.get("barangay")
+            barangay              = request.POST.get("barangay") or "Cansaga"
             sitio_id              = int(request.POST.get("sitio_id"))
-            city_municipality     = request.POST.get("city_municipality")
+            city_municipality     = request.POST.get("city_municipality") or "Consolacion"
             country               = request.POST.get("country") or "Philippines"
             total_gross_income    = request.POST.get("total_gross_income")
             dti_sec_cda_reg_num   = request.POST.get("dti_sec_cda_reg_number") or None
             clearance_category_id = int(request.POST.get("clearance_category_id"))
             clearance_date_issued = request.POST.get("clearance_date_issued") or None
 
-            # NEW: total_units (optional overall; required for unitized categories)
+            # total_units (optional overall; required by SP only if category supports it)
             total_units_raw = request.POST.get("total_units")
             total_units = int(total_units_raw) if (total_units_raw not in [None, ""]) else None
 
-            personnel_id          = int(request.session.get("personnel_id"))
+            # NEW: amusement device quantities (required by SP only if category is Amusement)
+            def _i(val):
+                return int(val) if (val not in [None, ""]) else None
+
+            videoke_count       = _i(request.POST.get("videoke_count"))
+            billiard_count      = _i(request.POST.get("billiard_count"))
+            other_device_count  = _i(request.POST.get("other_device_count"))
+
+            personnel_id = int(request.session.get("personnel_id"))
 
             Secretary.sp_register_business(
                 resident_id, business_name, business_type_id, nature_of_business, ownership_id,
                 house_number, street, barangay, sitio_id, city_municipality, country,
                 total_gross_income, dti_sec_cda_reg_num, clearance_category_id,
-                total_units,                      # <-- NEW
+                total_units,
+                videoke_count, billiard_count, other_device_count,  # <-- NEW
                 clearance_date_issued, personnel_id
             )
             set_flash(request, "Successfully Submitted", "success")
@@ -410,6 +419,12 @@ def business_update(request, business_id: int):
             else:
                 return JsonResponse({"ok": False, "message": "This clearance category cannot be changed."}, status=400)
 
+        # Parse units and amusement device counts (zeros are valid)
+        total_units        = _to_int_or_none(request.POST.get("total_units"))
+        videoke_count      = _to_int_or_none(request.POST.get("videoke_count"))
+        billiard_count     = _to_int_or_none(request.POST.get("billiard_count"))
+        other_device_count = _to_int_or_none(request.POST.get("other_device_count"))
+
         # Build payload (leave non-editables as None so proc won’t touch them)
         payload = {
             "business_name":          _none_if_blank(request.POST.get("business_name")),
@@ -426,7 +441,10 @@ def business_update(request, business_id: int):
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
             "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
             "dti_sec_cda_reg_number": None,      # not editable
-            "total_units":            _to_int_or_none(request.POST.get("total_units")),
+            "total_units":            total_units,
+            "videoke_count":          videoke_count,       # <-- NEW
+            "billiard_count":         billiard_count,      # <-- NEW
+            "other_device_count":     other_device_count,  # <-- NEW
         }
 
         result = Business.sp_update_business(
@@ -440,7 +458,7 @@ def business_update(request, business_id: int):
     except ValueError as ve:
         return JsonResponse({"ok": False, "message": str(ve)}, status=400)
     except Exception as e:
-        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)\
+        return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)
         
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')

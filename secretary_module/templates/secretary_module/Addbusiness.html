@@ -106,77 +106,114 @@
         </div>
 
         <!-- Address -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">House No.</label>
-            <input name="house_number" class="border rounded-lg w-full px-3 py-2"/>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Street</label>
-            <input name="street" class="border rounded-lg w-full px-3 py-2"/>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Barangay</label>
-            <input name="barangay" class="border rounded-lg w-full px-3 py-2"/>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Sitio <span class="text-red-600">*</span></label>
-            <select name="sitio_id" class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none" required>
-              <option value="">-- Select Sitio --</option>
-              <option value="1">Sitio Kawayanan</option>
-              <option value="2">Sitio V'G</option>
-              <option value="3">Sitio Centro Uno</option>
-              <option value="4">Sitio Centro Dos</option>
-              <option value="5">Sitio Centro Tres</option>
-              <option value="6">Sitio Pajo</option>
-              <option value="7">Sitio Fatima</option>
-              <option value="8">Sitio Mangga and Upper Cansaga</option>
-            </select>
-          </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">House No.</label>
+    <input name="house_number" class="border rounded-lg w-full px-3 py-2"/>
+  </div>
+  <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">Street</label>
+    <input name="street" class="border rounded-lg w-full px-3 py-2"/>
+  </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">City / Municipality <span class="text-red-600">*</span></label>
-            <input name="city_municipality" class="border rounded-lg w-full px-3 py-2" required/>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Country</label>
-            <input name="country" class="border rounded-lg w-full px-3 py-2" value="Philippines"/>
-          </div>
+  <!-- Barangay (auto-filled, not editable) -->
+  <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">Barangay</label>
+    <input value="Cansaga" class="border rounded-lg w-full px-3 py-2 bg-gray-100 text-gray-600" disabled />
+    <input type="hidden" name="barangay" value="Cansaga" />
+  </div>
+
+  <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">Sitio <span class="text-red-600">*</span></label>
+    <select name="sitio_id" class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none" required>
+      <option value="">-- Select Sitio --</option>
+      <option value="1">Sitio Kawayanan</option>
+      <option value="2">Sitio V'G</option>
+      <option value="3">Sitio Centro Uno</option>
+      <option value="4">Sitio Centro Dos</option>
+      <option value="5">Sitio Centro Tres</option>
+      <option value="6">Sitio Pajo</option>
+      <option value="7">Sitio Fatima</option>
+      <option value="8">Sitio Mangga and Upper Cansaga</option>
+    </select>
+  </div>
+
+  <!-- City / Municipality (auto-filled, not editable) -->
+  <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">City / Municipality</label>
+    <input value="Consolacion" class="border rounded-lg w-full px-3 py-2 bg-gray-100 text-gray-600" disabled />
+    <input type="hidden" name="city_municipality" value="Consolacion" />
+  </div>
+
+  <!-- Country (kept auto-filled; editable or lock it same as above if you prefer) -->
+   <div>
+    <label class="block text-sm font-semibold text-gray-700 mb-1">City / Municipality</label>
+    <input value="Philippines" class="border rounded-lg w-full px-3 py-2 bg-gray-100 text-gray-600" disabled />
+    <input type="hidden" name="country" value="Philippines" />
+  </div>
+
+        <!-- Clearance Category -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">
+            Clearance Category <span class="text-red-600">*</span>
+          </label>
+          <select id="clearanceCategory" name="clearance_category_id"
+                  class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                  required>
+            <option value="">-- Select Clearance Category --</option>
+            {% for cat in clearance_categories %}
+              <option
+                value="{{ cat.clearance_category_id }}"
+                data-supported-units="{{ cat.supported_units|yesno:'true,false' }}"
+                data-is-amusement="{% if cat.category_name|lower == 'amusement' %}true{% else %}false{% endif %}"
+              >
+                {{ cat.category_name }}
+              </option>
+            {% empty %}
+              <option disabled>No categories found</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Some categories require units (e.g., doors, computers). Amusement requires device counts.
+          </p>
         </div>
 
-<!-- Clearance Category -->
-<div>
-  <label class="block text-sm font-semibold text-gray-700 mb-1">
-    Clearance Category <span class="text-red-600">*</span>
-  </label>
-  <select id="clearanceCategory" name="clearance_category_id"
-          class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
-          required>
-    <option value="">-- Select Clearance Category --</option>
-    {% for cat in clearance_categories %}
-      <option
-        value="{{ cat.clearance_category_id }}"
-        data-supported-units="{{ cat.supported_units|yesno:'true,false' }}"
-      >
-        {{ cat.category_name }}
-      </option>
-    {% empty %}
-      <option disabled>No categories found</option>
-    {% endfor %}
-  </select>
-  <p class="text-xs text-gray-500 mt-1">Some categories require units (e.g., doors, computers).</p>
-</div>
+        <!-- Total Units (conditionally shown) -->
+        <div id="unitsWrap" class="hidden">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">
+            Total Units <span class="text-red-600">*</span>
+          </label>
+          <input id="totalUnits" name="total_units" type="number" min="0" step="1"
+                 class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                 placeholder="Enter total units for this category"/>
+          <p class="text-xs text-gray-500 mt-1">Required for categories that support units.</p>
+        </div>
 
-<!-- Total Units (conditionally shown) -->
-<div id="unitsWrap" class="hidden">
-  <label class="block text-sm font-semibold text-gray-700 mb-1">
-    Total Units <span class="text-red-600">*</span>
-  </label>
-  <input id="totalUnits" name="total_units" type="number" min="0" step="1"
-         class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
-         placeholder="Enter total units for this category"/>
-  <p class="text-xs text-gray-500 mt-1">Required for categories that support units.</p>
-</div>
+        <!-- Amusement Device Quantities (conditionally shown when category = Amusement) -->
+        <div id="amusementWrap" class="hidden">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Amusement Devices</label>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Videoke Units</label>
+              <input id="videokeCount" name="videoke_count" type="number" min="0" step="1"
+                     class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                     placeholder="0">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Billiard Tables</label>
+              <input id="billiardCount" name="billiard_count" type="number" min="0" step="1"
+                     class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                     placeholder="0">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Other Devices</label>
+              <input id="otherDeviceCount" name="other_device_count" type="number" min="0" step="1"
+                     class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                     placeholder="0">
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Required for Amusement</p>
+        </div>
 
         <!-- Clearance Date -->
         <div>
@@ -204,23 +241,55 @@
 <script>
   (function () {
     const sel = document.getElementById('clearanceCategory');
-    const wrap = document.getElementById('unitsWrap');
-    const units = document.getElementById('totalUnits');
 
-    function toggleUnits() {
+    const unitsWrap = document.getElementById('unitsWrap');
+    const totalUnits = document.getElementById('totalUnits');
+
+    const amusementWrap = document.getElementById('amusementWrap');
+    const videoke = document.getElementById('videokeCount');
+    const billiard = document.getElementById('billiardCount');
+    const otherDev = document.getElementById('otherDeviceCount');
+
+    function ensureZeroIfEmpty(el) {
+      if (el.value === '') el.value = '0';
+    }
+
+    function toggleSections() {
       const opt = sel.options[sel.selectedIndex];
-      const supported = opt && opt.dataset.supportedUnits === 'true';
-      if (supported) {
-        wrap.classList.remove('hidden');
-        units.required = true;
+      const supportsUnits = opt && opt.dataset.supportedUnits === 'true';
+      const isAmusement   = opt && opt.dataset.isAmusement === 'true';
+
+      // Units section
+      if (supportsUnits) {
+        unitsWrap.classList.remove('hidden');
+        totalUnits.required = true;
       } else {
-        wrap.classList.add('hidden');
-        units.required = false;
-        units.value = '';
+        unitsWrap.classList.add('hidden');
+        totalUnits.required = false;
+        totalUnits.value = '';
+      }
+
+      // Amusement device counts
+      if (isAmusement) {
+        amusementWrap.classList.remove('hidden');
+        videoke.required  = true;
+        billiard.required = true;
+        otherDev.required = true;
+
+        // NEW: default to 0 if left blank
+        ensureZeroIfEmpty(videoke);
+        ensureZeroIfEmpty(billiard);
+        ensureZeroIfEmpty(otherDev);
+      } else {
+        amusementWrap.classList.add('hidden');
+        videoke.required  = false; videoke.value  = '';
+        billiard.required = false; billiard.value = '';
+        otherDev.required = false; otherDev.value = '';
       }
     }
-    sel.addEventListener('change', toggleUnits);
-    toggleUnits(); // initial
+
+    sel.addEventListener('change', toggleSections);
+    toggleSections(); // initial state on load
   })();
 </script>
 
