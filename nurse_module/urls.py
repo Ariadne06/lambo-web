@@ -5,12 +5,9 @@ app_name = 'nurse_module'
 
 urlpatterns = [
      path('', views.nurse_dashboard, name='nurse_dashboard'),
-     path('nurse_residentList', views.nurse_residentList),
-     path('nurse_moreResident', views.nurse_moreResident),
-     path('nurse_household', views.nurse_household),
-     path('householdMore', views.householdMore),
-     path('householdInfo1', views.householdInfo1),
-     path('householdInfo2', views.householdInfo2),
+     path("residents/", views.nurse_resident_list, name="nurse_residentList"),
+     path('households/', views.nurse_household, name='nurse_household'),
+     path('households/<int:household_id>/', views.nurse_household_more, name='nurse_household_more'),
      path('childrecordList', views.childrecordList),
      path('moreChildRecord', views.moreChildRecord),
      path('childImmunization', views.childImmunization),
@@ -28,8 +25,7 @@ urlpatterns = [
      path('maternalOutcome', views.maternalOutcome),
      path('maternalPostpartum', views.maternalPostpartum),
      path('maternalSurgical', views.maternalSurgical),
-     path('nurseGeneralInfo', views.nurseGeneralInfo),
-     path('moreGenInfo', views.moreGenInfo),
+     path('general-health/', views.nurseGeneralInfo, name='nurse_general_health'),
      path('ImmunizationStatus', views.ImmunizationStatus),
 
     
