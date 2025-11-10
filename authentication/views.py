@@ -122,34 +122,62 @@ def login_view(request):
     })
 
 
+# @custom_login_required
+# def logout_view(request):
+#     # Before adding a new message, clear old ones
+#     storage = messages.get_messages(request)
+#     storage.used = True
+    
+#     # Check if user_id exists in the session
+#     if 'session_token' in request.session:
+#         token = request.session.get('session_token')
+#         result = authentication.sp_logout_user(token) 
+    
+#         storage = messages.get_messages(request)
+#         storage.used = True
+        
+#         try:
+#             if result and result.get('status') == 'success':
+#                 messages.success(request, 'You have been logged out successfully.')
+#             else:
+#                 messages.error(request, result.get('status'))
+#         except Exception as e:
+#             messages.error(request, f'Logout failed: {str(e)}')
+#         finally:
+#             # Clear the session
+#             request.session.flush()
+#     else:
+#         messages.warning(request, 'You are not logged in.')
+
+#     return redirect('authentication:login')
+
 @custom_login_required
 def logout_view(request):
-    # Before adding a new message, clear old ones
+    # Clear any old queued messages to avoid duplicates
     storage = messages.get_messages(request)
     storage.used = True
-    
-    # Check if user_id exists in the session
-    if 'session_token' in request.session:
-        token = request.session.get('session_token')
-        result = authentication.sp_logout_user(token) 
-    
-        storage = messages.get_messages(request)
-        storage.used = True
-        
-        try:
-            if result and result.get('status') == 'success':
-                messages.success(request, 'You have been logged out successfully.')
-            else:
-                messages.error(request, result.get('status'))
-        except Exception as e:
-            messages.error(request, f'Logout failed: {str(e)}')
-        finally:
-            # Clear the session
-            request.session.flush()
-    else:
-        messages.warning(request, 'You are not logged in.')
 
-    return redirect('authentication:login')
+    token = request.session.get('session_token')
+
+    try:
+        # Best-effort: invalidate server-side token if we still have one.
+        if token:
+            try:
+                authentication.sp_logout_user(token)
+            except Exception:
+                # Ignore backend errors here—user-initiated logout should still succeed.
+                pass
+    finally:
+        # Always clear the Django session locally
+        try:
+            request.session.flush()
+        except Exception:
+            # If already flushed, ignore
+            pass
+
+    # Always show a positive message (logout is idempotent)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('authentication:login') 
 
 # @csrf_exempt
 # def silent_logout(request):
