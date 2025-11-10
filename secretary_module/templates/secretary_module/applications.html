@@ -8,6 +8,12 @@
 <div class="px-6 py-6">
   <h2 class="text-lg font-semibold text-red-700 mb-4">Applications</h2>
 
+  <!-- Search -->
+  <form method="get" class="mb-4 flex items-center gap-2">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by code, request, name, status" class="w-80 rounded-xl border border-gray-300 px-3 py-2 text-sm" />
+    <button class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700">Search</button>
+  </form>
+
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
@@ -16,289 +22,242 @@
             <th class="px-4 py-2 border border-gray-200 text-left">Full Name</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Application</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Amount</th>
-            <th class="px-4 py-2 border border-gray-200 text-left">Status Payment</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Payment Status</th>
             <th class="px-4 py-2 border border-gray-200 text-center w-40">Action</th>
           </tr>
         </thead>
 
         <tbody class="divide-y divide-gray-100">
-          <!-- PAID row (GREEN Print visible) -->
+          {% for r in rows %}
+          {% with ps=r.payment_status|lower %}
           <tr>
-            <td class="px-4 py-2 border border-gray-200">Adrianne Villarta</td>
-            <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
-            <td class="px-4 py-2 border border-gray-200">300 Php</td>
-            <td class="px-4 py-2 border border-gray-200">Done</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.applicant_name }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.request }}</td>
+            <td class="px-4 py-2 border border-gray-200">₱{{ r.total_amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.payment_status }}</td>
             <td class="px-4 py-2 border border-gray-200">
               <div class="flex items-center justify-center gap-2">
-                <!-- info -->
-                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info"
-                      onclick="openModal('modalDocInfo-1000')">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
-                </svg>
-              </button>
-                <!-- PRINT: enabled & obvious -->
-                <a href="#" class="print-btn" title="Print">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/>
-                    </svg>
-                    <span>Print</span>
-                </a>
-              </div>
-            </td>
-          </tr>
-
-          <style>
-            .print-btn{
-                display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-                min-width:80px; padding:.375rem .75rem; border-radius:.5rem;
-                background:#16a34a; color:#fff; font-weight:600; font-size:.875rem; /* green-600 */
-                box-shadow:0 1px 2px rgba(0,0,0,.12);
-            }
-            .print-btn:hover{ background:#15803d; } /* green-700 */
-            .print-btn svg{ color:#fff; fill:currentColor; width:1.25rem; height:1.25rem; }
-          </style>
-
-          <!-- PENDING row (GRAY Print still visible but disabled-looking) -->
-          <tr>
-            <td class="px-4 py-2 border border-gray-200">Adrian Medalla</td>
-            <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
-            <td class="px-4 py-2 border border-gray-200">300 Php</td>
-            <td class="px-4 py-2 border border-gray-200">Pending</td>
-            <td class="px-4 py-2 border border-gray-200">
-              <div class="flex items-center justify-center gap-2">
-                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="Info"
-                        onclick="openModal('modalDocInfo-1001')">
+                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="View"
+                        data-app-id="{{ r.application_id }}" onclick="viewApplication(this)">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
                   </svg>
                 </button>
-                <!-- PRINT: disabled style (still obvious) -->
-                <a href="#" class="print-btn" style="background:#e5e7eb;color:#374151;cursor:not-allowed;pointer-events:none;">
+                {% if ps == 'paid' or ps == 'done' %}
+                  <a href="{% url 'secretary_module:print_application_pdf' r.application_id %}" class="print-btn" style="background:#2563eb" title="Download PDF" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v12h2V4h8V2Zm4 4h-8a2 2 0 0 0-2 2v12l6-3 6 3V8a2 2 0 0 0-2-2Z"/></svg>
+                    <span>PDF</span>
+                  </a>
+                {% else %}
+                  <a href="#" class="print-btn" style="background:#e5e7eb;color:#374151;cursor:not-allowed;pointer-events:none;">
                     <svg><path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/></svg>
-                    <span>Print</span>
-                    </a>
+                    <span>PDF</span>
+                  </a>
+                {% endif %}
               </div>
             </td>
           </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-6 text-center text-gray-500">No applications found.</td>
+          </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
-    <div class="mt-4 flex justify-center text-sm text-gray-600">
+    {% if total_pages > 1 %}
+    <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+      <div>
+        Page {{ page }} of {{ total_pages }} — {{ total }} total
+      </div>
       <nav class="flex items-center gap-2">
-        <a href="#" class="px-2 py-1 hover:text-red-700">1</a>
-        <a href="#" class="px-2 py-1 hover:text-red-700">2</a>
-        <a href="#" class="px-2 py-1 hover:text-red-700">3</a>
-        <span>…</span>
-        <a href="#" class="px-2 py-1 hover:text-red-700">60</a>
+        {% if has_prev %}
+          <a class="px-2 py-1 hover:text-red-700" href="?q={{ q }}&page={{ prev_page }}&per_page={{ per_page }}">Prev</a>
+        {% endif %}
+        {% if has_next %}
+          <a class="px-2 py-1 hover:text-red-700" href="?q={{ q }}&page={{ next_page }}&per_page={{ per_page }}">Next</a>
+        {% endif %}
       </nav>
     </div>
+    {% endif %}
   </div>
-<!-- =========================
-     INFO MODAL (Row 1 / Paid)
-     ========================= -->
-<div id="modalDocInfo-1000" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title_1000">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
-       onclick="closeModal('modalDocInfo-1000')"></div>
 
-  <!-- Panel wrapper -->
-  <div class="relative mx-auto my-16 w-[520px] max-w-[92vw]">
-    <!-- Glow ring -->
-    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
-
-    <!-- Panel -->
-    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
-         data-panel>
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
-          </svg>
-          <h3 id="docinfo_title_1000" class="text-base font-semibold tracking-wide">Document Details</h3>
-        </div>
-        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
-                aria-label="Close" onclick="closeModal('modalDocInfo-1000')">&times;</button>
-      </div>
-
-      <!-- Body -->
-      <div class="px-6 pt-5 pb-4">
-        <!-- top summary -->
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resident ID</span>
-          <span class="font-mono text-sm tracking-widest text-gray-900">1000</span>
-        </div>
-
-        <!-- details grid -->
-        <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Adrianne Villarta</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Application</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Barangay Clearance</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">Purpose</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Job Application</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
-            <dd class="col-span-3">
-              <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                300 Php
-              </span>
-            </dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">0001</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Status</dt>
-            <dd class="col-span-3">
-              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                <!-- check -->
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="m5 13 4 4L19 7l-1.4-1.4L9 14.2 6.4 11.6 5 13Z"/></svg>
-                Paid
-              </span>
-            </dd>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="px-6 pb-5 flex items-center justify-end gap-2">
-        <button type="button"
-                class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
-                onclick="closeModal('modalDocInfo-1000')">
-          Close
-        </button>
-        <button type="button"
-                class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700"
-                onclick="window.print()">
-          <!-- printer -->
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/></svg>
-          Print
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ==========================
-     INFO MODAL (Row 2 / Pending)
-     ========================== -->
-<div id="modalDocInfo-1001" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title_1001">
-  <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop
-       onclick="closeModal('modalDocInfo-1001')"></div>
-  <div class="relative mx-auto my-16 w-[520px] max-w-[92vw]">
-    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
-    <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200"
-         data-panel>
-      <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
-          <h3 id="docinfo_title_1001" class="text-base font-semibold tracking-wide">Document Details</h3>
-        </div>
-        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
-                aria-label="Close" onclick="closeModal('modalDocInfo-1001')">&times;</button>
-      </div>
-
-      <div class="px-6 pt-5 pb-4">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resident ID</span>
-          <span class="font-mono text-sm tracking-widest text-gray-900">1001</span>
-        </div>
-
-        <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Adrian Medalla</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Application</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Barangay Clearance</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">Purpose</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-900">Job Application</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
-            <dd class="col-span-3">
-              <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[13px] font-semibold text-amber-800 ring-1 ring-amber-200">
-                300 Php (Pending)
-              </span>
-            </dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-            <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
-            <dd class="col-span-3 text-sm font-medium text-gray-400">—</dd>
-          </div>
-          <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-            <dt class="col-span-2 text-sm text-gray-600">Status</dt>
-            <dd class="col-span-3">
-              <span class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[13px] font-semibold text-gray-700 ring-1 ring-gray-200">
-                <!-- clock -->
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 11h5v-2h-4V7h-2v6Z"/></svg>
-                Awaiting Payment
-              </span>
-            </dd>
-          </div>
-        </div>
-      </div>
-
-      <div class="px-6 pb-5 flex items-center justify-end">
-        <button type="button"
-                class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
-                onclick="closeModal('modalDocInfo-1001')">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-  function openModal(id){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.classList.remove('hidden');
-    // animate in
-    requestAnimationFrame(() => {
-      el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
-      const panel = el.querySelector('[data-panel]');
-      if(panel){
-        panel.classList.remove('scale-95','opacity-0');
-        panel.classList.add('scale-100','opacity-100');
-      }
-    });
-  }
-  function closeModal(id){
-    const el = document.getElementById(id);
-    if(!el) return;
-    // animate out
-    el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
-    const panel = el.querySelector('[data-panel]');
-    if(panel){
-      panel.classList.add('scale-95','opacity-0');
-      panel.classList.remove('scale-100','opacity-100');
+  <style>
+    .print-btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+      min-width:80px; padding:.375rem .75rem; border-radius:.5rem;
+      background:#16a34a; color:#fff; font-weight:600; font-size:.875rem;
+      box-shadow:0 1px 2px rgba(0,0,0,.12);
     }
-    setTimeout(() => el.classList.add('hidden'), 180);
-  }
-  // ESC to close the *currently shown* modal (both supported)
-  document.addEventListener('keydown', (e) => {
-    if(e.key !== 'Escape') return;
-    ['modalDocInfo-1000','modalDocInfo-1001'].forEach(id => {
+    .print-btn:hover{ background:#15803d; }
+    .print-btn svg{ color:#fff; fill:currentColor; width:1.25rem; height:1.25rem; }
+  </style>
+
+  <!-- Single reusable modal -->
+  <div id="modalDocInfo" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title">
+    <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalDocInfo')"></div>
+    <div class="relative mx-auto my-16 w-[560px] max-w-[92vw]">
+      <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
+      <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
+        <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
+            <h3 id="docinfo_title" class="text-base font-semibold tracking-wide">Application Details</h3>
+          </div>
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalDocInfo')">&times;</button>
+        </div>
+
+        <div class="px-6 pt-5 pb-4">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Application Code</span>
+            <span id="mdl-code" class="font-mono text-sm tracking-widest text-gray-900">—</span>
+          </div>
+
+          <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+              <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
+              <dd id="mdl-name" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+            </div>
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+              <dt class="col-span-2 text-sm text-gray-600">Request</dt>
+              <dd id="mdl-request" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+            </div>
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+              <dt class="col-span-2 text-sm text-gray-600">Business</dt>
+              <dd id="mdl-biz" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+            </div>
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+              <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
+              <dd class="col-span-3">
+                <span id="mdl-amount" class="inline-flex items-center rounded-full bg-gray-50 px-3 py-1 text-[13px] font-semibold text-gray-800 ring-1 ring-gray-200">—</span>
+              </dd>
+            </div>
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
+              <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
+              <dd id="mdl-or" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
+            </div>
+            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
+              <dt class="col-span-2 text-sm text-gray-600">Status</dt>
+              <dd class="col-span-3">
+                <span id="mdl-status" class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1">—</span>
+              </dd>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Breakdown</h4>
+            <div id="mdl-breakdown" class="text-sm text-gray-800 space-y-1"></div>
+          </div>
+        </div>
+
+        <div class="px-6 pb-5 flex items-center justify-end gap-2">
+          <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200" onclick="closeModal('modalDocInfo')">Close</button>
+          <form id="forPaymentForm" method="post" action="#">
+            {% csrf_token %}
+            <button type="submit" id="btnForPayment" class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700">
+              Set to For Payment
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function peso(n){
+      if(n==null || n===undefined) return '—';
+      const v = typeof n === 'number' ? n : parseFloat(n);
+      if(isNaN(v)) return '—';
+      return '₱' + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function openModal(id){
       const el = document.getElementById(id);
-      if(el && !el.classList.contains('hidden')) closeModal(id);
-    });
-  });
-</script>
+      if(!el) return;
+      el.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
+        const panel = el.querySelector('[data-panel]');
+        if(panel){ panel.classList.remove('scale-95','opacity-0'); panel.classList.add('scale-100','opacity-100'); }
+      });
+    }
+    function closeModal(id){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
+      const panel = el.querySelector('[data-panel]');
+      if(panel){ panel.classList.add('scale-95','opacity-0'); panel.classList.remove('scale-100','opacity-100'); }
+      setTimeout(() => el.classList.add('hidden'), 180);
+    }
+    document.addEventListener('keydown', (e) => { if(e.key==='Escape'){ const el=document.getElementById('modalDocInfo'); if(el && !el.classList.contains('hidden')) closeModal('modalDocInfo'); } });
+
+    async function viewApplication(btn){
+      const id = btn.getAttribute('data-app-id');
+      try{
+        const resp = await fetch(`{% url 'secretary_module:application_detail_json' 0 %}`.replace('/0/','/'+id+'/'));
+        if(!resp.ok) throw new Error('Failed to load');
+        const d = await resp.json();
+        // Fill basics
+        document.getElementById('mdl-code').textContent = d.application_code || '—';
+        document.getElementById('mdl-name').textContent = d.applicant_name || '—';
+        document.getElementById('mdl-request').textContent = d.request || '—';
+        document.getElementById('mdl-biz').textContent = d.business_name || '—';
+        document.getElementById('mdl-amount').textContent = peso(d.total_amount);
+        document.getElementById('mdl-or').textContent = d.or_number || '—';
+
+        // Status badge
+        const st = (d.application_status||'').toLowerCase();
+        const stEl = document.getElementById('mdl-status');
+        stEl.textContent = d.application_status || '—';
+        stEl.className = 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1 ' +
+          (st==='paid'||st==='done' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : st==='for payment' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-gray-100 text-gray-700 ring-gray-200');
+
+        // Breakdown
+        const wrap = document.getElementById('mdl-breakdown');
+        wrap.innerHTML='';
+        let items = d.total_amount_details;
+        if(typeof items === 'string'){
+          try{ items = JSON.parse(items); }catch{ items = null; }
+        }
+        const flat = [];
+        const push = (label, amount) => { if(label && amount!=null) flat.push({label, amount}); };
+        if(Array.isArray(items)){
+          items.forEach(it=>{ push(it.item||it.label||it.name||'Item', it.amount||it.total||it.price||0); });
+        } else if(items && typeof items==='object'){
+          Object.entries(items).forEach(([k,v])=>{ if(typeof v==='number'){ push(k, v); } else if(v && typeof v==='object' && 'amount' in v){ push(k, v.amount); } });
+        }
+        if(flat.length===0){ wrap.innerHTML = '<div class="text-gray-500">No breakdown available.</div>'; }
+        else{
+          flat.forEach(row=>{
+            const div = document.createElement('div');
+            div.className='flex justify-between';
+            div.innerHTML = `<span>${row.label}</span><span>${peso(row.amount)}</span>`;
+            wrap.appendChild(div);
+          });
+        }
+
+        // For Payment button state + action
+        const form = document.getElementById('forPaymentForm');
+        form.action = `{% url 'secretary_module:set_application_to_for_payment' 0 %}`.replace('/0/','/'+id+'/');
+        const btnFP = document.getElementById('btnForPayment');
+        const appStatus = (d.application_status||'').toLowerCase();
+        if(appStatus==='pending'){
+          btnFP.disabled = false;
+          btnFP.classList.remove('opacity-50','cursor-not-allowed');
+        } else {
+          btnFP.disabled = true;
+          btnFP.classList.add('opacity-50','cursor-not-allowed');
+        }
+
+        openModal('modalDocInfo');
+      }catch(err){
+        alert('Unable to load application details.');
+      }
+    }
+  </script>
 
 </div>
 

@@ -577,3 +577,180 @@ class AnnouncementRepo(models.Model):
                 except Exception:
                     cur.execute("DELETE FROM Announcement WHERE announcement_id = %s", [announcement_id])
                     return True
+    
+
+# --- Backwards-compatible helper container ---
+class SecretaryHelpers:
+    """Container class placed at the end of this file that groups the
+    thin DB helper wrappers. This keeps new helpers appended (to reduce
+    merge conflicts) while grouping them in a single namespace as
+    requested.
+
+    Usage examples (prefer explicit class staticmethod calls from views):
+        BusinessFee.sp_get_fee_types_dropdown()
+        SecretaryHelpers.get_fee_types_dropdown()
+    """
+
+    @staticmethod
+    def get_fee_types_dropdown() -> list[dict]:
+        """Return fee_type_id / fee_type_name directly from SQL function.
+
+        Uses: SELECT * FROM get_fee_types_dropdown()
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_fee_types_dropdown()")
+            cols = [c[0] for c in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def get_other_clearance_purposes_dropdown() -> list[dict]:
+        """Return other_clearance_id / purpose_name using the DB helper.
+
+        Delegates to OtherClearanceType.sp_get_other_clearance_purposes_dropdown().
+        """
+        return OtherClearanceType.sp_get_other_clearance_purposes_dropdown()
+
+    @staticmethod
+    def search_owner(p_query: Optional[str], p_limit: int = 25, p_offset: int = 0) -> list[dict]:
+                """Call the DB function search_owner(p_query, p_limit, p_offset) and map rows.
+
+                Returns: list of dicts with keys
+                    business_id, business_name, business_status, owner_resident_id, owner_full_name
+                """
+                with connection.cursor() as cur:
+                        cur.callproc('search_owner', [p_query, p_limit, p_offset])
+                        cols = [c[0] for c in cur.description]
+                        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def search_resident(p_query: Optional[str], p_limit: int = 25, p_offset: int = 0) -> list[dict]:
+        """Call search_resident(...) and return rows as list[dict].
+
+        Delegates to Secretary.sp_search_resident().
+        """
+        return Secretary.sp_search_resident(p_query, p_limit, p_offset)
+
+    @staticmethod
+    def secretary_preview_business_clearance(
+        p_business_id: int,
+        p_purpose: Optional[str] = None,
+        p_videoke_qty: Optional[int] = None,
+        p_billiard_qty: Optional[int] = None,
+        p_other_device_qty: Optional[int] = None,
+    ) -> dict:
+        """Call the DB function secretary_preview_business_clearance(...) and return a mapped dict."""
+        with connection.cursor() as cur:
+            cur.callproc('secretary_preview_business_clearance', [
+                p_business_id, p_purpose, p_videoke_qty, p_billiard_qty, p_other_device_qty
+            ])
+            cols = [c[0] for c in cur.description]
+            row = cur.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def create_application_business(
+        fee_type_id: int,
+        business_id: int,
+        business_clearance_category: int,
+        videoke_qty: Optional[int] = None,
+        billiard_qty: Optional[int] = None,
+        other_device_qty: Optional[int] = None,
+        purpose: Optional[str] = None,
+        requested_by: Optional[str] = 'personnel',
+        date_submitted: Optional[datetime] = None,
+    ) -> Optional[int]:
+        """Call Create_Application_Business and return the new application_id.
+
+        SQL signature (defaults handled in DB):
+          Create_Application_Business(
+            p_fee_type_id INT,
+            p_business_id INT,
+            p_business_clearance_category INT,
+            p_videoke_quantity INT DEFAULT NULL,
+            p_billiard_quantity INT DEFAULT NULL,
+            p_other_device_quantity INT DEFAULT NULL,
+            p_purpose TEXT DEFAULT NULL,
+            p_requested_by TEXT DEFAULT NULL,
+            p_date_submitted TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+          ) RETURNS INT
+        """
+        with connection.cursor() as cur:
+            if date_submitted is not None:
+                cur.execute(
+                    "SELECT Create_Application_Business(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    [
+                        fee_type_id,
+                        business_id,
+                        business_clearance_category,
+                        videoke_qty,
+                        billiard_qty,
+                        other_device_qty,
+                        purpose,
+                        requested_by,
+                        date_submitted,
+                    ],
+                )
+            else:
+                cur.execute(
+                    "SELECT Create_Application_Business(%s,%s,%s,%s,%s,%s,%s,%s)",
+                    [
+                        fee_type_id,
+                        business_id,
+                        business_clearance_category,
+                        videoke_qty,
+                        billiard_qty,
+                        other_device_qty,
+                        purpose,
+                        requested_by,
+                    ],
+                )
+            row = cur.fetchone()
+            return int(row[0]) if row and row[0] is not None else None
+
+    # ---- Applications listing/detail/status helpers ----
+    @staticmethod
+    def list_all_applications(p_query: Optional[str] = None, p_limit: int = 50, p_offset: int = 0) -> list[dict]:
+        """Wrapper for get_all_application(p_query, p_limit, p_offset)."""
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_all_application(%s,%s,%s)", [p_query, p_limit, p_offset])
+            cols = [c[0] for c in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def count_all_applications(p_query: Optional[str] = None) -> int:
+        """Count rows via SELECT COUNT(*) FROM get_all_application(...)."""
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM get_all_application(%s,%s,%s)",
+                [p_query, 1_000_000_000, 0]
+            )
+            return int(cur.fetchone()[0])
+
+    @staticmethod
+    def get_specific_application(application_id: int) -> Optional[dict]:
+        """Wrapper for get_specific_application(application_id)."""
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_specific_application(%s)", [application_id])
+            cols = [c[0] for c in cur.description]
+            row = cur.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def set_application_to_for_payment(application_id: int) -> None:
+        """Wrapper for set_application_to_for_payment(application_id). Returns None; raises on error."""
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_application_to_for_payment(%s)", [application_id])
+
+    @staticmethod
+    def get_clearance_details_for_printing(application_id: int) -> Optional[dict]:
+        """Call get_clearance_details_for_printing and return a single dict row."""
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_clearance_details_for_printing(%s)",
+                [application_id]
+            )
+            cols = [c[0] for c in cur.description]
+            row = cur.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    
