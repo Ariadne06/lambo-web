@@ -132,6 +132,14 @@ class FPStatus(models.Model):
         managed = False
         db_table = 'fp_status'
 
+class Relationship(models.Model):
+    relationship_id = models.AutoField(primary_key=True)
+    relationship_name = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        managed = False 
+        db_table = 'relationship'
+
 class GeneralHealthMale(models.Model):
     ghtm_id = models.AutoField(primary_key=True)
     family_member_id = models.IntegerField()
@@ -173,6 +181,169 @@ class GeneralHealthFemale(models.Model):
         managed = False
         db_table = 'general_health_female'
 
+# child health models
+class FeedingMethod(models.Model):
+    feeding_method_id = models.AutoField(primary_key=True)
+    method_name = models.CharField(max_length=50, unique=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'feeding_method'
+
+
+class Month(models.Model):
+    month_id = models.AutoField(primary_key=True)
+    month_sequence_name = models.CharField(max_length=20, unique=True)
+    month_number = models.IntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = 'month'
+
+
+class TTStatus(models.Model):
+    tt_status_id = models.AutoField(primary_key=True)
+    tt_code = models.CharField(max_length=10, unique=True)
+    tt_name = models.CharField(max_length=100)
+    
+    class Meta:
+        managed = False
+        db_table = 'tt_status'
+
+
+class VaccineType(models.Model):
+    vaccine_type_id = models.AutoField(primary_key=True)
+    vaccine_name = models.CharField(max_length=100, unique=True)
+    at_birth = models.BooleanField(default=False)
+    first_dose = models.BooleanField(default=False)
+    second_dose = models.BooleanField(default=False)
+    third_dose = models.BooleanField(default=False)
+    interval_between_doses = models.DurationField(null=True, blank=True)
+    date_added = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'vaccine_type'
+
+
+class DoseType(models.Model):
+    dose_type_id = models.AutoField(primary_key=True)
+    dose_name = models.CharField(max_length=30, unique=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'dose_type'
+
+
+class Supplements(models.Model):
+    supplement_id = models.AutoField(primary_key=True)
+    supplement_name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'supplements'
+
+
+class ChildHealthRecord(models.Model):
+    child_health_id = models.AutoField(primary_key=True)
+    child_id = models.IntegerField()  # FK to Resident
+    time_of_birth = models.TimeField(null=True, blank=True)
+    birth_weight_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    birth_length_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    place_of_delivery = models.CharField(max_length=200, null=True, blank=True)
+    address_landmark = models.CharField(max_length=200, null=True, blank=True)
+    tt_status_of_mother = models.IntegerField(null=True, blank=True)
+    tt_status_date = models.DateField(null=True, blank=True)
+    newborn_screening_status = models.BooleanField(null=True, blank=True)
+    newborn_screening_status_date = models.DateField(null=True, blank=True)
+    feeding_method_id = models.IntegerField(null=True, blank=True)
+    created_by = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'child_health_record'
+
+
+class ExclusiveBreastfeed(models.Model):
+    eb_id = models.AutoField(primary_key=True)
+    child_health_id = models.IntegerField()
+    month_id = models.IntegerField()
+    date_assessed = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'exclusive_breastfeed'
+
+
+class ChildImmunizationRecord(models.Model):
+    immunization_id = models.AutoField(primary_key=True)
+    child_health_id = models.IntegerField()
+    vaccine_type_id = models.IntegerField()
+    dose_type_id = models.IntegerField()
+    date_added = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'child_immunization_record'
+
+
+class ChildSupplementRecord(models.Model):
+    child_health_id = models.IntegerField()
+    supplement_id = models.IntegerField()
+    age_in_months = models.IntegerField()
+    date_given = models.DateTimeField(auto_now_add=True)
+    given_by = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'child_supplement_record'
+        unique_together = (('child_health_id', 'supplement_id', 'age_in_months'),)
+
+
+class ResidentMedicalHistory(models.Model):
+    rmh_id = models.AutoField(primary_key=True)
+    child_health_id = models.IntegerField()
+    medical_history_name = models.CharField(max_length=200)
+    date_added = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'resident_medical_history'
+
+
+class ResidentSurgicalHistory(models.Model):
+    rsh_id = models.AutoField(primary_key=True)
+    child_health_id = models.IntegerField()
+    surgical_history_name = models.CharField(max_length=200)
+    date_of_surgery = models.DateField()
+    date_added = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'resident_surgical_history'
+
+
+class ChildGrowthMonitoring(models.Model):
+    cgm_id = models.AutoField(primary_key=True)
+    child_health_id = models.IntegerField()
+    date_of_visit = models.DateTimeField(auto_now_add=True)
+    age_in_months = models.IntegerField()
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    height_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    temp_c = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    resp_rate = models.IntegerField(null=True, blank=True)
+    pulse_rate = models.IntegerField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'child_growth_monitoring'
 
 # Main tables 
 class Household(models.Model):
