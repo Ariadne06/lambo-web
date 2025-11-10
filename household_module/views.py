@@ -5,12 +5,17 @@ from rest_framework.response import Response
 from .models import HouseType, Household, PhilhealthCategory
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import connection
-from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType, RelationshipToHouseholdHead, NutritionStatus, MedicalHistoryType, Class, FPMethod, FPStatus
+from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType, RelationshipToHouseholdHead, NutritionStatus, MedicalHistoryType, Class, FPMethod, FPStatus, Relationship, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements
 from .serializers import (
     FamilyMemberCreateSerializer, HouseOwnershipTypeSerializer, HouseTypeSerializer, HouseholdTypeSerializer, NutritionStatusSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
     HouseholdInsertSerializer, FamilyCreateSerializer, RelationshipToHouseholdHeadSerializer, PhilhealthCategorySerializer, MedicalHistoryTypeSerializer, ClassSerializer, 
-    FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer, GeneralHealthUpdateSerializer, QuarterSerializer
+    FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer, GeneralHealthUpdateSerializer, QuarterSerializer, RelationshipSerializer, HouseholdUpdateSerializer, FeedingMethodSerializer, MonthSerializer, TTStatusSerializer,
+    VaccineTypeSerializer, DoseTypeSerializer, SupplementsSerializer,
+    ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer
+)
+from .utils.database_helpers import (
+    search_child, view_specific_child_health_record
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -76,6 +81,40 @@ class FPStatusViewSet(viewsets.ReadOnlyModelViewSet):
 class QuarterViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Quarter.objects.all().order_by('-year', '-quarter_number')
     serializer_class = QuarterSerializer
+
+class ResidentFamilyRelationshipViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Relationship.objects.all().order_by('relationship_id')
+    serializer_class = RelationshipSerializer
+
+class FeedingMethodViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = FeedingMethod.objects.filter(is_active=True)
+    serializer_class = FeedingMethodSerializer
+
+
+class MonthViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Month.objects.all().order_by('month_number')
+    serializer_class = MonthSerializer
+
+
+class TTStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = TTStatus.objects.all().order_by('tt_status_id')
+    serializer_class = TTStatusSerializer
+
+
+class VaccineTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = VaccineType.objects.all().order_by('vaccine_name')
+    serializer_class = VaccineTypeSerializer
+
+
+class DoseTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DoseType.objects.all()
+    serializer_class = DoseTypeSerializer
+
+
+class SupplementsViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Supplements.objects.filter(is_active=True)
+    serializer_class = SupplementsSerializer
+
 
 
 class HouseholdListView(APIView):
@@ -1478,3 +1517,269 @@ class FamilyUpdateView(APIView):
         
         # Generic fallback
         return "Update failed. Please check your information and try again."
+
+
+class ResidentRelationshipsView(APIView):
+    """Get resident relationships"""
+    
+    def get(self, request, resident_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM get_resident_links(%s)", [resident_id])
+                columns = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+                
+                if row:
+                    relationships = dict(zip(columns, row))
+                    # Convert JSONB fields to Python objects
+                    if relationships.get('guardians'):
+                        relationships['guardians'] = relationships['guardians']
+                    if relationships.get('children'):
+                        relationships['children'] = relationships['children']
+                    
+                    return Response({
+                        'success': True,
+                        'data': relationships
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'success': True,
+                        'data': {
+                            'guardians': [],
+                            'children': []
+                        }
+                    }, status=status.HTTP_200_OK)
+                    
+        except Exception as e:
+            print(f"Error fetching relationships: {e}")
+            return Response({
+                'success': False,
+                'message': 'Failed to fetch relationships'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResidentLinkRelationView(APIView):
+    """Link resident relationships"""
+    
+    def post(self, request):
+        try:
+            origin_resident_id = request.data.get('origin_resident_id')
+            target_resident_id = request.data.get('target_resident_id')
+            relationship_id = request.data.get('relationship_id')
+            
+            if not all([origin_resident_id, target_resident_id, relationship_id]):
+                return Response({
+                    'success': False,
+                    'message': 'Missing required fields'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT link_resident_relation(%s, %s, %s)
+                """, [origin_resident_id, target_resident_id, relationship_id])
+                
+                result = cursor.fetchone()
+                relation_id = result[0] if result else None
+                
+                if relation_id:
+                    return Response({
+                        'success': True,
+                        'relation_id': relation_id,
+                        'message': 'Relationship linked successfully'
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        'success': False,
+                        'message': 'Failed to link relationship'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+        except Exception as e:
+            error_message = str(e)
+            
+            # Handle specific error codes from your SQL function
+            if 'E8106' in error_message:
+                message = 'This person already has a linked mother'
+            elif 'E8107' in error_message:
+                message = 'This person already has a linked father'
+            elif 'E8108' in error_message:
+                message = 'This relationship already exists'
+            elif 'E8111' in error_message:
+                message = 'The target person already has a parent of this type'
+            else:
+                message = 'Failed to link relationship'
+            
+            return Response({
+                'success': False,
+                'message': message
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+class ResidentUnlinkRelationView(APIView):
+    """Unlink resident relationships"""
+    
+    def post(self, request):
+        try:
+            origin_resident_id = request.data.get('origin_resident_id')
+            target_resident_id = request.data.get('target_resident_id')
+            relationship_id = request.data.get('relationship_id')
+            
+            if not all([origin_resident_id, target_resident_id, relationship_id]):
+                return Response({
+                    'success': False,
+                    'message': 'Missing required fields'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT unlink_resident_relation(%s, %s, %s)
+                """, [origin_resident_id, target_resident_id, relationship_id])
+                
+                result = cursor.fetchone()
+                closed_count = result[0] if result else 0
+                
+                if closed_count > 0:
+                    return Response({
+                        'success': True,
+                        'closed_count': closed_count,
+                        'message': 'Relationship removed successfully'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'success': False,
+                        'message': 'No active relationship found to remove'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                    
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': 'Failed to remove relationship'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# child health
+
+class SearchChildView(APIView):
+    """Search for children in families"""
+    
+    def get(self, request):
+        query = request.GET.get('q', '')
+        
+        if not query:
+            return Response({
+                'success': False,
+                'message': 'Query parameter required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            results = search_child(query)
+            return Response({
+                'success': True,
+                'data': results
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChildHealthRecordCreateView(APIView):
+    """Create child health record"""
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    
+    def post(self, request):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'message': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildHealthRecordCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            result = serializer.save()
+            
+            return Response({
+                'success': True,
+                'child_health_id': result['child_health_id'],
+                'message': 'Child health record created successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChildHealthRecordDetailView(APIView):
+    """View specific child health record"""
+    
+    def get(self, request, child_health_id):
+        try:
+            record = view_specific_child_health_record(child_health_id)
+            
+            if not record:
+                return Response({
+                    'success': False,
+                    'message': 'Child health record not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            return Response({
+                'success': True,
+                'data': record
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChildHealthRecordUpdateView(APIView):
+    """Update child health record"""
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    
+    def put(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'message': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildHealthRecordUpdateSerializer(
+                data=request.data,
+                context={
+                    'child_health_id': child_health_id,
+                    'personnel_id': personnel_id
+                }
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Child health record updated successfully'
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

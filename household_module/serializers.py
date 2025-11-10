@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from .models import MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
+from .models import Relationship, MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements, ChildHealthRecord
 from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
-from .utils.database_helpers import insert_family_member, save_general_health_for_member
+from .utils.database_helpers import insert_family_member, save_general_health_for_member, insert_child_health_record, update_child_health_record, add_child_immunization, add_child_supplement, add_child_medical_condition, add_child_surgical_history, add_child_growth_monitoring, add_exclusive_breastfeed_backfill
+
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,6 +80,50 @@ class QuarterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quarter
         fields = ['quarter_id', 'quarter_number', 'quarter_name', 'year', 'start_date', 'end_date']
+
+class RelationshipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Relationship
+        fields = ['relationship_id', 'relationship_name']
+
+class FeedingMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeedingMethod
+        fields = ['feeding_method_id', 'method_name', 'is_active']
+
+
+class MonthSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Month
+        fields = ['month_id', 'month_sequence_name', 'month_number']
+
+
+class TTStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TTStatus
+        fields = ['tt_status_id', 'tt_code', 'tt_name']
+
+
+class VaccineTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VaccineType
+        fields = [
+            'vaccine_type_id', 'vaccine_name', 'at_birth', 
+            'first_dose', 'second_dose', 'third_dose',
+            'interval_between_doses', 'date_added', 'updated_at'
+        ]
+
+
+class DoseTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoseType
+        fields = ['dose_type_id', 'dose_name']
+
+
+class SupplementsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplements
+        fields = ['supplement_id', 'supplement_name', 'is_active']
 
 
 
@@ -495,3 +540,71 @@ class HouseholdUpdateSerializer(serializers.Serializer):
             })
         
         return data
+    
+
+class ChildHealthRecordCreateSerializer(serializers.Serializer):
+    """Create child health record"""
+    child_id = serializers.IntegerField(required=True)
+    time_of_birth = serializers.TimeField(required=False, allow_null=True)
+    birth_weight_kg = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    birth_length_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    place_of_delivery = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    address_landmark = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    tt_status_of_mother = serializers.IntegerField(required=False, allow_null=True)
+    tt_status_date = serializers.DateField(required=False, allow_null=True)
+    newborn_screening_status = serializers.BooleanField(required=False, allow_null=True)
+    newborn_screening_status_date = serializers.DateField(required=False, allow_null=True)
+    feeding_method_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        if not data.get('child_id'):
+            raise serializers.ValidationError({'child_id': 'Child ID is required'})
+        
+        if data.get('newborn_screening_status') is True and not data.get('newborn_screening_status_date'):
+            raise serializers.ValidationError({
+                'newborn_screening_status_date': 'Date required when screening status is TRUE'
+            })
+        
+        return data
+    
+    def create(self, validated_data):
+        try:
+            personnel_id = self.context.get('personnel_id')
+            if not personnel_id:
+                raise serializers.ValidationError({'personnel_id': 'Personnel ID is required'})
+            
+            validated_data['personnel_id'] = personnel_id
+            child_health_id = insert_child_health_record(validated_data)
+            
+            if not child_health_id:
+                raise serializers.ValidationError('Failed to create child health record')
+            
+            return {'child_health_id': child_health_id}
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to create record: {str(e)}")
+
+
+class ChildHealthRecordUpdateSerializer(serializers.Serializer):
+    """Update child health record"""
+    place_of_delivery = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    address_landmark = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    tt_status_of_mother = serializers.IntegerField(required=False, allow_null=True)
+    tt_status_date = serializers.DateField(required=False, allow_null=True)
+    newborn_screening_status = serializers.BooleanField(required=False, allow_null=True)
+    newborn_screening_status_date = serializers.DateField(required=False, allow_null=True)
+    feeding_method_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def update(self, instance, validated_data):
+        try:
+            personnel_id = self.context.get('personnel_id')
+            child_health_id = self.context.get('child_health_id')
+            
+            if not personnel_id or not child_health_id:
+                raise serializers.ValidationError('Missing required context')
+            
+            validated_data['personnel_id'] = personnel_id
+            update_child_health_record(child_health_id, validated_data)
+            
+            return {'child_health_id': child_health_id}
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to update: {str(e)}")
