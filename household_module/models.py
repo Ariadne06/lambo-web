@@ -1080,3 +1080,77 @@ class Family(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_update_general_health_for_member(
+            family_member_id,
+            class_id,
+            apply_medical_history,
+            medical_history_ids,
+            apply_fp,
+            wra_lmp,
+            fp_method_yn,
+            fp_method_id,
+            fp_status_id,
+            age_of_menarche,
+            apply_lifestyle,
+            smoker,
+            alcohol_drinker,
+            sexually_active,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_general_health_for_member', [
+                    family_member_id,
+                    class_id,
+                    apply_medical_history,
+                    medical_history_ids,
+                    apply_fp,
+                    wra_lmp,
+                    fp_method_yn,
+                    fp_method_id,
+                    fp_status_id,
+                    age_of_menarche,
+                    apply_lifestyle,
+                    smoker,
+                    alcohol_drinker,
+                    sexually_active,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_specific_family_member_genhealth(fm_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('get_specific_family_member_genhealth', [fm_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_all_general_health(
+            query,
+            quarter_id,
+            limit,
+            offset
+        ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_all_general_health', [
+                    query,
+                    quarter_id,
+                    limit,
+                    offset
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e

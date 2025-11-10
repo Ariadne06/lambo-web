@@ -333,8 +333,14 @@
                         class="openGeneralHealthModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
                         data-member-id="{{ m.family_member_id|default:'' }}"
                         data-member-name="{{ m.full_name }}"
-                        data-member-sex="{{ m.sex|default:'' }}">
-                        Add Health Info
+                        data-member-sex="{{ m.sex|default:'' }}"
+                        data-has-gh="{{ m.has_gh|yesno:'true,false' }}"
+                      >
+                        {% if m.has_gh %}
+                          Update General Health info
+                        {% else %}
+                          Add General Health Info
+                        {% endif %}
                       </button>
 
                       <button
@@ -1494,13 +1500,20 @@
       </button>
     </div>
 
-    <form method="post" action="{% url 'bhw_module:insertGeneralHealth' %}" class="px-6 py-5">
+    <form
+      method="post"
+      action="{% url 'bhw_module:insertGeneralHealth' %}"
+      class="px-6 py-5"
+      data-fetch-url="{% url 'bhw_module:generalHealthGetApi' %}"
+      data-update-action="{% url 'bhw_module:updateGeneralHealth' %}"
+    >
       {% csrf_token %}
       <!-- Hidden context -->
       <input type="hidden" name="member_id" id="gh_member_id">
       <input type="hidden" name="member_sex" id="gh_member_sex">
       <input type="hidden" name="household_id" value="{{ results.household_id }}">
       <input type="hidden" name="household_number" value="{{ household_number }}">
+      <input type="hidden" name="gh_id" id="gh_record_id">    
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <!-- LEFT -->
@@ -1621,7 +1634,9 @@
 
       <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
         <button type="button" id="cancelGeneralHealthModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save</button>
+        <button type="submit" id="gh_submit_btn" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Save
+        </button>
       </div>
     </form>
   </div>
@@ -1639,6 +1654,33 @@
     el?.classList.remove('flex');
     document.documentElement.classList.remove('overflow-y-hidden');
   }
+
+  // Helper: toggle a modal to read-only (disables all fields & submit buttons, keeps Close/Cancel clickable)
+function setModalReadOnly(modalEl, readOnly) {
+  if (!modalEl) return;
+
+  // Disable fields
+  modalEl.querySelectorAll('input, select, textarea')
+    .forEach(el => { el.disabled = !!readOnly; });
+
+  // Disable submit controls only
+  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]')
+    .forEach(el => { el.disabled = !!readOnly; });
+
+  // Leave Close/Cancel buttons alone (type="button"), but you can also
+  // explicitly protect anything you want with [data-keep-enabled]
+  modalEl.querySelectorAll('[data-keep-enabled]')
+    .forEach(el => { el.disabled = false; });
+}
+
+function isHouseholdReadOnlyContext() {
+  const root = document.getElementById('householdRoot');
+  if (!root) return false;
+  const currentQuarterId = String(root.dataset.currentQuarterId || '');
+  const viewedQuarterId  = String(root.dataset.viewedQuarterId  || '');
+  const isActive         = root.dataset.isActive === 'true';
+  return (!isActive) || (currentQuarterId && viewedQuarterId && viewedQuarterId !== currentQuarterId);
+}
 
   /* ---- UPDATE HOUSEHOLD modal: reset on open/close ---- */
   (function(){
@@ -2055,11 +2097,16 @@
       const ghMemberSex   = document.getElementById('gh_member_sex');
       const ghMemberLabel = document.getElementById('gh_member_label');
 
-      // Female-only sections already in your form
+      const ghRecordId    = document.getElementById('gh_record_id');      // NEW
+      const ghSubmitBtn   = document.getElementById('gh_submit_btn');     // NEW
+
+      const fetchUrl      = ghForm?.dataset.fetchUrl || '';               // NEW
+      const updateAction  = ghForm?.dataset.updateAction || '';           // NEW
+      const insertAction  = ghForm?.getAttribute('action') || '';         // NEW
+
+      // Female-only sections
       const ghLmpWrap       = document.getElementById('gh_lmp_wrap');
       const ghMenarcheWrap  = document.getElementById('gh_menarche_wrap');
-
-      // FP wrappers (women-only) and selects
       const ghFpUseWrap     = document.getElementById('gh_fp_use_wrap');
       const ghFpMethodWrap  = document.getElementById('gh_fp_method_wrap');
       const ghFpStatusWrap  = document.getElementById('gh_fp_status_wrap');
@@ -2068,9 +2115,18 @@
       const ghFpMethodSel   = ghModal.querySelector('select[name="fp_method"]');
       const ghFpStatusSel   = ghModal.querySelector('select[name="fp_status"]');
 
-      // Fallbacks if you don't have global openModal/closeModal helpers.
-      const _open = (el) => (window.openModal ? window.openModal(el) : (el.classList.remove('hidden'), document.body.style.overflow='hidden'));
-      const _close = (el) => (window.closeModal ? window.closeModal(el) : (el.classList.add('hidden'), document.body.style.overflow=''));
+      // Always-present controls
+      const smokerSel       = ghModal.querySelector('select[name="smoker"]');
+      const alcoholSel      = ghModal.querySelector('select[name="alcohol_drinker"]');
+      const sexActSel       = ghModal.querySelector('select[name="sexually_active"]');
+      const lmpInput        = ghModal.querySelector('input[name="last_menstrual_period"]');
+      const menarcheInput   = ghModal.querySelector('input[name="age_menarche"]');
+      const classSel        = ghModal.querySelector('select[name="class"]');
+
+      // helper refs
+      const docEl = document.documentElement;
+      const _open  = (el) => (window.openModal ? window.openModal(el) : (el.classList.remove('hidden'), docEl.classList.add('overflow-y-hidden')));
+      const _close = (el) => (window.closeModal ? window.closeModal(el) : (el.classList.add('hidden'), docEl.classList.remove('overflow-y-hidden')));
 
       const isFemale = (s) => {
         const v = String(s || '').trim().toLowerCase();
@@ -2080,18 +2136,11 @@
       function setWrapVisibleAndDisable(wrap, visible) {
         if (!wrap) return;
         wrap.classList.toggle('hidden', !visible);
-        const controls = wrap.querySelectorAll('input, select, textarea');
-        controls.forEach(ctrl => {
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
           ctrl.disabled = !visible;
           if (!visible) {
-            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') {
-              ctrl.checked = false;
-            } else if (ctrl.tagName === 'SELECT' && ctrl.multiple) {
-              Array.from(ctrl.options).forEach(o => o.selected = false);
-            } else {
-              ctrl.value = '';
-            }
-            // Also ensure hidden fields aren't "required"
+            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') ctrl.checked = false;
+            else ctrl.value = '';
             ctrl.removeAttribute('required');
           }
         });
@@ -2100,8 +2149,7 @@
       function setRequiredInWrap(wrap, required) {
         if (!wrap) return;
         wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
-          if (required) ctrl.setAttribute('required', 'required');
-          else ctrl.removeAttribute('required');
+          required ? ctrl.setAttribute('required','required') : ctrl.removeAttribute('required');
         });
       }
 
@@ -2112,11 +2160,9 @@
         setWrapVisibleAndDisable(ghFpUseWrap,    female);
 
         if (!female) {
-          // If switching to non-female, hide/disable FP method & status too.
           setWrapVisibleAndDisable(ghFpMethodWrap, false);
           setWrapVisibleAndDisable(ghFpStatusWrap, false);
         } else {
-          // If female, FP method/status depend on FP use value
           syncFPControls();
         }
       }
@@ -2137,7 +2183,77 @@
         }
       }
 
-      // ---- Snapshot/Restore so closing discards edits ----
+      // ---------- NEW: populate helpers ----------
+      function setSelectValue(sel, val) {
+        if (!sel) return;
+        if (val === null || val === undefined || val === '') { sel.value = ''; return; }
+        const v = String(val);
+        // exact value match if exists
+        for (const opt of sel.options) if (String(opt.value) === v) { sel.value = v; return; }
+        // try boolean normalization
+        if (v === 'true' || v === 'false') { sel.value = v; return; }
+        sel.value = '';
+      }
+      function setBoolSelect(sel, boolVal) {
+        setSelectValue(sel, (boolVal === true || boolVal === 1 || boolVal === '1' || String(boolVal).toLowerCase()==='true') ? 'true' : (boolVal===false || boolVal===0 || String(boolVal).toLowerCase()==='false') ? 'false' : '');
+      }
+      function setCheckboxList(name, values) {
+        const arr = Array.isArray(values) ? values.map(v=>String(v)) : String(values||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const setVals = new Set(arr);
+        ghForm.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(name)}"]`).forEach(cb => {
+          cb.checked = setVals.has(String(cb.value));
+        });
+      }
+
+      function clearFormValues() {
+        ghForm.reset();
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+        if (ghRecordId) ghRecordId.value = '';
+      }
+
+      function populateFromData(d) {
+        // Flexible key support
+        if (ghRecordId) ghRecordId.value = d.gh_id || d.id || d.general_health_id || '';
+
+        setBoolSelect(smokerSel,     d.smoker);
+        setBoolSelect(alcoholSel,    d.alcohol_drinker);
+        setBoolSelect(sexActSel,     d.sexually_active);
+
+        if (lmpInput)      lmpInput.value      = (d.last_menstrual_period || '').slice(0,10);
+        if (menarcheInput) menarcheInput.value = d.age_menarche ?? '';
+
+        setBoolSelect(ghFpUseSel, d.fp_use);
+        setSelectValue(ghFpMethodSel, d.fp_method_id ?? d.fp_method);
+        setSelectValue(ghFpStatusSel, d.fp_status_id ?? d.fp_status);
+
+        setSelectValue(classSel, d.class_id ?? d.class);
+
+        // medical_history may be array of IDs or comma string
+        if (d.medical_history !== undefined) setCheckboxList('medical_history', d.medical_history);
+
+        // Re-apply visibility tied to values
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+      }
+
+      async function fetchGH(memberId) {
+        if (!fetchUrl || !memberId) return null;
+        try {
+          const url = new URL(fetchUrl, window.location.origin);
+          url.searchParams.set('member_id', memberId);
+          const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+          if (!res.ok) throw new Error('Fetch failed');
+          const data = await res.json();
+          // Accept either {record:{...}} or direct object
+          return data.record || data || null;
+        } catch (e) {
+          console.error('generalHealthGetApi error:', e);
+          return null;
+        }
+      }
+
+      // ---- Snapshot/restore (unchanged) ----
       function takeSnapshot(form) {
         const snap = {};
         const add = (name, val) => { snap[name] = val; };
@@ -2165,16 +2281,12 @@
         }
         ghModal._snapshot = snap;
       }
-
       function restoreSnapshot(form) {
         const snap = ghModal._snapshot || {};
-        // Clear first
         form.reset();
-
         for (const [name, val] of Object.entries(snap)) {
           const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
           if (!els.length) continue;
-
           const first = els[0];
           if (first.type === 'checkbox') {
             const setVals = new Set(Array.isArray(val) ? val : []);
@@ -2191,13 +2303,16 @@
             first.value = (val ?? '');
           }
         }
-
-        // Re-apply visibility/requirements after values are back
         setFemaleOnlyVisibility(ghMemberSex?.value || '');
         syncFPControls();
       }
 
-      function openGHModal(memberId, memberName, memberSex) {
+      async function openGHModal(memberId, memberName, memberSex, hasGh) {
+        // Base state: insert mode
+        if (ghSubmitBtn) ghSubmitBtn.textContent = 'Save';
+        if (ghForm && insertAction) ghForm.setAttribute('action', insertAction);
+        clearFormValues();
+
         if (ghMemberId)    ghMemberId.value = memberId || '';
         if (ghMemberSex)   ghMemberSex.value = memberSex || '';
         if (ghMemberLabel) ghMemberLabel.textContent = memberName ? `– ${memberName}` : '';
@@ -2206,29 +2321,44 @@
         syncFPControls();
 
         _open(ghModal);
-        // Take the baseline after showing (so everything is laid out)
+
+        setModalReadOnly(ghModal, isHouseholdReadOnlyContext());
+
+        if (hasGh === true || hasGh === 'true' || hasGh === 1 || hasGh === '1') {
+          // Switch to update mode
+          if (ghSubmitBtn) ghSubmitBtn.textContent = 'Update';
+          if (ghForm && updateAction) ghForm.setAttribute('action', updateAction);
+
+          const data = await fetchGH(memberId);
+          if (data) populateFromData(data);
+        }
+
+        // Take snapshot after values are final
         takeSnapshot(ghForm);
       }
 
       function closeGHModalDiscard() {
-        // Discard any edits the user made
         if (ghForm) restoreSnapshot(ghForm);
         _close(ghModal);
       }
 
-      // Expose opener for your buttons
+      // Expose opener for direct calls
       window.openGeneralHealthModal = openGHModal;
 
-      // Delegated open (optional if you prefer dataset attributes)
+      // Delegated open: now passes hasGh too
       document.addEventListener('click', (e) => {
         const btn = e.target.closest('.openGeneralHealthModal');
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
-        openGHModal(btn.dataset.memberId, btn.dataset.memberName, btn.dataset.memberSex);
+        openGHModal(
+          btn.dataset.memberId,
+          btn.dataset.memberName,
+          btn.dataset.memberSex,
+          btn.dataset.hasGh
+        );
       });
 
-      // Wire close actions — all discard snapshot
       ghCloseBtn?.addEventListener('click', closeGHModalDiscard);
       ghCancelBtn?.addEventListener('click', closeGHModalDiscard);
       ghModal?.addEventListener('click', (e) => { if (e.target === ghModal) closeGHModalDiscard(); });
@@ -2236,10 +2366,7 @@
         if (e.key === 'Escape' && !ghModal.classList.contains('hidden')) closeGHModalDiscard();
       });
 
-      // Keep FP controls in sync when FP Use changes
       ghFpUseSel?.addEventListener('change', syncFPControls);
-
-      // If the form resets for any reason, re-sync visibility/requirements
       ghForm?.addEventListener('reset', () => {
         setTimeout(() => {
           setFemaleOnlyVisibility(ghMemberSex?.value || '');
@@ -2452,6 +2579,8 @@
       }
 
       openModal(ufModal);
+
+      setModalReadOnly(ufModal, isHouseholdReadOnlyContext());
     }
 
     // Open handlers
@@ -2680,6 +2809,7 @@
       umModal?.classList.remove('hidden');
       umModal?.classList.add('flex');
       document.documentElement.classList.add('overflow-y-hidden');
+      setModalReadOnly(umModal, isHouseholdReadOnlyContext());
     }
 
     function closeUM() {
@@ -2868,14 +2998,20 @@
   }
 
   function setDisabledState(disabled) {
-    const scopeButtons = root.querySelectorAll('button');
+    const scopeButtons = root.querySelectorAll(
+      'button:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal)'
+    );
     scopeButtons.forEach(btn => {
       btn.disabled = !!disabled;
       btn.classList.toggle('btn-disabled', !!disabled);
       btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     });
 
-    const scopeLinks = root.querySelectorAll('a[role="button"], a.button, a[data-action]');
+    const scopeLinks = root.querySelectorAll(
+    'a[role="button"]:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal), ' +
+    'a.button:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal), ' +
+    'a[data-action]:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal)'
+    );
     scopeLinks.forEach(a => {
       a.classList.toggle('btn-disabled', !!disabled);
       if (disabled) a.setAttribute('tabindex', '-1'); else a.removeAttribute('tabindex');
@@ -2889,17 +3025,26 @@
   setDisabledState(shouldDisable());
 
   // Defensive: block delegated clicks when disabled
-  document.addEventListener('click', function (e) {
-    if (!document.body.classList.contains('household-actions-disabled')) return;
-    const actionable = e.target.closest(
-      'button, [role="button"], .openUpdateFamilyModal, .openRemoveFamilyModal, .openMarkFamilyVisitModal, .openAddMemberModal, .openUpdateMemberModal, .openRemoveMemberModal, .openGeneralHealthModal, #openUpdateHouseholdModal, #openDeactivateHouseholdModal, #openActivateHouseholdModal, #openAddFamilyModal'
-    );
-    if (actionable) {
-      e.preventDefault();
-      e.stopPropagation();
-      alert('Actions are disabled because you are viewing a non-current quarter or the household is inactive.');
-    }
-  }, true);
+document.addEventListener('click', function (e) {
+  if (!document.body.classList.contains('household-actions-disabled')) return;
+
+  // ✅ Allow all interaction INSIDE any OPEN modal (so Cancel/Close/Activate still work)
+  if (e.target.closest('.fixed.inset-0.flex')) return;
+
+  // ✅ Allow these launch buttons even when disabled (so you can open read-only modals)
+  const allow = e.target.closest('#openActivateHouseholdModal, .openUpdateFamilyModal, .openGeneralHealthModal, .openLinkRelationshipModal, .openUpdateMemberModal');
+  if (allow) return;
+
+  // Otherwise, block actions on the page
+  const actionable = e.target.closest(
+    'button, [role="button"], .openUpdateFamilyModal, .openRemoveFamilyModal, .openMarkFamilyVisitModal, .openAddMemberModal, .openUpdateMemberModal, .openRemoveMemberModal, .openGeneralHealthModal, #openUpdateHouseholdModal, #openDeactivateHouseholdModal, #openActivateHouseholdModal, #openAddFamilyModal'
+  );
+  if (actionable) {
+    e.preventDefault();
+    e.stopPropagation();
+    alert('Actions are disabled because you are viewing a non-current quarter or the household is inactive.');
+  }
+}, true);
 })();
 
   /* =====================================
@@ -2965,6 +3110,8 @@
         </button>
       </div>
     `).join('');
+
+    setModalReadOnly(modal, isHouseholdReadOnlyContext());
   }
 
   async function loadRelations(memberId, residentId) {
@@ -2985,6 +3132,11 @@
 
   async function addRelation(e) {
     e.preventDefault();
+
+    if (isHouseholdReadOnlyContext()) {
+      alert('Read-only view: cannot add links in this quarter/household state.');
+      return;
+    }
 
     const payload = {
       source_member_id:    srcMember?.value || '',
@@ -3069,6 +3221,7 @@
     if (titleLbl)    titleLbl.textContent = memberName ? `– ${memberName}` : '';
 
     openModal(modal);
+    setModalReadOnly(modal, isHouseholdReadOnlyContext());
     loadRelations(memberId, residentId);
   }
 
@@ -3098,6 +3251,12 @@
 
   // Delegated remove handler (pull triple from the row + source id from hidden)
   listWrap?.addEventListener('click', (e) => {
+  if (isHouseholdReadOnlyContext()) {
+    e.preventDefault();
+    alert('Read-only view: cannot remove links in this quarter/household state.');
+    return;
+  }
+
     const btn = e.target.closest('.lr-remove');
     if (!btn) return;
 
