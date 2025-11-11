@@ -14,8 +14,7 @@ from utils.constants import LIMIT_OPTIONS
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from household_module.models import Household, Family
-
-
+from nurse_module.models import Household as HouseholdListModel
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -29,6 +28,9 @@ _SQL_TO_UI_AUDIENCE = {
     'personnel': 'PERSONNEL',
     'resident': 'RESIDENTS',
 }
+
+PAGE_SIZE = 20
+MAX_PAGE_SIZE = 200
 
 
 @custom_login_required
@@ -250,7 +252,7 @@ def nurse_household(request):
     limit = max(1, page_size)
     offset = max(0, (page - 1) * limit)
 
-    rows, meta = Household.get_all_households(
+    rows, meta = HouseholdListModel.get_all_households(
         q=q,
         barangay=barangay,
         sitio_id=sitio_id_val,
@@ -317,10 +319,11 @@ def nurse_household_more(request, household_id: int):
     # Families + members (only if we have a summary for this quarter)
     families_with_members = []
     if summary is not None:
-        fams = HouseholdFamilies.list_families(household_id, selected_qid or summary.quarter_id)
-        for f in fams:
-            members = HouseholdFamilies.list_members(f.family_id, selected_qid or summary.quarter_id)
-            families_with_members.append({"family": f, "members": members})
+        families_with_members = HouseholdFamilies.list_families_with_members(
+            household_id,
+            selected_qid or summary.quarter_id,
+        )
+
 
     context = {
         "summary": summary,
@@ -334,35 +337,17 @@ def nurse_household_more(request, household_id: int):
     }
     return render(request, "nurse_module/householdMore.html", context)
 
+
 @custom_login_required
 @role_required('Midwife')
 def childrecordList(request):
+    
     return render(request, 'nurse_module/childrecordList.html')
 
 @custom_login_required
 @role_required('Midwife')
 def moreChildRecord(request):
     return render(request, 'nurse_module/moreChildRecord.html')
-
-@custom_login_required
-@role_required('Midwife')
-def childImmunization(request):
-    return render(request, 'nurse_module/childImmunization.html')
-
-@custom_login_required
-@role_required('Midwife')
-def childSupplements(request):
-    return render(request, 'nurse_module/childSupplements.html')
-
-@custom_login_required
-@role_required('Midwife')
-def childGrowth(request):
-    return render(request, 'nurse_module/childGrowth.html')
-
-@custom_login_required
-@role_required('Midwife')
-def childSurgical(request):
-    return render(request, 'nurse_module/childSurgical.html')
 
 @custom_login_required
 @role_required('Midwife')
@@ -374,24 +359,6 @@ def maternalrecord(request):
 def Morematernalrecord(request):
     return render(request, 'nurse_module/Morematernalrecord.html')
 
-def maternalObstetrical(request):
-    return render(request, 'nurse_module/maternalObstetrical.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalCheckUp(request):
-    return render(request, 'nurse_module/maternalCheckUp.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalImmunization(request):
-    return render(request, 'nurse_module/maternalImmunization.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalScreening(request):
-    return render(request, 'nurse_module/maternalScreening.html')
-
 @custom_login_required
 @role_required('Midwife')
 def maternalLabScreening(request):
@@ -399,28 +366,8 @@ def maternalLabScreening(request):
 
 @custom_login_required
 @role_required('Midwife')
-def maternalSupplement(request):
-    return render(request, 'nurse_module/maternalSupplement.html')
-
-@custom_login_required
-@role_required('Midwife')
 def maternalIron(request):
     return render(request, 'nurse_module/maternalIron.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalOutcome(request):
-    return render(request, 'nurse_module/maternalOutcome.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalPostpartum(request):
-    return render(request, 'nurse_module/maternalPostpartum.html')
-
-@custom_login_required
-@role_required('Midwife')
-def maternalSurgical(request):
-    return render(request, 'nurse_module/maternalSurgical.html')
 
 @custom_login_required
 @role_required('Midwife')

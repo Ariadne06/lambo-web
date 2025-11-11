@@ -278,15 +278,15 @@ class Household(models.Model):
     Read-only adapter for get_all_households().
     """
     class Meta:
-        managed = False
+        db_table = "household"
 
     @staticmethod
     def get_all_households(
         q: Optional[str] = None,
         barangay: Optional[str] = None,
         sitio_id: Optional[int] = None,
-        status: str = "all",                  # 'all' | 'active' | 'inactive'
-        quarter_id: Optional[int] = None,     # snapshot mode when set (and not current)
+        status: str = "all",
+        quarter_id: Optional[int] = None,
         limit: int = 10,
         offset: int = 0
     ) -> Tuple[List[HouseholdDTO], Dict[str, Any]]:
@@ -668,7 +668,7 @@ class HouseholdDetail:
             row = cur.fetchone()
         return row[0] if row and row[0] else None
 
-@dataclass 
+@dataclass
 class FamilyDTO:
     family_id: int
     family_code: str
@@ -773,6 +773,133 @@ class HouseholdFamilies(models.Model):
                 nutrition=r[8],
             ))
         return out
+    
+    @staticmethod
+    def list_families_with_members(
+        household_id: int,
+        quarter_id: Optional[int],
+    ) -> List[dict]:
+        """
+        Uses get_family_summaries_per_household(household_id, quarter_id)
+        and expands the family_members JSONB into MemberDTOs.
+        """
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                      family_id,
+                      family_code,
+                      family_head,
+                      respondent_name,
+                      respondent_relationship,
+                      nhts_status,
+                      indigent,
+                      household_type,
+                      water_source,
+                      waste_management,
+                      toilet_type,
+                      family_members
+                    FROM get_family_summaries_per_household(%s, %s);
+                    """,
+                    [household_id, quarter_id],
+                )
+                rows = cur.fetchall()
+        except (ProgrammingError, DatabaseError):
+            return []
+
+        results: List[dict] = []
+
+        for (
+            family_id,
+            family_code,
+            family_head,
+            respondent_name,
+            respondent_relationship,
+            nhts_status,
+            indigent,
+            household_type,
+            water_source,
+            waste_management,
+            toilet_type,
+            family_members_json,
+        ) in rows:
+
+            # Skip sentinel row (family_id = 0), if your SQL uses that
+            if family_id == 0:
+                continue
+
+            fam = FamilyDTO(
+                family_id=family_id,
+                family_code=family_code,
+                family_head=family_head,
+                respondent_name=respondent_name,
+                respondent_relation_to_fh=respondent_relationship,
+                nhts=nhts_status,
+                indigenous_people=indigent,
+                household_type=household_type,
+                water_source=water_source,
+                waste_mgmt=waste_management,
+                toilet_type=toilet_type,
+            )
+
+            # ---- JSONB → Python list[dict] ----
+            if not family_members_json:
+                members_source = []
+            elif isinstance(family_members_json, (list, tuple)):
+                # already decoded (rare, but safe)
+                members_source = family_members_json
+            else:
+                # most likely a JSON string or memoryview
+                try:
+                    if isinstance(family_members_json, memoryview):
+                        raw = family_members_json.tobytes().decode("utf-8")
+                    else:
+                        raw = str(family_members_json)
+                    members_source = json.loads(raw)
+                except Exception:
+                    members_source = []
+
+            members: List[MemberDTO] = []
+            for m in members_source:
+                # safety: ensure it's a dict
+                if not isinstance(m, dict):
+                    continue
+
+                full_name = (m.get("full_name") or "").strip()
+
+                # Simple initials from full name
+                initials = (
+                    "".join(
+                        part[0].upper()
+                        for part in full_name.split()
+                        if part
+                    )[:2]
+                    or "•"
+                )
+
+                members.append(
+                    MemberDTO(
+                        member_id=m.get("family_member_id"),
+                        display_name=full_name or "—",
+                        initials=initials,
+                        # These are ID fields in JSON; you can later resolve them to text labels if you want
+                        rel_to_hh_head=None,  # m.get("rth_id")  -> you’d need to join a label if desired
+                        rel_to_fam_head=None, # m.get("rtf_id")
+                        philhealth_no=m.get("philhealthid_number"),
+                        membership_type=m.get("membership_type"),
+                        category=str(m.get("philhealth_category_id"))
+                        if m.get("philhealth_category_id") is not None
+                        else None,
+                        nutrition=str(m.get("nutrition_status_id"))
+                        if m.get("nutrition_status_id") is not None
+                        else None,
+                    )
+                )
+
+            results.append({"family": fam, "members": members})
+
+        return results
 
 
 
@@ -846,3 +973,9 @@ class GeneralHealthRow(models.Model):
                 return None
             cols = [c[0] for c in cur.description]
             return dict(zip(cols, row))
+        
+
+
+
+
+

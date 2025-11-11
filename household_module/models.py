@@ -967,6 +967,8 @@ class Family(models.Model):
     def sp_view_all_general_health(
             query,
             quarter_id,
+            sitio_id,
+            sex,
             limit,
             offset
         ):
@@ -975,6 +977,8 @@ class Family(models.Model):
                 cursor.callproc('view_all_general_health', [
                     query,
                     quarter_id,
+                    sitio_id,
+                    sex,
                     limit,
                     offset
                 ])
