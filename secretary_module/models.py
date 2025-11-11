@@ -45,13 +45,16 @@ class Secretary(models.Model):
         total_gross_income,
         dti_sec_cda_reg_number,   # optional
         clearance_category_id,    # required
-        total_units,              # <-- NEW (optional; may be None)
+        total_units,              # optional
+        videoke_count,            # <-- NEW (optional unless Amusement)
+        billiard_count,           # <-- NEW (optional unless Amusement)
+        other_device_count,       # <-- NEW (optional unless Amusement)
         clearance_date_issued,    # optional
         created_by,
     ):
         """
-        Calls register_business(...) which expects p_total_units
-        BETWEEN p_clearance_category_id and p_clearance_date_issued.
+        Calls register_business(...) which now expects amusement device counts
+        BETWEEN p_total_units and p_clearance_date_issued.
         """
         with connection.cursor() as cursor:
             cursor.callproc(
@@ -71,8 +74,11 @@ class Secretary(models.Model):
                     total_gross_income,
                     dti_sec_cda_reg_number,  # may be None
                     clearance_category_id,
-                    total_units,              # <-- keep position in sync with SQL
-                    clearance_date_issued,    # may be None
+                    total_units,             # keep order in sync with SQL
+                    videoke_count,           # <-- NEW
+                    billiard_count,          # <-- NEW
+                    other_device_count,      # <-- NEW
+                    clearance_date_issued,   # may be None
                     created_by,
                 ],
             )
@@ -162,9 +168,20 @@ class Business(models.Model):
         total_gross_income=None,
         clearance_category_id=None,  # may be None
         dti_sec_cda_reg_number=None, # not editable
-        total_units=None,            # <-- NEW (may be None)
+        total_units=None,            # may be None
+        videoke_count=None,          # <-- NEW (may be None; 0 allowed)
+        billiard_count=None,         # <-- NEW (may be None; 0 allowed)
+        other_device_count=None,     # <-- NEW (may be None; 0 allowed)
         updated_by: int = None,
     ):
+        """
+        Calls update_business(...) in PostgreSQL.
+
+        Notes:
+        - The amusement device counts are required by the DB only if the category is Amusement.
+          Otherwise they can be NULL and will be ignored.
+        - Keep the argument order aligned with the SQL function definition.
+        """
         try:
             with connection.cursor() as cursor:
                 cursor.callproc(
@@ -185,7 +202,10 @@ class Business(models.Model):
                         country,                # p_country
                         total_gross_income,     # p_total_gross_income
                         clearance_category_id,  # p_clearance_category_id
-                        total_units,            # p_total_units  <-- keep position in sync
+                        total_units,            # p_total_units
+                        videoke_count,          # p_videoke_count      <-- NEW
+                        billiard_count,         # p_billiard_count     <-- NEW
+                        other_device_count,     # p_other_device_count <-- NEW
                         updated_by,             # p_updated_by
                     ],
                 )
