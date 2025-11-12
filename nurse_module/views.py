@@ -1,20 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, Household, QuarterCatalog, HouseholdDetail, HouseholdFamilies
+from .models import Dashboard, AnnouncementRepo, ResidentList
 from datetime import datetime
-from typing import Optional, Dict, Any
 from django.shortcuts import render
 from django.utils.http import urlencode
-from django.utils.http import url_has_allowed_host_and_scheme
-from django.http import Http404
 from django.views.decorators.http import require_GET
 from utils.constants import LIMIT_OPTIONS
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from household_module.models import Household, Family
-from nurse_module.models import Household as HouseholdListModel
+from django.http import JsonResponse
+import json
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -28,6 +26,18 @@ _SQL_TO_UI_AUDIENCE = {
     'personnel': 'PERSONNEL',
     'resident': 'RESIDENTS',
 }
+
+def _to_list(val):
+    if val is None: return []
+    if isinstance(val, (list, tuple)): return [str(v) for v in val]
+    s = str(val).strip()
+    try:
+        j = json.loads(s)
+        if isinstance(j, list):
+            return [str(v) for v in j]
+    except Exception:
+        pass
+    return [p.strip().strip('[]{}()"\'') for p in s.split(',') if p.strip()]
 
 PAGE_SIZE = 20
 MAX_PAGE_SIZE = 200
@@ -231,112 +241,265 @@ def nurse_resident_list(request):
 @custom_login_required
 @role_required('Midwife')
 def nurse_household(request):
-    q          = request.GET.get("q") or None
-    barangay   = request.GET.get("barangay") or None
-    sitio_id   = request.GET.get("sitio_id")
-    status     = (request.GET.get("status") or "all").lower()
-    quarter_id = request.GET.get("quarter_id")
-    page       = int(request.GET.get("page", "1"))
-    page_size  = int(request.GET.get("page_size", "10"))
+    limit = None
+    offset = None
+    results = []
+    status= ''
+    
+    query = (request.GET.get('query') or '').strip()
+    status = (request.GET.get('status') or 'all').strip()
+    raw_sitio = request.GET.get('sitio_id')
+    quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    current_quarter_id = Household.sp_get_current_quarter_id()
 
-    try:
-        sitio_id_val = int(sitio_id) if sitio_id not in (None, "", "null") else None
-    except ValueError:
-        sitio_id_val = None
+    if quarter_id:
+        quarter_id = int(quarter_id)
+    elif current_quarter_id:
+        quarter_id = int(current_quarter_id)
+    else:
+        quarter_id = None
 
-    try:
-        quarter_id_val = int(quarter_id) if quarter_id not in (None, "", "null") else None
-    except ValueError:
-        quarter_id_val = None
-
-    limit = max(1, page_size)
-    offset = max(0, (page - 1) * limit)
-
-    rows, meta = HouseholdListModel.get_all_households(
-        q=q,
-        barangay=barangay,
-        sitio_id=sitio_id_val,
-        status=status,
-        quarter_id=quarter_id_val,
-        limit=limit,
-        offset=offset
+    # ✅ Are we looking at the current quarter?
+    is_current_quarter = bool(
+        current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
     )
 
-    base_qs = {k: v for k, v in {
-        "q": q,
-        "barangay": barangay,
-        "sitio_id": sitio_id,
+    try:
+        sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
+    except ValueError:
+        sitio_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Household.sp_get_all_households(
+            query=query,
+            barangay=None,
+            sitio_id=sitio_id,
+            status=status,
+            quarter_id=quarter_id,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, str(e), "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
         "status": status,
-        "quarter_id": quarter_id,
-        "page_size": page_size,
-    }.items() if v not in (None, "", "null")}
-
-    def page_url(p):
-        qs = base_qs.copy()
-        qs["page"] = p
-        return f"?{urlencode(qs)}"
-
-    # New: quarters with display labels
-    curr_qid   = QuarterCatalog.get_current_quarter_id()
-    quarters   = QuarterCatalog.get_all_quarters()
-
-    context = {
-        "rows": rows,
-        "page": page,
-        "page_size": page_size,
-        "page_sizes": [10, 25, 50, 100],   # for the rows-per-page select (if you use it)
-        "has_prev": meta["has_prev"] and page > 1,
-        "has_next": meta["has_next"],
-        "prev_url": page_url(max(1, page - 1)),
-        "next_url": page_url(page + 1),
-        "quarters": quarters,              # <-- list of QuarterOption
-        "current_quarter_id": curr_qid,    # optional if you want to highlight
-        "selected_quarter_id": quarter_id_val,
-        "q": q,
     }
-    return render(request, "nurse_module/nurse_household.html", context)
+    if sitio_id is not None:
+        base_params["sitio_id"] = sitio_id
+    # ✅ keep quarter in pagination / limit links
+    if quarter_id is not None:
+        base_params["quarter_id"] = quarter_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    sitio = Household.sp_get_sitio()
+    quarter = Household.sp_get_quarter()
+    
+    flash = get_flash(request)
+    return render(request, 'nurse_module/nurse_household.html',{
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        'status': status,
+        'sitio_id': sitio_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'sitio': sitio,
+        'quarter': quarter,
+        'quarter_id': quarter_id,
+        # ✅ expose these to the template
+        'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
+        'is_current_quarter': is_current_quarter,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 
 @custom_login_required
 @role_required('Midwife')
-def nurse_household_more(request, household_id: int):
-    raw_q = request.GET.get("quarter_id")
-    try:
-        selected_qid = int(raw_q) if raw_q not in (None, "", "null") else None
-    except ValueError:
-        selected_qid = None
+def nurse_householdView(request):
+    
+    def _to_bool(v):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, (int, float)):
+            return v != 0
+        if isinstance(v, str):
+            return v.strip().lower() in {"true", "t", "1", "yes", "y"}
+        return False
 
-    summary = HouseholdDetail.get_summary(household_id, selected_qid)
-    live_for_header = None
-    if summary is None:
-        live_for_header = HouseholdDetail.get_summary(household_id, None)
-
-    quarters = QuarterCatalog.all()
-    qlabel = QuarterCatalog.label_for(selected_qid) if selected_qid else (
-        QuarterCatalog.label_for(summary.quarter_id) if summary else None
+    raw_hid = (
+        request.GET.get('household_id')
+        or request.POST.get('household_id')
+        or request.GET.get('hid') 
+    )
+    qid_raw = request.GET.get('quarter_id') or request.POST.get('quarter_id')
+    household_number = (
+        request.GET.get('household_number')
+        or request.session.get('household_number')
+        or request.POST.get('household_number')
     )
 
-    # Families + members (only if we have a summary for this quarter)
-    families_with_members = []
-    if summary is not None:
-        families_with_members = HouseholdFamilies.list_families_with_members(
-            household_id,
-            selected_qid or summary.quarter_id,
-        )
+    if not raw_hid:
+        set_flash(request, "No household selected.", "error")
+        return redirect('bhw_module:householdList')
 
+    try:
+        hid = int(raw_hid)
+    except (TypeError, ValueError):
+        set_flash(request, "Invalid household id.", "error")
+        return redirect('bhw_module:householdList')
 
-    context = {
-        "summary": summary,
-        "header_fallback": live_for_header,
-        "header_number": (summary.household_number if summary else (live_for_header.household_number if live_for_header else None)),
-        "quarters": quarters,
-        "selected_quarter_id": selected_qid if raw_q not in (None, "", "null") else (summary.quarter_id if summary else None),
-        "quarter_label": qlabel,
-        "household_id": household_id,
-        "families_with_members": families_with_members,   # << pass to template
-    }
-    return render(request, "nurse_module/householdMore.html", context)
+    # Parse quarter id if present
+    qid = None
+    try:
+        if qid_raw not in (None, ""):
+            qid = int(qid_raw)
+    except (TypeError, ValueError):
+        qid = None
 
+    try:
+        result   = Household.sp_get_specific_household(hid, qid)
+        rows_raw = Family.sp_get_family_summaries_per_household(hid, qid)
+        
+        if not result:
+            set_flash(request, "Household not found.", "error")
+            return redirect('bhw_module:householdList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('bhw_module:householdList')
+
+    # Build families list and decode JSONB members
+    families = []
+    for r in rows_raw or []:
+        # Skip sentinel row from your SQL (family_id = 0)
+        if not r.get('family_id'):
+            continue
+
+        members = r.get('family_members') or []
+        if isinstance(members, str):
+            try:
+                members = json.loads(members)
+            except Exception:
+                members = []
+
+        
+        for m in members:
+            name = (m.get('full_name') or '').strip()
+            parts = [p for p in name.split() if p]
+            m['initials'] = (''.join(p[0] for p in parts[:2]) or 'NA').upper()
+
+        families.append({
+            'family_id':               r.get('family_id'),
+            'family_code':             r.get('family_code') or '',
+            'family_head':             r.get('family_head') or '',
+            'respondent':              r.get('respondent_name') or '',
+            'rtf':                     r.get('respondent_relationship') or '',
+            'nhts_status':             _to_bool(r.get('nhts_status')),
+            'indigent':                _to_bool(r.get('indigent')),
+            'household_type':          r.get('household_type') or '',
+            'water_source':            r.get('water_source') or '',
+            'waste_management':        r.get('waste_management') or '',
+            'is_visited':               _to_bool(r.get('is_visited')),
+            'date_visited':             r.get('date_visited'),
+            'toilet_type':             r.get('toilet_type') or '',
+            'family_head_id':          r.get('family_head_id'),
+            'respondent_id':           r.get('respondent_id'),
+            'rth':                     r.get('relationship_of_family_head_to_hh ') or '',
+            'rth_id':                  r.get('relationship_of_family_head_to_hh_id'),
+            'rtf_id':                  r.get('relationship_of_respondent_to_family_head_id'),
+            'household_type_id':       r.get('household__type_id'),
+            'waste_management_id':     r.get('waste_management_id'),
+            'water_source_id':         r.get('water_source_id'),
+            'toilet_type_id':          r.get('toilet_type_id'),
+            'ip_tribe':                r.get('ip_tribe') or '',
+            'quarter_id':              r.get('quarter_id'),
+            'members':                 members,
+        })
+
+    # reflect chosen quarter in result (your existing bit) …
+    if qid is not None:
+        try:
+            setattr(result, 'quarter_id', qid)
+        except Exception:
+            if isinstance(result, dict):
+                result['quarter_id'] = qid     
+
+    relationship     = Household.sp_get_relationship_to_household_head()
+    house_ownership  = Household.sp_get_house_ownership()
+    house_type       = Household.sp_get_house_type()
+    sitio            = Household.sp_get_sitio()
+    household_type   = Household.sp_get_household_type()
+    water_source     = Family.sp_get_water_source_type()
+    quarter          = Household.sp_get_quarter()
+    waste_management = Family.sp_get_waste_management_type()
+    toilet_facility  = Family.sp_get_toilet_facility_type()
+    family_relationship = Family.sp_get_relationship_to_family_head()
+    philhealth_category = Family.sp_get_philhealth_category()
+    nutrition_status = Family.sp_get_nutrition_status()
+    current_quarter = Household.sp_get_current_quarter_id()
+    link_relationship = Family.sp_get_link_relationship()
+    fp_method = Family.sp_get_fp_method()
+    fp_status = Family.sp_get_fp_status()
+    classification = Family.sp_get_classifications()
+
+    flash = get_flash(request)
+    return render(request, 'nurse_module/householdMore.html', {
+        'relationship': relationship,
+        'house_ownership': house_ownership,
+        'house_type': house_type,
+        'sitio': sitio,
+        'household_type': household_type,
+        'water_source': water_source,
+        'quarter': quarter,
+        'household_number': household_number,
+        'waste_management': waste_management,
+        'toilet_facility': toilet_facility,
+        'hid': hid,
+        'family_relationship': family_relationship,
+        'philhealth_category': philhealth_category,
+        'nutrition_status': nutrition_status,
+        'fp_method': fp_method,
+        'fp_status': fp_status,
+        'class': classification,
+        'results': result,
+        'link_relationship': link_relationship,
+        'current_quarter': current_quarter,
+        'families': families,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Midwife')
@@ -371,6 +534,48 @@ def maternalIron(request):
 
 @custom_login_required
 @role_required('Midwife')
+@require_GET
+def general_health_get_api(request):
+    fm_id = request.GET.get("member_id") or request.GET.get("family_member_id")
+    if not fm_id:
+        return JsonResponse({"error": "member_id is required"}, status=400)
+    try:
+        fm_id = int(fm_id)
+    except ValueError:
+        return JsonResponse({"error": "member_id must be an integer"}, status=400)
+
+    try:
+        row = Family.sp_get_specific_family_member_genhealth(fm_id)
+    except Exception as e:
+        # Log if you have logging; return a safe message to client
+        return JsonResponse({"error": "database_error", "detail": str(e)}, status=500)
+
+    if not row:
+        return JsonResponse({"record": None, "exists": False}, status=200)
+
+    # ----- Optional normalization (keeps raw keys intact) -----
+    # Map to the keys your JS expects; fall back to whatever the SP returns.
+    record = dict(row)  # start with raw db keys
+
+    # Friendly, consistent keys your modal code handles:
+    record.setdefault("gh_id",                 row.get("record_id") or row.get("id") or row.get("general_health_id"))
+    record.setdefault("smoker",                row.get("smoker"))
+    record.setdefault("alcohol_drinker",       row.get("alcohol_drinker"))
+    record.setdefault("sexually_active",       row.get("sexually_active"))
+    record.setdefault("last_menstrual_period", row.get("last_menstrual_period"))
+    record.setdefault("age_menarche",          row.get("age_of_menarche"))
+    record.setdefault("fp_use",                row.get("fp_method_yn"))
+    record.setdefault("fp_method_id",          row.get("fp_method_id"))
+    record.setdefault("fp_status_id",          row.get("fp_status_id"))
+    record.setdefault("class_id",              row.get("class_id"))
+    # Normalize medical_history to list
+    mh = row.get("medical_history") or row.get("medical_history_ids") or row.get("mh")
+    record["medical_history"] = _to_list(mh)
+
+    return JsonResponse({"record": record, "exists": True}, status=200)
+
+@custom_login_required
+@role_required('Midwife')
 def nurseGeneralInfo(request):
     limit = None
     offset = None
@@ -379,6 +584,9 @@ def nurseGeneralInfo(request):
     query = (request.GET.get('query') or '').strip()
     quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
     current_quarter_id = Household.sp_get_current_quarter_id()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_sitio = request.GET.get('sitio_id')
 
     if quarter_id:
         quarter_id = int(quarter_id)
@@ -391,6 +599,11 @@ def nurseGeneralInfo(request):
     is_current_quarter = bool(
         current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
     )
+    
+    try:
+        sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
+    except ValueError:
+        sitio_id = None
     
     try:
         limit = int(request.GET.get("limit", 25))
@@ -412,6 +625,8 @@ def nurseGeneralInfo(request):
         results = Family.sp_view_all_general_health(
             query=query,
             quarter_id=quarter_id,
+            sitio_id=sitio_id,
+            sex=sex,
             limit=limit + 1,
             offset=offset,
         )
@@ -427,7 +642,12 @@ def nurseGeneralInfo(request):
         "limit": limit,
         "query": query,
     }
-    # ✅ keep quarter in pagination / limit links
+    if sitio_id is not None:
+        base_params["sitio_id"] = sitio_id
+        
+    if sex is not None:
+        base_params["sex"] = sex
+
     if quarter_id is not None:
         base_params["quarter_id"] = quarter_id
 
@@ -436,12 +656,15 @@ def nurseGeneralInfo(request):
     limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
 
     quarter = Household.sp_get_quarter()
+    sitio = Household.sp_get_sitio()
     
     flash = get_flash(request)
-    return render(request, 'bhw_module/genInfo.html', {
+    return render(request, 'nurse_module/nurseGeneralInfo.html', {
         "results": final_result,
         "limit": limit,
         "page": page,
+        "sex": sex,
+        'sitio_id': sitio_id,
         "has_prev": has_prev,
         "has_next": has_next,
         "prev_url": prev_url,
@@ -449,6 +672,7 @@ def nurseGeneralInfo(request):
         "limit_options": LIMIT_OPTIONS,
         "limit_urls": limit_urls,
         'query': query,
+        'sitio': sitio,
         'quarter': quarter,
         'quarter_id': quarter_id,
         'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
@@ -456,8 +680,6 @@ def nurseGeneralInfo(request):
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
-    return render(request, 'nurse_module/nurseGeneralInfo.html')
-
 
 @custom_login_required
 @role_required('Midwife')

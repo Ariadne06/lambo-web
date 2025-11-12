@@ -1,334 +1,2876 @@
 {% extends "base_nurse.html" %}
+
+{% block title %}Household View{% endblock %}
+
 {% block content %}
 
-<div class="min-h-screen bg-gradient-to-b from-white via-red-50/40 to-white">
+<style>
+/* Keep the dialog within the viewport and stack header + form */
+#addFamilyModal > .relative.z-10 {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make only the form scroll */
+#addFamilyModal > .relative.z-10 > form {
+  overflow-y: auto;
+  flex: 1;          /* take remaining height under the header */
+  min-height: 0;    /* allow child to shrink for overflow */
+  -webkit-overflow-scrolling: touch; /* smoother on iOS */
+}
+
+/* CHANGED: light, global disabled look for buttons we toggle */
+.btn-disabled { opacity: .5; cursor: not-allowed !important; pointer-events: none; }
+</style>
+
+
+<div id="householdRoot"
+  class="min-h-screen bg-gradient-to-b from-white via-red-50/40 to-white"
+  data-viewed-quarter-id="{{ results.quarter_id }}"
+  data-current-quarter-id="{{ current_quarter }}"   
+  data-is-active="{{ results.is_active|yesno:'true,false' }}">
   <!-- Top Bar / Title -->
   <header class="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
     <div class="mx-auto max-w-7xl px-6 py-5">
-      <div class="flex items-center gap-4">
-        <!-- Left: accent + title (fills remaining space) -->
-        <div class="flex items-center gap-4 flex-1">
-          <div class="h-12 w-1.5 rounded-full bg-red-600"></div>
-          <div>
-            <h1 class="text-2xl font-semibold tracking-tight">
-              {{ header_number|default:"—" }}
-            </h1>
-            <p class="text-sm text-gray-500">
-              Household Code ·{% if quarter_label %} Quarter: {{ quarter_label }}{% endif %}
-            </p>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
+            <!-- Back arrow -->
+            <a href="javascript:void(0)" onclick="window.location.href='{% url 'nurse_module:nurse_household' %}'" class="inline-flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-gray-200 hover:bg-gray-50" aria-label="Back to Household List">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.78 15.53a.75.75 0 0 1-1.06 0l-5-5a.75.75 0 0 1 0-1.06l5-5a.75.75 0 1 1 1.06 1.06L8.06 9.25l4.72 4.72a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd"/>
+              </svg>
+            </a>
+            <div class="h-12 w-1.5 rounded-full bg-red-600"></div>
+            <div>
+              <h1 class="text-2xl font-semibold tracking-tight">{{ household_number }}</h1>
+              <p class="text-sm text-gray-500">Household Number</p>
+            </div>
           </div>
         </div>
-
-        <!-- Right: Back button -->
-        <a href="{% url 'nurse_module:nurse_household' %}"
-           class="ml-auto inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-300">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Back
-        </a>
       </div>
     </div>
   </header>
 
+  <!-- Flash message (optional) -->
+    {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
+      </div>
+    {% endif %}
+
+  <!-- Content -->
   <main class="mx-auto max-w-7xl px-6 py-10">
-
-    <!-- Quarter picker (always active) -->
-    <form method="get" action="{% url 'nurse_module:nurse_household_more' household_id %}" class="mb-6">
-      <label for="quarter_id" class="block text-sm font-semibold text-gray-700 mb-1">Quarter</label>
-      <div class="relative inline-block">
-        <select id="quarter_id" name="quarter_id"
-                class="appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-2.5 pr-9 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                onchange="this.form.submit()">
-          {% for q in quarters %}
-            <option value="{{ q.quarter_id }}" {% if selected_quarter_id == q.quarter_id %}selected{% endif %}>
-              {{ q.label }}
-            </option>
-          {% endfor %}
-        </select>
-        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
-          </svg>
-        </span>
-      </div>
-    </form>
-
-    {% if not summary %}
-      <!-- Empty-quarter banner -->
-      <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-800">
-        <p class="text-sm">No records for this household in this quarter.</p>
-      </div>
-
-      <!-- Quick Actions (disabled look) -->
-      <section class="mb-8 rounded-2xl border bg-white shadow-sm">
-        <div class="px-6 py-4">
-          <h3 class="text-base font-semibold">Quick Actions</h3>
+    <div class="grid grid-cols-12 gap-8">
+      <!-- Left Column: Household Summary -->
+      <aside class="col-span-4 space-y-6">
+        <!-- Quarter -->
+        <div>
+          <form method="post" action="{% url 'nurse_module:nurse_householdView' %}">
+            {% csrf_token %}
+            <input type="hidden" name="household_id" value="{{ hid }}">
+            <input type="hidden" name="household_number" value="{{ household_number }}">
+            <label class="block text-sm font-medium text-gray-700">Quarter</label>
+            <select
+              id="quarterSelect" 
+              name="quarter_id"
+              class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+              onchange="if(this.value) this.form.submit();"
+            >
+              <option value="" selected disabled>— Select Quarter —</option>
+              {% for q in quarter %}
+                <option value="{{ q.quarter_id }}" {% if q.quarter_id == results.quarter_id %}selected{% endif %}>
+                  {{ q.quarter_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
         </div>
-        <div class="px-6 pb-6">
-          <button type="button"
-                  class="w-full rounded-xl border border-red-300/60 px-4 py-3 text-center text-sm font-medium text-red-500"
-                  disabled>
-            Add Family Unit
-          </button>
-        </div>
-      </section>
-
-      <!-- Families none -->
-      <section class="rounded-2xl border bg-white shadow-sm">
-        <div class="px-6 py-5">
-          <h2 class="text-lg font-semibold">Families in this Household</h2>
-          <p class="mt-1 text-sm text-gray-500">Each family shows the same details captured when adding.</p>
-          <p class="mt-6 text-sm text-gray-600">No families recorded yet.</p>
-        </div>
-      </section>
-
-    {% else %}
-
-      <div class="grid grid-cols-12 gap-8">
-        <!-- LEFT: Household Summary -->
-        <aside class="col-span-12 lg:col-span-4 space-y-6">
-          <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <!-- Household card -->
+        <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+          {% if results.household_id == 0 %}
+            <div class="mx-6 mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              No records for this household in {{ results.quarter_name|default:"this quarter" }}.
+            </div>
+          {% else %}
             <div class="px-6 py-6">
-              <h3 class="mb-4 text-base font-semibold">Household Summary</h3>
-
               <dl class="divide-y divide-gray-100">
-                <!-- Household Head -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">Household Head</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {{ summary.household_head|default:"—" }}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.household_head }}</dd>
                 </div>
-
-                <!-- House Type -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">House Type</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {{ summary.house_type|default:"—" }}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.house_type }}</dd>
                 </div>
-
-                <!-- House Ownership -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">House Ownership</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {{ summary.house_ownership|default:"—" }}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.house_ownership }}</dd>
                 </div>
-
-                <!-- Address -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">Address</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {% with hn=summary.house_number st=summary.street si=summary.sitio_name br=summary.barangay cm=summary.city_municipality %}
-  {% if hn or st or si or br or cm %}
-    {{ hn }}{% if hn and st or hn and si or hn and br or hn and cm %}, {% endif %}
-    {{ st }}{% if st and si or st and br or st and cm %}, {% endif %}
-    {{ si }}{% if si and br or si and cm %}, {% endif %}
-    {{ br }}{% if br and cm %}, {% endif %}
-    {{ cm }}
-  {% else %}—{% endif %}
-{% endwith %}
-
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.full_address }}</dd>
                 </div>
-
-                <!-- Respondent Name -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">Respondent Name</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {{ summary.respondent|default:"—" }}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.respondent }}</dd>
                 </div>
-
-                <!-- Relationship to Household Head -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">Relationship to Household Head</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {% firstof summary.rel_to_hh_head summary.respondent_to_head summary.respondent_rth "—" %}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.respondent_rth }}</dd>
                 </div>
-
-                <!-- Date of Visit -->
                 <div class="grid grid-cols-5 gap-4 py-3">
                   <dt class="col-span-2 text-sm text-gray-500">Date of Visit</dt>
-                  <dd class="col-span-3 text-sm font-medium text-gray-900">
-                    {% if summary.date_visited %}{{ summary.date_visited|date:"M j, Y, g:i a" }}{% else %}—{% endif %}
-                  </dd>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">{{ results.date_visited }}</dd>
                 </div>
               </dl>
             </div>
-          </section>
-        </aside>
-
-        <!-- RIGHT: Families & Members (dynamic) -->
-        <section class="col-span-12 lg:col-span-8 space-y-6">
-          <div>
-            <h2 class="text-lg font-semibold">Families in this Household</h2>
-            <p class="text-sm text-gray-500">Click a member’s name to view details in a modal.</p>
-          </div>
-
-          {% if families_with_members and families_with_members|length > 0 %}
-            {% for item in families_with_members %}
-              {% with f=item.family mlist=item.members %}
-                <section class="overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md">
-                  <div class="flex items-start gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4">
-                    <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
-                    <div class="flex-1">
-                      <h3 class="font-semibold tracking-tight">
-                        {{ f.family_code }} · Family Head: {{ f.family_head|default:"—" }}
-                      </h3>
-                      <p class="mt-1 text-xs text-gray-500">
-                        Respondent:
-                        <span class="font-medium text-gray-700">{{ f.respondent_name|default:"—" }}</span>
-                        · Relationship to Family Head:
-                        <span class="font-medium text-gray-700">{{ f.respondent_relation_to_fh|default:"—" }}</span>
-                      </p>
-                      <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: {{ f.nhts|yesno:"YES,NO,—" }}</span>
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigenous People: {{ f.indigenous_people|yesno:"YES,NO,—" }}</span>
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: {{ f.household_type|default:"—" }}</span>
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: {{ f.water_source|default:"—" }}</span>
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: {{ f.waste_mgmt|default:"—" }}</span>
-                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: {{ f.toilet_type|default:"—" }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="px-6 pb-6 pt-3">
-                    <h4 class="mb-3 text-sm font-semibold">Members</h4>
-
-                    {% if mlist and mlist|length > 0 %}
-                      <div class="space-y-2">
-                        {% for mm in mlist %}
-                          <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">
-                              {{ mm.initials|default:"•" }}
-                            </div>
-                            <button
-                              type="button"
-                              class="member-open text-sm font-medium text-red-700 hover:underline"
-                              data-name="{{ mm.display_name }}"
-                              data-family-code="{{ f.family_code }}"
-                              data-rth="{{ mm.rel_to_hh_head|default:'—' }}"
-                              data-rtf="{{ mm.rel_to_fam_head|default:'—' }}"
-                              data-philhealth="{{ mm.philhealth_no|default:'—' }}"
-                              data-membership="{{ mm.membership_type|default:'—' }}"
-                              data-category="{{ mm.category|default:'—' }}"
-                              data-nutrition="{{ mm.nutrition|default:'—' }}">
-                              {{ mm.display_name }}
-                            </button>
-                          </div>
-                        {% endfor %}
-                      </div>
-                    {% else %}
-                      <p class="text-sm text-gray-500">No members recorded for this family.</p>
-                    {% endif %}
-                  </div>
-                </section>
-              {% endwith %}
-            {% endfor %}
-          {% else %}
-            <section class="rounded-2xl border bg-white shadow-sm">
-              <div class="px-6 py-5">
-                <h2 class="text-lg font-semibold">Families in this Household</h2>
-                <p class="mt-1 text-sm text-gray-500">Each family shows the same details captured when adding.</p>
-                <p class="mt-6 text-sm text-gray-600">No families recorded yet.</p>
-              </div>
-            </section>
           {% endif %}
         </section>
-      </div>
+      </aside>
 
-    {% endif %}
+      <!-- Right Column: Families -->
+      <section class="col-span-8 space-y-6">
+        <div class="flex items-end justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">Families in this Household</h2>
+            <p class="text-sm text-gray-500">Each family shows the same details captured when adding.</p>
+          </div>
+        </div>
+
+        {# Families list #}
+        {% if families and families|length %}
+          {% for f in families %}
+            <details class="group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4 group-open:from-red-50">
+                <div class="flex items-center gap-3">
+                  <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
+                  <div>
+                    <h3 class="font-semibold tracking-tight">{{ f.family_code }} · Family Head: {{ f.family_head }}</h3>
+                    <p class="mt-1 text-xs text-gray-500">
+                      Respondent: <span class="font-medium text-gray-700">{{ f.respondent }}</span>
+                      · Relationship of respondent to Family Head: <span class="font-medium text-gray-700">{{ f.rtf }}</span>
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: {{ f.nhts_status|yesno:"YES,NO" }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigenous People: {{ f.indigent|yesno:"YES,NO" }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: {{ f.household_type }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: {{ f.water_source }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: {{ f.waste_management }}</span>
+                      <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: {{ f.toilet_type }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  {% if f.is_visited %}
+                    <!-- Already visited: show a green chip -->
+                    <span class="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-[11px] font-medium text-green-700 ring-1 ring-green-600/20">
+                      <!-- check icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 0 1 0 1.414l-7.5 7.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L8.5 12.586l6.793-6.793a1 1 0 0 1 1.414 0Z" clip-rule="evenodd"/>
+                      </svg>
+                      Visited: {{ f.date_visited }}
+                    </span>
+                  {% else %}
+                    <!-- Mark visited button -->
+                    <button
+                      type="button"
+                      class="inline-flex h-8 items-center rounded-lg bg-green-600 px-3 text-xs font-medium text-white shadow ring-1 ring-green-600/20 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                      title="Mark family visited"
+                      aria-label="Mark family visited"
+                      data-family-id="{{ f.family_id }}"
+                      data-family-label="{{ f.family_code }} · {{ f.family_head }}"
+                      disabled aria-disabled="true"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="mr-1.5 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 0 1 0 1.414l-7.5 7.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L8.5 12.586l6.793-6.793a1 1 0 0 1 1.414 0Z" clip-rule="evenodd"/>
+                      </svg>
+                      Mark Visited
+                    </button>
+                  {% endif %}
+
+                  <!-- UPDATE (pencil) -->
+                  <button
+                    type="button"
+                    class="openUpdateFamilyModal inline-flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-gray-200 bg-white hover:bg-gray-50"
+                    title="Update family"
+                    aria-label="Update family"
+                    data-family-id="{{ f.family_id }}"
+                    data-family-code="{{ f.family_code }}"
+                    data-family-head="{{ f.family_head }}"
+                    data-respondent="{{ f.respondent }}"
+                    data-rtf="{{ f.rtf }}"
+                    data-nhts-status="{{ f.nhts_status|yesno:'true,false' }}"
+                    data-indigent="{{ f.indigent|yesno:'true,false' }}"
+                    data-household-type="{{ f.household_type }}"
+                    data-water-source="{{ f.water_source }}"
+                    data-waste-management="{{ f.waste_management }}"
+                    data-toilet-type="{{ f.toilet_type }}"
+                    data-family-head-id="{{ f.family_head_id }}"
+                    data-respondent-id="{{ f.respondent_id }}"
+                    data-rth="{{ f.rth_id }}"
+                    data-rth-id="{{ f.rth_id }}"
+                    data-rtf-id="{{ f.rtf_id }}"
+                    data-ip-tribe="{{ f.ip_tribe|default:'' }}"
+                    data-quarter-id="{{ f.quarter_id }}"
+                  >
+                    <!-- pencil icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 0 1 2.828 2.828l-9.9 9.9a2 2 0 0 1-.878.505l-3.086.772a.5.5 0 0 1-.606-.606l.772-3.086a2 2 0 0 1 .505-.878l9.9-9.9Z"/>
+                      <path d="M12.172 5 15 7.828" />
+                    </svg>
+                  </button>
+
+                  <!-- existing chevron -->
+                  <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180"
+                      xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+              </summary>
+
+              <div class="px-6 pb-6 pt-2">
+                <h4 class="mb-3 text-sm font-semibold">Members</h4>
+
+                <div class="grid grid-cols-2 gap-3">
+                  {% for m in f.members %}
+                    <div class="flex items-center rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                      <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">
+                          {{ m.initials }}
+                        </div>
+                        <button
+                            type="button"
+                            class="openUpdateMemberModal text-sm font-medium text-red-700 hover:underline"
+                            title="Update member details"
+                            aria-label="Update member details"
+                            data-family-member-id="{{ m.family_member_id|default:'' }}"
+                            data-full-name="{{ m.full_name|default:'' }}"
+                            data-rth-id="{{ m.rth_id|default:'' }}"
+                            data-rtf-id="{{ m.rtf_id|default:'' }}"
+                            data-philhealthid-number="{{ m.philhealthid_number|default:'' }}"
+                            data-membership-type="{{ m.membership_type|default:'' }}"
+                            data-philhealth-category-id="{{ m.philhealth_category_id|default:'' }}"
+                            data-nutrition-status-id="{{ m.nutrition_status_id|default:'' }}"
+                            data-status="{{ m.status|default:'' }}"
+                          >
+                            {{ m.full_name }}
+                        </button>
+                      </div>
+
+                      <!-- NEW: Link Relation (first button) -->
+                      <button
+                        type="button"
+                        class="openLinkRelationshipModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        data-family-member-id="{{ m.family_member_id|default:'' }}"
+                        data-member-name="{{ m.full_name }}"
+                        data-resident-id="{{ m.resident_id|default:'' }}"
+                        aria-label="Link a relationship"
+                        title="Link a relationship"
+                      >
+                        Link Relationship
+                      </button>
+
+                      {% if m.has_gh %}
+                        <button
+                          type="button"
+                          class="openGeneralHealthModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                          data-member-id="{{ m.family_member_id|default:'' }}"
+                          data-member-name="{{ m.full_name }}"
+                          data-member-sex="{{ m.sex|default:'' }}"
+                          data-has-gh="{{ m.has_gh|yesno:'true,false' }}">
+                          View General Health info
+                        </button>
+                      {% else %}
+                        <span
+                          class="ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-400 bg-gray-50 cursor-not-allowed">
+                          No General Health Info
+                        </span>
+                      {% endif %}
+                    </div>
+                  {% empty %}
+                    <p class="text-sm text-gray-500">No members yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-gray-500">No families recorded yet.</p>
+        {% endif %}
+
+      </section>
+    </div>
   </main>
 </div>
 
-<!-- VIEW-ONLY MEMBER MODAL -->
-<div id="memberModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+<!-- Update Family Modal -->
+<div id="updateFamilyModal" class="fixed inset-0 z-50 hidden items-center justify-center">
   <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
 
-  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
-    <div class="border-b px-6 py-4">
-      <h3 class="text-base font-semibold">
-        Member Details <span id="mm_title" class="text-gray-500"></span>
-      </h3>
-    </div>
-
-    <div class="px-6 py-5">
-      <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div>
-          <dt class="text-sm text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></dt>
-          <dd id="mm_rth" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-        </div>
-        <div>
-          <dt class="text-sm text-gray-700">Relationship to Family Head <span class="text-red-600">*</span></dt>
-          <dd id="mm_rtf" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-        </div>
-
-        <div>
-          <dt class="text-sm text-gray-700">PhilHealth Number</dt>
-          <dd id="mm_ph" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-          <p class="mt-1 text-xs text-gray-500">Leave blank if none.</p>
-        </div>
-        <div>
-          <dt class="text-sm text-gray-700">PhilHealth Membership Type <span class="text-red-600">*</span></dt>
-          <dd id="mm_membership" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-        </div>
-
-        <div>
-          <dt class="text-sm text-gray-700">PhilHealth Category <span class="text-red-600">*</span></dt>
-          <dd id="mm_category" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-        </div>
-        <div>
-          <dt class="text-sm text-gray-700">Nutritional Status</dt>
-          <dd id="mm_nutrition" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="border-t px-6 py-4 flex justify-end">
-      <button id="mm_back" type="button"
-              class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-        Back
+  <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-bold">Update Family Profile <span id="uf_title_label" class="text-gray-500"></span></h3>
+      <button id="closeUpdateFamilyModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
       </button>
     </div>
+
+    <form method="post" action="" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" name="family_id" id="uf_family_id">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+      <input type="hidden" name="quarter_id" id="uf_quarter_id">
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Family Head -->
+        <div class="relative">
+          <label for="uf_family_head_name" class="block text-sm font-medium text-gray-700">Family Head <span class="text-red-600">*</span></label>
+          <input id="uf_family_head_name" name="family_head_name" type="text" readOnly
+                 autocomplete="off" placeholder="Search resident by name"
+                 data-autocomplete="resident" data-target-hidden="#uf_family_head_id"
+                 data-init-name=""
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <input type="hidden" id="uf_family_head_id" name="family_head_id">
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+               data-autocomplete-list="#uf_family_head_name"></div>
+        </div>
+
+        <!-- Respondent -->
+        <div class="relative">
+          <label for="uf_respondent_name" class="block text-sm font-medium text-gray-700">Respondent Name <span class="text-red-600">*</span></label>
+          <input id="uf_respondent_name" name="respondent_name" type="text" readOnly
+                 autocomplete="off" placeholder="Search resident by name"
+                 data-autocomplete="resident" data-target-hidden="#uf_respondent_id"
+                 data-init-name=""
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <input type="hidden" id="uf_respondent_id" name="respondent_id">
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+               data-autocomplete-list="#uf_respondent_name"></div>
+        </div>
+
+        <!-- Relationships -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Family Head to HH <span class="text-red-600">*</span></label>
+          <select id="uf_fam_head_rel" name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed" disabled>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Respondent to Family Head <span class="text-red-600">*</span></label>
+          <select id="uf_respondent_rel" name="respondent_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" disabled>— Select Relationship —</option>
+            {% for fr in family_relationship %}
+              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Household env. -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Household Type <span class="text-red-600">*</span></label>
+          <select id="uf_household_type" name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Household Type —</option>
+            {% for hht in household_type %}
+              <option value="{{ hht.household_type_id }}">{{ hht.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Waste Management <span class="text-red-600">*</span></label>
+          <select id="uf_waste_management_type" name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Waste Management Type —</option>
+            {% for wmt in waste_management %}
+              <option value="{{ wmt.waste_management_type_id }}">{{ wmt.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Water Source <span class="text-red-600">*</span></label>
+          <select id="uf_water_source_type" name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Water Source Type —</option>
+            {% for ws in water_source %}
+              <option value="{{ ws.water_source_type_id }}">{{ ws.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Toilet Facility <span class="text-red-600">*</span></label>
+          <select id="uf_toilet_facility_type" name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Toilet Facility Type —</option>
+            {% for tf in toilet_facility %}
+              <option value="{{ tf.toilet_facility_type_id }}">{{ tf.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Flags -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">NHTS Status <span class="text-red-600">*</span></label>
+          <select id="uf_nhts_status" name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>Select…</option>
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Indigent Status <span class="text-red-600">*</span></label>
+          <select id="uf_indigent_status" name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>Select…</option>
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+        </div>
+
+        <!-- IP Tribe (toggle like add modal) -->
+        <div id="uf_ip_tribe_wrap" class="mt-2 hidden sm:col-span-2">
+          <label for="uf_ip_tribe" class="block text-sm font-medium text-gray-700">Specify Tribe <span class="text-red-600">*</span></label>
+          <input id="uf_ip_tribe" name="ip_tribe" type="text" placeholder="e.g., Manobo, Subanen"
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelUpdateFamilyModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Remove Family Confirmation Modal -->
+<div id="removeFamilyModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <div class="relative z-10 w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-bold">Remove Family</h3>
+      <button id="closeRemoveFamilyModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+      <form method="post" action="{% url 'bhw_module:familyDeactivate' %}" class="px-6 py-5">
+        {% csrf_token %}
+        <input type="hidden" name="family_id" id="rm_family_id">
+        <input type="hidden" name="household_id" value="{{ results.household_id }}">
+        <input type="hidden" name="household_number" value="{{ household_number }}">
+
+        <p class="text-sm text-gray-700">
+          Are you sure you want to remove
+          <span id="rm_family_label" class="font-medium text-gray-900"></span>
+          from this household?
+        </p>
+
+        <div class="mt-4">
+          <label for="rm_reason_sel" class="block text-sm font-medium text-gray-700">
+            Reason for removal <span class="text-red-600">*</span>
+          </label>
+          <select
+            id="rm_reason_sel"
+            name="reason"
+            required
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+          >
+            <option value="" selected disabled>— Select reason —</option>
+            <option value="Moved out">Moved out</option>
+            <option value="Relocated">Relocated</option>
+          </select>
+          <p class="mt-1 text-xs text-gray-500">Choose the most appropriate reason.</p>
+        </div>
+
+        <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+          <button type="button" id="cancelRemoveFamilyModal"
+            class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit"
+            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+            Remove
+          </button>
+        </div>
+      </form>
+  </div>
+</div>
+
+<!-- Update Household Modal -->
+<div id="updateHouseholdModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-bold">Update Household Profile</h3>
+      <button id="closeUpdateHouseholdModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'bhw_module:householdUpdate' %}" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Household Head (typeahead) -->
+        <div class="sm:col-span-1 relative"><!-- CHANGED: added relative wrapper for dropdown -->
+          <label class="block text-sm font-medium text-gray-700">Household Head <span class="text-red-600">*</span></label>
+
+          <!-- CHANGED: removed list="residentList"; added data-* for autocomplete and data-init-name -->
+          <input
+            id="upd_head_name"
+            name="head_name"
+            autocomplete="off"
+            placeholder="Search resident by name"
+            value="{{ results.household_head }}"
+            data-autocomplete="resident"               
+            data-target-hidden="#upd_head_id"          
+            data-init-name="{{ results.household_head }}" 
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <input type="hidden" id="upd_head_id" name="head_id" value="{{ results.household_head_id }}">
+
+          <!-- CHANGED: dropdown container for suggestions -->
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+              data-autocomplete-list="#upd_head_name"></div>
+        </div>
+
+        <!-- Respondent Name (typeahead) -->
+        <div class="sm:col-span-2 relative"><!-- CHANGED: added relative wrapper for dropdown -->
+          <label class="block text-sm font-medium text-gray-700">Respondent Name <span class="text-red-600">*</span></label>
+
+          <!-- CHANGED: removed list="residentList"; added data-* for autocomplete and data-init-name -->
+          <input
+            id="upd_respondent_name"
+            name="respondent_name"
+            autocomplete="off"
+            placeholder="Search resident by name"
+            value="{{ results.respondent }}"
+            data-autocomplete="resident"                   
+            data-target-hidden="#upd_respondent_id"        
+            data-init-name="{{ results.respondent }}"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <input type="hidden" id="upd_respondent_id" name="respondent_id" value="{{ results.respondent_id }}">
+
+          <!-- CHANGED: dropdown container for suggestions -->
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+              data-autocomplete-list="#upd_respondent_name"></div>
+
+          <p class="mt-1 text-xs text-gray-500">Person providing the information (may be the head).</p>
+        </div>
+
+        <!-- House Ownership -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">House Ownership <span class="text-red-600">*</span></label>
+          <select id="house_ownership" name="house_ownership"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+                <option value="" disabled>— Select Ownership —</option>
+                {% for ho in house_ownership %}
+                  <option value="{{ ho.house_ownership_id }}" {% if ho.house_ownership_id == results.house_ownership_id %}selected{% endif %}>{{ ho.description }}</option>
+                {% endfor %}
+          </select>
+          <p class="mt-1 text-xs text-gray-500">Specify if the house is owned, rented, or under another arrangement.</p>
+        </div>
+
+        <!-- Relationship to Household Head -->
+        <div class="sm:col-span-1">
+          <label class="block text-sm font-medium text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></label>
+          <select name="respondent_rth"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" disabled>— Select Relationship —</option>
+            {% for rel in relationship %}
+              <option value="{{ rel.rth_id }}" {% if rel.rth_id == results.respondent_rth_id %}selected{% endif %}>{{ rel.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="mt-1 text-xs text-gray-500">Relationship of the respondent to the household head.</p>
+        </div>
+
+        <!-- House Type -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">House Type <span class="text-red-600">*</span></label>
+          <select id="house_type" name="house_type"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+                <option value="" disabled>— Select Type —</option>
+                {% for ht in house_type %}
+                  <option value="{{ ht.house_type_id }}" {% if ht.house_type_id == results.house_type_id %}selected{% endif %}>{{ ht.description }}</option>
+                {% endfor %}
+          </select>
+          <p class="mt-1 text-xs text-gray-500">e.g., concrete, semi-concrete, light materials.</p>
+        </div>
+
+        <!-- House Number -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">House Number <span class="text-red-600">*</span></label>
+          <input name="house_number"
+            value="{{ results.house_number }}"
+            placeholder="Enter Household Number"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <p class="mt-1 text-xs text-gray-500">Local numbering (digits or alphanumerics, max 20).</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between border-b py-4">
+        <h3 class="text-base font-bold">Address</h3>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Sitio -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Sitio <span class="text-red-600">*</span></label>
+          <select name="sitio_id"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" disabled>— Select Sitio —</option>
+            {% for s in sitio %}
+              <option value="{{ s.sitio_id }}" {% if s.sitio_id == results.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Street -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Street</label>
+          <input name="street"
+                 value="{{ results.street }}"
+                 placeholder="e.g., Riverside St."
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+        </div>
+
+        <!-- Barangay (readonly as in Add form) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Barangay <span class="text-red-600">*</span></label>
+          <input name="barangay" value="{{ results.barangay|default:'Cansaga' }}"
+                 readonly
+                 class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 text-gray-700 shadow-sm" required>
+          <p class="mt-1 text-xs text-gray-500">Defaulted to Barangay Cansaga for LAMBO.</p>
+        </div>
+
+        <!-- Municipality / City (readonly as in Add form) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Municipality / City <span class="text-red-600">*</span></label>
+          <input name="municipality" value="{{ results.municipality|default:'Consolacion' }}"
+                 readonly
+                 class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 text-gray-700 shadow-sm" required>
+          <p class="mt-1 text-xs text-gray-500">Defaulted to Municipality of Consolacion for LAMBO.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelUpdateHouseholdModal"
+                class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="submit"
+                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Save Changes
+        </button>
+      </div>
+    </form>
+
+    <!-- Reuse the same datalist you already have on the page -->
+    <datalist id="residentList">
+      {% if residents %}
+        {% for r in residents %}
+          <option data-id="{{ r.id }}" value="{{ r.full_name }}"></option>
+        {% endfor %}
+      {% endif %}
+    </datalist>
+  </div>
+</div>
+
+
+
+<!-- Add Member Modal -->
+<div id="addMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">Add Family Member</h3>
+      <button id="closeAddMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 11-1.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06 5.28 15.78a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'bhw_module:familyMemberInsert' %}" class="px-6 py-5">
+      {% csrf_token %}
+
+      <!-- family hook (filled by JS when opening the modal) -->
+      <input type="hidden" name="family_id" id="member_family_number">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+
+      <!-- --------------- Identity ---------------- -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Full Name (search in residents) -->
+        <div class="sm:col-span-2 relative">
+          <label for="resident_full_name" class="block text-sm font-medium text-gray-700">
+            Full Name <span class="text-red-600">*</span>
+          </label>
+
+          <input
+            id="resident_full_name"
+            name="resident_full_name"
+            type="text"
+            autocomplete="off"
+            placeholder="Search resident by name"
+            data-autocomplete="resident"
+            data-target-hidden="#resident_id"
+            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+
+          <input type="hidden" name="resident_id" id="resident_id">
+
+          <!-- suggestions dropdown for this input -->
+          <div
+            class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+            data-autocomplete-list="#resident_full_name"></div>
+
+          <p class="mt-1 text-xs text-gray-500">Choose a resident from the suggestions so the ID is captured.</p>
+        </div>
+
+        <!-- Relationship of Family Member to Household Head (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Family Member to Household Head <span class="text-red-600">*</span></label>
+          <select name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">How is the family member related to the household head</p>
+        </div>
+
+        <!-- Relationship of Family Member to Family Head (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship of Family Member to Family Head <span class="text-red-600">*</span></label>
+          <select name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for fr in family_relationship %}
+              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">How is the family member related to the family head</p>
+        </div>
+
+        <!-- PhilHealth Number (OPTIONAL by default) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            PhilHealth Number
+          </label>
+          <input id="philhealth_number" name="philhealth_number" type="text"
+                placeholder="e.g., 12-345678901-2"
+                class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <p class="text-xs text-gray-500 mt-1">Leave blank if none.</p>
+        </div>
+
+        <!-- Membership Type (OPTIONAL unless PhilHealth number provided) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="membership_type">
+            PhilHealth Membership Type
+            <span class="text-red-600">*</span>
+          </label>
+          <select id="membership_type" name="membership_type"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled>
+            <option value="" selected disabled>— Membership Type —</option>
+            <option value="M">Member</option>
+            <option value="D">Dependent</option>
+          </select>
+        </div>
+
+        <!-- PhilHealth Category (OPTIONAL unless PhilHealth number provided) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="philhealth_category">
+            PhilHealth Category
+            <span class="text-red-600">*</span>
+          </label>
+          <select id="philhealth_category" name="philhealth_category"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled>
+            <option value="" selected disabled>— Select Category —</option>
+            {% for pc in philhealth_category %}
+              <option value="{{ pc.philhealth_category_id }}">{{ pc.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Select only if a PhilHealth number is entered.</p>
+        </div>
+
+        <!-- Nutritional Status (dropdown) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Nutritional Status</label>
+          <select name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="" selected disabled>— Select Status —</option>
+            {% for ns in nutrition_status %}
+              <option value="{{ ns.nutrition_status_id }}">{{ ns.description }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Choose the member’s current nutritional status based on the latest assessment.
+          </p>
+        </div>
+      </div>
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelAddMemberModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Member</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Update Member Modal -->
+<div id="updateMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        Update Family Member <span id="um_title_label" class="text-gray-500"></span>
+      </h3>
+      <button id="closeUpdateMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'bhw_module:familyMemberUpdate' %}" class="px-6 py-5">
+      {% csrf_token %}
+
+      <!-- Hidden context -->
+      <input type="hidden" name="family_member_id" id="um_family_member_id">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Relationship of Member to HH -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></label>
+          <select id="um_mem_rel_hh" name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for r in relationship %}
+              <option value="{{ r.rth_id }}">{{ r.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Relationship of Member to Family Head -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Relationship to Family Head <span class="text-red-600">*</span></label>
+          <select id="um_mem_rel_fh" name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for fr in family_relationship %}
+              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- PhilHealth Number -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth Number</label>
+          <input id="um_philhealth_number" name="philhealth_number" type="text"
+                 placeholder="e.g., 12-345678901-2"
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <p class="text-xs text-gray-500 mt-1">Leave blank if none.</p>
+        </div>
+
+        <!-- Membership Type (required only when number is present) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth Membership Type <span id="um_membership_required_star" class="text-red-600 hidden">*</span></label>
+          <select id="um_membership_type" name="membership_type"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled>
+            <option value="" selected disabled>— Membership Type —</option>
+            <option value="M">Member</option>
+            <option value="D">Dependent</option>
+          </select>
+        </div>
+
+        <!-- PhilHealth Category (required only when number is present) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">PhilHealth Category <span id="um_category_required_star" class="text-red-600 hidden">*</span></label>
+          <select id="um_philhealth_category" name="philhealth_category"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled>
+            <option value="" selected disabled>— Select Category —</option>
+            {% for pc in philhealth_category %}
+              <option value="{{ pc.philhealth_category_id }}">{{ pc.description }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Nutritional Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Nutritional Status</label>
+          <select id="um_nutritional_status" name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <option value="" selected disabled>— Select Status —</option>
+            {% for ns in nutrition_status %}
+              <option value="{{ ns.nutrition_status_id }}">{{ ns.description }}</option>
+            {% endfor %}
+          </select>
+        </div> 
+      </div>
+
+        <!-- FOOTER (full width now) -->
+        <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+          <button type="button" id="cancelUpdateMemberModal"
+            class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit"
+            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+            Save Changes
+          </button>
+        </div>
+    </form>
+  </div>
+</div>
+
+<!-- Remove Member Confirmation Modal -->
+<div id="removeMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <div class="relative z-10 w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-bold">Remove Family Member</h3>
+      <button id="closeRemoveMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'bhw_module:familyMemberRemove' %}" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" name="family_member_id" id="rm_member_id">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+      <input type="hidden" name="resident_id" id="rm_member_resident_id">
+      <input type="hidden" name="family_id" id="rm_member_family_id">
+
+      <p class="text-sm text-gray-700">
+        Are you sure you want to remove
+        <span id="rm_member_label" class="font-medium text-gray-900"></span>
+        from this family?
+      </p>
+
+      <div class="mt-4">
+        <label for="rmv_reason_sel" class="block text-sm font-medium text-gray-700">
+          Reason for removal <span class="text-red-600">*</span>
+        </label>
+        <select
+          id="rmv_reason_sel"
+          name="reason"
+          required
+          class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+        >
+          <option value="" selected disabled>— Select reason —</option>
+          <option value="New Family">New Family</option>
+          <option value="Relocated">Relocated</option>
+          <option value="Deceased">Deceased</option>
+        </select>
+        <p class="mt-1 text-xs text-gray-500">Choose the most appropriate reason.</p>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelRemoveMemberModal"
+          class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="submit"
+          class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Remove
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Link Relationship Modal -->
+<div id="linkRelationshipModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        Link Relationship <span id="lr_title_label" class="text-gray-500"></span>
+      </h3>
+      <button id="closeLinkRelationshipModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- You can keep normal form submit as fallback; JS will intercept and AJAX it -->
+    <form id="lr_form" method="post" action="" class="px-6 py-5">
+      {% csrf_token %}
+      <input type="hidden" id="lr_source_member_id" name="source_member_id">
+      <input type="hidden" id="lr_source_resident_id" name="source_resident_id">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Resident (typeahead) -->
+        <div class="relative sm:col-span-2">
+          <label for="lr_resident_name" class="block text-gray-700 text-sm font-medium mb-1">
+            Resident to Link <span class="text-red-600">*</span>
+          </label>
+          <input id="lr_resident_name" name="lr_resident_name" type="text" required
+                 placeholder="Search resident by name"
+                 autocomplete="off"
+                 data-autocomplete="resident"
+                 data-target-hidden="#lr_resident_id"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+          <input type="hidden" id="lr_resident_id" name="related_resident_id">
+          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+               data-autocomplete-list="#lr_resident_name"></div>
+          <p class="text-xs text-gray-500 mt-1">Pick from suggestions so we capture the correct resident ID.</p>
+        </div>
+
+        <!-- Relationship to the selected member -->
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">
+            Relationship to this member <span class="text-red-600">*</span>
+          </label>
+          <!-- Reusing your existing family_relationship list -->
+          <select id="lr_relationship" name="relationship_id"
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <option value="" selected disabled>— Select Relationship —</option>
+            {% for lr in link_relationship %}
+              <option value="{{ lr.relationship_id }}">{{ lr.relationship_name }}</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Ex: Father, Mother, Brother, Sister, Guardian, etc.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelLinkRelationshipModal"
+                class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="submit"
+                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Add Link
+        </button>
+      </div>
+
+      <!-- Live list of linked residents -->
+      <div class="mt-6">
+        <h4 class="text-sm font-semibold">Linked Residents</h4>
+        <div id="lr_list" class="mt-3 space-y-2">
+          <p class="text-xs text-gray-500">No linked residents yet.</p>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- General Health Info Modal -->
+<div id="generalHealthModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <!-- Dialog -->
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="flex items-center justify-between border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        General Health Info <span id="gh_member_label" class="text-gray-500"></span>
+      </h3>
+      <button id="closeGeneralHealthModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 111.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06 5.28 15.78a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <form
+      method="post"
+      action="{% url 'bhw_module:insertGeneralHealth' %}"
+      class="px-6 py-5"
+      data-fetch-url="{% url 'bhw_module:generalHealthGetApi' %}"
+      data-update-action="{% url 'bhw_module:updateGeneralHealth' %}"
+    >
+      {% csrf_token %}
+      <!-- Hidden context -->
+      <input type="hidden" name="member_id" id="gh_member_id">
+      <input type="hidden" name="member_sex" id="gh_member_sex">
+      <input type="hidden" name="household_id" value="{{ results.household_id }}">
+      <input type="hidden" name="household_number" value="{{ household_number }}">
+      <input type="hidden" name="gh_id" id="gh_record_id">    
+
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <!-- LEFT -->
+        <div class="space-y-4">
+          <!-- Medical History (multiple selection) -->
+          <fieldset>
+            <legend class="text-sm font-medium text-gray-700">Medical History (select all that apply)</legend>
+            <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                HPN – Hypertension
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                DM – Diabetes
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                TB – Tuberculosis
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                S – Surgery
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Smoker -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Smoker <span class="text-red-600">*</span></label>
+            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="">Select Yes/No</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
+            </select>
+          </div>
+
+          <!-- Alcohol Beverage Drinker -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker <span class="text-red-600">*</span></label>
+            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="">Select Yes/No</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
+            </select>
+          </div>
+
+          <!-- Sexually Active -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Sexually Active <span class="text-red-600">*</span></label>
+            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="">Select Yes/No</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
+            </select>
+          </div>
+
+          <!-- LMP (Female only) -->
+          <div id="gh_lmp_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">Last Menstrual Period</label>
+            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          </div>
+
+          <!-- Age of Menarche (Female only) -->
+          <div id="gh_menarche_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">Age of MENARCHE</label>
+            <input name="age_menarche" type="number" min="8" max="20" placeholder="Enter Age"
+                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="space-y-4">
+          <!-- FP Use (women only) -->
+          <div id="gh_fp_use_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">FP Use</label>
+            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <option value="">Select Yes/No</option>
+              <option value="true">YES</option>
+              <option value="false">NO</option>
+            </select>
+          </div>
+
+          <!-- FP Method (women only) -->
+          <div id="gh_fp_method_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">FP Method <span class="text-red-600">*</span></label>
+            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Method —</option>
+              {% for fm in fp_method %}
+                <option value="{{ fm.fp_method_id }}">{{ fm.description }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- FP Status (women only) -->
+          <div id="gh_fp_status_wrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700">FP Status <span class="text-red-600">*</span></label>
+            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Status —</option>
+              {% for fs in fp_status %}
+                <option value="{{ fs.fp_status_id }}">{{ fs.description }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Classification by Age / Health Risk Group -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Classification by Age<span class="text-red-600">*</span></label>
+              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <option value="" selected disabled>— Select Class —</option>
+                {% for c in class %}
+                  <option value="{{ c.class_id }}">{{ c.class_description }}</option>
+                {% endfor %}
+              </select>
+            </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
+        <button type="button" id="cancelGeneralHealthModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" id="gh_submit_btn" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Save
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
 <script>
-  // Minimal JS: open modal with data-* and close
-  (function () {
-    const modal = document.getElementById('memberModal');
-    const backdrop = modal.querySelector('.absolute.inset-0');
-    const btnBack = document.getElementById('mm_back');
+  /* ---- shared helpers (keep only ONE copy in the file) ---- */
+  function openModal(el){
+    el?.classList.remove('hidden');
+    el?.classList.add('flex');
+    document.documentElement.classList.add('overflow-y-hidden');
+  }
+  function closeModal(el){
+    el?.classList.add('hidden');
+    el?.classList.remove('flex');
+    document.documentElement.classList.remove('overflow-y-hidden');
+  }
 
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v && String(v).trim() ? v : '—'; };
-    const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); document.documentElement.classList.add('overflow-y-hidden'); };
-    const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); document.documentElement.classList.remove('overflow-y-hidden'); };
+  // Helper: toggle a modal to read-only (disables all fields & submit buttons, keeps Close/Cancel clickable)
+function setModalReadOnly(modalEl, readOnly) {
+  if (!modalEl) return;
 
-    document.addEventListener('click', (e) => {
-      const b = e.target.closest('.member-open');
-      if (!b) return;
+  // Disable fields
+  modalEl.querySelectorAll('input, select, textarea')
+    .forEach(el => { el.disabled = !!readOnly; });
 
-      document.getElementById('mm_title').textContent = b.dataset.name ? '– ' + b.dataset.name : '';
-      set('mm_rth',        b.dataset.rth);
-      set('mm_rtf',        b.dataset.rtf);
-      set('mm_ph',         b.dataset.philhealth);
-      set('mm_membership', b.dataset.membership);
-      set('mm_category',   b.dataset.category);
-      set('mm_nutrition',  b.dataset.nutrition);
+  // Disable submit controls only
+  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]')
+    .forEach(el => { el.disabled = !!readOnly; });
 
-      open();
-    });
+  // Leave Close/Cancel buttons alone (type="button"), but you can also
+  // explicitly protect anything you want with [data-keep-enabled]
+  modalEl.querySelectorAll('[data-keep-enabled]')
+    .forEach(el => { el.disabled = false; });
+}
 
-    btnBack.addEventListener('click', close);
-    backdrop.addEventListener('click', close);
+function isHouseholdReadOnlyContext() {
+  const root = document.getElementById('householdRoot');
+  if (!root) return false;
+  const currentQuarterId = String(root.dataset.currentQuarterId || '');
+  const viewedQuarterId  = String(root.dataset.viewedQuarterId  || '');
+  const isActive         = root.dataset.isActive === 'true';
+  return (!isActive) || (currentQuarterId && viewedQuarterId && viewedQuarterId !== currentQuarterId);
+}
+
+  /* ---- UPDATE HOUSEHOLD modal: reset on open/close ---- */
+  (function(){
+    const modal     = document.getElementById('updateHouseholdModal');
+    const openBtn   = document.getElementById('openUpdateHouseholdModal');
+    const closeBtn  = document.getElementById('closeUpdateHouseholdModal');
+    const cancelBtn = document.getElementById('cancelUpdateHouseholdModal');
+    const form      = modal?.querySelector('form');
+
+    // CHANGED: helper to close suggestion lists inside this modal
+    function closeAllLists(){
+      modal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+        el.innerHTML = '';
+        el.classList.add('hidden');
+      });
+    }
+
+    function openAndPrime(){
+      form?.reset();        // ensures server defaults show
+      closeAllLists();      // CHANGED
+      openModal(modal);
+    }
+    function closeAndReset(){
+      form?.reset();        // discard unsaved edits
+      closeAllLists();      // CHANGED
+      closeModal(modal);
+    }
+
+    openBtn?.addEventListener('click', openAndPrime);
+    closeBtn?.addEventListener('click', closeAndReset);
+    cancelBtn?.addEventListener('click', closeAndReset);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeAndReset(); });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeAndReset();
     });
   })();
-</script>
 
+  // Add Family modal submit guard
+  const addFamilyForm = document.querySelector('#addFamilyModal form');
+  addFamilyForm?.addEventListener('submit', (e) => {
+    const checks = [
+      { input: document.getElementById('family_head_name'), hidden: document.getElementById('family_head_id'), label: 'Family Head' },
+      { input: document.getElementById('respondent_name'), hidden: document.getElementById('respondent_id'), label: 'Respondent' },
+    ];
+    for (const { input, hidden, label } of checks) {
+      if (input && hidden && input.value && !hidden.value) {
+        e.preventDefault();
+        alert(`Please select a ${label} from the suggestions so we can capture the correct ID.`);
+        input.focus();
+        return;
+      }
+    }
+  });
+
+  (function() {
+    // CHANGED: reuse the same API URL as in HouseholdAdd
+    const SEARCH_URL = "{% url 'bhw_module:resident_search_api' %}";
+    const DEBOUNCE_MS = 250;
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }
+    }
+
+    function highlight(text, q) {
+      if (!q) return text;
+      try {
+        const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + ')', 'ig');
+        return text.replace(re, '<mark class="bg-yellow-100">$1</mark>');
+      } catch { return text; }
+    }
+
+    function makeItemHTML(item, q) {
+      const name = item.full_name || '(No name)';
+      const sub = [item.address, item.sex, item.dob].filter(Boolean).join(' • ');
+      return `
+        <button type="button" class="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50"
+                data-resident-id="${item.resident_id || ''}"
+                data-resident-name="${(name || '').replace(/"/g,'&quot;')}">
+          <div class="text-sm">${highlight(name, q)}</div>
+          ${sub ? `<div class="text-xs text-gray-500">${sub}</div>` : ''}
+        </button>
+      `;
+    }
+
+    async function fetchResidents(q) {
+      const url = new URL(SEARCH_URL, window.location.origin);
+      url.searchParams.set('q', q);
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Network error');
+      const data = await res.json();
+      return data.results || [];
+    }
+
+    function attachAutocomplete(input) {
+      const list = input.parentElement.querySelector('[data-autocomplete-list]');
+      const hiddenSelector = input.getAttribute('data-target-hidden');
+      const hidden = document.querySelector(hiddenSelector);
+
+      let currentIndex = -1;
+      let items = [];
+
+      const closeList = () => {
+        list.innerHTML = '';
+        list.classList.add('hidden');
+        currentIndex = -1;
+      };
+
+      const openList = () => list.classList.remove('hidden');
+
+      const setSelection = (id, name) => {
+        input.value = name || '';
+        hidden.value = id || '';
+        closeList();
+      };
+
+      const render = () => async () => {
+        const term = input.value.trim();
+        hidden.value = ''; // CHANGED: clear previous selection when typing
+        if (!term) { closeList(); return; }
+        try {
+          items = await fetchResidents(term);
+          if (!items.length) { closeList(); return; }
+          list.innerHTML = items.map(i => makeItemHTML(i, term)).join('');
+          openList();
+        } catch {
+          closeList();
+        }
+      };
+
+      const debouncedRender = debounce(render(), DEBOUNCE_MS);
+      input.addEventListener('input', debouncedRender);
+
+      // click selection
+      list.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-resident-id]');
+        if (!btn) return;
+        setSelection(btn.dataset.residentId, btn.dataset.residentName);
+        input.focus();
+      });
+
+      // keyboard navigation on input
+      input.addEventListener('keydown', (e) => {
+        if (list.classList.contains('hidden')) return;
+        const buttons = Array.from(list.querySelectorAll('button[data-resident-id]'));
+        if (!buttons.length) return;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          currentIndex = (currentIndex + 1) % buttons.length;
+          buttons[currentIndex].focus();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeList();
+        }
+      });
+
+      // keyboard on list
+      list.addEventListener('keydown', (e) => {
+        const btn = e.target.closest('button[data-resident-id]');
+        if (!btn) return;
+        const buttons = Array.from(list.querySelectorAll('button[data-resident-id]'));
+        const idx = buttons.indexOf(btn);
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          setSelection(btn.dataset.residentId, btn.dataset.residentName);
+          input.focus();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          buttons[(idx + 1) % buttons.length].focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          buttons[(idx - 1 + buttons.length) % buttons.length].focus();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeList();
+          input.focus();
+        }
+      });
+
+      // click outside closes
+      document.addEventListener('click', (e) => {
+        if (!input.parentElement.contains(e.target)) closeList();
+      });
+    }
+
+    // CHANGED: attach to the two inputs inside the update modal only
+    document.addEventListener('DOMContentLoaded', () => {
+      document
+        .querySelectorAll('input[data-autocomplete="resident"]')
+        .forEach(attachAutocomplete);
+
+      // OPTIONAL CHANGED: gentle guard on submit
+      const form = document.querySelector('#updateHouseholdModal form');
+      form?.addEventListener('submit', (e) => {
+        // If user changed a name but didn't pick from dropdown, hidden ID will be empty.
+        const pairs = [
+          { input: document.getElementById('upd_head_name'), hidden: document.getElementById('upd_head_id') },
+          { input: document.getElementById('upd_respondent_name'), hidden: document.getElementById('upd_respondent_id') },
+        ];
+        for (const { input, hidden } of pairs) {
+          if (!input || !hidden) continue;
+          const init = (input.getAttribute('data-init-name') || '').trim();
+          const now  = (input.value || '').trim();
+          if (now && now !== init && !hidden.value) {
+            e.preventDefault();
+            alert('Please select a resident from the suggestions so we can capture the correct ID.');
+            input.focus();
+            return;
+          }
+        }
+      });
+    });
+  })();
+
+  (function () {
+    const docEl = document.documentElement;
+
+    /* ---------- helpers ---------- */
+    function anyModalOpen() {
+      return !!document.querySelector('.fixed.inset-0.flex');
+    }
+    function openModal(el) {
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      docEl.classList.add('overflow-y-hidden');
+    }
+    function closeModal(el) {
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+      if (!anyModalOpen()) docEl.classList.remove('overflow-y-hidden');
+    }
+    function bindBackdropClose(el, closeFn) {
+      el?.addEventListener('click', (e) => { if (e.target === el) closeFn(); });
+    }
+
+    /* =====================================
+      FAMILY MODAL (Add Family Unit) — same behavior as Update modal
+    ===================================== */
+    (function () {
+      const familyModal    = document.getElementById('addFamilyModal');
+      const openFamilyBtn  = document.getElementById('openAddFamilyModal');
+      const closeFamilyBtn = document.getElementById('closeAddFamilyModal');
+      const cancelFamilyBtn= document.getElementById('cancelAddFamilyModal');
+      const addFamilyForm  = familyModal?.querySelector('form');
+
+      function resetFamilyModal() {
+        // 1) reset form fields to initial HTML values
+        addFamilyForm?.reset();
+
+        // 2) clear hidden respondent id
+        const respHidden = familyModal?.querySelector('#respondent_id');
+        if (respHidden) respHidden.value = '';
+
+        // 3) collapse any autocomplete dropdowns inside this modal
+        familyModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+          el.innerHTML = '';
+          el.classList.add('hidden');
+        });
+      }
+
+      function openFamily() {
+        resetFamilyModal();     // fresh state on open
+        openModal(familyModal);
+      }
+      function closeFamily() {
+        resetFamilyModal();     // discard unsaved edits
+        closeModal(familyModal);
+      }
+
+      openFamilyBtn?.addEventListener('click', openFamily);
+      closeFamilyBtn?.addEventListener('click', closeFamily);
+      cancelFamilyBtn?.addEventListener('click', closeFamily);
+
+      // backdrop click closes & resets
+      familyModal?.addEventListener('click', (e) => { if (e.target === familyModal) closeFamily(); });
+
+      // ESC closes & resets (keeps it consistent with Update modal)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && familyModal && !familyModal.classList.contains('hidden')) closeFamily();
+      });
+
+      // Submit guard: require a suggestion selection to capture correct respondent_id
+      addFamilyForm?.addEventListener('submit', (e) => {
+        const input  = familyModal?.querySelector('#respondent_name');
+        const hidden = familyModal?.querySelector('#respondent_id');
+        if (input && hidden && input.value && !hidden.value) {
+          e.preventDefault();
+          alert('Please select a respondent from the suggestions so we can capture the correct ID.');
+          input.focus();
+          return;
+        }
+      });
+    })();
+
+    // Add Member modal submit guard
+    (function () {
+      const form = document.querySelector('#addMemberModal form');
+      form?.addEventListener('submit', (e) => {
+        // must choose a suggestion so resident_id is captured
+        const input  = document.getElementById('resident_full_name');
+        const hidden = document.getElementById('resident_id');
+        if (input && hidden && input.value && !hidden.value) {
+          e.preventDefault();
+          alert('Please select a resident from the suggestions so we can capture the correct ID.');
+          input.focus();
+          return;
+        }
+
+        const phNumber       = memberModal?.querySelector('#philhealth_number');
+        const membershipSel  = memberModal?.querySelector('#membership_type');
+        const categorySel    = memberModal?.querySelector('#philhealth_category');
+        const membershipStar = memberModal?.querySelector('#membership_required_star');
+        const categoryStar   = memberModal?.querySelector('#category_required_star');
+
+        function syncPhilHealthRequirements() {
+          const hasPh = (phNumber?.value || '').trim().length > 0;
+
+          if (membershipSel) {
+            membershipSel.required = hasPh;
+            membershipStar?.classList.toggle('hidden', !hasPh);
+          }
+          if (categorySel) {
+            categorySel.required = hasPh;
+            categoryStar?.classList.toggle('hidden', !hasPh);
+          }
+        }
+      });
+    })();
+
+
+    /* =====================================
+      MEMBER MODAL (Add Member)
+    ===================================== */
+    const memberModal = document.getElementById('addMemberModal');
+    const openMemberBtns = document.querySelectorAll('.openAddMemberModal');
+    const closeMemberBtn = document.getElementById('closeAddMemberModal');
+    const cancelMemberBtn = document.getElementById('cancelAddMemberModal');
+    const memberFamilyField = document.getElementById('member_family_number');
+    const addMemberForm = memberModal?.querySelector('form');
+
+    const phNumber       = memberModal?.querySelector('#philhealth_number');
+    const membershipSel  = memberModal?.querySelector('#membership_type');
+    const categorySel    = memberModal?.querySelector('#philhealth_category');
+
+    function syncPhilHealthControls() {
+      const hasPh = (phNumber?.value || '').trim().length > 0;
+
+      if (membershipSel) {
+        membershipSel.disabled = !hasPh;
+        if (!hasPh) membershipSel.value = '';
+      }
+      if (categorySel) {
+        categorySel.disabled = !hasPh;
+        if (!hasPh) categorySel.value = '';
+      }
+    }
+
+
+    function resetAddMemberModal() {
+      // 1) reset fields
+      addMemberForm?.reset();
+
+      // 2) clear hidden resident id
+      const hiddenResId = memberModal?.querySelector('#resident_id');
+      if (hiddenResId) hiddenResId.value = '';
+
+      // 3) collapse autocomplete dropdowns inside this modal
+      memberModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+        el.innerHTML = '';
+        el.classList.add('hidden');
+      });
+
+      // 4) restore conditional-required to default (optional)
+      syncPhilHealthControls();
+    }
+
+    function openMemberModal(familyNum) {
+      resetAddMemberModal();                     // fresh state each open
+      if (memberFamilyField) memberFamilyField.value = familyNum || '';
+      openModal(memberModal);
+    }
+    const closeMemberModal = () => {             // discard unsaved edits on close
+      resetAddMemberModal();
+      closeModal(memberModal);
+    };
+
+    openMemberBtns.forEach(btn => {
+      btn.addEventListener('click', () => openMemberModal(btn.dataset.familyNumber));
+    });
+    closeMemberBtn?.addEventListener('click', closeMemberModal);
+    cancelMemberBtn?.addEventListener('click', closeMemberModal);
+    bindBackdropClose(memberModal, closeMemberModal);
+
+    phNumber?.addEventListener('input',  syncPhilHealthControls);
+    phNumber?.addEventListener('change', syncPhilHealthControls);
+    addMemberForm?.addEventListener('reset', () => setTimeout(syncPhilHealthControls, 0));
+
+    /* =====================================
+      GENERAL HEALTH MODAL (per member)
+    ===================================== */
+    (function () {
+      const ghModal       = document.getElementById('generalHealthModal');
+      if (!ghModal) return;
+
+      const ghCloseBtn    = document.getElementById('closeGeneralHealthModal');
+      const ghCancelBtn   = document.getElementById('cancelGeneralHealthModal');
+      const ghForm        = ghModal.querySelector('form');
+
+      const ghMemberId    = document.getElementById('gh_member_id');
+      const ghMemberSex   = document.getElementById('gh_member_sex');
+      const ghMemberLabel = document.getElementById('gh_member_label');
+
+      const ghRecordId    = document.getElementById('gh_record_id');      // NEW
+      const ghSubmitBtn   = document.getElementById('gh_submit_btn');     // NEW
+
+      const fetchUrl      = ghForm?.dataset.fetchUrl || '';               // NEW
+      const updateAction  = ghForm?.dataset.updateAction || '';           // NEW
+      const insertAction  = ghForm?.getAttribute('action') || '';         // NEW
+
+      // Female-only sections
+      const ghLmpWrap       = document.getElementById('gh_lmp_wrap');
+      const ghMenarcheWrap  = document.getElementById('gh_menarche_wrap');
+      const ghFpUseWrap     = document.getElementById('gh_fp_use_wrap');
+      const ghFpMethodWrap  = document.getElementById('gh_fp_method_wrap');
+      const ghFpStatusWrap  = document.getElementById('gh_fp_status_wrap');
+
+      const ghFpUseSel      = ghModal.querySelector('select[name="fp_use"]');
+      const ghFpMethodSel   = ghModal.querySelector('select[name="fp_method"]');
+      const ghFpStatusSel   = ghModal.querySelector('select[name="fp_status"]');
+
+      // Always-present controls
+      const smokerSel       = ghModal.querySelector('select[name="smoker"]');
+      const alcoholSel      = ghModal.querySelector('select[name="alcohol_drinker"]');
+      const sexActSel       = ghModal.querySelector('select[name="sexually_active"]');
+      const lmpInput        = ghModal.querySelector('input[name="last_menstrual_period"]');
+      const menarcheInput   = ghModal.querySelector('input[name="age_menarche"]');
+      const classSel        = ghModal.querySelector('select[name="class"]');
+
+      // helper refs
+      const docEl = document.documentElement;
+      const _open  = (el) => (window.openModal ? window.openModal(el) : (el.classList.remove('hidden'), docEl.classList.add('overflow-y-hidden')));
+      const _close = (el) => (window.closeModal ? window.closeModal(el) : (el.classList.add('hidden'), docEl.classList.remove('overflow-y-hidden')));
+
+      const isFemale = (s) => {
+        const v = String(s || '').trim().toLowerCase();
+        return v === 'female' || v === 'f' || v === 'woman' || v === 'women';
+      };
+
+      function setWrapVisibleAndDisable(wrap, visible) {
+        if (!wrap) return;
+        wrap.classList.toggle('hidden', !visible);
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          ctrl.disabled = !visible;
+          if (!visible) {
+            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') ctrl.checked = false;
+            else ctrl.value = '';
+            ctrl.removeAttribute('required');
+          }
+        });
+      }
+
+      function setRequiredInWrap(wrap, required) {
+        if (!wrap) return;
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          required ? ctrl.setAttribute('required','required') : ctrl.removeAttribute('required');
+        });
+      }
+
+      function setFemaleOnlyVisibility(sex) {
+        const female = isFemale(sex);
+        setWrapVisibleAndDisable(ghLmpWrap,      female);
+        setWrapVisibleAndDisable(ghMenarcheWrap, female);
+        setWrapVisibleAndDisable(ghFpUseWrap,    female);
+
+        if (!female) {
+          setWrapVisibleAndDisable(ghFpMethodWrap, false);
+          setWrapVisibleAndDisable(ghFpStatusWrap, false);
+        } else {
+          syncFPControls();
+        }
+      }
+
+      function syncFPControls() {
+        const female = isFemale(ghMemberSex?.value);
+        const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
+
+        setWrapVisibleAndDisable(ghFpMethodWrap, usingFp);
+        setWrapVisibleAndDisable(ghFpStatusWrap, usingFp);
+
+        setRequiredInWrap(ghFpMethodWrap, usingFp);
+        setRequiredInWrap(ghFpStatusWrap, usingFp);
+
+        if (!usingFp) {
+          if (ghFpMethodSel) ghFpMethodSel.value = '';
+          if (ghFpStatusSel) ghFpStatusSel.value = '';
+        }
+      }
+
+      // ---------- NEW: populate helpers ----------
+      function setSelectValue(sel, val) {
+        if (!sel) return;
+        if (val === null || val === undefined || val === '') { sel.value = ''; return; }
+        const v = String(val);
+        // exact value match if exists
+        for (const opt of sel.options) if (String(opt.value) === v) { sel.value = v; return; }
+        // try boolean normalization
+        if (v === 'true' || v === 'false') { sel.value = v; return; }
+        sel.value = '';
+      }
+      function setBoolSelect(sel, boolVal) {
+        setSelectValue(sel, (boolVal === true || boolVal === 1 || boolVal === '1' || String(boolVal).toLowerCase()==='true') ? 'true' : (boolVal===false || boolVal===0 || String(boolVal).toLowerCase()==='false') ? 'false' : '');
+      }
+      function setCheckboxList(name, values) {
+        const arr = Array.isArray(values) ? values.map(v=>String(v)) : String(values||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const setVals = new Set(arr);
+        ghForm.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(name)}"]`).forEach(cb => {
+          cb.checked = setVals.has(String(cb.value));
+        });
+      }
+
+      function clearFormValues() {
+        ghForm.reset();
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+        if (ghRecordId) ghRecordId.value = '';
+      }
+
+      function populateFromData(d) {
+        // Flexible key support
+        if (ghRecordId) ghRecordId.value = d.gh_id || d.id || d.general_health_id || '';
+
+        setBoolSelect(smokerSel,     d.smoker);
+        setBoolSelect(alcoholSel,    d.alcohol_drinker);
+        setBoolSelect(sexActSel,     d.sexually_active);
+
+        if (lmpInput)      lmpInput.value      = (d.last_menstrual_period || '').slice(0,10);
+        if (menarcheInput) menarcheInput.value = d.age_menarche ?? '';
+
+        setBoolSelect(ghFpUseSel, d.fp_use);
+        setSelectValue(ghFpMethodSel, d.fp_method_id ?? d.fp_method);
+        setSelectValue(ghFpStatusSel, d.fp_status_id ?? d.fp_status);
+
+        setSelectValue(classSel, d.class_id ?? d.class);
+
+        // medical_history may be array of IDs or comma string
+        if (d.medical_history !== undefined) setCheckboxList('medical_history', d.medical_history);
+
+        // Re-apply visibility tied to values
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+      }
+
+      async function fetchGH(memberId) {
+        if (!fetchUrl || !memberId) return null;
+        try {
+          const url = new URL(fetchUrl, window.location.origin);
+          url.searchParams.set('member_id', memberId);
+          const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+          if (!res.ok) throw new Error('Fetch failed');
+          const data = await res.json();
+          // Accept either {record:{...}} or direct object
+          return data.record || data || null;
+        } catch (e) {
+          console.error('generalHealthGetApi error:', e);
+          return null;
+        }
+      }
+
+      // ---- Snapshot/restore (unchanged) ----
+      function takeSnapshot(form) {
+        const snap = {};
+        const add = (name, val) => { snap[name] = val; };
+
+        const byName = {};
+        Array.from(form.elements).forEach(el => {
+          if (!el.name || el.disabled || el.type === 'file') return;
+          (byName[el.name] ||= []).push(el);
+        });
+
+        for (const [name, els] of Object.entries(byName)) {
+          const first = els[0];
+          if (first.type === 'checkbox') {
+            add(name, els.filter(e => e.checked).map(e => e.value));
+          } else if (first.type === 'radio') {
+            const sel = els.find(e => e.checked);
+            add(name, sel ? sel.value : null);
+          } else if (first.tagName === 'SELECT' && first.multiple) {
+            add(name, Array.from(first.selectedOptions).map(o => o.value));
+          } else if (els.length > 1) {
+            add(name, els.map(e => e.value ?? ''));
+          } else {
+            add(name, first.value ?? '');
+          }
+        }
+        ghModal._snapshot = snap;
+      }
+      function restoreSnapshot(form) {
+        const snap = ghModal._snapshot || {};
+        form.reset();
+        for (const [name, val] of Object.entries(snap)) {
+          const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
+          if (!els.length) continue;
+          const first = els[0];
+          if (first.type === 'checkbox') {
+            const setVals = new Set(Array.isArray(val) ? val : []);
+            els.forEach(e => e.checked = setVals.has(e.value));
+          } else if (first.type === 'radio') {
+            els.forEach(e => e.checked = (val != null && e.value == val));
+          } else if (first.tagName === 'SELECT' && first.multiple) {
+            const setVals = new Set(Array.isArray(val) ? val : []);
+            Array.from(first.options).forEach(opt => opt.selected = setVals.has(opt.value));
+          } else if (els.length > 1) {
+            const arr = Array.isArray(val) ? val : [val];
+            els.forEach((e, i) => e.value = arr[i] ?? '');
+          } else {
+            first.value = (val ?? '');
+          }
+        }
+        setFemaleOnlyVisibility(ghMemberSex?.value || '');
+        syncFPControls();
+      }
+
+      async function openGHModal(memberId, memberName, memberSex, hasGh) {
+        // Base state: insert mode
+        if (ghSubmitBtn) ghSubmitBtn.textContent = 'Save';
+        if (ghForm && insertAction) ghForm.setAttribute('action', insertAction);
+        clearFormValues();
+
+        if (ghMemberId)    ghMemberId.value = memberId || '';
+        if (ghMemberSex)   ghMemberSex.value = memberSex || '';
+        if (ghMemberLabel) ghMemberLabel.textContent = memberName ? `– ${memberName}` : '';
+
+        setFemaleOnlyVisibility(memberSex);
+        syncFPControls();
+
+        _open(ghModal);
+
+        setModalReadOnly(ghModal, isHouseholdReadOnlyContext());
+
+        if (hasGh === true || hasGh === 'true' || hasGh === 1 || hasGh === '1') {
+          // Switch to update mode
+          if (ghSubmitBtn) ghSubmitBtn.textContent = 'Update';
+          if (ghForm && updateAction) ghForm.setAttribute('action', updateAction);
+
+          const data = await fetchGH(memberId);
+          if (data) populateFromData(data);
+        }
+
+        // Take snapshot after values are final
+        takeSnapshot(ghForm);
+      }
+
+      function closeGHModalDiscard() {
+        if (ghForm) restoreSnapshot(ghForm);
+        _close(ghModal);
+      }
+
+      // Expose opener for direct calls
+      window.openGeneralHealthModal = openGHModal;
+
+      // Delegated open: now passes hasGh too
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.openGeneralHealthModal');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openGHModal(
+          btn.dataset.memberId,
+          btn.dataset.memberName,
+          btn.dataset.memberSex,
+          btn.dataset.hasGh
+        );
+      });
+
+      ghCloseBtn?.addEventListener('click', closeGHModalDiscard);
+      ghCancelBtn?.addEventListener('click', closeGHModalDiscard);
+      ghModal?.addEventListener('click', (e) => { if (e.target === ghModal) closeGHModalDiscard(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !ghModal.classList.contains('hidden')) closeGHModalDiscard();
+      });
+
+      ghFpUseSel?.addEventListener('change', syncFPControls);
+      ghForm?.addEventListener('reset', () => {
+        setTimeout(() => {
+          setFemaleOnlyVisibility(ghMemberSex?.value || '');
+          syncFPControls();
+        }, 0);
+      });
+    })();
+
+    /* =====================================
+    GLOBAL: ESC closes top-most open modal
+    ====================================== */
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (ghModal && !ghModal.classList.contains('hidden')) return closeGHModal();
+      if (memberModal && !memberModal.classList.contains('hidden')) return closeMemberModal();
+      if (familyModal && !familyModal.classList.contains('hidden')) return closeFamilyModal();
+    });
+  })();
+
+  (() => {
+  // Inside Add Family modal
+  const famModal = document.getElementById('addFamilyModal');
+  const select = famModal?.querySelector('select[name="ip_status"]');
+  const wrap     = famModal?.querySelector('#ip_tribe_wrap');
+  const input    = famModal?.querySelector('#ip_tribe');
+
+  if (!select || !wrap) return;
+
+  function syncIPField() {
+    // Your options use value="true"/"false"
+    const show = select.value === 'true';
+    wrap.classList.toggle('hidden', !show);
+    if (input) {
+      input.required = show;     // require when visible
+      if (!show) input.value = ''; // clear when hidden
+    }
+  }
+
+  select.addEventListener('change', syncIPField);
+  // Initialize on load (handles pre-filled forms)
+  syncIPField();
+})();
+
+  (() => {
+    const famModal = document.getElementById('addFamilyModal');
+    if (!famModal) return;
+
+    const form   = famModal.querySelector('form');
+    const select = famModal.querySelector('select[name="indigent_status"]'); // your IP toggle
+    const wrap   = famModal.querySelector('#ip_tribe_wrap');
+    const input  = famModal.querySelector('#ip_tribe');
+
+    if (!form || !select || !wrap) return;
+
+    function syncIPField() {
+      const show = select.value === 'true';     // YES option uses value="true"
+      wrap.classList.toggle('hidden', !show);
+      if (input) {
+        input.required = show;                  // required only when shown
+        if (!show) input.value = '';            // clear when hidden
+      }
+    }
+
+    // Show/hide on change
+    select.addEventListener('change', syncIPField);
+
+    // Ensure it hides again whenever the modal is reset (your close/cancel calls form.reset())
+    form.addEventListener('reset', () => {
+      // Defer a tick so the browser applies the reset values first
+      setTimeout(syncIPField, 0);
+    });
+
+    // Initialize once on load (covers pre-filled cases too)
+    syncIPField();
+  })();
+
+  /* =====================================
+    UPDATE FAMILY MODAL — full JS
+  ===================================== */
+  (function () {
+    const ufModal   = document.getElementById('updateFamilyModal');
+    const ufForm    = ufModal?.querySelector('form');
+
+    const openBtns  = document.querySelectorAll('.openUpdateFamilyModal');
+    const closeBtn  = document.getElementById('closeUpdateFamilyModal');
+    const cancelBtn = document.getElementById('cancelUpdateFamilyModal');
+
+    const titleLbl  = document.getElementById('uf_title_label');
+    const famId     = document.getElementById('uf_family_id');
+
+    const headName  = document.getElementById('uf_family_head_name');
+    const headId    = document.getElementById('uf_family_head_id');
+    const respName  = document.getElementById('uf_respondent_name');
+    const respId    = document.getElementById('uf_respondent_id');
+
+    const headRel   = document.getElementById('uf_fam_head_rel');   
+    const respRel   = document.getElementById('uf_respondent_rel');  
+    const hhtSel    = document.getElementById('uf_household_type');
+    const wmtSel    = document.getElementById('uf_waste_management_type');
+    const wsSel     = document.getElementById('uf_water_source_type');
+    const tfSel     = document.getElementById('uf_toilet_facility_type');
+
+    const nhtsSel   = document.getElementById('uf_nhts_status');
+    const indigSel  = document.getElementById('uf_indigent_status');
+    const ipWrap    = document.getElementById('uf_ip_tribe_wrap');
+    const ipInput   = document.getElementById('uf_ip_tribe');
+
+    // NEW: quarter id hidden input
+    const qidInput  = document.getElementById('uf_quarter_id');
+
+    // Prefer selecting by value (ID). If not present, match by visible text (case-insensitive).
+    function setSelectByIdOrText(select, id, text) {
+      if (!select) return false;
+
+      if (id != null && id !== '') {
+        for (const opt of select.options) {
+          if (String(opt.value) === String(id)) {
+            select.value = opt.value;
+            return true;
+          }
+        }
+      }
+      if (text) {
+        const needle = String(text).trim().toLowerCase();
+        for (const opt of select.options) {
+          if (opt.text.trim().toLowerCase() === needle) {
+            select.value = opt.value;
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function syncIPField() {
+      const show = indigSel?.value === 'true';
+      ipWrap?.classList.toggle('hidden', !show);
+      if (ipInput) {
+        ipInput.required = show;
+        if (!show) ipInput.value = '';
+      }
+    }
+
+    function resetModal() {
+      ufForm?.reset();
+
+      // clear hidden IDs so we can detect re-selection
+      if (headId) headId.value = '';
+      if (respId) respId.value = '';
+      if (qidInput) qidInput.value = '';
+
+      // collapse any autocomplete lists inside this modal
+      ufModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+        el.innerHTML = '';
+        el.classList.add('hidden');
+      });
+
+      syncIPField();
+    }
+
+    function openUF(e, btn) {
+      e?.stopPropagation?.(); e?.preventDefault?.();
+      resetModal();
+
+      const data = btn.dataset;
+
+      // Title & IDs
+      if (titleLbl) titleLbl.textContent = data.familyCode ? `– ${data.familyCode}` : '';
+      if (famId)    famId.value = data.familyId || '';
+
+      // Names + hidden IDs (valid even if user doesn't re-pick from typeahead)
+      if (headName) {
+        headName.value = data.familyHead || '';
+        headName.setAttribute('data-init-name', data.familyHead || '');
+      }
+      if (headId) headId.value = data.familyHeadId || '';
+
+      if (respName) {
+        respName.value = data.respondent || '';
+        respName.setAttribute('data-init-name', data.respondent || '');
+      }
+      if (respId) respId.value = data.respondentId || '';
+
+      // Relationship selects — use IDs if provided, else fallback to label text
+      setSelectByIdOrText(headRel, data.rthId || data.rth, data.rth);
+      setSelectByIdOrText(respRel, data.rtfId, data.rtf);
+
+      // Environment selects — your buttons currently pass the labels
+      setSelectByIdOrText(hhtSel, data.householdTypeId,       data.householdType);
+      setSelectByIdOrText(wmtSel, data.wasteManagementTypeId, data.wasteManagement);
+      setSelectByIdOrText(wsSel,  data.waterSourceTypeId,     data.waterSource);
+      setSelectByIdOrText(tfSel,  data.toiletFacilityTypeId,  data.toiletType);
+
+      // Flags
+      if (nhtsSel && (data.nhtsStatus === 'true' || data.nhtsStatus === 'false')) {
+        nhtsSel.value = data.nhtsStatus;
+      }
+      if (indigSel && (data.indigent === 'true' || data.indigent === 'false')) {
+        indigSel.value = data.indigent;
+      }
+
+      // IP tribe (optional)
+      if (ipInput) ipInput.value = data.ipTribe || '';
+      syncIPField();
+
+      // NEW: Quarter ID — prefer the button's value, fallback to the page Quarter select
+      if (qidInput) {
+        const pageQuarter = document.querySelector('select[name="quarter_id"]')?.value || '';
+        qidInput.value = data.quarterId || pageQuarter || '';
+      }
+
+      openModal(ufModal);
+
+      setModalReadOnly(ufModal, isHouseholdReadOnlyContext());
+    }
+
+    // Open handlers
+    openBtns.forEach(btn => btn.addEventListener('click', (e) => openUF(e, btn)));
+
+    // Close handlers
+    const doClose = () => { resetModal(); closeModal(ufModal); };
+    closeBtn?.addEventListener('click', doClose);
+    cancelBtn?.addEventListener('click', doClose);
+    ufModal?.addEventListener('click', (e) => { if (e.target === ufModal) doClose(); });
+
+    // React to indigent change (toggle IP tribe)
+    indigSel?.addEventListener('change', syncIPField);
+
+    // Submit guard: if user edits a name but doesn’t pick from typeahead, require the hidden ID
+    ufForm?.addEventListener('submit', (e) => {
+      const pairs = [
+        { input: headName, hidden: headId },
+        { input: respName, hidden: respId },
+      ];
+      for (const { input, hidden } of pairs) {
+        if (!input || !hidden) continue;
+        const init = (input.getAttribute('data-init-name') || '').trim();
+        const now  = (input.value || '').trim();
+        if (now && now !== init && !hidden.value) {
+          e.preventDefault();
+          alert('Please select a resident from the suggestions so we can capture the correct ID.');
+          input.focus();
+          return;
+        }
+      }
+    });
+  })();
+
+  /* =====================================
+    REMOVE FAMILY modal
+  ===================================== */
+  (function () {
+    const rmModal   = document.getElementById('removeFamilyModal');
+    const openBtns  = document.querySelectorAll('.openRemoveFamilyModal');
+    const closeBtn  = document.getElementById('closeRemoveFamilyModal');
+    const cancelBtn = document.getElementById('cancelRemoveFamilyModal');
+
+    const rmForm    = rmModal?.querySelector('form');
+    const rmId      = document.getElementById('rm_family_id');
+    const rmLabel   = document.getElementById('rm_family_label');
+    const reasonSel = document.getElementById('rm_reason_sel');
+
+    function openRM(e, btn) {
+      e?.stopPropagation?.();
+      e?.preventDefault?.();
+
+      // preload hidden fields/labels
+      if (rmId)    rmId.value = btn.dataset.familyId || '';
+      if (rmLabel) rmLabel.textContent = btn.dataset.familyLabel || '';
+
+      // fresh state on open
+      rmForm?.reset();
+
+      openModal(rmModal);
+    }
+
+    function closeRM() {
+      rmForm?.reset();
+      closeModal(rmModal);
+    }
+
+    // open
+    openBtns.forEach(btn => btn.addEventListener('click', (e) => openRM(e, btn)));
+
+    // close
+    closeBtn?.addEventListener('click', closeRM);
+    cancelBtn?.addEventListener('click', closeRM);
+    rmModal?.addEventListener('click', (e) => { if (e.target === rmModal) closeRM(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rmModal && !rmModal.classList.contains('hidden')) closeRM();
+    });
+
+    // require a reason
+    rmForm?.addEventListener('submit', (e) => {
+      if (!reasonSel?.value) {
+        e.preventDefault();
+        alert('Please select a reason for removal.');
+        reasonSel?.focus();
+      }
+    });
+
+    // prevent <details> toggle when clicking the action button
+    document.querySelectorAll('.openRemoveFamilyModal')
+      .forEach(btn => btn.addEventListener('click', (e) => e.stopPropagation()));
+  })();
+
+  /* =====================================
+    MARK FAMILY VISIT modal
+  ===================================== */
+  (function () {
+    const mvModal   = document.getElementById('markFamilyVisitModal');
+    const openBtns  = document.querySelectorAll('.openMarkFamilyVisitModal');
+    const closeBtn  = document.getElementById('closeMarkFamilyVisitModal');
+    const cancelBtn = document.getElementById('cancelMarkFamilyVisitModal');
+
+    const mvId      = document.getElementById('mv_family_id');
+    const mvLabel   = document.getElementById('mv_family_label');
+
+    function openMV(e, btn) {
+      e?.stopPropagation?.(); e?.preventDefault?.();
+      if (mvId) mvId.value = btn.dataset.familyId || '';
+      if (mvLabel) mvLabel.textContent = btn.dataset.familyLabel || '';
+      openModal(mvModal);
+    }
+
+    openBtns.forEach(btn => btn.addEventListener('click', (e) => openMV(e, btn)));
+
+    const doClose = () => closeModal(mvModal);
+    closeBtn?.addEventListener('click', doClose);
+    cancelBtn?.addEventListener('click', doClose);
+    mvModal?.addEventListener('click', (e) => { if (e.target === mvModal) doClose(); });
+
+    // ESC closes if open
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mvModal && !mvModal.classList.contains('hidden')) doClose();
+    });
+  })();
+
+  /* =====================================
+    UPDATE MEMBER MODAL — JS (new data attrs)
+  ===================================== */
+  (function () {
+    const umModal   = document.getElementById('updateMemberModal');
+    const umForm    = umModal?.querySelector('form');
+
+    const openBtns  = document.querySelectorAll('.openUpdateMemberModal');
+    const closeBtn  = document.getElementById('closeUpdateMemberModal');
+    const cancelBtn = document.getElementById('cancelUpdateMemberModal');
+
+    const titleLbl  = document.getElementById('um_title_label');
+    const fmIdInput = document.getElementById('um_family_member_id');
+
+    const fullNameInput = document.getElementById('um_full_name');
+
+    const relHHSel  = document.getElementById('um_mem_rel_hh');         // rth_id
+    const relFHSel  = document.getElementById('um_mem_rel_fh');         // rtf_id
+
+    const phNum     = document.getElementById('um_philhealth_number');  // philhealthid_number
+    const memType   = document.getElementById('um_membership_type');    // "M" / "D"
+    const catSel    = document.getElementById('um_philhealth_category'); // id
+
+    const memStar   = document.getElementById('um_membership_required_star');
+    const catStar   = document.getElementById('um_category_required_star');
+
+    const nutSel    = document.getElementById('um_nutritional_status');
+
+    // Optional status field (uncomment in HTML if needed)
+    const statusSel = document.getElementById('um_status');
+
+    function setSelectById(select, id) {
+      if (!select) return false;
+      if (id == null || id === '') return false;
+      for (const opt of select.options) {
+        if (String(opt.value) === String(id)) { select.value = opt.value; return true; }
+      }
+      return false;
+    }
+
+    function syncPhilHealthControls() {
+      const hasPh = (phNum?.value || '').trim().length > 0;
+
+      if (memType) {
+        memType.disabled = !hasPh;
+        memType.required = !!hasPh;
+        memStar?.classList.toggle('hidden', !hasPh);
+        if (!hasPh) memType.value = '';
+      }
+      if (catSel) {
+        catSel.disabled = !hasPh;
+        catSel.required = !!hasPh;
+        catStar?.classList.toggle('hidden', !hasPh);
+        if (!hasPh) catSel.value = '';
+      }
+    }
+
+    function resetModal() {
+      umForm?.reset();
+      if (fmIdInput) fmIdInput.value = '';
+      // collapse any autocomplete lists (none here, but keep consistent)
+      umModal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+        el.innerHTML = '';
+        el.classList.add('hidden');
+      });
+      syncPhilHealthControls();
+    }
+
+    function openUM(btn) {
+      resetModal();
+
+      const d = btn.dataset;
+
+      // Heading + IDs + Name
+      titleLbl && (titleLbl.textContent = d.fullName ? `– ${d.fullName}` : '');
+      fmIdInput && (fmIdInput.value = d.familyMemberId || '');
+      fullNameInput && (fullNameInput.value = d.fullName || '');
+
+      // Relationships
+      setSelectById(relHHSel, d.rthId);
+      setSelectById(relFHSel, d.rtfId);
+
+      // PhilHealth
+      if (phNum) phNum.value = d.philhealthidNumber || '';
+      if (memType && d.membershipType) memType.value = d.membershipType;
+      setSelectById(catSel, d.philhealthCategoryId);
+      syncPhilHealthControls();
+
+      // Nutrition
+      setSelectById(nutSel, d.nutritionStatusId);
+
+      // Optional status
+      if (statusSel && d.status) {
+        // Map your payload to select values if needed
+        // e.g., "A"/"I" -> "ACTIVE"/"INACTIVE"
+        const val = (d.status || '').toUpperCase();
+        const mapped = (val === 'A') ? 'ACTIVE' : (val === 'I') ? 'INACTIVE' : val;
+        setSelectById(statusSel, mapped);
+      }
+
+      // Open modal
+      umModal?.classList.remove('hidden');
+      umModal?.classList.add('flex');
+      document.documentElement.classList.add('overflow-y-hidden');
+      setModalReadOnly(umModal, isHouseholdReadOnlyContext());
+    }
+
+    function closeUM() {
+      resetModal();
+      umModal?.classList.add('hidden');
+      umModal?.classList.remove('flex');
+      if (!document.querySelector('.fixed.inset-0.flex')) {
+        document.documentElement.classList.remove('overflow-y-hidden');
+      }
+    }
+
+    // Open handlers (avoid toggling <details>)
+    openBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openUM(btn);
+      });
+    });
+
+    // Close handlers
+    closeBtn?.addEventListener('click', closeUM);
+    cancelBtn?.addEventListener('click', closeUM);
+    umModal?.addEventListener('click', (e) => { if (e.target === umModal) closeUM(); });
+
+    // ESC close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && umModal && !umModal.classList.contains('hidden')) closeUM();
+    });
+
+    // PhilHealth dynamic requirements
+    phNum?.addEventListener('input',  syncPhilHealthControls);
+    phNum?.addEventListener('change', syncPhilHealthControls);
+    umForm?.addEventListener('reset', () => setTimeout(syncPhilHealthControls, 0));
+  })();
+
+  /* Deactivate Household modal — dropdown validation only */
+  (function () {
+    const modal     = document.getElementById('deactivateHouseholdModal');
+    const openBtn   = document.getElementById('openDeactivateHouseholdModal');
+    const closeBtn  = document.getElementById('closeDeactivateHouseholdModal');
+    const cancelBtn = document.getElementById('cancelDeactivateHouseholdModal');
+    const form      = modal?.querySelector('form');
+    const reasonSel = document.getElementById('dh_reason_sel');
+
+    function openDeactivate() {
+      form?.reset();
+      modal?.classList.remove('hidden');
+      modal?.classList.add('flex');
+      document.documentElement.classList.add('overflow-y-hidden');
+    }
+    function closeDeactivate() {
+      form?.reset();
+      modal?.classList.add('hidden');
+      modal?.classList.remove('flex');
+      document.documentElement.classList.remove('overflow-y-hidden');
+    }
+
+    openBtn?.addEventListener('click', openDeactivate);
+    closeBtn?.addEventListener('click', closeDeactivate);
+    cancelBtn?.addEventListener('click', closeDeactivate);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeDeactivate(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeDeactivate();
+    });
+
+    // Guard: must pick a reason
+    form?.addEventListener('submit', (e) => {
+      if (!reasonSel?.value) {
+        e.preventDefault();
+        alert('Please select a reason for deactivation.');
+        reasonSel?.focus();
+      }
+    });
+  })();
+
+  /* Activate Household modal — simple open/close */
+  (function () {
+    const modal     = document.getElementById('activateHouseholdModal');
+    const openBtn   = document.getElementById('openActivateHouseholdModal');
+    const closeBtn  = document.getElementById('closeActivateHouseholdModal');
+    const cancelBtn = document.getElementById('cancelActivateHouseholdModal');
+    const form      = modal?.querySelector('form');
+
+    function openActivate() {
+      form?.reset();
+      modal?.classList.remove('hidden');
+      modal?.classList.add('flex');
+      document.documentElement.classList.add('overflow-y-hidden');
+    }
+    function closeActivate() {
+      form?.reset();
+      modal?.classList.add('hidden');
+      modal?.classList.remove('flex');
+      document.documentElement.classList.remove('overflow-y-hidden');
+    }
+
+    openBtn?.addEventListener('click', openActivate);
+    closeBtn?.addEventListener('click', closeActivate);
+    cancelBtn?.addEventListener('click', closeActivate);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeActivate(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeActivate();
+    });
+  })();
+
+  // Global: prevent <details> from hijacking action-button clicks
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll(
+      '.openUpdateFamilyModal,.openRemoveFamilyModal,.openMarkFamilyVisitModal'
+    ).forEach(btn => btn.addEventListener('click', (e) => e.stopPropagation()));
+  });
+
+  /* =====================================
+    REMOVE MEMBER modal
+  ===================================== */
+  (function () {
+    const rmModal    = document.getElementById('removeMemberModal');
+    const openBtns   = document.querySelectorAll('.openRemoveMemberModal');
+    const closeBtn   = document.getElementById('closeRemoveMemberModal');
+    const cancelBtn  = document.getElementById('cancelRemoveMemberModal');
+
+    const rmForm     = rmModal?.querySelector('form');
+    const rmId       = document.getElementById('rm_member_id');             // family_member_id
+    const rmResident = document.getElementById('rm_member_resident_id');    // resident_id
+    const rmFamily   = document.getElementById('rm_member_family_id');      // NEW: family_id
+    const rmLabel    = document.getElementById('rm_member_label');
+    const reasonSel  = document.getElementById('rmv_reason_sel');
+
+    function openRM(e, btn) {
+      e?.stopPropagation?.();
+      e?.preventDefault?.();
+
+      rmForm?.reset(); // reset first, then fill
+
+      if (rmId)       rmId.value       = btn.dataset.familyMemberId || '';
+      if (rmResident) rmResident.value = btn.dataset.residentId     || '';
+      if (rmFamily)   rmFamily.value   = btn.dataset.familyId       || '';  // <-- NEW
+      if (rmLabel)    rmLabel.textContent = btn.dataset.memberLabel || '';
+
+      rmModal?.classList.remove('hidden');
+      rmModal?.classList.add('flex');
+      document.documentElement.classList.add('overflow-y-hidden');
+    }
+
+    function closeRM() {
+      rmForm?.reset();
+      rmModal?.classList.add('hidden');
+      rmModal?.classList.remove('flex');
+      document.documentElement.classList.remove('overflow-y-hidden');
+    }
+
+    openBtns.forEach(btn => btn.addEventListener('click', (e) => openRM(e, btn)));
+
+    closeBtn?.addEventListener('click', closeRM);
+    cancelBtn?.addEventListener('click', closeRM);
+    rmModal?.addEventListener('click', (e) => { if (e.target === rmModal) closeRM(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rmModal && !rmModal.classList.contains('hidden')) closeRM();
+    });
+
+    rmForm?.addEventListener('submit', (e) => {
+      if (!rmId?.value) { e.preventDefault(); alert('Missing member id.'); return; }
+      if (!reasonSel?.value) { e.preventDefault(); alert('Please select a reason for removal.'); reasonSel?.focus(); return; }
+      // Optional extra guards if your view requires them:
+      // if (!rmResident?.value) { e.preventDefault(); alert('Missing resident id.'); return; }
+      // if (!rmFamily?.value)   { e.preventDefault(); alert('Missing family id.'); return; }
+    });
+
+    document.querySelectorAll('.openRemoveMemberModal')
+      .forEach(btn => btn.addEventListener('click', (e) => e.stopPropagation()));
+  })();
+
+/* Global guard: disable actions when quarter != current or household is inactive */
+(function () {
+  const root = document.getElementById('householdRoot');
+  if (!root) return;
+
+  const currentQuarterId = String(root.dataset.currentQuarterId || '');
+  const viewedQuarterId  = String(root.dataset.viewedQuarterId  || '');
+  const isActive         = root.dataset.isActive === 'true';
+
+  function shouldDisable() {
+    // Disable if household inactive OR viewing a non-current quarter
+    return (!isActive) || (currentQuarterId && viewedQuarterId && viewedQuarterId !== currentQuarterId);
+  }
+
+  function setDisabledState(disabled) {
+    const scopeButtons = root.querySelectorAll(
+      'button:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal)'
+    );
+    scopeButtons.forEach(btn => {
+      btn.disabled = !!disabled;
+      btn.classList.toggle('btn-disabled', !!disabled);
+      btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    });
+
+    const scopeLinks = root.querySelectorAll(
+    'a[role="button"]:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal), ' +
+    'a.button:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal), ' +
+    'a[data-action]:not(#openActivateHouseholdModal):not(.openUpdateFamilyModal):not(.openGeneralHealthModal):not(.openLinkRelationshipModal):not(.openUpdateMemberModal)'
+    );
+    scopeLinks.forEach(a => {
+      a.classList.toggle('btn-disabled', !!disabled);
+      if (disabled) a.setAttribute('tabindex', '-1'); else a.removeAttribute('tabindex');
+      if (disabled) a.setAttribute('aria-disabled', 'true'); else a.removeAttribute('aria-disabled');
+    });
+
+    document.body.classList.toggle('household-actions-disabled', !!disabled);
+  }
+
+  // Apply for this render
+  setDisabledState(shouldDisable());
+
+  // Defensive: block delegated clicks when disabled
+document.addEventListener('click', function (e) {
+  if (!document.body.classList.contains('household-actions-disabled')) return;
+
+  // ✅ Allow all interaction INSIDE any OPEN modal (so Cancel/Close/Activate still work)
+  if (e.target.closest('.fixed.inset-0.flex')) return;
+
+  // ✅ Allow these launch buttons even when disabled (so you can open read-only modals)
+  const allow = e.target.closest('#openActivateHouseholdModal, .openUpdateFamilyModal, .openGeneralHealthModal, .openLinkRelationshipModal, .openUpdateMemberModal');
+  if (allow) return;
+
+  // Otherwise, block actions on the page
+  const actionable = e.target.closest(
+    'button, [role="button"], .openUpdateFamilyModal, .openRemoveFamilyModal, .openMarkFamilyVisitModal, .openAddMemberModal, .openUpdateMemberModal, .openRemoveMemberModal, .openGeneralHealthModal, #openUpdateHouseholdModal, #openDeactivateHouseholdModal, #openActivateHouseholdModal, #openAddFamilyModal'
+  );
+  if (actionable) {
+    e.preventDefault();
+    e.stopPropagation();
+    alert('Actions are disabled because you are viewing a non-current quarter or the household is inactive.');
+  }
+}, true);
+})();
+
+  /* =====================================
+    Link Family Relationship modal — full JS
+  ===================================== */
+(function () {
+  // ---- Endpoints (adjust if your URLs differ) ----
+  const REL_LIST_URL   = "{% url 'bhw_module:residentLinksListApi' %}";   // GET ?member_id=&resident_id=
+  const REL_ADD_URL    = "{% url 'bhw_module:residentLinkInsert' %}";     // POST
+  const REL_REMOVE_URL = "{% url 'bhw_module:residentLinkRemove' %}";     // POST
+
+  // ---- Elements ----
+  const modal       = document.getElementById('linkRelationshipModal');
+  const form        = document.getElementById('lr_form');
+  const titleLbl    = document.getElementById('lr_title_label');
+  const srcMember   = document.getElementById('lr_source_member_id');
+  const srcResident = document.getElementById('lr_source_resident_id');
+  const nameInput   = document.getElementById('lr_resident_name');
+  const idHidden    = document.getElementById('lr_resident_id');
+  const relSel      = document.getElementById('lr_relationship');
+  const listWrap    = document.getElementById('lr_list');
+
+  const openBtns    = document.querySelectorAll('.openLinkRelationshipModal');
+  const closeBtn    = document.getElementById('closeLinkRelationshipModal');
+  const cancelBtn   = document.getElementById('cancelLinkRelationshipModal');
+
+  // ---- CSRF ----
+  function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // ---- helpers ----
+  function clearForm() {
+    form?.reset();
+    if (idHidden) idHidden.value = '';
+    modal?.querySelectorAll('[data-autocomplete-list]').forEach(el => {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+    });
+  }
+
+  // Expect each item from REL_LIST_URL to include:
+  // { related_resident_id, full_name, relationship_label, relationship_id }
+  function renderList(items) {
+    if (!listWrap) return;
+    if (!items || !items.length) {
+      listWrap.innerHTML = '<p class="text-xs text-gray-500">No linked residents yet.</p>';
+      return;
+    }
+    listWrap.innerHTML = items.map(it => `
+      <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+           data-related-resident-id="${it.related_resident_id}"
+           data-relationship-id="${it.relationship_id}">
+        <div class="flex flex-col">
+          <span class="font-medium text-gray-800">${it.full_name}</span>
+          <span class="text-xs text-gray-500">${it.relationship_label}</span>
+        </div>
+        <button type="button"
+          class="lr-remove rounded-lg border px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50">
+          Remove
+        </button>
+      </div>
+    `).join('');
+
+    setModalReadOnly(modal, isHouseholdReadOnlyContext());
+  }
+
+  async function loadRelations(memberId, residentId) {
+    try {
+      const url = new URL(REL_LIST_URL, window.location.origin);
+      if (memberId)  url.searchParams.set('member_id', memberId);
+      if (residentId)url.searchParams.set('resident_id', residentId);
+
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Failed to load relations');
+      const data = await res.json();
+      renderList(data.relations || []);
+    } catch (err) {
+      console.error(err);
+      renderList([]);
+    }
+  }
+
+  async function addRelation(e) {
+    e.preventDefault();
+
+    if (isHouseholdReadOnlyContext()) {
+      alert('Read-only view: cannot add links in this quarter/household state.');
+      return;
+    }
+
+    const payload = {
+      source_member_id:    srcMember?.value || '',
+      source_resident_id:  srcResident?.value || '',
+      related_resident_id: idHidden?.value || '',
+      relationship_id:     relSel?.value || ''
+    };
+
+    if (!payload.related_resident_id) return alert('Please pick a resident from the suggestions.');
+    if (!payload.relationship_id)     return alert('Please choose a relationship.');
+
+    // Prevent self-link (same person)
+    if (payload.source_resident_id && payload.source_resident_id === payload.related_resident_id) {
+      return alert('You cannot link a resident to themselves.');
+    }
+
+    // Prevent duplicates by resident_id
+    const dup = Array.from(listWrap.querySelectorAll('[data-related-resident-id]'))
+      .some(n => n.getAttribute('data-related-resident-id') === payload.related_resident_id);
+    if (dup) return alert('That resident is already linked.');
+
+    try {
+      const body = new URLSearchParams(payload);
+      const res = await fetch(REL_ADD_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      });
+      if (!res.ok) throw new Error('Add failed');
+
+      // Clear inputs and refresh list
+      nameInput.value = '';
+      idHidden.value  = '';
+      relSel.value    = '';
+      await loadRelations(srcMember?.value || '', srcResident?.value || '');
+    } catch (err) {
+      console.error(err);
+      alert('Could not add relation. Please try again.');
+    }
+  }
+
+  // Remove requires the triple that your Django view expects:
+  // source_resident_id, related_resident_id, relationship_id
+  async function removeRelation({ originId, targetId, relId }) {
+    if (!confirm('Remove this linked resident?')) return;
+    try {
+      const body = new URLSearchParams({
+        source_resident_id:  originId,
+        related_resident_id: targetId,
+        relationship_id:     relId
+      });
+
+      const res = await fetch(REL_REMOVE_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      });
+      if (!res.ok) throw new Error('Remove failed');
+      await loadRelations(srcMember?.value || '', srcResident?.value || '');
+    } catch (err) {
+      console.error(err);
+      alert('Could not remove relation. Please try again.');
+    }
+  }
+
+  function openLR(btn) {
+    clearForm();
+    const memberId   = btn.dataset.familyMemberId || '';
+    const memberName = btn.dataset.memberName || '';
+    const residentId = btn.dataset.residentId || '';
+
+    if (srcMember)   srcMember.value   = memberId;
+    if (srcResident) srcResident.value = residentId;
+    if (titleLbl)    titleLbl.textContent = memberName ? `– ${memberName}` : '';
+
+    openModal(modal);
+    setModalReadOnly(modal, isHouseholdReadOnlyContext());
+    loadRelations(memberId, residentId);
+  }
+
+  function closeLR() {
+    clearForm();
+    closeModal(modal);
+  }
+
+  // Openers
+  openBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      openLR(btn);
+    });
+  });
+
+  // Closers
+  closeBtn?.addEventListener('click', closeLR);
+  cancelBtn?.addEventListener('click', closeLR);
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeLR(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeLR();
+  });
+
+  // Add handler
+  form?.addEventListener('submit', addRelation);
+
+  // Delegated remove handler (pull triple from the row + source id from hidden)
+  listWrap?.addEventListener('click', (e) => {
+  if (isHouseholdReadOnlyContext()) {
+    e.preventDefault();
+    alert('Read-only view: cannot remove links in this quarter/household state.');
+    return;
+  }
+
+    const btn = e.target.closest('.lr-remove');
+    if (!btn) return;
+
+    const row      = btn.closest('[data-related-resident-id]');
+    const originId = srcResident?.value || '';
+    const targetId = row?.dataset.relatedResidentId || '';
+    const relId    = row?.dataset.relationshipId || '';
+
+    if (!originId || !targetId || !relId) {
+      alert('Missing data to remove relation.');
+      return;
+    }
+    removeRelation({ originId, targetId, relId });
+  });
+})();
+</script>
 {% endblock %}
