@@ -631,19 +631,19 @@
             <legend class="text-sm font-medium text-gray-700">Medical History (select all that apply)</legend>
             <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 HPN – Hypertension
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 DM – Diabetes
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 TB – Tuberculosis
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 S – Surgery
               </label>
             </div>
@@ -652,7 +652,7 @@
           <!-- Smoker -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Smoker <span class="text-red-600">*</span></label>
-            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -662,7 +662,7 @@
           <!-- Alcohol Beverage Drinker -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker <span class="text-red-600">*</span></label>
-            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -672,7 +672,7 @@
           <!-- Sexually Active -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Sexually Active <span class="text-red-600">*</span></label>
-            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -682,14 +682,14 @@
           <!-- LMP (Female only) -->
           <div id="gh_lmp_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">Last Menstrual Period</label>
-            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
           </div>
 
           <!-- Age of Menarche (Female only) -->
           <div id="gh_menarche_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">Age of MENARCHE</label>
             <input name="age_menarche" type="number" min="8" max="20" placeholder="Enter Age"
-                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
           </div>
         </div>
 
@@ -698,7 +698,7 @@
           <!-- FP Use (women only) -->
           <div id="gh_fp_use_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Use</label>
-            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -708,7 +708,7 @@
           <!-- FP Method (women only) -->
           <div id="gh_fp_method_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Method <span class="text-red-600">*</span></label>
-            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Method —</option>
               {% for fm in fp_method %}
                 <option value="{{ fm.fp_method_id }}">{{ fm.description }}</option>
@@ -719,7 +719,7 @@
           <!-- FP Status (women only) -->
           <div id="gh_fp_status_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Status <span class="text-red-600">*</span></label>
-            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Status —</option>
               {% for fs in fp_status %}
                 <option value="{{ fs.fp_status_id }}">{{ fs.description }}</option>
@@ -730,7 +730,7 @@
           <!-- Classification by Age / Health Risk Group -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Classification by Age<span class="text-red-600">*</span></label>
-              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Class —</option>
                 {% for c in class %}
                   <option value="{{ c.class_id }}">{{ c.class_description }}</option>
@@ -742,9 +742,6 @@
 
       <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
         <button type="button" id="cancelGeneralHealthModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" id="gh_submit_btn" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-          Save
-        </button>
       </div>
     </form>
   </div>
@@ -1262,29 +1259,42 @@ function isHouseholdReadOnlyContext() {
         });
       }
 
+      // Helper: make a wrap visible/hidden but always keep its inner fields disabled
+      function showButDisabled(wrap, visible) {
+        if (!wrap) return;
+        wrap.classList.toggle('hidden', !visible);
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          ctrl.disabled = true;                         // force disabled
+          ctrl.setAttribute('data-always-disabled',''); // protect from other togglers
+          if (!visible) {
+            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') ctrl.checked = false;
+            else ctrl.value = '';
+            ctrl.removeAttribute('required');
+          }
+        });
+      }
+
       function setFemaleOnlyVisibility(sex) {
         const female = isFemale(sex);
-        setWrapVisibleAndDisable(ghLmpWrap,      female);
-        setWrapVisibleAndDisable(ghMenarcheWrap, female);
-        setWrapVisibleAndDisable(ghFpUseWrap,    female);
 
-        if (!female) {
-          setWrapVisibleAndDisable(ghFpMethodWrap, false);
-          setWrapVisibleAndDisable(ghFpStatusWrap, false);
-        } else {
-          syncFPControls();
-        }
+        // Visible if female, but inputs remain disabled
+        showButDisabled(ghLmpWrap,      female);
+        showButDisabled(ghMenarcheWrap, female);
+        showButDisabled(ghFpUseWrap,    female);
+
+        // FP method/status only visible for female + using FP; still disabled
+        const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
+        showButDisabled(ghFpMethodWrap, usingFp);
+        showButDisabled(ghFpStatusWrap, usingFp);
       }
 
       function syncFPControls() {
         const female = isFemale(ghMemberSex?.value);
         const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
 
-        setWrapVisibleAndDisable(ghFpMethodWrap, usingFp);
-        setWrapVisibleAndDisable(ghFpStatusWrap, usingFp);
-
-        setRequiredInWrap(ghFpMethodWrap, usingFp);
-        setRequiredInWrap(ghFpStatusWrap, usingFp);
+        // keep them disabled forever; just show/hide
+        showButDisabled(ghFpMethodWrap, usingFp);
+        showButDisabled(ghFpStatusWrap, usingFp);
 
         if (!usingFp) {
           if (ghFpMethodSel) ghFpMethodSel.value = '';
