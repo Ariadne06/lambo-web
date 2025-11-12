@@ -53,7 +53,6 @@
         </div>
       </form>
 
-
     <!-- Table -->
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
@@ -110,7 +109,6 @@
             </td>
           </tr>
 
-        
           {% empty %}
           <tr><td colspan="5" class="px-4 py-3 text-center text-gray-500">No businesses found.</td></tr>
           {% endfor %}
@@ -153,92 +151,152 @@
 
 <!-- View Business Modal -->
 <div id="modalBusinessView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalBusinessView')"></div>
 
   <!-- Dialog -->
-  <div class="relative mx-auto my-8 w-[96%] max-w-2xl">
+  <div class="relative mx-auto my-8 w-[96%] max-w-3xl">
     <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-
       <!-- Header -->
-      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-4">
-        <h2 class="text-base font-semibold text-white">Business Details</h2>
-        <button type="button"
-                class="text-white/90 hover:text-white text-xl font-bold"
+      <div class="flex items-center justify-between px-6 py-4 bg-white border-b">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-rose-100 text-rose-700 grid place-items-center">
+            <!-- briefcase icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 6V5a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v1h4a2 2 0 0 1 2 2v4h-9v2h9v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4h9v-2H2V8a2 2 0 0 1 2-2h5Zm2 0h2V5a1 1 0 0 0-2 0v1Z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Business Details</h2>
+            <p class="text-xs text-gray-500">ID: <span id="mbv_business_id" class="font-medium text-gray-700"></span></p>
+          </div>
+        </div>
+        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
                 aria-label="Close modal" onclick="closeModal('modalBusinessView')">&times;</button>
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-6 space-y-4 text-sm">
+      <div class="px-6 py-6 space-y-6">
+        <!-- Top summary -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 rounded-xl border bg-white p-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-sm text-gray-500">Business Name</div>
+                <div id="mbv_business_name" class="text-base font-semibold text-gray-900"></div>
+                <div class="mt-1 text-xs text-gray-500">
+                  Owner: <span id="mbv_owner_name" class="font-medium text-gray-700"></span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm text-gray-500">Status</div>
+                <span id="mbv_business_status"
+                      class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                </span>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="rounded-lg bg-gray-50 p-3">
+                <div class="text-xs text-gray-500">Business Type</div>
+                <div id="mbv_business_type" class="text-sm font-medium text-gray-800"></div>
+              </div>
+              <div class="rounded-lg bg-gray-50 p-3">
+                <div class="text-xs text-gray-500">Total Gross Income</div>
+                <div id="mbv_total_gross_income" class="text-sm font-medium text-gray-800"></div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Business ID -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Business ID:</span>
-          <span id="mbv_business_id" class="text-gray-800"></span>
+          <!-- Clearance card -->
+          <div class="rounded-xl border bg-white p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-gray-500">Clearance Category</div>
+                <div id="mbv_clearance_category" class="text-sm font-semibold text-gray-900"></div>
+              </div>
+            </div>
+
+            <!-- Issuance date (only when active) -->
+            <div id="mbv_clearance_row" class="mt-3 hidden">
+              <div class="text-xs text-gray-500">Issuance Date</div>
+              <div id="mbv_clearance_date" class="text-sm font-medium text-gray-800"></div>
+            </div>
+
+            <!-- Total Units (conditionally shown) -->
+            <div id="mbv_units_row" class="mt-3">
+              <div class="text-xs text-gray-500">Total Units</div>
+              <div id="mbv_total_units" class="text-sm font-medium text-gray-800"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- Owner's Name -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Owner's Name:</span>
-          <span id="mbv_owner_name" class="text-gray-800"></span>
+        <!-- Amusement Devices block (clean + modern) -->
+        <div id="mbv_amusement_wrap" class="hidden rounded-xl border bg-white p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700 grid place-items-center">
+                <!-- sparkles icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5 3h2v2H5V3Zm6 0h2v2h-2V3ZM3 5h2v2H3V5Zm16 0h2v2h-2V5Zm-6 0h2v2h-2V5ZM5 19h2v2H5v-2Zm6 0h2v2h-2v-2Zm-8-6h2v2H3v-2Zm16 0h2v2h-2v-2ZM9 7.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5L1.5 15l5.5-2 2-5.5Z"/>
+                </svg>
+              </div>
+              <h3 class="text-sm font-semibold text-gray-900">Amusement Devices</h3>
+            </div>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold tracking-wide uppercase">
+              Category: Amusement
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Videoke -->
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-gray-500">Videoke Units</div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.5 6.5A3.5 3.5 0 1 1 16 3a3.5 3.5 0 0 1 3.5 3.5ZM13 7l4 4-7.5 7.5a2 2 0 0 1-2.8 0l-.2-.2a2 2 0 0 1 0-2.8L13 7Z"/>
+                </svg>
+              </div>
+              <div id="mbv_videoke_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+
+            <!-- Billiard -->
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-gray-500">Billiard Tables</div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 7h16v2H4V7Zm-1 4h18v6H3v-6Zm2 2v2h3v-2H5Zm5 0v2h4v-2h-4Zm6 0v2h3v-2h-3Z"/>
+                </svg>
+              </div>
+              <div id="mbv_billiard_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+
+            <!-- Other -->
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-gray-500">Other Devices</div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 6h16v2H4V6Zm0 4h16v2H4v-2Zm0 4h10v2H4v-2Z"/>
+                </svg>
+              </div>
+              <div id="mbv_other_device_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+          </div>
+
+          <p class="mt-2 text-[11px] text-gray-500">Zeros are valid values and indicate absence of that device type.</p>
         </div>
 
-        <!-- Business Name -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Business Name:</span>
-          <span id="mbv_business_name" class="text-gray-800"></span>
+        <!-- Address -->
+        <div class="rounded-xl border bg-white p-4">
+          <div class="text-sm font-semibold text-gray-900 mb-1">Business Address</div>
+          <div id="mbv_address" class="text-sm text-gray-800"></div>
         </div>
-
-        <!-- Business Type -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Business Type:</span>
-          <span id="mbv_business_type" class="text-gray-800"></span>
-        </div>
-
-        <!-- Clearance Category (NEW) -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Clearance Category:</span>
-          <span id="mbv_clearance_category" class="text-gray-800"></span>
-        </div>
-
-        <!-- Total Units (shown only when present) -->
-        <div id="mbv_units_row" class="flex justify-between border-b pb-2 hidden">
-          <span class="font-semibold text-gray-600">Total Units:</span>
-          <span id="mbv_total_units" class="text-gray-800"></span>
-        </div>
-
-        <!-- Business Status -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Business Status:</span>
-          <span id="mbv_business_status" class="text-gray-800"></span>
-        </div>
-
-        <!-- Issuance Date (only when active) -->
-        <div id="mbv_clearance_row" class="justify-between border-b pb-2 hidden">
-          <span class="font-semibold text-gray-600">Issuance Date:</span>
-          <span id="mbv_clearance_date" class="text-gray-800"></span>
-        </div>
-
-        <!-- Total Gross Income -->
-        <div class="flex justify-between border-b pb-2">
-          <span class="font-semibold text-gray-600">Total Gross Income:</span>
-          <span id="mbv_total_gross_income" class="text-gray-800"></span>
-        </div>
-
-        <!-- Business Address -->
-        <div class="flex flex-col">
-          <span class="font-semibold text-gray-600 mb-1">Business Address:</span>
-          <span id="mbv_address" class="text-gray-800"></span>
-        </div>
-
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between gap-3 border-t bg-gray-50/60 px-6 py-4">
+      <div class="flex items-center justify-between gap-3 border-t bg-gray-50 px-6 py-4">
         <div class="flex items-center gap-3">
           <button type="button"
-                  class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                  class="rounded-xl bg-white border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                   onclick="closeModal('modalBusinessView')">
             Close
           </button>
@@ -253,28 +311,21 @@
           </button>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
 
-<!-- Payment History Modal -->
+<!-- Payment History Modal (unchanged) -->
 <div id="modalPaymentHistory" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="mph_title">
-  <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalPaymentHistory')"></div>
-
-  <!-- Dialog -->
   <div class="relative mx-auto my-8 w-[96%] max-w-4xl">
     <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-      <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50/60">
         <h2 id="mph_title" class="text-base font-semibold text-gray-900">Payment History</h2>
         <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
                 aria-label="Close modal" onclick="closeModal('modalPaymentHistory')">&times;</button>
       </div>
-
-      <!-- Body -->
       <div class="px-6 pt-6">
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-sm">
@@ -286,56 +337,21 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
-                <td class="px-4 py-2 border border-gray-200">330 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Business Clearance</td>
-                <td class="px-4 py-2 border border-gray-200">300 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
-                <td class="px-4 py-2 border border-gray-200">200 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Certificate of Residency</td>
-                <td class="px-4 py-2 border border-gray-200">200 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
-                <td class="px-4 py-2 border border-gray-200">200 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td>
-                <td class="px-4 py-2 border border-gray-200">200 Php</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-2 border border-gray-200">03/01/2020</td>
-                <td class="px-4 py-2 border border-gray-200">Barangay Clearance</td>
-                <td class="px-4 py-2 border border-gray-200">330 Php</td>
-              </tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Barangay Clearance</td><td class="px-4 py-2 border border-gray-200">330 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Business Clearance</td><td class="px-4 py-2 border border-gray-200">300 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Residency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
+              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Barangay Clearance</td><td class="px-4 py-2 border border-gray-200">330 Php</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-
-      <!-- Footer -->
       <div class="px-6 pb-6">
         <div class="mt-4 flex items-center">
-          <button type="button"
-                  class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                  onclick="closeModal('modalPaymentHistory')">
-            Close
-          </button>
-
-          <!-- Pagination centered -->
+          <button type="button" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
+                  onclick="closeModal('modalPaymentHistory')">Close</button>
           <nav class="mx-auto text-sm text-gray-600">
             <ul class="flex items-center gap-2">
               <li><a href="#" class="px-2 py-1 hover:text-red-700">1</a></li>
@@ -349,23 +365,22 @@
           </nav>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
 <!-- Update Business Modal -->
 <div id="updateBusinessModal"
-     class="fixed inset-0 z-50 hidden bg-black/50 overflow-y-auto p-4"> <!-- ← allow overlay to scroll -->
+     class="fixed inset-0 z-50 hidden bg-black/50 overflow-y-auto p-4">
   <div class="mx-auto my-6 w-full max-w-3xl">
-    <div class="bg-white rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col"> <!-- ← constrain & stack -->
+    <div class="bg-white rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
       <div class="px-6 py-4 border-b flex items-center justify-between flex-none">
         <h3 class="text-lg font-semibold">Update Business</h3>
         <button type="button" class="p-2" onclick="UB.close()">✕</button>
       </div>
 
-      <!-- Form body (scrolls) -->
-      <form id="updateBusinessForm" class="p-6 space-y-4 overflow-y-auto"> <!-- ← scroll here -->
+      <!-- Form body -->
+      <form id="updateBusinessForm" class="p-6 space-y-4 overflow-y-auto">
         <input type="hidden" name="business_id" id="ub_business_id">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -464,31 +479,54 @@
             <span class="text-sm font-medium">Clearance Category</span>
             <select id="ub_clearance_category_id" name="clearance_category_id"
                   class="mt-1 w-full border rounded-md p-2 bg-white">
-            <option value="">-- Select Clearance Category --</option>
-            {% for c in clearance_categories %}
-              <option value="{{ c.clearance_category_id }}"
-                      data-supported-units="{{ c.supported_units|yesno:'true,false' }}">
-                {{ c.category_name }}
-              </option>
-            {% endfor %}
-          </select>
+              <option value="">-- Select Clearance Category --</option>
+              {% for c in clearance_categories %}
+                <option value="{{ c.clearance_category_id }}"
+                        data-supported-units="{{ c.supported_units|yesno:'true,false' }}"
+                        data-is-amusement="{% if c.category_name|lower == 'amusement' %}true{% else %}false{% endif %}">
+                  {{ c.category_name }}
+                </option>
+              {% endfor %}
+            </select>
             <p id="ub_clr_note" class="mt-1 text-xs text-gray-500"></p>
           </label>
 
           <!-- Total Units (conditionally shown) -->
-          <label id="ub_units_wrap" class="block hidden">
+          <label id="ub_units_wrap" class="block">
             <span class="text-sm font-medium">Total Units</span>
             <input id="ub_total_units" name="total_units" type="number" min="0" step="1"
                   class="mt-1 w-full border rounded-md p-2" placeholder="Enter total units"/>
             <p class="mt-1 text-xs text-gray-500">Required for categories that support units.</p>
           </label>
 
+          <!-- Amusement Device Quantities (conditionally shown) -->
+          <div id="ub_amusement_wrap" class="hidden md:col-span-2">
+            <div class="text-sm font-medium mb-2">Amusement Devices</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <label class="block">
+                <span class="text-xs text-gray-600">Videoke Units</span>
+                <input id="ub_videoke_count" name="videoke_count" type="number" min="0" step="1"
+                       class="mt-1 w-full border rounded-md p-2" placeholder="0"/>
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-600">Billiard Tables</span>
+                <input id="ub_billiard_count" name="billiard_count" type="number" min="0" step="1"
+                       class="mt-1 w-full border rounded-md p-2" placeholder="0"/>
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-600">Other Devices</span>
+                <input id="ub_other_device_count" name="other_device_count" type="number" min="0" step="1"
+                       class="mt-1 w-full border rounded-md p-2" placeholder="0"/>
+              </label>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Required for Amusement; zeros are allowed.</p>
+          </div>
         </div>
 
         <div id="ub_alert" class="hidden text-sm p-2 rounded-md"></div>
       </form>
 
-      <!-- Footer (fixed) -->
+      <!-- Footer -->
       <div class="flex justify-end gap-3 p-4 border-t flex-none">
         <button type="button" class="px-4 py-2 rounded-md border" onclick="UB.close()">Cancel</button>
         <button type="submit" form="updateBusinessForm" class="px-4 py-2 rounded-md bg-red-600 text-white">Save changes</button>
@@ -497,25 +535,21 @@
   </div>
 </div>
 
-
 <script>
   function openModal(id){
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.remove('hidden');
-    // lock page scroll while any modal is open
     document.documentElement.classList.add('overflow-hidden');
   }
   function closeModal(id){
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('hidden');
-    // if all modals are closed, restore page scroll
     const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden)');
     if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
   }
 
-  // Fallback labels in case the API only returns an ID
   const CLEARANCE_CATEGORY_LABELS = {
     "1": "Corporation",
     "2": "Partnership",
@@ -531,7 +565,6 @@
     "12": "Amusement",
   };
 
-  // Close with Escape
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeModal('modalBusinessView');
@@ -589,20 +622,18 @@
       setVal("mbv_owner_name",         pick(d, ['owner_name','resident_name','owner_full_name']));
       setVal("mbv_business_name",      pick(d, ['business_name','biz_name']));
       setVal("mbv_business_type",      pick(d, ['business_type','type_name','business_type_name']));
-      
-      // Clearance Category (prefer name, fallback to ID -> label map)
+
       const catText = pick(d, ['clearance_category_name', 'clearance_category', 'category_name'], '');
-      if (catText) {
-        setVal('mbv_clearance_category', catText);
-      } else {
-        const catId = String(pick(d, ['clearance_category_id', 'clearance_categoryid'], ''));
-        setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[catId] || '—');
-      }
+      let catId = pick(d, ['clearance_category_id', 'clearance_categoryid'], '');
+      catId = (catId !== '' && catId !== null && catId !== undefined) ? Number(catId) : null;
+
+      if (catText) setVal('mbv_clearance_category', catText);
+      else setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[String(catId)] || '—');
 
       setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
       setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
 
-      // Total Units (show only if present)
+      // Total Units
       const units = pick(d, ['total_units','units','unit_count'], null);
       const unitsRow = document.getElementById('mbv_units_row');
       if (unitsRow) {
@@ -615,7 +646,25 @@
         }
       }
 
-      setVal("mbv_address",            pick(d, ['address','full_address','addr']));
+      // Amusement devices
+      const isAmusement = (String(catId) === '12') || (String(catText || '').toLowerCase() === 'amusement');
+      const amuseWrap = document.getElementById('mbv_amusement_wrap');
+      if (amuseWrap) {
+        if (isAmusement) {
+          amuseWrap.classList.remove('hidden');
+          // Zeros are valid; default to 0 when undefined
+          setVal('mbv_videoke_count',      pick(d, ['videoke_count','videoke','videoke_units'], 0));
+          setVal('mbv_billiard_count',     pick(d, ['billiard_count','billiards','billiard_tables'], 0));
+          setVal('mbv_other_device_count', pick(d, ['other_device_count','other_devices'], 0));
+        } else {
+          amuseWrap.classList.add('hidden');
+          setVal('mbv_videoke_count', '');
+          setVal('mbv_billiard_count', '');
+          setVal('mbv_other_device_count', '');
+        }
+      }
+
+      setVal("mbv_address", pick(d, ['address','full_address','addr']));
 
       const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
       const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
@@ -652,26 +701,23 @@
     const form  = document.getElementById('updateBusinessForm');
     const alertBox = document.getElementById('ub_alert');
 
-    // --- Units helpers (NEW) ---
+    // --- Helpers for Units/Amusement toggles ---
     function unitsSupportedForCategory(selectEl, forcedSupported = null) {
-      // If server told us explicitly, use that
-      if (forcedSupported !== null && forcedSupported !== undefined) {
-        return !!forcedSupported;
-      }
-      // Prefer data-supported-units on the selected <option>
+      if (forcedSupported !== null && forcedSupported !== undefined) return !!forcedSupported;
       const opt = selectEl && selectEl.options[selectEl.selectedIndex];
-      if (opt && Object.prototype.hasOwnProperty.call(opt, 'dataset')) {
-        if ('supportedUnits' in opt.dataset) {
-          return opt.dataset.supportedUnits === 'true';
-        }
+      if (opt && opt.dataset && 'supportedUnits' in opt.dataset) {
+        return opt.dataset.supportedUnits === 'true';
       }
-      // Fallback: try a global map if you render one (optional)
-      const id = selectEl ? String(selectEl.value || '') : '';
-      if (window.CLEARANCE_CATEGORIES && id && typeof window.CLEARANCE_CATEGORIES[id] !== 'undefined') {
-        return !!window.CLEARANCE_CATEGORIES[id]; // boolean
-      }
-      // Default: assume not supported
       return false;
+    }
+    function isAmusementCategory(selectEl, forcedIsAmusement = null) {
+      if (forcedIsAmusement !== null && forcedIsAmusement !== undefined) return !!forcedIsAmusement;
+      const opt = selectEl && selectEl.options[selectEl.selectedIndex];
+      if (opt && opt.dataset && 'isAmusement' in opt.dataset) {
+        return opt.dataset.isAmusement === 'true';
+      }
+      const val = selectEl ? String(selectEl.value || '') : '';
+      return val === '12';
     }
     function toggleUnitsUI(forcedSupported = null) {
       const clrSel = document.getElementById('ub_clearance_category_id');
@@ -687,6 +733,34 @@
         wrap.classList.add('hidden');
         input.required = false;
         input.value = '';
+      }
+    }
+    function ensureZeroIfEmpty(el) {
+      if (el && el.value === '') el.value = '0';
+    }
+    function toggleAmusementUI(forcedIsAmusement = null) {
+      const clrSel = document.getElementById('ub_clearance_category_id');
+      const wrap   = document.getElementById('ub_amusement_wrap');
+      const vEl    = document.getElementById('ub_videoke_count');
+      const bEl    = document.getElementById('ub_billiard_count');
+      const oEl    = document.getElementById('ub_other_device_count');
+      if (!wrap || !clrSel) return;
+
+      const show = isAmusementCategory(clrSel, forcedIsAmusement);
+      if (show) {
+        wrap.classList.remove('hidden');
+        if (vEl) vEl.required = true;
+        if (bEl) bEl.required = true;
+        if (oEl) oEl.required = true;
+        // default to zeros if blank
+        ensureZeroIfEmpty(vEl);
+        ensureZeroIfEmpty(bEl);
+        ensureZeroIfEmpty(oEl);
+      } else {
+        wrap.classList.add('hidden');
+        if (vEl) { vEl.required = false; vEl.value = ''; }
+        if (bEl) { bEl.required = false; bEl.value = ''; }
+        if (oEl) { oEl.required = false; oEl.value = ''; }
       }
     }
 
@@ -711,20 +785,19 @@
       alertBox.textContent = '';
       const ownerInput = document.getElementById('ub_resident_name');
       if (ownerInput) ownerInput.value = '';
-      // Also reset units wrapper visually
       toggleUnitsUI(false);
+      toggleAmusementUI(false);
     }
 
     async function open(businessId) {
       reset();
-      document.getElementById('ub_business_id').value = businessId;        // hidden (for POST)
-      document.getElementById('ub_business_id_display').value = businessId; // visible read-only
+      document.getElementById('ub_business_id').value = businessId;
+      document.getElementById('ub_business_id_display').value = businessId;
       openModalOnly();
 
       const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
       const detailUrl = detailTpl.replace("99999", businessId);
 
-      // helpers
       const pick = (obj, keys, def = '') => {
         for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
         return def;
@@ -745,15 +818,12 @@
         }
         selectEl.value = v;
       };
-      // Restrict clearance-category choices based on current category
       function restrictClearanceOptions(selectEl, currentId) {
         const note = document.getElementById('ub_clr_note');
         if (!selectEl) return;
 
-        // Always ensure current option is present/selected
         ensureSelected(selectEl, currentId, CLEARANCE_CATEGORY_LABELS[String(currentId)]);
 
-        // Work out allowed set
         const allow = new Set();
         if (currentId === 3 || currentId === 4) {
           ['3','4'].forEach(v => allow.add(v));
@@ -766,20 +836,17 @@
           selectEl.classList.remove('bg-gray-100','text-gray-600');
           if (note) note.textContent = 'Lessor: you may switch only among categories 6–10.';
         } else {
-          // Not allowed to change
           selectEl.disabled = true;
           selectEl.classList.add('bg-gray-100','text-gray-600');
           if (note) note.textContent = 'This clearance category cannot be changed.';
         }
-
-        // Hide disallowed options (keep placeholder)
         Array.from(selectEl.options).forEach(opt => {
           if (!opt.value) return;
           opt.hidden = (allow.size > 0) ? !allow.has(opt.value) : false;
         });
 
-        // Refresh units UI after any restriction change
         toggleUnitsUI();
+        toggleAmusementUI();
       }
 
       try {
@@ -808,7 +875,7 @@
           return;
         }
 
-        // -------- text/number fields with alias fallbacks --------
+        // Fill basics
         document.getElementById('ub_business_name').value = pick(d, ['business_name','biz_name']);
         document.getElementById('ub_nature').value       = pick(d, ['nature_of_business','nature','business_nature']);
         document.getElementById('ub_house_number').value = pick(d, ['house_number','house_no','house_no_str']);
@@ -817,10 +884,10 @@
         document.getElementById('ub_income').value       = pick(d, ['total_gross_income','gross_income','income']);
         document.getElementById('ub_dti').value          = pick(d, ['dti_sec_cda_reg_number','reg_no','registration_no']);
 
-        // Owner placeholder + rule (owner change only if NOT Sole Proprietorship)
+        // Owner rule
         const ownerName  = pick(d, ['owner_name','resident_name','owner_full_name']);
         const ownerInput = document.getElementById('ub_resident_name');
-        const ownId      = pick(d, ['ownership_id','own_id','ownershipid']);
+        const ownId      = Number(pick(d, ['ownership_id','own_id','ownershipid']) || 0);
         if (String(ownId) === '1') {
           ownerInput.disabled = true;
           ownerInput.placeholder = 'Owner cannot be changed for Sole Proprietorship.';
@@ -829,7 +896,7 @@
           ownerInput.placeholder = ownerName ? `Current: ${ownerName}` : 'Type a name to change owner';
         }
 
-        // Dropdowns (Business Type/Ownership are not editable but we select current)
+        // Dropdowns (select current)
         const typeSel    = document.getElementById('ub_business_type_id');
         const typeId     = pick(d, ['business_type_id','type_id','btype_id','business_typeid']);
         const typeLabel  = pick(d, ['business_type','type_name','business_type_name']);
@@ -839,7 +906,7 @@
         const ownLabel   = pick(d, ['ownership','ownership_name','ownershiptype']);
         ensureSelected(ownSel,  ownId,  ownLabel);
 
-        // Clearance Category (editable with conditions)
+        // Clearance category + rules
         const clrSel   = document.getElementById('ub_clearance_category_id');
         if (clrSel) {
           const clrId    = Number(pick(d, ['clearance_category_id']));
@@ -847,19 +914,34 @@
           ensureSelected(clrSel, clrId, clrLabel);
           restrictClearanceOptions(clrSel, clrId);
 
-          // Initialize Total Units value (if any) + toggle visibility
+          // Units
           const currentUnits = pick(d, ['total_units','units','unit_count'], '');
           const inputUnits = document.getElementById('ub_total_units');
           if (inputUnits !== null && inputUnits !== undefined) {
             inputUnits.value = currentUnits ?? '';
           }
-
-          // If backend also returns whether this category supports units, respect it
           const supportedFromDetail = pick(d, ['supported_units','units_supported','category_supports_units'], null);
           toggleUnitsUI(supportedFromDetail);
 
-          // Re-evaluate when the category changes (uses data-supported-units on <option> if present)
-          clrSel.addEventListener('change', () => toggleUnitsUI());
+          // Amusement device counts (zeros allowed)
+          const v = pick(d, ['videoke_count','videoke','videoke_units'], '');
+          const b = pick(d, ['billiard_count','billiards','billiard_tables'], '');
+          const o = pick(d, ['other_device_count','other_devices'], '');
+          const vEl = document.getElementById('ub_videoke_count');
+          const bEl = document.getElementById('ub_billiard_count');
+          const oEl = document.getElementById('ub_other_device_count');
+          if (vEl) vEl.value = (v === '' || v === null || v === undefined) ? '' : v;
+          if (bEl) bEl.value = (b === '' || b === null || b === undefined) ? '' : b;
+          if (oEl) oEl.value = (o === '' || o === null || o === undefined) ? '' : o;
+
+          const isAmuseFromDetail = (String(clrId) === '12') || (String(clrLabel || '').toLowerCase() === 'amusement');
+          toggleAmusementUI(isAmuseFromDetail);
+
+          // Re-evaluate on change
+          clrSel.addEventListener('change', () => {
+            toggleUnitsUI();
+            toggleAmusementUI();
+          });
         }
 
       } catch (err) {
@@ -873,12 +955,10 @@
       modal.classList.remove('flex');
       alertBox.className = 'hidden';
       alertBox.textContent = '';
-      // if all modals are closed, restore page scroll
       const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden)');
       if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
     }
 
-    // Submit handler
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const businessId = document.getElementById('ub_business_id').value;
@@ -932,7 +1012,6 @@
 
       if (res.ok && payload.ok) {
         alert(payload.message || "Business marked as Closed.");
-        // close any open modals, then refresh
         closeModal('modalBusinessView');
         window.location.reload();
       } else {
@@ -945,11 +1024,6 @@
   }
 </script>
 
-
-
-
-
-<!-- local colors so buttons never turn white -->
 <style>
   .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
   .btn-red:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}

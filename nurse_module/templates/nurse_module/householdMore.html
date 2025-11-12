@@ -1,136 +1,334 @@
-{% extends 'base_admin.html' %}
-
-{% block title %}
-    Household Visit & Members
-{% endblock %}
-
+{% extends "base_nurse.html" %}
 {% block content %}
-<div class="px-4 py-4">
-  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 md:p-6">
-    <!-- Visit / Household Info -->
-    <form class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-      <!-- Left column -->
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Household ID</label>
-          <input type="text" value="10000" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Household No.</label>
-          <input type="text" value="0001" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Family No.</label>
-          <input type="text" value="0001-001" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Household Head</label>
-          <input type="text" value="Adrianne Villarta" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Date of Visit</label>
-          <select class="w-full rounded-md border border-gray-300 px-2 py-1.5">
-            <option>1st Quarter</option>
-            <option>2nd Quarter</option>
-            <option>3rd Quarter</option>
-            <option>4th Quarter</option>
-          </select>
-        </div>
-        <div>
-          <input type="text" value="01/01/2020" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-      </div>
 
-      <!-- Right column -->
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Sitio/Purok</label>
-          <input type="text" value="Purok 5" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Select One</label>
-          <input type="text" value="Non-NHTS" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Barangay</label>
-          <input type="text" value="Cansaga" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Type of Water Source</label>
-          <input type="text" value="I- Point Source" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Toilet Facility</label>
-          <input type="text" value="B- Connected to Septic and Sewerage System" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Waste Management</label>
-          <input type="text" value="A- Waste Segregation" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
-        <div class="grid grid-cols-2 gap-2">
+<div class="min-h-screen bg-gradient-to-b from-white via-red-50/40 to-white">
+  <!-- Top Bar / Title -->
+  <header class="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-6 py-5">
+      <div class="flex items-center gap-4">
+        <!-- Left: accent + title (fills remaining space) -->
+        <div class="flex items-center gap-4 flex-1">
+          <div class="h-12 w-1.5 rounded-full bg-red-600"></div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Renter (Y/N)</label>
-            <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">If Yes, Months</label>
-            <input type="text" placeholder="Enter No of Months" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
+            <h1 class="text-2xl font-semibold tracking-tight">
+              {{ header_number|default:"—" }}
+            </h1>
+            <p class="text-sm text-gray-500">
+              Household Code ·{% if quarter_label %} Quarter: {{ quarter_label }}{% endif %}
+            </p>
           </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">With blind drainage?</label>
-          <input type="text" value="No" class="w-full rounded-md border border-gray-300 px-2 py-1.5" />
-        </div>
+
+        <!-- Right: Back button -->
+        <a href="{% url 'nurse_module:nurse_household' %}"
+           class="ml-auto inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Back
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-6 py-10">
+
+    <!-- Quarter picker (always active) -->
+    <form method="get" action="{% url 'nurse_module:nurse_household_more' household_id %}" class="mb-6">
+      <label for="quarter_id" class="block text-sm font-semibold text-gray-700 mb-1">Quarter</label>
+      <div class="relative inline-block">
+        <select id="quarter_id" name="quarter_id"
+                class="appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-2.5 pr-9 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                onchange="this.form.submit()">
+          {% for q in quarters %}
+            <option value="{{ q.quarter_id }}" {% if selected_quarter_id == q.quarter_id %}selected{% endif %}>
+              {{ q.label }}
+            </option>
+          {% endfor %}
+        </select>
+        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
+          </svg>
+        </span>
       </div>
     </form>
 
-    <!-- Members Table -->
-    <h2 class="mt-6 mb-3 text-lg font-semibold text-red-700">Household Member</h2>
+    {% if not summary %}
+      <!-- Empty-quarter banner -->
+      <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-800">
+        <p class="text-sm">No records for this household in this quarter.</p>
+      </div>
 
-    <div class="overflow-x-auto rounded-xl border border-gray-200">
-      <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-          <tr class="text-left text-gray-600">
-            <th class="px-4 py-2 font-semibold">Resident ID.</th>
-            <th class="px-4 py-2 font-semibold">First Name</th>
-            <th class="px-4 py-2 font-semibold">M.I</th>
-            <th class="px-4 py-2 font-semibold">Last Name</th>
-            <th class="px-4 py-2 font-semibold">Date of Birth</th>
-            <th class="px-4 py-2 font-semibold">Sex</th>
-            <th class="px-4 py-2 font-semibold">Religion</th>
-            <th class="px-4 py-2 font-semibold">Status</th>
-            <th class="px-4 py-2 font-semibold text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-2">1000</td>
-            <td class="px-4 py-2">Adrianne</td>
-            <td class="px-4 py-2">C.</td>
-            <td class="px-4 py-2">Villarta</td>
-            <td class="px-4 py-2">08/08/2028</td>
-            <td class="px-4 py-2">Male</td>
-            <td class="px-4 py-2">Catholic</td>
-            <td class="px-4 py-2">Single</td>
-            <td class="px-4 py-2">
-              <button class="flex h-7 w-7 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
-            </td>
-          </tr>
-          <!-- Repeat for others -->
-        </tbody>
-      </table>
+      <!-- Quick Actions (disabled look) -->
+      <section class="mb-8 rounded-2xl border bg-white shadow-sm">
+        <div class="px-6 py-4">
+          <h3 class="text-base font-semibold">Quick Actions</h3>
+        </div>
+        <div class="px-6 pb-6">
+          <button type="button"
+                  class="w-full rounded-xl border border-red-300/60 px-4 py-3 text-center text-sm font-medium text-red-500"
+                  disabled>
+            Add Family Unit
+          </button>
+        </div>
+      </section>
+
+      <!-- Families none -->
+      <section class="rounded-2xl border bg-white shadow-sm">
+        <div class="px-6 py-5">
+          <h2 class="text-lg font-semibold">Families in this Household</h2>
+          <p class="mt-1 text-sm text-gray-500">Each family shows the same details captured when adding.</p>
+          <p class="mt-6 text-sm text-gray-600">No families recorded yet.</p>
+        </div>
+      </section>
+
+    {% else %}
+
+      <div class="grid grid-cols-12 gap-8">
+        <!-- LEFT: Household Summary -->
+        <aside class="col-span-12 lg:col-span-4 space-y-6">
+          <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div class="px-6 py-6">
+              <h3 class="mb-4 text-base font-semibold">Household Summary</h3>
+
+              <dl class="divide-y divide-gray-100">
+                <!-- Household Head -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">Household Head</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {{ summary.household_head|default:"—" }}
+                  </dd>
+                </div>
+
+                <!-- House Type -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">House Type</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {{ summary.house_type|default:"—" }}
+                  </dd>
+                </div>
+
+                <!-- House Ownership -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">House Ownership</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {{ summary.house_ownership|default:"—" }}
+                  </dd>
+                </div>
+
+                <!-- Address -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">Address</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {% with hn=summary.house_number st=summary.street si=summary.sitio_name br=summary.barangay cm=summary.city_municipality %}
+  {% if hn or st or si or br or cm %}
+    {{ hn }}{% if hn and st or hn and si or hn and br or hn and cm %}, {% endif %}
+    {{ st }}{% if st and si or st and br or st and cm %}, {% endif %}
+    {{ si }}{% if si and br or si and cm %}, {% endif %}
+    {{ br }}{% if br and cm %}, {% endif %}
+    {{ cm }}
+  {% else %}—{% endif %}
+{% endwith %}
+
+                  </dd>
+                </div>
+
+                <!-- Respondent Name -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">Respondent Name</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {{ summary.respondent|default:"—" }}
+                  </dd>
+                </div>
+
+                <!-- Relationship to Household Head -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">Relationship to Household Head</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {% firstof summary.rel_to_hh_head summary.respondent_to_head summary.respondent_rth "—" %}
+                  </dd>
+                </div>
+
+                <!-- Date of Visit -->
+                <div class="grid grid-cols-5 gap-4 py-3">
+                  <dt class="col-span-2 text-sm text-gray-500">Date of Visit</dt>
+                  <dd class="col-span-3 text-sm font-medium text-gray-900">
+                    {% if summary.date_visited %}{{ summary.date_visited|date:"M j, Y, g:i a" }}{% else %}—{% endif %}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+        </aside>
+
+        <!-- RIGHT: Families & Members (dynamic) -->
+        <section class="col-span-12 lg:col-span-8 space-y-6">
+          <div>
+            <h2 class="text-lg font-semibold">Families in this Household</h2>
+            <p class="text-sm text-gray-500">Click a member’s name to view details in a modal.</p>
+          </div>
+
+          {% if families_with_members and families_with_members|length > 0 %}
+            {% for item in families_with_members %}
+              {% with f=item.family mlist=item.members %}
+                <section class="overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md">
+                  <div class="flex items-start gap-3 bg-gradient-to-r from-white to-red-50/60 px-6 py-4">
+                    <div class="h-10 w-1.5 rounded-full bg-red-600"></div>
+                    <div class="flex-1">
+                      <h3 class="font-semibold tracking-tight">
+                        {{ f.family_code }} · Family Head: {{ f.family_head|default:"—" }}
+                      </h3>
+                      <p class="mt-1 text-xs text-gray-500">
+                        Respondent:
+                        <span class="font-medium text-gray-700">{{ f.respondent_name|default:"—" }}</span>
+                        · Relationship to Family Head:
+                        <span class="font-medium text-gray-700">{{ f.respondent_relation_to_fh|default:"—" }}</span>
+                      </p>
+                      <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">NHTS: {{ f.nhts|yesno:"YES,NO,—" }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Indigenous People: {{ f.indigenous_people|yesno:"YES,NO,—" }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Household Type: {{ f.household_type|default:"—" }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Water Source: {{ f.water_source|default:"—" }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Waste Mgmt: {{ f.waste_mgmt|default:"—" }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 ring-1 ring-gray-200">Toilet: {{ f.toilet_type|default:"—" }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="px-6 pb-6 pt-3">
+                    <h4 class="mb-3 text-sm font-semibold">Members</h4>
+
+                    {% if mlist and mlist|length > 0 %}
+                      <div class="space-y-2">
+                        {% for mm in mlist %}
+                          <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-semibold text-white">
+                              {{ mm.initials|default:"•" }}
+                            </div>
+                            <button
+                              type="button"
+                              class="member-open text-sm font-medium text-red-700 hover:underline"
+                              data-name="{{ mm.display_name }}"
+                              data-family-code="{{ f.family_code }}"
+                              data-rth="{{ mm.rel_to_hh_head|default:'—' }}"
+                              data-rtf="{{ mm.rel_to_fam_head|default:'—' }}"
+                              data-philhealth="{{ mm.philhealth_no|default:'—' }}"
+                              data-membership="{{ mm.membership_type|default:'—' }}"
+                              data-category="{{ mm.category|default:'—' }}"
+                              data-nutrition="{{ mm.nutrition|default:'—' }}">
+                              {{ mm.display_name }}
+                            </button>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="text-sm text-gray-500">No members recorded for this family.</p>
+                    {% endif %}
+                  </div>
+                </section>
+              {% endwith %}
+            {% endfor %}
+          {% else %}
+            <section class="rounded-2xl border bg-white shadow-sm">
+              <div class="px-6 py-5">
+                <h2 class="text-lg font-semibold">Families in this Household</h2>
+                <p class="mt-1 text-sm text-gray-500">Each family shows the same details captured when adding.</p>
+                <p class="mt-6 text-sm text-gray-600">No families recorded yet.</p>
+              </div>
+            </section>
+          {% endif %}
+        </section>
+      </div>
+
+    {% endif %}
+  </main>
+</div>
+
+<!-- VIEW-ONLY MEMBER MODAL -->
+<div id="memberModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+
+  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+    <div class="border-b px-6 py-4">
+      <h3 class="text-base font-semibold">
+        Member Details <span id="mm_title" class="text-gray-500"></span>
+      </h3>
     </div>
 
-    <!-- Back button -->
-    <div class="mt-4 flex justify-end">
-      <a href="#" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-1.5 text-white text-sm font-medium shadow hover:bg-red-700">
+    <div class="px-6 py-5">
+      <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></dt>
+          <dd id="mm_rth" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-gray-700">Relationship to Family Head <span class="text-red-600">*</span></dt>
+          <dd id="mm_rtf" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-sm text-gray-700">PhilHealth Number</dt>
+          <dd id="mm_ph" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+          <p class="mt-1 text-xs text-gray-500">Leave blank if none.</p>
+        </div>
+        <div>
+          <dt class="text-sm text-gray-700">PhilHealth Membership Type <span class="text-red-600">*</span></dt>
+          <dd id="mm_membership" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-sm text-gray-700">PhilHealth Category <span class="text-red-600">*</span></dt>
+          <dd id="mm_category" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-gray-700">Nutritional Status</dt>
+          <dd id="mm_nutrition" class="mt-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">—</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="border-t px-6 py-4 flex justify-end">
+      <button id="mm_back" type="button"
+              class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
         Back
-      </a>
+      </button>
     </div>
   </div>
 </div>
+
+<script>
+  // Minimal JS: open modal with data-* and close
+  (function () {
+    const modal = document.getElementById('memberModal');
+    const backdrop = modal.querySelector('.absolute.inset-0');
+    const btnBack = document.getElementById('mm_back');
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v && String(v).trim() ? v : '—'; };
+    const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); document.documentElement.classList.add('overflow-y-hidden'); };
+    const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); document.documentElement.classList.remove('overflow-y-hidden'); };
+
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('.member-open');
+      if (!b) return;
+
+      document.getElementById('mm_title').textContent = b.dataset.name ? '– ' + b.dataset.name : '';
+      set('mm_rth',        b.dataset.rth);
+      set('mm_rtf',        b.dataset.rtf);
+      set('mm_ph',         b.dataset.philhealth);
+      set('mm_membership', b.dataset.membership);
+      set('mm_category',   b.dataset.category);
+      set('mm_nutrition',  b.dataset.nutrition);
+
+      open();
+    });
+
+    btnBack.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+  })();
+</script>
+
 {% endblock %}
