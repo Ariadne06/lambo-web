@@ -7,7 +7,9 @@ urlpatterns = [
     path('', views.secretary_dashboard, name='secretary_dashboard'),
     path('resident_list/', views.resident_list, name="resident_list"),
     path('household_list/', views.household_list, name="household_list"),
-    path('moreHousehold/', views.moreHousehold),
+    path('sec_householdView/', views.sec_householdView, name="sec_householdView"),
+    path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),
+    path('api/resident-links', views.resident_links_list_api, name='sec_residentLinksListApi'),
     path('Addbusiness/', views.Addbusiness, name="Addbusiness"),
     path('businessDetail1/', views.businessDetail1),
     path('businessDetail2/', views.businessDetail2),
@@ -21,8 +23,12 @@ urlpatterns = [
     path('manageCert1/', views.manageCert1, name='manageCert1'),
     path('manageCert2/', views.manageCert2, name='manageCert2'),
     path('applications/', views.applications, name="applications"),
+    # HTML detail page and JSON detail endpoint
+    path('applications/<int:application_id>/', views.application_detail, name='application_detail'),
     path('applications/<int:application_id>/detail/', views.application_detail_json, name='application_detail_json'),
     path('applications/<int:application_id>/for-payment/', views.set_application_to_for_payment, name='set_application_to_for_payment'),
+    path('applications/<int:application_id>/completed/', views.set_application_to_completed, name='set_application_to_completed'),
+    path('applications/<int:application_id>/cancel/', views.cancel_application, name='cancel_application'),
     path('applications/<int:application_id>/print/', views.print_application, name='print_application'),
     path('applications/<int:application_id>/print/pdf/', views.print_application_pdf, name='print_application_pdf'),
     path('announcement/', views.announcement, name="announcement"),
@@ -43,4 +49,5 @@ urlpatterns = [
     # Dynamic AJAX endpoints for the Create Application (walk-in) UI
     path('applications/search/', views.application_search, name='application_search'),
     path('applications/preview/', views.preview_business_clearance, name='preview_business_clearance'),
+    path('applications/preview/barangay/', views.preview_barangay_clearance, name='preview_barangay_clearance'),
 ]

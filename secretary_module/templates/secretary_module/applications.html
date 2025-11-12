@@ -1,66 +1,147 @@
 {% extends 'base_sec.html' %}
 
 {% block title %}
-    Secretary
+    Applications
 {% endblock %}
 
 {% block content %}
 <div class="px-6 py-6">
   <h2 class="text-lg font-semibold text-red-700 mb-4">Applications</h2>
 
-  <!-- Search -->
-  <form method="get" class="mb-4 flex items-center gap-2">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by code, request, name, status" class="w-80 rounded-xl border border-gray-300 px-3 py-2 text-sm" />
-    <button class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700">Search</button>
-  </form>
+  <!-- Search + Filters -->
+  <div class="mb-5 flex items-center gap-2">
+    <form method="get" class="flex items-center gap-2 grow">
+      <div class="relative w-full sm:w-[420px]">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by code, request, name, status" class="w-full rounded-xl border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600" />
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z"/></svg>
+      </div>
+      {# preserve multi-selected filters as hidden inputs #}
+      {% for s in application_status_list %}
+        <input type="hidden" name="application_status" value="{{ s }}" />
+      {% endfor %}
+      {% for r in request_label_list %}
+        <input type="hidden" name="request_label" value="{{ r }}" />
+      {% endfor %}
+      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/></svg>
+        Search
+      </button>
+    </form>
+
+    <!-- Filters dropdown (details/summary for no-JS toggle) -->
+  <details class="relative">
+      <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/></svg>
+        Filters{% if application_status or request_label %}<span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">1</span>{% endif %}
+      </summary>
+      <div class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4">
+        <form method="get" class="space-y-3">
+          <input type="hidden" name="q" value="{{ q }}" />
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Application Status</label>
+            <div class="grid grid-cols-1 gap-2">
+              {% for s in application_status_options %}
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="application_status" value="{{ s }}" class="rounded" {% if s in application_status_list %}checked{% endif %}>
+                  <span>{{ s }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Request</label>
+            <div class="grid grid-cols-1 gap-2">
+              {% for rlbl in request_label_options %}
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="request_label" value="{{ rlbl }}" class="rounded" {% if rlbl in request_label_list %}checked{% endif %}>
+                  <span>{{ rlbl }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <a href="?q={{ q }}" class="text-sm text-gray-600 hover:text-rose-700">Clear</a>
+            <button type="submit" class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">Apply Filters</button>
+          </div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+  {% if application_status_list or request_label_list %}
+    <div class="mb-3 flex items-center gap-2 text-sm">
+      <span class="text-gray-600">Active:</span>
+      {% for chip in status_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endfor %}
+      {% for chip in request_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endfor %}
+      <a href="{{ clear_all_url }}" class="ml-2 inline-flex items-center gap-1 text-gray-700 hover:text-rose-700"><span class="text-xs">✕</span> Clear all</a>
+    </div>
+  {% endif %}
 
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
         <thead>
           <tr class="bg-gray-50 text-gray-700 font-medium">
+            <th class="px-4 py-2 border border-gray-200 text-left min-w-[160px] whitespace-nowrap">Code</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Full Name</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Application</th>
-            <th class="px-4 py-2 border border-gray-200 text-left">Amount</th>
-            <th class="px-4 py-2 border border-gray-200 text-left">Payment Status</th>
-            <th class="px-4 py-2 border border-gray-200 text-center w-40">Action</th>
+            <th class="px-4 py-2 border border-gray-200 text-right min-w-[120px]">Amount</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Application Status</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Elapsed</th>
+            <th class="px-4 py-2 border border-gray-200 text-center w-48">Action</th>
           </tr>
         </thead>
 
         <tbody class="divide-y divide-gray-100">
           {% for r in rows %}
-          {% with ps=r.payment_status|lower %}
-          <tr>
+          {% with ast=r.application_status|lower ps=r.payment_status|lower %}
+          <tr class="hover:bg-gray-50/60">
+            <td class="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[160px]">{{ r.application_code|default:'—' }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.applicant_name }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.request }}</td>
-            <td class="px-4 py-2 border border-gray-200">₱{{ r.total_amount|floatformat:2 }}</td>
-            <td class="px-4 py-2 border border-gray-200">{{ r.payment_status }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-right">₱{{ r.total_amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 border border-gray-200">
+              {# Normalize and color-code application status #}
+              <span class="status-chip
+                {% if ast == 'approved' %}chip-green
+                {% elif ast == 'for payment' %}chip-amber
+                {% elif ast == 'pending' %}chip-blue
+                {% elif ast == 'rejected' %}chip-red
+                {% elif ast == 'completed' %}chip-green
+                {% else %}chip-gray{% endif %}">
+                {{ r.application_status }}
+              </span>
+            </td>
+            <td class="px-4 py-2 border border-gray-200">
+              {% if r.age_text %}
+                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-800 px-2 py-0.5 text-xs font-semibold ring-1 ring-gray-200" title="Submitted {{ r.date_submitted }}">{{ r.age_text }}</span>
+              {% else %}
+                <span class="text-gray-500">—</span>
+              {% endif %}
+            </td>
             <td class="px-4 py-2 border border-gray-200">
               <div class="flex items-center justify-center gap-2">
-                <button type="button" class="p-1.5 rounded hover:bg-gray-100" title="View"
-                        data-app-id="{{ r.application_id }}" onclick="viewApplication(this)">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
-                  </svg>
-                </button>
-                {% if ps == 'paid' or ps == 'done' %}
-                  <a href="{% url 'secretary_module:print_application_pdf' r.application_id %}" class="print-btn" style="background:#2563eb" title="Download PDF" target="_blank" rel="noopener">
-                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v12h2V4h8V2Zm4 4h-8a2 2 0 0 0-2 2v12l6-3 6 3V8a2 2 0 0 0-2-2Z"/></svg>
-                    <span>PDF</span>
-                  </a>
-                {% else %}
-                  <a href="#" class="print-btn" style="background:#e5e7eb;color:#374151;cursor:not-allowed;pointer-events:none;">
-                    <svg><path d="M6 9V3h12v6H6Zm12 2H6a2 2 0 0 0-2 2v4h4v4h8v-4h4v-4a2 2 0 0 0-2-2Z"/></svg>
-                    <span>PDF</span>
-                  </a>
-                {% endif %}
+                <a href="{% url 'secretary_module:application_detail' r.application_id %}" class="btn btn-outline">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9Z"/></svg>
+                  View
+                </a>
               </div>
             </td>
           </tr>
           {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="5" class="px-4 py-6 text-center text-gray-500">No applications found.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-gray-500">No applications found.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -68,17 +149,26 @@
     </div>
 
     <!-- Pagination -->
-    {% if total_pages > 1 %}
-    <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+    {% if total > 0 %}
+    <div class="mt-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-sm text-gray-600">
       <div>
         Page {{ page }} of {{ total_pages }} — {{ total }} total
       </div>
-      <nav class="flex items-center gap-2">
+      <nav class="flex items-center gap-1">
         {% if has_prev %}
-          <a class="px-2 py-1 hover:text-red-700" href="?q={{ q }}&page={{ prev_page }}&per_page={{ per_page }}">Prev</a>
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>
         {% endif %}
+        {% for it in page_items %}
+          {% if it.ellipsis %}
+            <span class="px-2">…</span>
+          {% elif it.current %}
+            <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.num }}</span>
+          {% else %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.num }}</a>
+          {% endif %}
+        {% endfor %}
         {% if has_next %}
-          <a class="px-2 py-1 hover:text-red-700" href="?q={{ q }}&page={{ next_page }}&per_page={{ per_page }}">Next</a>
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>
         {% endif %}
       </nav>
     </div>
@@ -86,178 +176,26 @@
   </div>
 
   <style>
-    .print-btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-      min-width:80px; padding:.375rem .75rem; border-radius:.5rem;
-      background:#16a34a; color:#fff; font-weight:600; font-size:.875rem;
-      box-shadow:0 1px 2px rgba(0,0,0,.12);
-    }
-    .print-btn:hover{ background:#15803d; }
-    .print-btn svg{ color:#fff; fill:currentColor; width:1.25rem; height:1.25rem; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-width:84px; padding:.5rem .875rem; border-radius:.75rem; font-weight:600; font-size:.875rem; line-height:1; border:1px solid transparent; transition:all .15s ease; }
+    .btn svg{ width:1rem; height:1rem; }
+    .btn-outline{ background:#fff; color:#374151; border-color:#d1d5db; }
+    .btn-outline:hover{ background:#f9fafb; border-color:#cbd5e1; }
+    .btn-pdf{ background:#2563eb; color:#fff; border-color:#2563eb; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+    .btn-pdf:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+    .btn-disabled{ background:#e5e7eb; color:#6b7280; border-color:#e5e7eb; cursor:not-allowed; pointer-events:none; border-radius:.75rem; display:inline-flex; align-items:center; gap:.5rem; min-width:84px; padding:.5rem .875rem; font-weight:600; font-size:.875rem; }
+
+    .status-chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid; }
+    .chip-green{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+    .chip-amber{ background:#fffbeb; color:#92400e; border-color:#fde68a; }
+    .chip-blue{ background:#eff6ff; color:#1e3a8a; border-color:#bfdbfe; }
+    .chip-red{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+    .chip-gray{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+    .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+    .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+    details[open] > summary { background:#f9fafb; }
+    details > summary::-webkit-details-marker { display:none; }
   </style>
 
-  <!-- Single reusable modal -->
-  <div id="modalDocInfo" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="docinfo_title">
-    <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" data-backdrop onclick="closeModal('modalDocInfo')"></div>
-    <div class="relative mx-auto my-16 w-[560px] max-w-[92vw]">
-      <div class="absolute -inset-1 rounded-2xl bg-gradient-to-b from-rose-200/70 to-transparent blur opacity-60"></div>
-      <div class="relative bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200" data-panel>
-        <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-3 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
-            <h3 id="docinfo_title" class="text-base font-semibold tracking-wide">Application Details</h3>
-          </div>
-          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" aria-label="Close" onclick="closeModal('modalDocInfo')">&times;</button>
-        </div>
-
-        <div class="px-6 pt-5 pb-4">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Application Code</span>
-            <span id="mdl-code" class="font-mono text-sm tracking-widest text-gray-900">—</span>
-          </div>
-
-          <div class="rounded-xl ring-1 ring-gray-100 overflow-hidden">
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-              <dt class="col-span-2 text-sm text-gray-600">Full Name</dt>
-              <dd id="mdl-name" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
-            </div>
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-              <dt class="col-span-2 text-sm text-gray-600">Request</dt>
-              <dd id="mdl-request" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
-            </div>
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-              <dt class="col-span-2 text-sm text-gray-600">Business</dt>
-              <dd id="mdl-biz" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
-            </div>
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-              <dt class="col-span-2 text-sm text-gray-600">Amount</dt>
-              <dd class="col-span-3">
-                <span id="mdl-amount" class="inline-flex items-center rounded-full bg-gray-50 px-3 py-1 text-[13px] font-semibold text-gray-800 ring-1 ring-gray-200">—</span>
-              </dd>
-            </div>
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-white">
-              <dt class="col-span-2 text-sm text-gray-600">OR No.</dt>
-              <dd id="mdl-or" class="col-span-3 text-sm font-medium text-gray-900">—</dd>
-            </div>
-            <div class="grid grid-cols-5 gap-3 px-4 py-3 bg-gray-50/60">
-              <dt class="col-span-2 text-sm text-gray-600">Status</dt>
-              <dd class="col-span-3">
-                <span id="mdl-status" class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1">—</span>
-              </dd>
-            </div>
-          </div>
-
-          <div class="mt-4">
-            <h4 class="text-sm font-semibold text-gray-700 mb-2">Breakdown</h4>
-            <div id="mdl-breakdown" class="text-sm text-gray-800 space-y-1"></div>
-          </div>
-        </div>
-
-        <div class="px-6 pb-5 flex items-center justify-end gap-2">
-          <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200" onclick="closeModal('modalDocInfo')">Close</button>
-          <form id="forPaymentForm" method="post" action="#">
-            {% csrf_token %}
-            <button type="submit" id="btnForPayment" class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700">
-              Set to For Payment
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function peso(n){
-      if(n==null || n===undefined) return '—';
-      const v = typeof n === 'number' ? n : parseFloat(n);
-      if(isNaN(v)) return '—';
-      return '₱' + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    }
-
-    function openModal(id){
-      const el = document.getElementById(id);
-      if(!el) return;
-      el.classList.remove('hidden');
-      requestAnimationFrame(() => {
-        el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
-        const panel = el.querySelector('[data-panel]');
-        if(panel){ panel.classList.remove('scale-95','opacity-0'); panel.classList.add('scale-100','opacity-100'); }
-      });
-    }
-    function closeModal(id){
-      const el = document.getElementById(id);
-      if(!el) return;
-      el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
-      const panel = el.querySelector('[data-panel]');
-      if(panel){ panel.classList.add('scale-95','opacity-0'); panel.classList.remove('scale-100','opacity-100'); }
-      setTimeout(() => el.classList.add('hidden'), 180);
-    }
-    document.addEventListener('keydown', (e) => { if(e.key==='Escape'){ const el=document.getElementById('modalDocInfo'); if(el && !el.classList.contains('hidden')) closeModal('modalDocInfo'); } });
-
-    async function viewApplication(btn){
-      const id = btn.getAttribute('data-app-id');
-      try{
-        const resp = await fetch(`{% url 'secretary_module:application_detail_json' 0 %}`.replace('/0/','/'+id+'/'));
-        if(!resp.ok) throw new Error('Failed to load');
-        const d = await resp.json();
-        // Fill basics
-        document.getElementById('mdl-code').textContent = d.application_code || '—';
-        document.getElementById('mdl-name').textContent = d.applicant_name || '—';
-        document.getElementById('mdl-request').textContent = d.request || '—';
-        document.getElementById('mdl-biz').textContent = d.business_name || '—';
-        document.getElementById('mdl-amount').textContent = peso(d.total_amount);
-        document.getElementById('mdl-or').textContent = d.or_number || '—';
-
-        // Status badge
-        const st = (d.application_status||'').toLowerCase();
-        const stEl = document.getElementById('mdl-status');
-        stEl.textContent = d.application_status || '—';
-        stEl.className = 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1 ' +
-          (st==='paid'||st==='done' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : st==='for payment' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-gray-100 text-gray-700 ring-gray-200');
-
-        // Breakdown
-        const wrap = document.getElementById('mdl-breakdown');
-        wrap.innerHTML='';
-        let items = d.total_amount_details;
-        if(typeof items === 'string'){
-          try{ items = JSON.parse(items); }catch{ items = null; }
-        }
-        const flat = [];
-        const push = (label, amount) => { if(label && amount!=null) flat.push({label, amount}); };
-        if(Array.isArray(items)){
-          items.forEach(it=>{ push(it.item||it.label||it.name||'Item', it.amount||it.total||it.price||0); });
-        } else if(items && typeof items==='object'){
-          Object.entries(items).forEach(([k,v])=>{ if(typeof v==='number'){ push(k, v); } else if(v && typeof v==='object' && 'amount' in v){ push(k, v.amount); } });
-        }
-        if(flat.length===0){ wrap.innerHTML = '<div class="text-gray-500">No breakdown available.</div>'; }
-        else{
-          flat.forEach(row=>{
-            const div = document.createElement('div');
-            div.className='flex justify-between';
-            div.innerHTML = `<span>${row.label}</span><span>${peso(row.amount)}</span>`;
-            wrap.appendChild(div);
-          });
-        }
-
-        // For Payment button state + action
-        const form = document.getElementById('forPaymentForm');
-        form.action = `{% url 'secretary_module:set_application_to_for_payment' 0 %}`.replace('/0/','/'+id+'/');
-        const btnFP = document.getElementById('btnForPayment');
-        const appStatus = (d.application_status||'').toLowerCase();
-        if(appStatus==='pending'){
-          btnFP.disabled = false;
-          btnFP.classList.remove('opacity-50','cursor-not-allowed');
-        } else {
-          btnFP.disabled = true;
-          btnFP.classList.add('opacity-50','cursor-not-allowed');
-        }
-
-        openModal('modalDocInfo');
-      }catch(err){
-        alert('Unable to load application details.');
-      }
-    }
-  </script>
 
 </div>
 

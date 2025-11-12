@@ -134,8 +134,6 @@ def bhw_dashboard(request):
     }
     return render(request, "bhw_module/bhw_dashboard.html", ctx)
 
-
-
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdList(request):
@@ -1754,6 +1752,9 @@ def genInfo(request):
     query = (request.GET.get('query') or '').strip()
     quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
     current_quarter_id = Household.sp_get_current_quarter_id()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_sitio = request.GET.get('sitio_id')
 
     if quarter_id:
         quarter_id = int(quarter_id)
@@ -1766,6 +1767,11 @@ def genInfo(request):
     is_current_quarter = bool(
         current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
     )
+    
+    try:
+        sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
+    except ValueError:
+        sitio_id = None
     
     try:
         limit = int(request.GET.get("limit", 25))
@@ -1787,6 +1793,8 @@ def genInfo(request):
         results = Family.sp_view_all_general_health(
             query=query,
             quarter_id=quarter_id,
+            sitio_id=sitio_id,
+            sex=sex,
             limit=limit + 1,
             offset=offset,
         )
@@ -1802,7 +1810,12 @@ def genInfo(request):
         "limit": limit,
         "query": query,
     }
-    # ✅ keep quarter in pagination / limit links
+    if sitio_id is not None:
+        base_params["sitio_id"] = sitio_id
+        
+    if sex is not None:
+        base_params["sex"] = sex
+
     if quarter_id is not None:
         base_params["quarter_id"] = quarter_id
 
@@ -1811,12 +1824,15 @@ def genInfo(request):
     limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
 
     quarter = Household.sp_get_quarter()
+    sitio = Household.sp_get_sitio()
     
     flash = get_flash(request)
     return render(request, 'bhw_module/genInfo.html', {
         "results": final_result,
         "limit": limit,
         "page": page,
+        "sex": sex,
+        'sitio_id': sitio_id,
         "has_prev": has_prev,
         "has_next": has_next,
         "prev_url": prev_url,
@@ -1824,6 +1840,7 @@ def genInfo(request):
         "limit_options": LIMIT_OPTIONS,
         "limit_urls": limit_urls,
         'query': query,
+        'sitio': sitio,
         'quarter': quarter,
         'quarter_id': quarter_id,
         'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
