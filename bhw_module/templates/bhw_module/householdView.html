@@ -760,7 +760,7 @@
         <!-- Relationships -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Relationship of Family Head to HH <span class="text-red-600">*</span></label>
-          <select id="uf_fam_head_rel" name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled>
+          <select id="uf_fam_head_rel" name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled data-always-disabled>
             <option value="" selected disabled>— Select Relationship —</option>
             {% for r in relationship %}
               <option value="{{ r.rth_id }}">{{ r.description }}</option>
@@ -1655,22 +1655,22 @@
     document.documentElement.classList.remove('overflow-y-hidden');
   }
 
-  // Helper: toggle a modal to read-only (disables all fields & submit buttons, keeps Close/Cancel clickable)
 function setModalReadOnly(modalEl, readOnly) {
   if (!modalEl) return;
 
-  // Disable fields
-  modalEl.querySelectorAll('input, select, textarea')
-    .forEach(el => { el.disabled = !!readOnly; });
+  modalEl.querySelectorAll('input, select, textarea').forEach(el => {
+    // never toggle these
+    if (el.matches('[data-always-disabled]')) return;
+    el.disabled = !!readOnly;
+  });
 
-  // Disable submit controls only
-  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]')
-    .forEach(el => { el.disabled = !!readOnly; });
+  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(el => {
+    el.disabled = !!readOnly;
+  });
 
-  // Leave Close/Cancel buttons alone (type="button"), but you can also
-  // explicitly protect anything you want with [data-keep-enabled]
-  modalEl.querySelectorAll('[data-keep-enabled]')
-    .forEach(el => { el.disabled = false; });
+  modalEl.querySelectorAll('[data-keep-enabled]').forEach(el => {
+    el.disabled = false;
+  });
 }
 
 function isHouseholdReadOnlyContext() {

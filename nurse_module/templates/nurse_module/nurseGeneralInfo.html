@@ -1,193 +1,553 @@
-{% extends 'base_admin.html' %}
-
-{% block title %}Nurse{% endblock %}
+{% extends "base_nurse.html" %}
+{% block title %}General Health Information List{% endblock %}
 
 {% block content %}
-<div class="px-6 py-8">
-  <!-- Header -->
-  <div class="mb-6">
-    <div class="flex items-center gap-3">
-      <span class="h-8 w-1.5 rounded-full bg-red-600"></span>
-      <div>
-        <h1 class="text-2xl font-semibold text-red-700 leading-none">General Health Information</h1>
-      </div>
-    </div>
+<div class="px-6 py-6 bg-gray-50">
+
+  <!-- Page title -->
+  <div class="mb-5">
+    <h1 class="text-2xl font-extrabold tracking-tight text-red-700">General Health Information</h1>
   </div>
 
-  <!-- Card wrapper: fixed height, inner scroll -->
-  <div class="bg-white shadow-sm rounded-2xl border border-gray-200 flex flex-col h-[calc(100vh-8rem)] overflow-hidden">
-    <!-- Toolbar -->
-    <div class="px-4 md:px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <!-- Search -->
-        <div class="w-full md:w-80">
-          <div class="relative">
-            <input id="hh-search" type="text" placeholder="Search Household"
-                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400" />
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/>
-              </svg>
-            </span>
+  <!-- Top tools -->
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center gap-2">
+      <button type="button"
+        class="gh-gray inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3v10l3-3 1.41 1.41L12 17.82l-4.41-4.41L9 10l3 3V3h0Z"/>
+          <path d="M5 19h14v2H5z"/>
+        </svg>
+        Export CSV
+      </button>
+    </div>
+
+    <form id="controlsForm" method="GET" class="flex items-center gap-3">
+      <div class="flex items-center gap-3">
+        <input type="text" placeholder="Search Household" name="query" id="queryInput"
+               value="{{ query|default:'' }}"
+               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
+      </div>
+
+      <label class="text-gray-600">Quarter: </label>
+      <select
+        name="quarter_id"
+        class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+        onchange="if(this.value) this.form.submit();"
+      >
+        <option value="" selected disabled>— Select Quarter —</option>
+        {% for q in quarter %}
+          <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
+            {{ q.quarter_name }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <div class="flex items-center gap-2 text-sm">
+        <label for="limit" class="text-gray-600">Rows per page:</label>
+        <div class="relative inline-block">
+          <select id="limit" name="limit"
+                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+            {% for n in limit_options %}
+              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="relative">
+        <button type="button"
+                onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+                class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+          </svg>
+          Filters
+        </button>
+
+        <div id="filtersMenu"
+             class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+          <div>
+            <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
+            <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="">— Select Sitio —</option>
+              {% for s in sitio %}
+                <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="sex" class="block text-gray-600 mb-1">Sex</label>
+            <select id="sex" name="sex" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="">— Select Sex —</option>
+              <option value="Male"  {% if sex == "Male" %}selected{% endif %}>Male</option>
+              <option value="Female" {% if sex == "Female" %}selected{% endif %}>Female</option>
+            </select>
           </div>
         </div>
-
-        <!-- Advanced Filters -->
-        <details class="group">
-          <summary class="flex cursor-pointer select-none items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm shadow-sm hover:bg-gray-50">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M6 12h12M10 18h4"/>
-            </svg>
-            Advanced Filters
-            <svg xmlns="http://www.w3.org/2000/svg" class="ml-1 h-4 w-4 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"/>
-            </svg>
-          </summary>
-
-          <div class="mt-3 mb-1 rounded-xl border border-gray-200 bg-white p-4">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <div>
-                <label class="block text-xs font-medium text-gray-600">Smoker</label>
-                <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
-                  <option value="">Any</option>
-                  <option>No</option>
-                  <option>Yes</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">Resident Name</label>
-                <input type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100" placeholder="e.g. Adrian" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">Household No.</label>
-                <input type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100" placeholder="e.g. 0001" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">Verified</label>
-                <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
-                  <option value="">Any</option>
-                  <option>Verified</option>
-                  <option>Unverified</option>
-                </select>
-              </div>
-            </div>
-            <div class="mt-3 flex items-center justify-end gap-2">
-              <!-- Consistent filter buttons -->
-              <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h10M4 18h7"/>
-                </svg>
-                Reset
-              </button>
-              <button class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow hover:bg-red-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                Apply
-              </button>
-            </div>
-          </div>
-        </details>
       </div>
+
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+    </form>
+
+  {% if message %}
+    <div id="messages" class="mb-4 px-4 py-3 rounded border
+        {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+        {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+        {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+      {{ message }}
+    </div>
+  {% endif %}
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-100 text-gray-700">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Resident ID</th>
+          <th class="px-4 py-3 text-left font-semibold">Household No.</th>
+          <th class="px-4 py-3 text-left font-semibold">Family Code</th>
+          <th class="px-4 py-3 text-left font-semibold">Resident Full Name</th>
+          <th class="px-4 py-3 text-left font-semibold">Sex</th>
+          <th class="px-4 py-3 text-left font-semibold">Age</th>
+          <th class="px-4 py-3 text-center font-semibold">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% if results|length == 0 %}
+          <tr>
+            <td colspan="7" class="py-10 px-4 text-center text-gray-500">
+              There are no resident that has general health in this quarter.
+            </td>
+          </tr>
+        {% elif results|length == 1 and results.0.household_id == 0 %}
+          <tr>
+            <td colspan="7" class="py-10 px-4 text-center text-gray-500">
+              There are no resident that has general health in this quarter.
+            </td>
+          </tr>
+        {% else %}
+          {% for person in results %}
+            {% if person.household_id != 0 %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3">{{ person.resident_id }}</td>
+              <td class="px-6 py-3">{{ person.household_number }}</td>
+              <td class="px-6 py-3">{{ person.family_code }}</td>
+              <td class="px-6 py-3">{{ person.full_name }}</td>
+              <td class="px-6 py-3">{{ person.sex }}</td>
+              <td class="px-6 py-3">{{ person.age }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-center gap-2">
+                  <!-- View button -->
+                  <button type="button"
+                          class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
+                          data-family-member-id="{{ person.family_member_id }}"
+                          data-name="{{ person.full_name|default:'' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                    </svg>
+                    View
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
     </div>
 
-    <!-- Table (scrolls) -->
-    <div class="flex-1 overflow-y-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-gray-600 sticky top-[64px] z-10">
-          <tr class="text-left">
-            <th class="px-6 py-3 font-semibold">Resident ID</th>
-            <th class="px-6 py-3 font-semibold">Household No.</th>
-            <th class="px-6 py-3 font-semibold">Smoker</th>
-            <th class="px-6 py-3 font-semibold">Resident Full Name</th>
-            <th class="px-6 py-3 font-semibold text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          <!-- Demo rows (replace with your loop) -->
-          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
-            <td class="px-6 py-4 font-medium text-gray-900">1000</td>
-            <td class="px-6 py-4">0001</td>
-            <td class="px-6 py-4">
-              <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">No</span>
-            </td>
-            <td class="px-6 py-4">
-              <a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Adrianne Villarta</a>
-            </td>
-            <td class="px-6 py-4 text-right">
-              <!-- CONSISTENT VIEW BUTTON (icon + text on ALL rows) -->
-              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
-                </svg>
-                View
-              </a>
-            </td>
-          </tr>
+  <style>
+    .gh-red{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
+    .gh-red:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
+    .gh-gray{background:#f3f4f6;color:#111827!important}
+    .gh-gray:hover{background:#e5e7eb}
+    .gh-green{background:#22c55e;color:#fff!important}
+    .gh-green:hover{filter:brightness(.95)}
+    .gh-blue{background:#3b82f6;color:#fff!important}
+    .gh-blue:hover{filter:brightness(.95)}
+  </style>
+</div>
 
-          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
-            <td class="px-6 py-4 font-medium text-gray-900">1001</td>
-            <td class="px-6 py-4">0002</td>
-            <td class="px-6 py-4">
-              <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">No</span>
-            </td>
-            <td class="px-6 py-4"><a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Adrian Medalla</a></td>
-            <td class="px-6 py-4 text-right">
-              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
-                </svg>
-                View
-              </a>
-            </td>
-          </tr>
+<!-- ========================= MODAL ========================= -->
+<div id="residentViewModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="residentViewModal_title">
+  <div class="fixed inset-0 bg-black/50" onclick="closeResidentModal()"></div>
+  <div class="fixed inset-0 overflow-y-auto" id="residentOverlayScroller">
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="w-[95%] max-w-6xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
+        <div class="sticky top-0 z-10 bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+          <h2 id="residentViewModal_title" class="text-lg font-semibold tracking-wide">Resident Health Profile</h2>
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" onclick="closeResidentModal()" aria-label="Close modal">&times;</button>
+        </div>
 
-          <tr class="hover:bg-gray-50 odd:bg-white even:bg-gray-50/40">
-            <td class="px-6 py-4 font-medium text-gray-900">1002</td>
-            <td class="px-6 py-4">0003</td>
-            <td class="px-6 py-4">
-              <span class="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">Yes</span>
-            </td>
-            <td class="px-6 py-4"><a href="#" class="text-gray-900 hover:text-red-700 hover:underline">Prescious Bugtai</a></td>
-            <td class="px-6 py-4 text-right">
-              <a href="#" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
-                </svg>
-                View
-              </a>
-            </td>
-          </tr>
+        <div id="residentViewModalBody" class="p-0"></div>
 
-          <!-- Add more rows or your loop here -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div class="px-4 md:px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm">
-      <span class="text-gray-500">Showing 1–10 of 420</span>
-      <div class="flex items-center gap-3">
-        <label class="flex items-center gap-2 text-gray-600">
-          <span>Rows</span>
-          <select class="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
-            <option>10</option><option selected>25</option><option>50</option>
-          </select>
-        </label>
-        <nav class="flex items-center gap-1" aria-label="Pagination">
-          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Prev</button>
-          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 bg-red-600 text-white">1</a>
-          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
-          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
-          <span class="px-3 py-1.5 text-gray-500">…</span>
-          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
-          <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
-        </nav>
+        <div class="sticky bottom-0 z-10 bg-gray-50 border-t px-4 py-3">
+          <button type="button"
+                  class="btn-back inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
+                  onclick="closeResidentModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
+                 viewBox="0 0 24 24" fill="currentColor">
+              <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
+            </svg>
+            Back
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ===== Template injected into the modal body ===== -->
+<template id="residentProfileTemplate">
+  <div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+    <!-- Header row: title (left) + FP chip + PhilHealth (right) -->
+    <div class="mb-6 flex items-center justify-between gap-3">
+      <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
+           style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
+        <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
+        Resident Health Profile
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- PhilHealth chip -->
+        <div class="flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-gray-700 shadow ring-1 ring-gray-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-rose-600" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/>
+          </svg>
+          PhilHealth #:
+          <span class="ml-1 text-gray-900" data-field="philhealth_number_header">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+        <!-- Name -->
+        <div class="md:col-span-2">
+          <label class="text-[11px] font-semibold text-gray-500">Full Name</label>
+          <div class="mt-1 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+            </svg>
+            <input data-field="full_name" value="—" class="w-full bg-transparent outline-none" readonly>
+          </div>
+        </div>
+
+        <!-- Sex -->
+        <div>
+          <label class="text-[11px] font-semibold text-gray-500">Sex</label>
+          <input data-field="sex" value="—" class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+        </div>
+      </div>
+
+      <div class="h-px w-full bg-gray-100"></div>
+
+      <!-- Body -->
+      <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
+        <!-- LEFT: Lifestyle & History -->
+        <section class="space-y-4">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span> Lifestyle & History
+          </h3>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Medical History</label>
+            <input data-field="medical_history" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Smoker</label>
+              <input data-field="smoker" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-gray-500">Alcohol Drinker</label>
+              <input data-field="alcohol_drinker" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Sexually Active</label>
+            <input data-field="sexually_active" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <!-- Female only -->
+          <div data-show-if="female" class="hidden">
+            <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
+            <div class="relative mt-1">
+              <input data-field="lmp" value="—" class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div data-show-if="female" class="hidden">
+            <label class="text-[11px] font-semibold text-gray-500">Age of Menarche</label>
+            <input data-field="age_menarche" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+        </section>
+
+        <!-- RIGHT: Clinical, FP (female), Risk Group -->
+        <section class="space-y-4">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span> Clinical & Risk Group
+          </h3>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Age</label>
+            <input data-field="age" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-gray-500">Classification by Age / Risk</label>
+            <input data-field="class_desc" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+          </div>
+
+          <!-- Female only FP block -->
+          <div data-show-if="female" class="hidden">
+            <h4 class="mt-4 text-xs font-semibold text-gray-500">Family Planning</h4>
+
+            <!-- FP Use icon chip -->
+            <div id="fpSectionChip"
+                 class="mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-semibold shadow ring-1 border">
+              <span id="fpUseIconSection" class="inline-flex h-4 w-4 items-center justify-center"></span>
+              <span class="sr-only">FP Use</span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 mt-3">
+              <div>
+                <label class="text-[11px] font-semibold text-gray-500">FP Method</label>
+                <input data-field="fp_method_name" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-gray-500">FP Status</label>
+                <input data-field="fp_status_name" value="—" class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" readonly>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  // Debounce
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
+
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => { pageField.value = 1; form.requestSubmit(); });
+  });
+
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    const SEARCH_DEBOUNCE_MS = 1000;
+    queryInput.addEventListener('input', debounce(() => { pageField.value = 1; form.requestSubmit(); }, SEARCH_DEBOUNCE_MS));
+  }
+
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    if (!menu) return;
+    const clickedInsideMenu = e.target.closest('#filtersMenu');
+    const toggleBtn = e.target.closest('button');
+    const clickedToggleBtn = toggleBtn && toggleBtn.textContent.trim() === 'Filters';
+    if (!clickedInsideMenu && !clickedToggleBtn) menu.classList.add('hidden');
+  });
+
+  function openResidentModal(){
+    const m = document.getElementById('residentViewModal');
+    m.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(() => m.querySelector('button[onclick="closeResidentModal()"]')?.focus(), 0);
+  }
+  function closeResidentModal(){
+    document.getElementById('residentViewModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const m = document.getElementById('residentViewModal');
+      if (m && !m.classList.contains('hidden')) closeResidentModal();
+    }
+  });
+
+  // ============== GH fetch & populate ==============
+  const GH_GET_URL = "{% url 'nurse_module:generalHealthGetApi' %}";
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (!isNaN(d)) {
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yy = d.getFullYear();
+        return `${mm}/${dd}/${yy}`;
+      }
+      const [y,m,d2] = iso.split('-').map(Number);
+      return `${String(m).padStart(2,'0')}/${String(d2).padStart(2,'0')}/${y}`;
+    } catch { return iso; }
+  }
+
+  function setBadgeColor(el, state) {
+    if (!el) return;
+    el.classList.remove(
+      'bg-emerald-50','border-emerald-200','text-emerald-700',
+      'bg-rose-50','border-rose-200','text-rose-700',
+      'bg-gray-100','border-gray-200','text-gray-600'
+    );
+    if (state === 'yes') {
+      el.classList.add('bg-emerald-50','border-emerald-200','text-emerald-700');
+    } else if (state === 'no') {
+      el.classList.add('bg-rose-50','border-rose-200','text-rose-700');
+    } else {
+      el.classList.add('bg-gray-100','border-gray-200','text-gray-600');
+    }
+  }
+
+  function renderFpIcon(iconEl, chipEl, state) {
+    if (!iconEl || !chipEl) return;
+    let svg = '';
+    if (state === 'yes') {
+      // ✔
+      svg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12 3.41 13.41 9 19l12-12L19.59 5.59 9 16.17Z"/></svg>';
+    } else if (state === 'no') {
+      // ✖
+      svg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/></svg>';
+    } else {
+      // –
+      svg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11h14v2H5z"/></svg>';
+    }
+    iconEl.innerHTML = svg;
+    setBadgeColor(chipEl, state);
+  }
+
+  function showBySex(root, sex) {
+    const s = (sex || '').toLowerCase();
+    root.querySelectorAll('[data-show-if]').forEach(el => {
+      const cond = el.getAttribute('data-show-if');
+      el.classList.toggle('hidden', cond !== s);
+    });
+  }
+
+  function toYN(v) {
+    if (v === true || v === 'true' || v === 1 || v === '1') return 'Yes';
+    if (v === false || v === 'false' || v === 0 || v === '0') return 'No';
+    return '—';
+  }
+
+  function populateProfile(body, record, nameFallback) {
+    // Render shell
+    body.innerHTML = document.getElementById('residentProfileTemplate').innerHTML;
+
+    const setField = (key, val) => {
+      const el = body.querySelector(`[data-field="${key}"]`);
+      if (!el) return;
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = (val ?? '—');
+      else el.textContent = (val ?? '—');
+    };
+
+    // Header PhilHealth
+    const phHdr = body.querySelector('[data-field="philhealth_number_header"]');
+    if (phHdr) phHdr.textContent = record.philhealth_number || '—';
+
+    // Common fields
+    setField('full_name', record.full_name || nameFallback || '—');
+    setField('sex', record.sex ? (record.sex.charAt(0).toUpperCase() + record.sex.slice(1)) : '—');
+
+    // Medical History (names preferred, else ids)
+    let med = 'None';
+    if (Array.isArray(record.medical_history_names) && record.medical_history_names.length) {
+      med = record.medical_history_names.join(', ');
+    } else if (Array.isArray(record.medical_history) && record.medical_history.length) {
+      med = record.medical_history.join(', ');
+    }
+    setField('medical_history', med);
+
+    setField('smoker', toYN(record.smoker));
+    setField('alcohol_drinker', toYN(record.alcohol_drinker));
+    setField('sexually_active', toYN(record.sexually_active));
+    setField('age', record.age ?? '—');
+    setField('class_desc', record.class_description ?? '—');
+
+    // Female-only fields
+    setField('lmp', fmtDate(record.last_menstrual_period));
+    setField('age_menarche', record.age_of_menarche ?? record.age_menarche ?? '—');
+    setField('fp_method_name', record.fp_method_name ?? '—');
+    setField('fp_status_name', record.fp_status_name ?? '—');
+
+    // FP Use -> ✔ / ✖ / –
+    const v = record.fp_method_yn;
+    const state = (v === true || v === 'true' || v === 1) ? 'yes'
+                : (v === false || v === 'false' || v === 0) ? 'no' : 'null';
+
+    renderFpIcon(body.querySelector('#fpUseIconHeader'),  body.querySelector('#fpHeaderChip'),  state);
+    renderFpIcon(body.querySelector('#fpUseIconSection'), body.querySelector('#fpSectionChip'), state);
+
+    // Show/hide female-only blocks
+    showBySex(body, record.sex);
+  }
+
+  // Wire any .gh-view-btn
+  document.addEventListener('click', async function(e){
+    const btn = e.target.closest('.gh-view-btn');
+    if (!btn) return;
+
+    const nameFallback = btn.dataset.name || '—';
+
+    // skeleton
+    const tpl = document.getElementById('residentProfileTemplate');
+    document.getElementById('residentViewModalBody').innerHTML = tpl.innerHTML;
+    openResidentModal();
+
+    const fmId = btn.dataset.familyMemberId;
+    if (!fmId) return;
+
+    try {
+      const res = await fetch(`${GH_GET_URL}?member_id=${encodeURIComponent(fmId)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+      if (!data || !data.exists || !data.record) return;
+
+      const body = document.getElementById('residentViewModalBody');
+      populateProfile(body, data.record, nameFallback);
+    } catch (err) {
+      console.error('GH fetch error:', err);
+    }
+  });
+</script>
+
+<style>
+  #residentOverlayScroller { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .btn-back{background:#f3f4f6;color:#111827!important}
+  .btn-back:hover{background:#e5e7eb}
+</style>
+
 {% endblock %}
