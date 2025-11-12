@@ -169,7 +169,7 @@
     </div>
   </div>
 
-   <script>
+   {% comment %} <script>
   // Simple accordion wiring (unchanged)
   const ACCORDION = [
     { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
@@ -279,6 +279,117 @@
     addEventListener('visibilitychange', arm, { capture: true });
     arm();
   })();
-  </script>
+  </script> {% endcomment %}
+
+  <script>
+// Simple accordion wiring (unchanged)
+const ACCORDION = [
+  { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
+  { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
+];
+function getEl(id){ return document.getElementById(id); }
+function closeItem(item){
+  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
+  if (!panel) return;
+  panel.classList.add('hidden');
+  arrow?.classList.remove('rotate-180');
+  btn?.setAttribute('aria-expanded', 'false');
+}
+function openItem(item){
+  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
+  if (!panel) return;
+  panel.classList.remove('hidden');
+  arrow?.classList.add('rotate-180');
+  btn?.setAttribute('aria-expanded', 'true');
+}
+ACCORDION.forEach((item) => {
+  const btn = getEl(item.btn), panel = getEl(item.panel);
+  if (btn && panel) {
+    const isOpen = !panel.classList.contains('hidden');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    btn.setAttribute('aria-controls', item.panel);
+  }
+  btn?.addEventListener('click', () => {
+    const open = !getEl(item.panel).classList.contains('hidden');
+    if (open) { closeItem(item); }
+    else { ACCORDION.forEach(other => { if (other !== item) closeItem(other); }); openItem(item); }
+  });
+});
+
+// Idle + tab close + safe manual logout (Option A: no ping on unload)
+(function () {
+  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+  const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+  const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}"; // still used for cross-tab cleanup
+
+  const TAB_FLAG       = 'tabAuth';
+  const CLOSED_KEY     = 'closed_session_token';
+  const SESSION_TOKEN  = "{{ request.session.session_token|default:'' }}";
+  if (!SESSION_TOKEN) return;
+
+  // --- Manual logout suppression ---
+  let suppressClosePing = false;
+  try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  document.getElementById('logout-link')?.addEventListener('click', () => {
+    suppressClosePing = true;
+    try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
+
+  async function pingSilentLogout(token) {
+    if (!token) return;
+    const body = new URLSearchParams();
+    body.set('session_token', token);
+    try {
+      await fetch(TAB_CLOSE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        credentials: 'omit',   // NO COOKIES
+        keepalive: true,
+        cache: 'no-store'
+      });
+    } catch (_) { /* ignore */ }
+  }
+
+  // First load in this tab? Clean foreign leftover token (but not our own)
+  if (!sessionStorage.getItem(TAB_FLAG)) {
+    sessionStorage.setItem(TAB_FLAG, '1');
+    const closedToken = localStorage.getItem(CLOSED_KEY);
+    if (closedToken && closedToken !== SESSION_TOKEN) {
+      // Only clean up an older/different tab's token
+      pingSilentLogout(closedToken);
+    }
+    try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
+  }
+
+  // On tab/browser close or reload — DO NOT ping here (Option A)
+  function handleClose() {
+    if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
+    // Stash our token so the next tab load can clean up the previous tab's token
+    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+    // IMPORTANT: No pingSilentLogout here to avoid logging out during normal navigation
+  }
+  addEventListener('pagehide', handleClose);
+  addEventListener('beforeunload', handleClose);
+
+  // Idle detection -> go to real logout
+  let last = Date.now(), timer;
+  function arm() {
+    clearTimeout(timer);
+    if (document.visibilityState !== 'visible') return;
+    timer = setTimeout(() => {
+      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+        window.location.replace(LOGOUT_URL);
+      }
+    }, IDLE_LIMIT_MS + 100);
+  }
+  function bump(){ last = Date.now(); arm(); }
+  ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
+    addEventListener(evt, bump, { passive: true })
+  );
+  addEventListener('visibilitychange', arm, { capture: true });
+  arm();
+})();
+</script>
 </body>
 </html>

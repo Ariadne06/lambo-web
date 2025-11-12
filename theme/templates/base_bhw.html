@@ -22,7 +22,7 @@
             <!-- Dashboard -->
           <a href="{% url 'bhw_module:bhw_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'bhw_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -30,7 +30,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'bhw_dashboard' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -39,7 +39,7 @@
 
         <a href="{% url 'bhw_module:householdList' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'householdList' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -47,7 +47,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'householdList' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -56,7 +56,7 @@
 
         <a href="{% url 'bhw_module:childList' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'childList' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -64,7 +64,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'childList' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -73,7 +73,7 @@
 
         <a href="{% url 'bhw_module:maternalList' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'maternalList' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -81,7 +81,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'maternalList' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -90,7 +90,7 @@
 
         <a href="{% url 'bhw_module:genInfo' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'genInfo' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -98,7 +98,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'genInfo' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
