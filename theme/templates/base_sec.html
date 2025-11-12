@@ -22,7 +22,7 @@
             <!-- Dashboard -->
           <a href="{% url 'secretary_module:secretary_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'secretary_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -30,7 +30,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'secretary_dashboard' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -237,7 +237,7 @@
             {% endif %}">
     <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
          class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+                {% if request.resolver_match.url_name == 'approval' %} invert {% endif %}">
     <span>Approval</span>
   </a>
 
@@ -250,7 +250,7 @@
             {% endif %}">
     <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
          class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+                {% if request.resolver_match.url_name == 'announcement' %} invert {% endif %}">
     <span>Announcement</span>
   </a>
     </div>
@@ -445,38 +445,76 @@
 
 <script>
 // Simple accordion wiring (unchanged)
-const ACCORDION = [
-  { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
-  { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
-];
-function getEl(id){ return document.getElementById(id); }
-function closeItem(item){
-  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
-  if (!panel) return;
-  panel.classList.add('hidden');
-  arrow?.classList.remove('rotate-180');
-  btn?.setAttribute('aria-expanded', 'false');
-}
-function openItem(item){
-  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
-  if (!panel) return;
-  panel.classList.remove('hidden');
-  arrow?.classList.add('rotate-180');
-  btn?.setAttribute('aria-expanded', 'true');
-}
-ACCORDION.forEach((item) => {
-  const btn = getEl(item.btn), panel = getEl(item.panel);
-  if (btn && panel) {
-    const isOpen = !panel.classList.contains('hidden');
-    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    btn.setAttribute('aria-controls', item.panel);
+  const ACCORDION = [
+    { btn: 'submenu-toggle', panel: 'submenu',       arrow: 'submenu-arrow', cluster: 'top'  },
+    { btn: 'logs-toggle',    panel: 'logs-submenu',  arrow: 'logs-arrow',    cluster: 'top'  },
+    { btn: 'price-toggle',   panel: 'price-submenu', arrow: 'price-arrow',   cluster: 'top'  },
+    { btn: 'cert-toggle',    panel: 'cert-submenu',  arrow: 'cert-arrow',    cluster: 'cert' },
+    // nested under Certificates
+    { btn: 'apps-toggle',    panel: 'apps-submenu',  arrow: 'apps-arrow',    cluster: 'cert' },
+  ];
+
+  function getEl(id){ return document.getElementById(id); }
+
+  function closeItem(item){
+    const panel = getEl(item.panel);
+    const arrow = getEl(item.arrow);
+    const btn   = getEl(item.btn);
+    if (!panel) return;
+    panel.classList.add('hidden');
+    arrow?.classList.remove('rotate-180');
+    btn?.setAttribute('aria-expanded', 'false');
   }
-  btn?.addEventListener('click', () => {
-    const open = !getEl(item.panel).classList.contains('hidden');
-    if (open) { closeItem(item); }
-    else { ACCORDION.forEach(other => { if (other !== item) closeItem(other); }); openItem(item); }
+
+  function openItem(item){
+    const panel = getEl(item.panel);
+    const arrow = getEl(item.arrow);
+    const btn   = getEl(item.btn);
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    arrow?.classList.add('rotate-180');
+    btn?.setAttribute('aria-expanded', 'true');
+  }
+
+  // Wire up clicks with cluster-aware behavior
+  ACCORDION.forEach((item) => {
+    const btn = getEl(item.btn);
+    const panel = getEl(item.panel);
+
+    // Initialize aria states from the server-rendered classes
+    if (btn && panel) {
+      const isOpen = !panel.classList.contains('hidden');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btn.setAttribute('aria-controls', item.panel);
+    }
+
+    btn?.addEventListener('click', () => {
+      const currentlyOpen = !getEl(item.panel).classList.contains('hidden');
+
+      if (currentlyOpen) {
+        // Close this item. If collapsing Certificates, also reset its nested submenu state.
+        closeItem(item);
+        if (item.btn === 'cert-toggle') {
+          const nested = ACCORDION.find(i => i.btn === 'apps-toggle');
+          if (nested) closeItem(nested);
+        }
+        return;
+      }
+
+      // Open flow: close items in other clusters only
+      ACCORDION.forEach(other => {
+        if (other !== item && other.cluster !== item.cluster) closeItem(other);
+      });
+
+      // If opening the nested Applications, ensure its parent Certificates is open
+      if (item.btn === 'apps-toggle') {
+        const parent = ACCORDION.find(i => i.btn === 'cert-toggle');
+        if (parent) openItem(parent);
+      }
+
+      openItem(item);
+    });
   });
-});
 
 // Idle + tab close + safe manual logout (Option A: no ping on unload)
 (function () {

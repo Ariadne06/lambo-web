@@ -1255,22 +1255,22 @@
     document.documentElement.classList.remove('overflow-y-hidden');
   }
 
-  // Helper: toggle a modal to read-only (disables all fields & submit buttons, keeps Close/Cancel clickable)
 function setModalReadOnly(modalEl, readOnly) {
   if (!modalEl) return;
 
-  // Disable fields
-  modalEl.querySelectorAll('input, select, textarea')
-    .forEach(el => { el.disabled = !!readOnly; });
+  modalEl.querySelectorAll('input, select, textarea').forEach(el => {
+    // never toggle these
+    if (el.matches('[data-always-disabled]')) return;
+    el.disabled = !!readOnly;
+  });
 
-  // Disable submit controls only
-  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]')
-    .forEach(el => { el.disabled = !!readOnly; });
+  modalEl.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(el => {
+    el.disabled = !!readOnly;
+  });
 
-  // Leave Close/Cancel buttons alone (type="button"), but you can also
-  // explicitly protect anything you want with [data-keep-enabled]
-  modalEl.querySelectorAll('[data-keep-enabled]')
-    .forEach(el => { el.disabled = false; });
+  modalEl.querySelectorAll('[data-keep-enabled]').forEach(el => {
+    el.disabled = false;
+  });
 }
 
 function isHouseholdReadOnlyContext() {
