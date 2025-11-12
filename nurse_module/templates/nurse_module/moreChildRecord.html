@@ -1,4 +1,4 @@
-{% extends 'base_admin.html' %}
+{% extends 'base_nurse.html' %}
 
 {% block title %}Child Health Record{% endblock %}
 
@@ -6,8 +6,21 @@
 <div class="px-6 py-6">
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
 
-    <!-- Title -->
-    <h2 class="text-lg font-semibold mb-6">Child Health Record</h2>
+    <!-- Header -->
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900">Child Health Record</h2>
+        <p class="text-sm text-gray-600">Review demographics, delivery details, and statuses.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{% url 'nurse_module:childrecordList' %}"
+           class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm hover:bg-gray-50">
+          ← Back to List
+        </a>
+       
+      </div>
+    </div>
 
     <!-- Form -->
     <form class="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-5">
@@ -102,51 +115,534 @@
       </div>
     </form>
 
-    <!-- Buttons Section (upgraded, eye-pleasing pills) -->
+    <!-- Buttons Section -->
     <div class="mt-10 flex flex-col md:flex-row items-center justify-between gap-4">
-
       <!-- Back Button -->
-      <a href="#"
-         class="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-6 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transform transition">
-        Back
+      <a href="{% url 'nurse_module:childrecordList' %}"
+         class="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-6 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
+        Back to List
       </a>
 
       <!-- Main Action Buttons -->
       <div class="flex flex-wrap justify-center gap-3">
-        <!-- Medical/Surgical -->
-        <button type="button" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transform transition">
+        <!-- Medical/Surgical (opens modal) -->
+        <button type="button" id="openMedicalModal"
+                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M11 7V5h2v2h2v2h-2v2h-2V9H9V7h2Zm-4 4V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6Z"/>
           </svg>
           Medical/Surgical
         </button>
 
-        <!-- Immunization -->
-        <button type="button" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transform transition">
+        <!-- Immunization (opens modal) -->
+        <button type="button" id="openImmunizationModal"
+                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="m21 6-3-3-7.5 7.5-1-1L3 9l5.5 6.5 1-1L21 6Z"/>
           </svg>
           Immunization
         </button>
 
-        <!-- Supplements -->
-        <button type="button" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transform transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 3h10v6H7V3Zm-2 8h14v10H5V11Zm7-6h4v2h-4V5Z"/>
-          </svg>
-          Supplements
-        </button>
-
-        <!-- Growth Monitoring -->
-        <button type="button" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transform transition">
+        <!-- Growth Monitoring (opens modal) -->
+        <button type="button" id="openGrowthModal"
+                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M5 3h2v18H5V3Zm12 0h2v18h-2V3ZM9 13h2v8H9v-8Zm6-6h2v14h-2V7Z"/>
           </svg>
           Growth Monitoring
+        </button>
+
+        <!-- Supplements (opens modal) -->
+        <button type="button" id="openSupplementsModal"
+                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 3h10v6H7V3Zm-2 8h14v10H5V11Zm7-6h4v2h-4V5Z"/>
+          </svg>
+          Supplements
         </button>
       </div>
     </div>
 
   </div>
 </div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Medical/Surgical Modal -->
+<div id="medicalModal" class="fixed inset-0 z-[100] hidden">
+  <div id="medicalBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Medical & Surgical History</h3>
+          <p class="text-xs text-gray-500">Past medical conditions and procedures.</p>
+        </div>
+        <button id="closeMedicalModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-8 space-y-12">
+
+          <!-- Medical Conditions -->
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-semibold text-red-700 mb-6">Medical Conditions</h2>
+
+            <div class="max-w-3xl mx-auto overflow-x-auto">
+              <table class="min-w-full text-sm text-left text-gray-700">
+                <thead class="bg-gray-50 text-gray-800 border-b">
+                  <tr>
+                    <th class="px-6 py-3 font-semibold">Condition</th>
+                    <th class="px-6 py-3 font-semibold">Notes</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Asthma</td>
+                    <td class="px-6 py-3">Diagnosed 2019</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Allergy</td>
+                    <td class="px-6 py-3">Penicillin</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Surgical History -->
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-semibold text-red-700 mb-6">Surgical History</h2>
+
+            <div class="max-w-3xl mx-auto overflow-x-auto">
+              <table class="min-w-full text-sm text-left text-gray-700">
+                <thead class="bg-gray-50 text-gray-800 border-b">
+                  <tr>
+                    <th class="px-6 py-3 font-semibold">Procedure</th>
+                    <th class="px-6 py-3 font-semibold">Notes</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Appendectomy</td>
+                    <td class="px-6 py-3">Done in 2018</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-6">&nbsp;</td>
+                    <td class="px-6 py-6">&nbsp;</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t">
+        <button id="closeMedicalModal2"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Immunization Modal -->
+<div id="immunizationModal" class="fixed inset-0 z-[100] hidden">
+  <div id="immunizationBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Child Immunization Record</h3>
+          <p class="text-xs text-gray-500">Vaccine doses and schedule overview.</p>
+        </div>
+        <button id="closeImmunizationModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-4">
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+            <table class="min-w-full text-sm text-left text-gray-700">
+              <thead class="bg-gray-100 text-gray-800 border-b">
+                <tr>
+                  <th class="px-6 py-3 font-semibold">Vaccine</th>
+                  <th class="px-6 py-3 font-semibold">At Birth</th>
+                  <th class="px-6 py-3 font-semibold">1st Dose</th>
+                  <th class="px-6 py-3 font-semibold">2nd Dose</th>
+                  <th class="px-6 py-3 font-semibold">3rd Dose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">BCG</td>
+                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/05/2023</td>
+                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/25/2023</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">Hepa B</td>
+                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/05/2023</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">DPT-HepB-HiB</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">Oral Polio</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">IPV</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">MMR</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">PCV 13</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">Vitamin K</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                  <td class="px-6 py-3 text-gray-400">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button id="closeImmunizationModal2"
+                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Growth Monitoring Modal -->
+<div id="growthModal" class="fixed inset-0 z-[100] hidden">
+  <div id="growthBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-6xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Child Growth Monitoring</h3>
+          <p class="text-xs text-gray-500">Track age, vitals, and notes over time.</p>
+        </div>
+        <button id="closeGrowthModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-4">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700">
+              <thead class="bg-gray-100 text-gray-800 border-b">
+                <tr>
+                  <th class="px-6 py-3 font-semibold">Age (mos)</th>
+                  <th class="px-6 py-3 font-semibold">Date</th>
+                  <th class="px-6 py-3 font-semibold">Height</th>
+                  <th class="px-6 py-3 font-semibold">Weight</th>
+                  <th class="px-6 py-3 font-semibold">Temp</th>
+                  <th class="px-6 py-3 font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">4</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">80 cm</td>
+                  <td class="px-6 py-3">5 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">None</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">5</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">90 cm</td>
+                  <td class="px-6 py-3">6 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">Fever</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">6</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">100 cm</td>
+                  <td class="px-6 py-3">7 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">Cough</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">7</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">110 cm</td>
+                  <td class="px-6 py-3">8 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">None</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">8</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">120 cm</td>
+                  <td class="px-6 py-3">9 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">Fever</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">9</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">130 cm</td>
+                  <td class="px-6 py-3">10 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">Cough</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-3">10</td>
+                  <td class="px-6 py-3">01/02/2020</td>
+                  <td class="px-6 py-3">140 cm</td>
+                  <td class="px-6 py-3">11 kg</td>
+                  <td class="px-6 py-3">36.7</td>
+                  <td class="px-6 py-3">None</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
+            <a class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400 cursor-not-allowed">Prev</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">1</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">4</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">5</a>
+            <span class="px-3 py-1.5">…</span>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
+            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t">
+        <button id="closeGrowthModal2"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Supplements Modal -->
+<div id="supplementsModal" class="fixed inset-0 z-[100] hidden">
+  <div id="supplementsBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Child Supplements Record</h3>
+          <p class="text-xs text-gray-500">Listing of supplements given over time.</p>
+        </div>
+        <button id="closeSupplementsModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-4">
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm text-left text-gray-700">
+                <thead class="bg-gray-50 text-gray-800 border-b">
+                  <tr>
+                    <th class="px-6 py-3 font-semibold">Type</th>
+                    <th class="px-6 py-3 font-semibold">Age (mos)</th>
+                    <th class="px-6 py-3 font-semibold">Date</th>
+                    <th class="px-6 py-3 font-semibold">Given By</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin A</td>
+                    <td class="px-6 py-3">4</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Adrianne Villarta</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin C</td>
+                    <td class="px-6 py-3">5</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Adrian Medalla</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Deworming</td>
+                    <td class="px-6 py-3">6</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Prescious Bugtai</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin A</td>
+                    <td class="px-6 py-3">7</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Charlz Arranchado</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin C</td>
+                    <td class="px-6 py-3">8</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Miles Majarocon</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin A</td>
+                    <td class="px-6 py-3">9</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Gwen Doong</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3">Vitamin C</td>
+                    <td class="px-6 py-3">10</td>
+                    <td class="px-6 py-3">01/02/2020</td>
+                    <td class="px-6 py-3">Jude Delo Santos</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50" href="#">1</a>
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">2</a>
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">3</a>
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">4</a>
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">5</a>
+              <span class="px-3 py-1.5">…</span>
+              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">60</a>
+            </div>
+          </div>
+
+          <div class="mt-2 flex justify-end">
+            <button id="closeSupplementsModal2"
+                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============== Tiny script to handle all four modals ============== -->
+<script>
+  (function () {
+    // Helpers
+    function open(modal) {
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+    function close(modal) {
+      modal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    // Medical/Surgical
+    const openMed = document.getElementById('openMedicalModal');
+    const medModal = document.getElementById('medicalModal');
+    const closeMed = document.getElementById('closeMedicalModal');
+    const closeMed2 = document.getElementById('closeMedicalModal2');
+    const medBackdrop = document.getElementById('medicalBackdrop');
+
+    openMed && openMed.addEventListener('click', () => open(medModal));
+    closeMed && closeMed.addEventListener('click', () => close(medModal));
+    closeMed2 && closeMed2.addEventListener('click', () => close(medModal));
+    medBackdrop && medBackdrop.addEventListener('click', () => close(medModal));
+
+    // Immunization
+    const openImm = document.getElementById('openImmunizationModal');
+    const immModal = document.getElementById('immunizationModal');
+    const closeImm = document.getElementById('closeImmunizationModal');
+    const closeImm2 = document.getElementById('closeImmunizationModal2');
+    const immBackdrop = document.getElementById('immunizationBackdrop');
+
+    openImm && openImm.addEventListener('click', () => open(immModal));
+    closeImm && closeImm.addEventListener('click', () => close(immModal));
+    closeImm2 && closeImm2.addEventListener('click', () => close(immModal));
+    immBackdrop && immBackdrop.addEventListener('click', () => close(immModal));
+
+    // Growth
+    const openGrowth = document.getElementById('openGrowthModal');
+    const growthModal = document.getElementById('growthModal');
+    const closeGrowth = document.getElementById('closeGrowthModal');
+    const closeGrowth2 = document.getElementById('closeGrowthModal2');
+    const growthBackdrop = document.getElementById('growthBackdrop');
+
+    openGrowth && openGrowth.addEventListener('click', () => open(growthModal));
+    closeGrowth && closeGrowth.addEventListener('click', () => close(growthModal));
+    closeGrowth2 && closeGrowth2.addEventListener('click', () => close(growthModal));
+    growthBackdrop && growthBackdrop.addEventListener('click', () => close(growthModal));
+
+    // Supplements
+    const openSupp = document.getElementById('openSupplementsModal');
+    const suppModal = document.getElementById('supplementsModal');
+    const closeSupp = document.getElementById('closeSupplementsModal');
+    const closeSupp2 = document.getElementById('closeSupplementsModal2');
+    const suppBackdrop = document.getElementById('supplementsBackdrop');
+
+    openSupp && openSupp.addEventListener('click', () => open(suppModal));
+    closeSupp && closeSupp.addEventListener('click', () => close(suppModal));
+    closeSupp2 && closeSupp2.addEventListener('click', () => close(suppModal));
+    suppBackdrop && suppBackdrop.addEventListener('click', () => close(suppModal));
+
+    // ESC to close whichever is open
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (medModal && !medModal.classList.contains('hidden')) close(medModal);
+      if (immModal && !immModal.classList.contains('hidden')) close(immModal);
+      if (growthModal && !growthModal.classList.contains('hidden')) close(growthModal);
+      if (suppModal && !suppModal.classList.contains('hidden')) close(suppModal);
+    });
+  })();
+</script>
 {% endblock %}

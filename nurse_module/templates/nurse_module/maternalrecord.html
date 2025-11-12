@@ -73,17 +73,25 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
+          <!-- Demo rows; in production loop through your queryset -->
           <tr class="hover:bg-gray-50">
             <td class="px-6 py-4">1000</td>
             <td class="px-6 py-4">Adrianne Villarta</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -91,13 +99,20 @@
             <td class="px-6 py-4">1001</td>
             <td class="px-6 py-4">Adrian Medalla</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Non-NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Non-NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -105,13 +120,20 @@
             <td class="px-6 py-4">1002</td>
             <td class="px-6 py-4">Prescious Bugtai</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -119,13 +141,20 @@
             <td class="px-6 py-4">1003</td>
             <td class="px-6 py-4">Charlz Arranchado</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Non-NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Non-NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -133,13 +162,20 @@
             <td class="px-6 py-4">1004</td>
             <td class="px-6 py-4">Miles Majarocon</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -147,13 +183,20 @@
             <td class="px-6 py-4">1005</td>
             <td class="px-6 py-4">Gwen Doong</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Non-NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Non-NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
 
@@ -161,15 +204,23 @@
             <td class="px-6 py-4">1006</td>
             <td class="px-6 py-4">Jude Delo Santos</td>
             <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Non-NHTS</td>
             <td class="px-6 py-4">
-              <button class="ml-auto flex h-8 w-8 items-center justify-center rounded-full border hover:bg-gray-50 hover:border-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-              </button>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Non-NHTS</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end">
+                <a href="{% url 'nurse_module:Morematernalrecord' %}"
+                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View
+                </a>
+              </div>
             </td>
           </tr>
+
         </tbody>
       </table>
     </div>
