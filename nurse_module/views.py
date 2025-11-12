@@ -344,7 +344,63 @@ def nurse_household(request):
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
+    
+def _ok(payload=None):  return JsonResponse({"ok": True, **(payload or {})})
+def _err(msg, code=400): return JsonResponse({"ok": False, "error": str(msg)}, status=code)
 
+def _coerce_jsonb(v):
+    # get_resident_links returns JSONB arrays for guardians/children
+    if v is None: return []
+    if isinstance(v, (list, tuple, dict)): return v
+    if isinstance(v, (bytes, bytearray, memoryview)): v = bytes(v).decode('utf-8')
+    if isinstance(v, str) and v: return json.loads(v)
+    return []
+    
+@custom_login_required
+@role_required('Midwife')
+@require_GET
+def resident_links_list_api(request):
+    try:
+        rid = int(request.GET.get('resident_id') or 0)
+        if not rid: return _err("resident_id is required.")
+        # row with {mother_id, mother_name, mother_relationship_id, father_..., guardians, children}
+        rows = Family.sp_get_resident_links(rid)
+        row = rows[0] if rows else {}
+
+        # relationship id -> name map for labels
+        rel_rows = Family.sp_get_link_relationship()
+        rel_map = {r["relationship_id"]: r["relationship_name"] for r in rel_rows}
+
+        relations = []
+
+        if row.get("mother_id"):
+            relations.append({
+                "related_resident_id": row["mother_id"],
+                "full_name": row.get("mother_name"),
+                "relationship_id": row.get("mother_relationship_id"),
+                "relationship_label": rel_map.get(row.get("mother_relationship_id"), "Mother"),
+            })
+        if row.get("father_id"):
+            relations.append({
+                "related_resident_id": row["father_id"],
+                "full_name": row.get("father_name"),
+                "relationship_id": row.get("father_relationship_id"),
+                "relationship_label": rel_map.get(row.get("father_relationship_id"), "Father"),
+            })
+
+        for key, fallback in (("guardians", "Guardian"), ("children", "Child")):
+            for it in _coerce_jsonb(row.get(key)):
+                rel_id = it.get("relationship_id")
+                relations.append({
+                    "related_resident_id": it.get("resident_id"),
+                    "full_name": it.get("full_name"),
+                    "relationship_id": rel_id,
+                    "relationship_label": rel_map.get(rel_id, fallback),
+                })
+
+        return _ok({"relations": relations})
+    except Exception as e:
+        return _err(e)
 
 @custom_login_required
 @role_required('Midwife')
