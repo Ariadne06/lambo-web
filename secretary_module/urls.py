@@ -21,8 +21,12 @@ urlpatterns = [
     path('manageCert1/', views.manageCert1, name='manageCert1'),
     path('manageCert2/', views.manageCert2, name='manageCert2'),
     path('applications/', views.applications, name="applications"),
+    # HTML detail page and JSON detail endpoint
+    path('applications/<int:application_id>/', views.application_detail, name='application_detail'),
     path('applications/<int:application_id>/detail/', views.application_detail_json, name='application_detail_json'),
     path('applications/<int:application_id>/for-payment/', views.set_application_to_for_payment, name='set_application_to_for_payment'),
+    path('applications/<int:application_id>/completed/', views.set_application_to_completed, name='set_application_to_completed'),
+    path('applications/<int:application_id>/cancel/', views.cancel_application, name='cancel_application'),
     path('applications/<int:application_id>/print/', views.print_application, name='print_application'),
     path('applications/<int:application_id>/print/pdf/', views.print_application_pdf, name='print_application_pdf'),
     path('announcement/', views.announcement, name="announcement"),
@@ -43,4 +47,5 @@ urlpatterns = [
     # Dynamic AJAX endpoints for the Create Application (walk-in) UI
     path('applications/search/', views.application_search, name='application_search'),
     path('applications/preview/', views.preview_business_clearance, name='preview_business_clearance'),
+    path('applications/preview/barangay/', views.preview_barangay_clearance, name='preview_barangay_clearance'),
 ]
