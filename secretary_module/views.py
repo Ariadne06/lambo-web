@@ -13,6 +13,7 @@ from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.db import connection
 from math import ceil
+from django.core.paginator import Paginator
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
 from decimal import Decimal, InvalidOperation
@@ -22,12 +23,13 @@ from django.core.files.storage import default_storage
 from datetime import datetime
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
+from urllib.parse import urlencode
 
 # PDF generation (HTML -> PDF)
 import io, os
 from django.conf import settings
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, BooleanObject
+from pypdf.generic import NameObject, BooleanObject, NumberObject
 
 _UI_TO_SQL_AUDIENCE = {
     'EVERYONE': 'both',
@@ -464,7 +466,19 @@ def business_close(request, business_id: int):
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def add_certificate(request):
-    return render(request, 'secretary_module/addCertificate.html')
+    # Provide fee types and other clearance purposes for the Create UI
+    try:
+        fee_types = SecretaryHelpers.get_fee_types_dropdown()
+    except Exception:
+        fee_types = []
+    try:
+        other_clearances = SecretaryHelpers.get_other_clearance_purposes_dropdown()
+    except Exception:
+        other_clearances = []
+    return render(request, 'secretary_module/addCertificate.html', {
+        'fee_types': fee_types,
+        'other_clearances': other_clearances,
+    })
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -481,6 +495,9 @@ def manageCert2(request):
 def applications(request):
     """List all applications using get_all_application() with search + pagination."""
     q = (request.GET.get('q') or '').strip() or None
+    # Support multi-select via repeated params ?application_status=Pending&application_status=For+Payment
+    app_status_list = [s.strip() for s in request.GET.getlist('application_status') if s and s.strip()]
+    req_label_list = [r.strip() for r in request.GET.getlist('request_label') if r and r.strip()]
     try:
         page = max(int(request.GET.get('page', 1)), 1)
     except Exception:
@@ -492,26 +509,255 @@ def applications(request):
     offset = (page - 1) * per_page
 
     try:
-        rows = SecretaryHelpers.list_all_applications(q, per_page, offset)
-        total = SecretaryHelpers.count_all_applications(q)
+        # If single selections (or none), use direct DB filtering for efficiency
+        if len(app_status_list) <= 1 and len(req_label_list) <= 1:
+            single_status = app_status_list[0] if app_status_list else None
+            single_req    = req_label_list[0] if req_label_list else None
+            rows = SecretaryHelpers.list_all_applications(q, single_status, single_req, per_page, offset)
+            total = SecretaryHelpers.count_all_applications(q, single_status, single_req)
+        else:
+            # Multi-select: build cross-product of filters and merge results ordered by date_submitted desc
+            # 1) Build combinations
+            statuses = app_status_list or [None]
+            requests = req_label_list or [None]
+            combos = [(s, r) for s in statuses for r in requests]
+
+            # 2) Count total exactly (sum; disjoint across status/request categories)
+            total = 0
+            per_combo_counts = {}
+            for s, r in combos:
+                c = SecretaryHelpers.count_all_applications(q, s, r)
+                per_combo_counts[(s, r)] = c
+                total += c
+
+            # 3) Fetch top-K from each combo where K = min(count, page*per_page), then merge and slice
+            end_idx = page * per_page
+            merged = {}
+            for s, r in combos:
+                take = min(per_combo_counts[(s, r)], end_idx)
+                if take <= 0:
+                    continue
+                subset = SecretaryHelpers.list_all_applications(q, s, r, take, 0)
+                for row in subset:
+                    merged[row['application_id']] = row
+
+            # 4) Global sort by (date_submitted desc, application_id desc)
+            merged_rows = list(merged.values())
+            try:
+                merged_rows.sort(key=lambda x: (x.get('date_submitted'), x.get('application_id')), reverse=True)
+            except Exception:
+                # Fallback if date types vary
+                merged_rows.sort(key=lambda x: str(x.get('date_submitted')) + '-' + str(x.get('application_id')), reverse=True)
+
+            start_idx = (page - 1) * per_page
+            rows = merged_rows[start_idx:end_idx]
     except Exception as e:
         messages.error(request, f"Failed to load applications: {_clean_db_error(e)}")
         rows, total = [], 0
 
     total_pages = max(ceil((total or 0) / per_page), 1)
+    # Build pagination URLs that preserve filters (doseq=True)
+    def _qs(base_dict: dict, statuses: list[str], reqs: list[str]) -> str:
+        params = []
+        for k, v in base_dict.items():
+            if v is not None and v != "":
+                params.append((k, v))
+        for s in statuses:
+            params.append(('application_status', s))
+        for r in reqs:
+            params.append(('request_label', r))
+        return urlencode(params, doseq=True)
+
+    prev_url = next_url = ''
+    if page > 1:
+        prev_url = '?' + _qs({'q': q or '', 'page': page - 1, 'per_page': per_page}, app_status_list, req_label_list)
+    if page < total_pages:
+        next_url = '?' + _qs({'q': q or '', 'page': page + 1, 'per_page': per_page}, app_status_list, req_label_list)
+
+    # Use Django's Paginator solely to get elided page range; rows are already sliced
+    paginator = Paginator(range(total), per_page)  # dummy sequence just for pagination metadata
+    # Clamp page within bounds (Paginator.get_page handles invalid values)
+    page_obj = paginator.get_page(page)
+    # Replace page with possibly adjusted number (e.g., too high -> last page)
+    page = page_obj.number
+    total_pages = paginator.num_pages
+    # Elided page range (provides automatic ellipses)
+    page_numbers = list(paginator.get_elided_page_range(number=page, on_each_side=1, on_ends=1))
+    page_urls = {}
+    for pn in page_numbers:
+        if isinstance(pn, int):
+            page_urls[pn] = '?' + _qs({'q': q or '', 'page': pn, 'per_page': per_page}, app_status_list, req_label_list)
+    # Build template-friendly items to avoid dict indexing in templates
+    page_items = []
+    for item in page_numbers:
+        if isinstance(item, int):
+            page_items.append({'num': item, 'url': page_urls.get(item, ''), 'current': (item == page)})
+        else:
+            page_items.append({'ellipsis': True})
+    # Update prev/next flags after clamping
+    has_prev = page_obj.has_previous()
+    has_next = page_obj.has_next()
+    prev_url = '?' + _qs({'q': q or '', 'page': page - 1, 'per_page': per_page}, app_status_list, req_label_list) if has_prev else ''
+    next_url = '?' + _qs({'q': q or '', 'page': page + 1, 'per_page': per_page}, app_status_list, req_label_list) if has_next else ''
+
+    # Build chip removal links
+    def _remove_one(kind: str, val: str) -> str:
+        s_list = list(app_status_list)
+        r_list = list(req_label_list)
+        if kind == 'status' and val in s_list:
+            s_list.remove(val)
+        if kind == 'request' and val in r_list:
+            r_list.remove(val)
+        return '?' + _qs({'q': q or '', 'page': 1, 'per_page': per_page}, s_list, r_list)
+
+    status_chips = [{'label': s, 'url': _remove_one('status', s)} for s in app_status_list]
+    request_chips = [{'label': r, 'url': _remove_one('request', r)} for r in req_label_list]
+
     ctx = {
         'rows': rows,
         'q': q or '',
+        'application_status': app_status_list[0] if len(app_status_list) == 1 else '',
+        'request_label': req_label_list[0] if len(req_label_list) == 1 else '',
+        'application_status_list': app_status_list,
+        'request_label_list': req_label_list,
         'page': page,
         'per_page': per_page,
         'total': total,
         'total_pages': total_pages,
-        'has_prev': page > 1,
-        'has_next': page < total_pages,
+        'has_prev': has_prev,
+        'has_next': has_next,
         'prev_page': page - 1,
         'next_page': page + 1,
+        'prev_url': prev_url,
+        'next_url': next_url,
+        'page_numbers': page_numbers,
+    'page_urls': page_urls,
+    'page_items': page_items,
+        # provide option lists for filter UI
+        'application_status_options': ['Pending','For Payment','Approved','Completed','Rejected','Cancelled'],
+        'request_label_options': ['Business Clearance','Business Closure','Business Clearance (Reprint)','Barangay Clearance'],
+        'status_chips': status_chips,
+        'request_chips': request_chips,
+        'clear_all_url': '?' + _qs({'q': q or '', 'page': 1, 'per_page': per_page}, [], []),
     }
     return render(request, 'secretary_module/applications.html', ctx)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def application_detail(request, application_id: int):
+    """Server-rendered detail page for a specific application."""
+    try:
+        row = SecretaryHelpers.get_specific_application(application_id)
+        if not row:
+            raise Http404('Application not found')
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, _clean_db_error(e))
+        return redirect('secretary_module:applications')
+
+    # Normalize breakdown and numeric formatting
+    import json
+    details_json = row.get('total_amount_details')
+    if isinstance(details_json, str):
+        try:
+            details_json = json.loads(details_json)
+        except Exception:
+            details_json = None
+
+    # normalize to a list of structured items and a total
+    breakdown_items = []
+    breakdown_total = None
+    purpose_value = None
+
+    def to_float(x):
+        try:
+            from decimal import Decimal as D
+            return float(x) if isinstance(x, (int, float, D)) else x
+        except Exception:
+            return x
+
+    if isinstance(details_json, dict):
+        items = details_json.get('items')
+        breakdown_total = to_float(details_json.get('total'))
+        # Extract purpose if provided in details JSON (e.g., { items:[], total:..., purpose:"..." })
+        try:
+            purpose_value = details_json.get('purpose') or purpose_value
+        except Exception:
+            purpose_value = purpose_value
+        if isinstance(items, list):
+            for it in items:
+                if isinstance(it, dict):
+                    breakdown_items.append({
+                        'label': it.get('item') or it.get('label') or it.get('name') or 'Item',
+                        'amount': to_float(it.get('amount') or it.get('total') or it.get('price') or 0),
+                        'qty': it.get('qty'),
+                        'rate': to_float(it.get('rate')) if it.get('rate') is not None else None,
+                        'rate_percent': to_float(it.get('rate_percent')) if it.get('rate_percent') is not None else None,
+                        'extra_units': it.get('extra_units'),
+                        'total_units': it.get('total_units'),
+                        'minimum_units': it.get('minimum_units'),
+                    })
+        else:
+            # dict but no 'items' array; try to flatten key-values
+            for k, v in details_json.items():
+                if k == 'total':
+                    continue
+                if isinstance(v, (int, float)):
+                    breakdown_items.append({'label': k, 'amount': to_float(v)})
+                elif isinstance(v, dict) and 'amount' in v:
+                    breakdown_items.append({'label': k, 'amount': to_float(v.get('amount'))})
+    elif isinstance(details_json, list):
+        for it in details_json:
+            if isinstance(it, dict):
+                breakdown_items.append({
+                    'label': it.get('item') or it.get('label') or it.get('name') or 'Item',
+                    'amount': to_float(it.get('amount') or it.get('total') or it.get('price') or 0),
+                    'qty': it.get('qty'),
+                    'rate': to_float(it.get('rate')) if it.get('rate') is not None else None,
+                    'rate_percent': to_float(it.get('rate_percent')) if it.get('rate_percent') is not None else None,
+                    'extra_units': it.get('extra_units'),
+                    'total_units': it.get('total_units'),
+                    'minimum_units': it.get('minimum_units'),
+                })
+
+    # If purpose was embedded in the JSON and row has no explicit purpose, surface it
+    try:
+        if purpose_value and not row.get('purpose'):
+            row['purpose'] = purpose_value
+    except Exception:
+        pass
+
+    ctx = {
+        'row': row,
+        'application_id': application_id,
+        'breakdown': breakdown_items,
+        'breakdown_total': breakdown_total,
+    }
+    # Provide personnel_id for forms that may need to submit it (e.g., cancellation)
+    try:
+        ctx['personnel_id'] = int(request.session.get('personnel_id') or 0) or _acting_personnel_id(request)
+    except Exception:
+        ctx['personnel_id'] = _acting_personnel_id(request)
+    return render(request, 'secretary_module/application_detail.html', ctx)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def set_application_to_completed(request, application_id: int):
+    """Mark an Approved application as Completed (finalized/printed)."""
+    try:
+        SecretaryHelpers.set_application_to_completed(application_id)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True, 'message': 'Application marked as Completed.'})
+        set_flash(request, 'Application marked as Completed.', 'success')
+        return redirect('secretary_module:application_detail', application_id=application_id)
+    except Exception as e:
+        msg = _clean_db_error(e)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'message': msg}, status=400)
+        set_flash(request, msg, 'error')
+        return redirect('secretary_module:application_detail', application_id=application_id)
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -1097,6 +1343,41 @@ def announcement(request):
     return render(request, 'secretary_module/announcement.html', ctx)
 
 
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def cancel_application(request, application_id: int):
+    """Cancel an application when allowed (Pending or For Payment).
+
+    Accepts optional 'reason' field. Returns JSON for AJAX, or flashes and redirects otherwise.
+    Server-side guard is primarily in SQL; we surface the DB message back to the client.
+    """
+    reason = (request.POST.get('reason') or '').strip() or None
+    try:
+        # Prefer posted personnel_id if provided; otherwise fall back to session/user
+        posted_pid = request.POST.get('personnel_id')
+        try:
+            personnel_id = int(posted_pid) if posted_pid is not None else None
+        except (TypeError, ValueError):
+            personnel_id = None
+        if not personnel_id:
+            personnel_id = _acting_personnel_id(request)
+        if not personnel_id:
+            raise ValueError('Missing personnel_id for cancellation.')
+
+        message = SecretaryHelpers.secretary_cancel_application(application_id, personnel_id, reason)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True, 'message': message})
+        set_flash(request, message or 'Application cancelled.', 'success')
+        return redirect('secretary_module:application_detail', application_id=application_id)
+    except Exception as e:
+        msg = _clean_db_error(e)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'message': msg}, status=400)
+        set_flash(request, msg, 'error')
+        return redirect('secretary_module:application_detail', application_id=application_id)
+
+
 # ---- Added at end: dynamic data endpoints used by the addCertificate UI
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -1129,84 +1410,116 @@ def add_certificate(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 @require_POST
 def submit_business_application(request):
-    """Create a Business application using Create_Application_Business.
-    Expects POST fields:
-      - fee_type_id (int)
-      - business_id (int)
-      - business_clearance_category (int)  # category id for business
-      - purpose (text)                      # Registration | Renewal | Business Closure
-      - videoke_qty, billiard_qty, other_device_qty (ints, optional; used for category 12)
+    """Create an application for either Business or Barangay Clearances.
+    Branch based on the fee_type_name.
     """
+    if request.method != 'POST':
+        return HttpResponseBadRequest('POST required')
+
+    fee_type_id_raw = request.POST.get('fee_type_id')
     try:
-        fee_type_id = int(request.POST.get('fee_type_id') or 0)
-        business_id = int(request.POST.get('business_id') or 0)
-        cat_id = int(request.POST.get('business_clearance_category') or request.POST.get('category_id') or 0)
+        fee_type_id = int(fee_type_id_raw)
     except (TypeError, ValueError):
-        set_flash(request, 'Invalid inputs. Please check your selections.', 'error')
+        messages.error(request, 'Invalid fee type.')
         return redirect('secretary_module:create_application')
 
-    purpose = (request.POST.get('purpose') or '').strip() or None
-    vq = _to_int_or_none(request.POST.get('videoke_qty'))
-    bq = _to_int_or_none(request.POST.get('billiard_qty'))
-    oq = _to_int_or_none(request.POST.get('other_device_qty'))
+    # Look up fee type name to determine flow
+    with connection.cursor() as cur:
+        cur.execute('SELECT fee_type_name FROM Fee_Type WHERE fee_type_id=%s LIMIT 1', [fee_type_id])
+        row = cur.fetchone()
+        fee_type_name = (row[0] if row else '')
 
-    # All secretary-side creates are by personnel
-    requested_by = 'personnel'
+    acting_pid = _acting_personnel_id(request)
 
-    try:
-        app_id = SecretaryHelpers.create_application_business(
-            fee_type_id=fee_type_id,
-            business_id=business_id,
-            business_clearance_category=cat_id,
-            videoke_qty=vq,
-            billiard_qty=bq,
-            other_device_qty=oq,
-            purpose=purpose,
-            requested_by=requested_by,
-        )
-
-        if not app_id:
-            set_flash(request, 'Application was not created.', 'error')
+    if fee_type_name.lower() == 'barangay clearances':
+        # Resident-based Barangay Clearance
+        resident_id_raw = request.POST.get('applicant_id')
+        purpose_id_raw = request.POST.get('purpose')  # holds other_clearance_id when barangay clearances
+        try:
+            resident_id = int(resident_id_raw)
+            other_clearance_id = int(purpose_id_raw)
+        except (TypeError, ValueError):
+            messages.error(request, 'Please select a resident and a purpose.')
+            return redirect('secretary_module:create_application')
+        try:
+            app_id = SecretaryHelpers.create_application_barangay_clearance(
+                personnel_id=acting_pid,
+                resident_id=resident_id,
+                other_clearance_id=other_clearance_id,
+            )
+            if not app_id:
+                messages.error(request, 'Application was not created.')
+                return redirect('secretary_module:create_application')
+            messages.success(request, f'Barangay clearance application #{app_id} created.')
+            return redirect('secretary_module:applications')
+        except Exception as e:
+            messages.error(request, _clean_db_error(e))
+            return redirect('secretary_module:create_application')
+    else:
+        # Business Clearance flow
+        try:
+            business_id = int(request.POST.get('business_id') or 0)
+            cat_id = int(request.POST.get('business_clearance_category') or request.POST.get('category_id') or 0)
+        except (TypeError, ValueError):
+            messages.error(request, 'Invalid business/category selection.')
             return redirect('secretary_module:create_application')
 
-        set_flash(request, f'Application #{app_id} created.', 'success')
-        return redirect('secretary_module:applications')
-    except Exception as e:
-        set_flash(request, _clean_db_error(e), 'error')
-        return redirect('secretary_module:create_application')
+        purpose = (request.POST.get('purpose') or '').strip() or None
+        vq = _to_int_or_none(request.POST.get('videoke_qty'))
+        bq = _to_int_or_none(request.POST.get('billiard_qty'))
+        oq = _to_int_or_none(request.POST.get('other_device_qty'))
+
+        try:
+            app_id = SecretaryHelpers.create_application_business(
+                fee_type_id=fee_type_id,
+                business_id=business_id,
+                business_clearance_category=cat_id,
+                videoke_qty=vq,
+                billiard_qty=bq,
+                other_device_qty=oq,
+                purpose=purpose,
+                requested_by='personnel',
+                requested_by_id=acting_pid,
+            )
+            if not app_id:
+                messages.error(request, 'Application was not created.')
+                return redirect('secretary_module:create_application')
+            messages.success(request, f'Business clearance application #{app_id} created.')
+            return redirect('secretary_module:applications')
+        except Exception as e:
+            messages.error(request, _clean_db_error(e))
+            return redirect('secretary_module:create_application')
 
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def application_search(request):
     """AJAX search used by the walk-in UI.
-    - If fee_type indicates Business (name contains 'Business'), call search_owner(p_query)
-    - Otherwise, attempt to call search_resident(p_query) if available; fall back to empty
-    Returns JSON array of result objects.
+    If fee_name == 'Barangay Clearances' -> search residents; else -> search business/owner.
     """
-    q = (request.GET.get('q') or '').strip() or None
+    q = (request.GET.get('q') or '').strip()
     fee_name = (request.GET.get('fee_name') or '').strip()
-    limit = int(request.GET.get('limit') or 25)
-    offset = int(request.GET.get('offset') or 0)
-
+    limit = 25
+    offset = 0
+    if not q:
+        return JsonResponse([], safe=False)
     try:
-        if q is None:
-            return JsonResponse([], safe=False)
-
-        if fee_name and 'business' in fee_name.lower():
-            # Use the DB-level search_owner function via the helper container
+        if fee_name.lower() == 'barangay clearances':
+            # Use the new resident search tailored for clearance picker
+            rows = SecretaryHelpers.search_resident_for_clearance(q, limit, offset, None, None, None)
+            payload = [{
+                'resident_id': r.get('resident_id'),
+                'resident_code': r.get('resident_code'),
+                'full_name': r.get('full_name'),
+                'dob': r.get('dob'),
+                'complete_address': r.get('complete_address'),
+            } for r in rows]
+            return JsonResponse(payload, safe=False)
+        else:
             rows = SecretaryHelpers.search_owner(q, limit, offset)
             return JsonResponse(rows, safe=False)
-        else:
-            # resident search; let search_resident raise if not available
-            try:
-                rows = Secretary.sp_search_resident(q, limit, offset)
-                return JsonResponse(rows, safe=False)
-            except Exception:
-                # no resident search implementation in DB
-                return JsonResponse([], safe=False)
     except Exception as e:
-        return JsonResponse({'ok': False, 'message': str(e)}, status=500)
+        return JsonResponse({'error': coerce_message(e)}, status=400)
 
 
 @custom_login_required
@@ -1265,15 +1578,24 @@ def print_application(request, application_id: int):
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def print_application_pdf(request, application_id: int):
-    """Fill the Business Clearance PDF (Template2_Business_Clearance_LETTER.pdf) with DB fields.
+    """Generate a filled PDF for the given application.
 
-    Fields filled (if available): business_name, owners_name, full_address, nature_of_business,
-    day, month, year, paid, fulldate_issue, or_number, fullname_captain.
+    - Barangay Clearance uses static/prints/Template1_Clearance_LETTER.pdf and fills:
+      full_name, full_address, purpose, day, month, year, or_number, fulldate_issue, fullname_captain
+    - Business Clearance/Closure uses static/prints/Template2_Business_Clearance_LETTER.pdf and fills:
+      business_name, owners_name, full_address, nature_of_business, day, month, year, paid, fulldate_issue, or_number, fullname_captain
 
-    Falls back to HTML printable view if anything fails.
+    Falls back to applications list with an error message if anything fails.
     """
     # Step 1: Fetch and normalize context
     try:
+        # Fetch core application first to enforce no PDF regeneration after completion
+        app_row = SecretaryHelpers.get_specific_application(application_id) or {}
+        app_status = (app_row.get('application_status') or '').strip().lower()
+        if app_status == 'completed':
+            messages.warning(request, 'Completed applications cannot be re-generated.')
+            return redirect('secretary_module:application_detail', application_id=application_id)
+
         row = SecretaryHelpers.get_clearance_details_for_printing(application_id)
         if not row:
             raise Http404('Application not found or no printable details.')
@@ -1296,38 +1618,17 @@ def print_application_pdf(request, application_id: int):
         messages.error(request, _clean_db_error(e))
         return redirect('secretary_module:applications')
 
-    # Step 2: Try fill the AcroForm PDF; on failure, render HTML with a message
+    # Step 2: Choose template and fields based on request type, then fill AcroForm
     try:
-        # Locate the template PDF under static/prints (old theme/templates/prints fallback removed)
-        template_candidates = [
-            os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template2_Business_Clearance_LETTER.pdf'),
-        ]
-        template_path = next((p for p in template_candidates if os.path.exists(p)), None)
-        if not template_path:
-            messages.error(request, 'PDF generation error: template not found.')
-            return redirect('secretary_module:applications')
-
-        # Build field values
-        paid_val = ctx.get('paid')
-        try:
-            if paid_val is not None:
-                paid_val = float(paid_val)
-        except Exception:
-            pass
-        paid_str = (
-            f"₱{paid_val:,.2f}" if isinstance(paid_val, (int, float)) else (str(paid_val) if paid_val is not None else '')
-        )
-
+        # Normalize date parts
         fulldate = ctx.get('fulldate_issue')
         day = ctx.get('day')
         month = ctx.get('month')
         year = ctx.get('year')
         try:
-            # If fulldate provided and parts are missing, derive them
             if fulldate and (not day or not month or not year):
                 day = day or f"{getattr(fulldate, 'day', '')}"
                 try:
-                    # month name
                     month = month or getattr(fulldate, 'strftime', lambda *_: '')('%B')
                 except Exception:
                     month = month or ''
@@ -1335,20 +1636,57 @@ def print_application_pdf(request, application_id: int):
         except Exception:
             pass
 
-        # Build dict for AcroForm
-        fields = {
-            'business_name':    ctx.get('business_name') or '',
-            'owners_name':      ctx.get('owners_name') or '',
-            'full_address':     ctx.get('full_address') or '',
-            'nature_of_business': ctx.get('nature_of_business') or '',
-            'day':              str(day or ''),
-            'month':            str(month or ''),
-            'year':             str(year or ''),
-            'paid':             paid_str,
-            'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
-            'or_number':        str(ctx.get('or_number') or ''),
-            'fullname_captain': ctx.get('fullname_captain') or '',
-        }
+        request_label = (ctx.get('request') or '').strip().lower()
+        is_barangay = (request_label == 'barangay clearance')
+
+        if is_barangay:
+            # Barangay Clearance template and field mapping
+            template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template1_Clearance_LETTER.pdf')
+            if not os.path.exists(template_path):
+                messages.error(request, 'PDF generation error: Template1_Clearance_LETTER.pdf not found.')
+                return redirect('secretary_module:applications')
+
+            fields = {
+                'full_name':        ctx.get('full_name') or '',
+                'full_address':     ctx.get('full_address') or '',
+                'purpose':          ctx.get('purpose') or '',
+                'day':              str(day or ''),
+                'month':            str(month or ''),
+                'year':             str(year or ''),
+                'or_number':        str(ctx.get('or_number') or ''),
+                'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                'fullname_captain': ctx.get('fullname_captain') or '',
+            }
+        else:
+            # Business Clearance/Closure template and field mapping
+            template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template2_Business_Clearance_LETTER.pdf')
+            if not os.path.exists(template_path):
+                messages.error(request, 'PDF generation error: Template2_Business_Clearance_LETTER.pdf not found.')
+                return redirect('secretary_module:applications')
+
+            paid_val = ctx.get('paid')
+            try:
+                if paid_val is not None:
+                    paid_val = float(paid_val)
+            except Exception:
+                pass
+            paid_str = (
+                f"₱{paid_val:,.2f}" if isinstance(paid_val, (int, float)) else (str(paid_val) if paid_val is not None else '')
+            )
+
+            fields = {
+                'business_name':      ctx.get('business_name') or '',
+                'owners_name':        ctx.get('owners_name') or '',
+                'full_address':       ctx.get('full_address') or '',
+                'nature_of_business': ctx.get('nature_of_business') or '',
+                'day':                str(day or ''),
+                'month':              str(month or ''),
+                'year':               str(year or ''),
+                'paid':               paid_str,
+                'fulldate_issue':     getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                'or_number':          str(ctx.get('or_number') or ''),
+                'fullname_captain':   ctx.get('fullname_captain') or '',
+            }
 
         reader = PdfReader(template_path)
         writer = PdfWriter()
@@ -1386,6 +1724,23 @@ def print_application_pdf(request, application_id: int):
                 # continue filling other pages even if one update fails
                 continue
 
+        # Mark fields as ReadOnly (/Ff bit 1) so they aren't editable after filling
+        try:
+            acro_obj = writer._root_object.get(NameObject('/AcroForm'))
+            if acro_obj is not None:
+                fields_arr = acro_obj.get_object().get(NameObject('/Fields'))
+                if fields_arr:
+                    for f in fields_arr:
+                        try:
+                            f_obj = f.get_object()
+                            curr = int(f_obj.get(NameObject('/Ff'), 0))
+                            f_obj.update({NameObject('/Ff'): NumberObject(curr | 1)})
+                        except Exception:
+                            pass
+        except Exception:
+            # non-fatal
+            pass
+
         # If nothing got filled (all values empty), attempt to hint field names in DEBUG
         try:
             if settings.DEBUG:
@@ -1401,14 +1756,58 @@ def print_application_pdf(request, application_id: int):
         except Exception:
             pass
 
+        # Attempt to apply document permissions: allow printing/accessibility; disallow edits/form filling
+        try:
+            try:
+                # pypdf >= 4 style
+                from pypdf import Permissions as _Perms
+                allow_perms = {_Perms.PRINT, _Perms.ACCESSIBILITY}
+                writer.encrypt(user_password="", permissions=allow_perms)
+            except Exception:
+                # Older pypdf fallback: best-effort basic encryption with empty password
+                try:
+                    writer.encrypt("")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Stream to HTTP response
         pdf_bytes = io.BytesIO()
         writer.write(pdf_bytes)
         pdf_bytes.seek(0)
 
+        suggested_name = 'barangay_clearance' if is_barangay else 'business_clearance'
         response = HttpResponse(pdf_bytes.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="application_{application_id}.pdf"'
+        response['Content-Disposition'] = f'inline; filename="{suggested_name}_{application_id}.pdf"'
         return response
-    except Exception:
-        messages.error(request, 'PDF generation error.')
+    except Exception as e:
+        messages.error(request, f'PDF generation error: {coerce_message(e)}')
         return redirect('secretary_module:applications')
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def preview_barangay_clearance(request):
+    """Preview fee breakdown for a Barangay Clearance resident application."""
+    try:
+        resident_id = int(request.POST.get('resident_id'))
+        other_clearance_id = int(request.POST.get('other_clearance_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid resident or purpose selection.'}, status=400)
+    try:
+        data = SecretaryHelpers.secretary_preview_barangay_clearance(resident_id, other_clearance_id)
+        if not data:
+            return JsonResponse({'ok': False, 'message': 'No preview data returned.'}, status=404)
+        return JsonResponse({
+            'ok': True,
+            'applicant_id': data.get('applicant_id'),
+            'applicant_full_name': data.get('applicant_full_name'),
+            'purpose': data.get('purpose'),
+            'total_amount': data.get('total_amount'),
+            'total_amount_details': data.get('total_amount_details'),
+            'has_open_application': data.get('has_open_application'),
+            'open_application_id': data.get('open_application_id'),
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': coerce_message(e)}, status=400)
