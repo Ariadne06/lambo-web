@@ -1,5 +1,5 @@
 {% extends "base_nurse.html" %}
-{% block title %}General Health Information{% endblock %}
+{% block title %}General Health Information List{% endblock %}
 
 {% block content %}
 <div class="px-6 py-6 bg-gray-50">
@@ -79,11 +79,11 @@
           </div>
 
           <div>
-            <label for="status" class="block text-gray-600 mb-1">Status</label>
-            <select id="status" name="status" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
-              <option value="all">— Select Status —</option>
-              <option value="active"  {% if status == "active" %}selected{% endif %}>Active</option>
-              <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+            <label for="sex" class="block text-gray-600 mb-1">Sex</label>
+            <select id="sex" name="sex" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="">— Select Sex —</option>
+              <option value="Male"  {% if sex == "Male" %}selected{% endif %}>Male</option>
+              <option value="Female" {% if sex == "Female" %}selected{% endif %}>Female</option>
             </select>
           </div>
         </div>
@@ -109,7 +109,7 @@
         <tr>
           <th class="px-4 py-3 text-left font-semibold">Resident ID</th>
           <th class="px-4 py-3 text-left font-semibold">Household No.</th>
-          <th class="px-4 py-3 text-left font-semibold">Smoker</th>
+          <th class="px-4 py-3 text-left font-semibold">Family Code</th>
           <th class="px-4 py-3 text-left font-semibold">Resident Full Name</th>
           <th class="px-4 py-3 text-left font-semibold">Sex</th>
           <th class="px-4 py-3 text-left font-semibold">Age</th>
@@ -134,7 +134,7 @@
             {% if person.household_id != 0 %}
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3">{{ person.resident_id }}</td>
-              <td class="px-6 py-3">{{ person.family_member_id }}</td>
+              <td class="px-6 py-3">{{ person.household_number }}</td>
               <td class="px-6 py-3">{{ person.family_code }}</td>
               <td class="px-6 py-3">{{ person.full_name }}</td>
               <td class="px-6 py-3">{{ person.sex }}</td>
@@ -397,7 +397,7 @@
   });
 
   // ============== GH fetch & populate ==============
-  const GH_GET_URL = "{% url 'bhw_module:generalHealthGetApi' %}";
+  const GH_GET_URL = "{% url 'nurse_module:generalHealthGetApi' %}";
 
   function fmtDate(iso) {
     if (!iso) return '—';
