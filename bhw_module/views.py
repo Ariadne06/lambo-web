@@ -134,8 +134,6 @@ def bhw_dashboard(request):
     }
     return render(request, "bhw_module/bhw_dashboard.html", ctx)
 
-
-
 @custom_login_required
 @role_required('Barangay Health Worker')
 def householdList(request):
