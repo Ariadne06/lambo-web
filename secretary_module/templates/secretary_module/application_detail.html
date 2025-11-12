@@ -1,0 +1,265 @@
+{% extends 'base_sec.html' %}
+
+{% block title %}Application Details{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6">
+  <div class="mb-4 flex items-center justify-between">
+    <a href="{% url 'secretary_module:applications' %}" class="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-rose-700">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to Applications
+    </a>
+    
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-gradient-to-r from-rose-700 to-rose-600 text-white flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
+        <div>
+          <div class="text-sm text-white/90">Application Code</div>
+          <div class="text-base font-semibold">{{ row.application_code }}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        {% with ast=row.application_status|lower %}
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-semibold ring-1
+            {% if ast == 'approved' or ast == 'completed' %} bg-emerald-600 text-white ring-emerald-400
+            {% elif ast == 'for payment' %} bg-amber-500 text-white ring-amber-300
+            {% elif ast == 'pending' %} bg-white/10 text-white ring-white/40 backdrop-blur-sm
+            {% elif ast == 'rejected' %} bg-rose-600 text-white ring-rose-400
+            {% else %} bg-white/20 text-white ring-white/30 {% endif %}">
+            {{ row.application_status|default:'—' }}
+          </span>
+        {% endwith %}
+        {% if row.or_number %}
+          <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[13px] font-semibold ring-1 ring-white/30">OR: {{ row.or_number }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wider text-gray-500">Applicant</div>
+            <div class="text-base font-semibold text-gray-900">{{ row.applicant_name|default:'—' }}</div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            <div class="col-span-1 text-gray-600">Application</div>
+            <div class="col-span-2 text-gray-900">{{ row.request|default:'—' }}</div>
+            <div class="col-span-1 text-gray-600">Fee Type</div>
+            <div class="col-span-2 text-gray-900">{{ row.fee_type|default:'—' }}</div>
+            {# Purpose (shown for both Barangay and Business clearances). Prefer row.purpose, fallback to row.purpose_name. #}
+            {% with p=row.purpose %}
+              <div class="col-span-1 text-gray-600">Purpose</div>
+              <div class="col-span-2 text-gray-900">{{ p|default:'—' }}</div>
+            {% endwith %}
+            {% with ft=row.fee_type|default:''|lower %}
+              {% if 'barangay' not in ft %}
+                <div class="col-span-1 text-gray-600">Business</div>
+                <div class="col-span-2 text-gray-900">{{ row.business_name|default:'—' }}</div>
+              {% endif %}
+            {% endwith %}
+             <div class="col-span-1 text-gray-600">Requested by</div>
+             <div class="col-span-2 text-gray-900">
+               {% if row.requested_by_full_name %}
+                 {{ row.requested_by_full_name }} <span class="text-gray-500">({{ row.requested_by|default:'—' }})</span>
+               {% elif row.requested_by %}
+                 <span class="text-gray-700">{{ row.requested_by }}</span>
+               {% else %}
+                 —
+               {% endif %}
+             </div>
+            <div class="col-span-1 text-gray-600">Payment Status</div>
+            <div class="col-span-2">
+              {% with ps=row.payment_status|lower %}
+                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-semibold ring-1
+                  {% if ps == 'paid' or ps == 'done' %} bg-emerald-50 text-emerald-900 ring-emerald-200
+                  {% elif ps == 'for payment' %} bg-amber-50 text-amber-900 ring-amber-200
+                  {% elif ps == 'pending' or ps == 'unpaid' %} bg-blue-50 text-blue-900 ring-blue-200
+                  {% else %} bg-gray-100 text-gray-800 ring-gray-200 {% endif %}">
+                  <span>{{ row.payment_status|default:'—' }}</span>
+                  {% if ps == 'paid' or ps == 'done' %}
+                    {% if row.date_paid %}
+                      <span class="text-[12px] font-normal opacity-80">• Paid on {{ row.date_paid }}</span>
+                    {% endif %}
+                  {% endif %}
+                </span>
+              {% endwith %}
+            </div>
+            <div class="col-span-1 text-gray-600">Amount</div>
+            <div class="col-span-2 text-gray-900">₱{{ row.total_amount|floatformat:2 }}</div>
+             {% if row.paid_by_full_name %}
+             <div class="col-span-1 text-gray-600">Paid to</div>
+             <div class="col-span-2 text-gray-900">{{ row.paid_by_full_name }}</div>
+             {% endif %}
+            <div class="col-span-1 text-gray-600">OR Number</div>
+            <div class="col-span-2 text-gray-900">{{ row.or_number|default:'—' }}</div>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <!-- Breakdown card (moved up) -->
+          <div class="text-sm font-semibold text-gray-700">Breakdown</div>
+          <div class="rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-4 text-sm">
+            {% if breakdown and breakdown|length > 0 %}
+              <div class="space-y-2">
+                {% for item in breakdown %}
+                  <div>
+                    <div class="flex justify-between">
+                      <span>{{ item.label }}</span>
+                      <span>₱{{ item.amount|floatformat:2 }}</span>
+                    </div>
+                    {% if item.qty or item.rate or item.rate_percent or item.extra_units %}
+                      <div class="text-xs text-gray-500">
+                        {% if item.qty and item.rate %}
+                          {{ item.qty }} × ₱{{ item.rate|floatformat:2 }}
+                        {% endif %}
+                        {% if item.rate_percent %}
+                          {% if item.qty and item.rate %} • {% endif %}
+                          {{ item.rate_percent|floatformat:0 }}%
+                        {% endif %}
+                        {% if item.extra_units %}
+                          {% if item.qty or item.rate or item.rate_percent %} • {% endif %}
+                          extra {{ item.extra_units }}{% if item.total_units %} of {{ item.total_units }} total{% endif %}{% if item.minimum_units %} (min {{ item.minimum_units }}){% endif %}
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+                {% if breakdown_total %}
+                  <div class="mt-2 pt-2 border-t border-gray-200 flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span>₱{{ breakdown_total|floatformat:2 }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="text-gray-500">No breakdown available.</div>
+            {% endif %}
+            </div>
+          </div>
+
+          <!-- Actions card (moved below) -->
+          <div class="rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 bg-gray-50 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-gray-800">Actions</h3>
+              {% with ast=row.application_status|lower %}
+                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-semibold ring-1
+                  {% if ast == 'approved' or ast == 'completed' %} bg-emerald-50 text-emerald-900 ring-emerald-200
+                  {% elif ast == 'for payment' %} bg-amber-50 text-amber-900 ring-amber-200
+                  {% elif ast == 'pending' %} bg-blue-50 text-blue-900 ring-blue-200
+                  {% elif ast == 'rejected' %} bg-rose-50 text-rose-900 ring-rose-200
+                  {% else %} bg-gray-100 text-gray-800 ring-gray-200 {% endif %}">
+                  {{ row.application_status|default:'—' }}
+                </span>
+              {% endwith %}
+            </div>
+            <div class="p-4 space-y-4">
+              {% with ast=row.application_status|lower ps=row.payment_status|lower %}
+                {# Rejection notice only #}
+                {% if ast == 'rejected' %}
+                  <div class="rounded-xl bg-rose-50 text-rose-900 ring-1 ring-rose-200 px-4 py-3 text-sm">
+                    <div class="font-semibold inline-flex items-center gap-2">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm3.536 13.536-1.414 1.414L12 13.828l-2.121 2.122-1.415-1.414L10.586 12 8.464 9.879l1.415-1.415L12 10.586l2.122-2.122 1.414 1.415L13.414 12l2.122 2.121Z"/></svg>
+                      Application Rejected
+                    </div>
+                    <div class="text-rose-900/80">
+                      {% if row.reject_reason %}<div>Reason: {{ row.reject_reason }}</div>{% endif %}
+                      <div class="flex flex-wrap gap-2 text-[13px] mt-1">
+                        {% if row.rejected_by_full_name %}<span>By: {{ row.rejected_by_full_name }}</span>{% endif %}
+                        {% if row.rejected_at %}<span>On {{ row.rejected_at }}</span>{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+
+                {% if ps != 'paid' and ps != 'done' and ps != 'canceled' and ps != 'cancelled' and ast != 'rejected' %}
+                  <div class="rounded-xl bg-amber-50 text-amber-900 ring-1 ring-amber-200 px-4 py-3 text-sm">
+                    <div class="font-semibold inline-flex items-center gap-2">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
+                      Unpaid.
+                    </div>
+                    <div class="text-amber-900/80">Amount Due: ₱{{ row.total_amount|floatformat:2 }}. Forward to the Treasurer for payment collection.</div>
+                  </div>
+                {% endif %}
+
+                {% if ast == 'pending' %}
+                  <form method="post" action="{% url 'secretary_module:set_application_to_for_payment' application_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="forward-treasurer-btn w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 12h11.586l-4.293-4.293 1.414-1.414L20.414 13l-6.707 6.707-1.414-1.414L16.586 14H5v-2Z"/></svg>
+                      Confirm &amp; Forward to Treasurer
+                    </button>
+                  </form>
+                  <div class="mt-3">
+                    <form method="post" action="{% url 'secretary_module:cancel_application' application_id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="personnel_id" value="{{ personnel_id }}">
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Reason (optional)</label>
+                      <textarea name="reason" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm resize-y" rows="3" placeholder="Add a note for audit (optional)"></textarea>
+                      <button type="submit" class="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm3.536 13.536-1.414 1.414L12 13.828l-2.121 2.122-1.415-1.414L10.586 12 8.464 9.879l1.415-1.415L12 10.586l2.122-2.122 1.414 1.415L13.414 12l2.122 2.121Z"/></svg>
+                        Cancel Application
+                      </button>
+                    </form>
+                  </div>
+                {% elif ast == 'approved' %}
+                  <a href="{% url 'secretary_module:print_application_pdf' application_id %}" target="_blank" rel="noopener" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-blue-700">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 9V2h12v7h2a2 2 0 0 1 2 2v6h-4v5H6v-5H2v-6a2 2 0 0 1 2-2h2Zm2-5v5h8V4H8Zm8 16v-3H8v3h8Z"/></svg>
+                    Download &amp; Print
+                  </a>
+                  <form method="post" action="{% url 'secretary_module:set_application_to_completed' application_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="mark-complete-btn w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow transition-shadow focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14.414-4.707-4.707 1.414-1.414L11 13.586l5.293-5.293 1.414 1.414L11 16.414Z"/></svg>
+                      Mark as Completed
+                    </button>
+                  </form>
+                {% elif ast == 'completed' %}
+                  <button class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 text-gray-600 px-4 py-2 text-sm font-semibold cursor-not-allowed" disabled>Download &amp; Print</button>
+                  <span class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 text-emerald-900 px-4 py-2 text-sm font-semibold ring-1 ring-emerald-200">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14.414-4.707-4.707 1.414-1.414L11 13.586l5.293-5.293 1.414 1.414L11 16.414Z"/></svg>
+                    Completed
+                  </span>
+                {% elif ast == 'for payment' %}
+                  {% if ps != 'paid' and ps != 'done' and ps != 'canceled' and ps != 'cancelled' %}
+                    <div>
+                      <form method="post" action="{% url 'secretary_module:cancel_application' application_id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="personnel_id" value="{{ personnel_id }}">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Reason (optional)</label>
+                        <textarea name="reason" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm resize-y" rows="3" placeholder="Add a note for audit (optional)"></textarea>
+                        <button type="submit" class="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm3.536 13.536-1.414 1.414L12 13.828l-2.121 2.122-1.415-1.414L10.586 12 8.464 9.879l1.415-1.415L12 10.586l2.122-2.122 1.414 1.415L13.414 12l2.122 2.121Z"/></svg>
+                          Cancel Application
+                        </button>
+                      </form>
+                    </div>
+                  {% else %}
+                    <span class="text-sm text-gray-600">Waiting for Treasurer payment. No actions available.</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-sm text-gray-600">No actions available for this status.</span>
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div> <!-- /space-y-3 -->
+      </div> <!-- /grid -->
+    </div> <!-- /p-6 -->
+  </div> <!-- /white card -->
+</div> <!-- /outer container -->
+<style>
+  .btn-complete { display:inline-flex; align-items:center; gap:.5rem; background:#059669; color:#fff; padding:.5rem 1rem; font-size:.75rem; font-weight:600; border-radius:.75rem; box-shadow:0 1px 2px rgba(0,0,0,.15); border:1px solid #047857; }
+  .btn-complete:hover { background:#047857; }
+  .btn-complete-disabled { display:inline-flex; align-items:center; gap:.5rem; background:#d1fae5; color:#065f46; padding:.5rem 1rem; font-size:.75rem; font-weight:700; border-radius:.75rem; border:1px solid #a7f3d0; }
+  /* Solid emerald action button with clear hover elevation */
+  .mark-complete-btn { background:#059669 !important; color:#fff !important; box-shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.10); }
+  .mark-complete-btn:hover { background:#047857 !important; box-shadow:0 8px 16px -4px rgba(16,24,40,.15), 0 4px 6px -2px rgba(16,24,40,.10); }
+  /* Ensure the Forward to Treasurer button is always visible (blue) */
+  .forward-treasurer-btn { background:#2563eb !important; color:#ffffff !important; border:1px solid #1d4ed8 !important; }
+  .forward-treasurer-btn:hover { background:#1d4ed8 !important; }
+</style>
+{% endblock %}
