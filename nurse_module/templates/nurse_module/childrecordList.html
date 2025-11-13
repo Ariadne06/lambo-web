@@ -1,3 +1,4 @@
+
 {% extends 'base_nurse.html' %}
 
 {% block title %}Child Health Records{% endblock %}
@@ -10,7 +11,6 @@
 
     <div class="flex items-center gap-2">
       <button class="hidden sm:inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm hover:bg-gray-50">
-        <!-- Download icon -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
         </svg>
@@ -24,20 +24,25 @@
     <div class="px-6 pt-5 pb-4 border-b border-gray-100">
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <!-- Search -->
-        <div class="w-full md:w-96">
+        <form method="get" class="w-full md:w-96">
           <label class="sr-only">Search Child</label>
           <div class="relative">
-            <input type="text" placeholder="Search child by name, ID, or mother…"
-                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:border-gray-400" />
+            <input
+              type="text"
+              name="q"
+              value="{{ search_query }}"
+              placeholder="Search by name, family code, resident code, or child ID…"
+              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:border-gray-400"
+            />
             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/>
               </svg>
             </span>
           </div>
-        </div>
+        </form>
 
-        <!-- Filters -->
+        {# Advanced Filters remains visual-only for now #}
         <details class="group">
           <summary class="flex cursor-pointer select-none items-center gap-2 text-sm text-gray-700">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,90 +74,111 @@
       </div>
     </div>
 
+    {% if messages %}
+  <div class="px-6 pt-4">
+    {% for message in messages %}
+      <div class="rounded-xl border {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-blue-200 bg-blue-50 text-blue-800{% endif %} px-4 py-3 text-sm">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
     <!-- Table -->
     <div class="overflow-auto">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr class="text-left text-gray-600">
-            <th class="px-6 py-3 font-semibold">Resident ID</th>
+            <th class="px-6 py-3 font-semibold">Child ID</th>
             <th class="px-6 py-3 font-semibold">Child Name</th>
+            <th class="px-6 py-3 font-semibold">Sex</th>
             <th class="px-6 py-3 font-semibold">Date of Birth</th>
-            <th class="px-6 py-3 font-semibold">Mother's Name</th>
+            <th class="px-6 py-3 font-semibold">Age</th>
+            <th class="px-6 py-3 font-semibold">Family Code</th>
+            <th class="px-6 py-3 font-semibold">Feeding</th>
+            <th class="px-6 py-3 font-semibold">TT Status</th>
             <th class="px-6 py-3 font-semibold text-right">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <!-- SAMPLE STATIC ROWS (replace with your loop later) -->
-          <tr class="hover:bg-gray-50/70">
-            <td class="px-6 py-4 font-medium text-gray-800">1000</td>
-            <td class="px-6 py-4">Adrianne Villarta</td>
-            <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Adrianne Villarta</td>
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-end">
-                <a href="{% url 'nurse_module:moreChildRecord' %}"
-                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  View
-                </a>
-              </div>
-            </td>
-          </tr>
-
-          <tr class="hover:bg-gray-50/70">
-            <td class="px-6 py-4 font-medium text-gray-800">1001</td>
-            <td class="px-6 py-4">Adrian Medalla</td>
-            <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Adrian Medalla</td>
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-end">
-                <a href="{% url 'nurse_module:moreChildRecord' %}"
-                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  View
-                </a>
-              </div>
-            </td>
-          </tr>
-
-          <tr class="hover:bg-gray-50/70">
-            <td class="px-6 py-4 font-medium text-gray-800">1002</td>
-            <td class="px-6 py-4">Prescious Bugtai</td>
-            <td class="px-6 py-4">01/02/2020</td>
-            <td class="px-6 py-4">Prescious Bugtai</td>
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-end">
-                <a href="{% url 'nurse_module:moreChildRecord' %}"
-                   class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  View
-                </a>
-              </div>
-            </td>
-          </tr>
-
-          <!-- /SAMPLE ROWS -->
+          {% for child in children %}
+            <tr class="hover:bg-gray-50/70">
+              <td class="px-6 py-4 font-medium text-gray-800">
+                {{ child.child_id }}
+              </td>
+              <td class="px-6 py-4">
+                {{ child.child_full_name }}
+              </td>
+              <td class="px-6 py-4">
+                {{ child.sex|default:"—" }}
+              </td>
+              <td class="px-6 py-4">
+                {% if child.dob %}
+                  {{ child.dob|date:"m/d/Y" }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                {{ child.age|default:"—" }}
+              </td>
+              <td class="px-6 py-4">
+                {{ child.family_code|default:"—" }}
+              </td>
+              <td class="px-6 py-4">
+                {{ child.feeding_method_name|default:"—" }}
+              </td>
+              <td class="px-6 py-4">
+                {% if child.tt_status_name %}
+                  {{ child.tt_status_name }}{% if child.tt_status_date %} ({{ child.tt_status_date|date:"m/d/Y" }}){% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-end">
+                  <a
+                    href="{% url 'nurse_module:moreChildRecord' child_health_id=child.child_health_id %}"
+                    class="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="px-6 py-6 text-center text-sm text-gray-500">
+                No child records found.
+              </td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
     <div class="px-6 py-4 border-t border-gray-100">
-      <nav class="flex items-center justify-center gap-1 text-sm">
-        <a class="px-2 py-1 rounded-lg hover:bg-gray-100" href="#">1</a>
-        <a class="px-2 py-1 rounded-lg hover:bg-gray-100" href="#">2</a>
-        <a class="px-2 py-1 rounded-lg hover:bg-gray-100" href="#">3</a>
-        <span class="px-2 py-1">…</span>
-        <a class="px-2 py-1 rounded-lg hover:bg-gray-100" href="#">60</a>
+      <nav class="flex items-center justify-center gap-2 text-sm">
+        {% if has_prev %}
+          <a class="px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-100"
+             href="?page={{ prev_page }}{% if base_qs %}&{{ base_qs }}{% endif %}">
+            Previous
+          </a>
+        {% endif %}
+        <span class="px-3 py-1 rounded-lg bg-gray-100 text-gray-800">
+          Page {{ page }}
+        </span>
+        {% if has_next %}
+          <a class="px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-100"
+             href="?page={{ next_page }}{% if base_qs %}&{{ base_qs }}{% endif %}">
+            Next
+          </a>
+        {% endif %}
       </nav>
     </div>
   </div>

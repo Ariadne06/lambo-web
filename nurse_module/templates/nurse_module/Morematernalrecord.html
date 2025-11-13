@@ -1,11 +1,13 @@
 {% extends 'base_admin.html' %}
 
-{% block title %}Nurse{% endblock %}
+{% block title %}Maternal Record{% endblock %}
 
 {% block content %}
 <div class="px-6 py-8">
   <!-- Page header -->
-  <h1 class="text-2xl font-semibold text-red-700 mb-6">Maternal Record</h1>
+  <h1 class="text-2xl font-semibold text-red-700 mb-6">
+    Maternal Record{% if mhr.full_name %} – {{ mhr.full_name }}{% endif %}
+  </h1>
 
   <!-- Card -->
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
@@ -15,35 +17,88 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Registration Date</label>
-          <input type="text" value="01/02/2025" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.registration_date|date:'m/d/Y' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Maternal Full Name</label>
-          <input type="text" value="Jereza Rodrigo" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.full_name }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">NHTS Status</label>
-          <input type="text" value="NHTS" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{% if mhr.nhts_status %}NHTS{% else %}Non-NHTS{% endif %}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <input type="text" value="Purok 7 Cansaga" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.full_address|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-          <input type="text" value="09672672606" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.phone_number|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
       </div>
 
       <!-- Right column -->
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <input type="text" value="Active" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Maternal ID (Resident)</label>
+          <input
+            type="text"
+            value="{{ mhr.maternal_id }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Recorded By</label>
-          <input type="text" value="Cristel Mandauwe" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Family Code</label>
+          <input
+            type="text"
+            value="{{ mhr.family_code|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Age (years)</label>
+          <input
+            type="text"
+            value="{{ mhr.age_years|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+          <input
+            type="text"
+            value="{{ mhr.address_landmark|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
       </div>
     </form>
@@ -104,14 +159,14 @@
 
       <!-- Delivery Outcome -->
       <button type="button" id="openDeliveryModal"
-              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a5 5 0 1 1 0 10A5 5 0 0 1 12 4Zm-7 14a7 7 0 0 1 14 0v2H5v-2Z"/></svg>
         Delivery Outcome
       </button>
 
       <!-- Postpartum Visit -->
       <button type="button" id="openPostpartumModal"
-              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm-4 6c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>
         Postpartum Visit
       </button>
@@ -120,7 +175,7 @@
 
   <!-- Footer Back -->
   <div class="mt-6">
-    <a href="#"
+    <a href="{% url 'nurse_module:maternalrecord' %}"
        class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
       Back
     </a>
@@ -141,7 +196,7 @@
       <div class="overflow-auto max-h-[70vh]">
         <div class="px-6 py-8 space-y-10">
 
-          <!-- Medical Conditions -->
+          <!-- Medical Conditions (dynamic) -->
           <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Medical Conditions</h2>
             <div class="max-w-md overflow-x-auto">
@@ -149,24 +204,34 @@
                 <thead class="bg-gray-50 text-gray-800">
                   <tr>
                     <th class="px-4 py-2 border border-gray-200 font-semibold">Condition</th>
-                    <th class="px-4 py-2 border border-gray-200 font-semibold">Notes</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date Added</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-2 border border-gray-200">Asthma</td>
-                    <td class="px-4 py-2 border border-gray-200">Diagnosed 2019</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-2 border border-gray-200">Allergy</td>
-                    <td class="px-4 py-2 border border-gray-200">Penicillin</td>
-                  </tr>
+                  {% if medical_conditions %}
+                    {% for mc in medical_conditions %}
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ mc.m_medical_history_name }}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ mc.date_added|date:"m/d/Y" }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="2" class="px-4 py-2 border border-gray-200 text-sm text-gray-500">
+                        No medical conditions recorded for this maternal health record.
+                      </td>
+                    </tr>
+                  {% endif %}
                 </tbody>
               </table>
             </div>
           </section>
 
-          <!-- Surgical History -->
+          <!-- Surgical History (dynamic) -->
           <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Surgical History</h2>
             <div class="max-w-md overflow-x-auto">
@@ -174,14 +239,36 @@
                 <thead class="bg-gray-50 text-gray-800">
                   <tr>
                     <th class="px-4 py-2 border border-gray-200 font-semibold">Procedure</th>
-                    <th class="px-4 py-2 border border-gray-200 font-semibold">Notes</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date of Surgery</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date Added</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-2 border border-gray-200">Appendectomy</td>
-                    <td class="px-4 py-2 border border-gray-200">Done in 2018</td>
-                  </tr>
+                  {% if surgical_history %}
+                    {% for sh in surgical_history %}
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ sh.m_surgical_history_name }}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {% if sh.date_of_surgery %}
+                            {{ sh.date_of_surgery|date:"m/d/Y" }}
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ sh.date_added|date:"m/d/Y" }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="3" class="px-4 py-2 border border-gray-200 text-sm text-gray-500">
+                        No surgical history recorded for this maternal health record.
+                      </td>
+                    </tr>
+                  {% endif %}
                 </tbody>
               </table>
             </div>
@@ -199,7 +286,7 @@
   </div>
 </div>
 
-<!-- ===================== OBSTETRICAL HISTORY MODAL ===================== -->
+<!-- ===================== OBSTETRICAL HISTORY MODAL (DYNAMIC) ===================== -->
 <div id="obstetricModal" class="fixed inset-0 z-[100] hidden">
   <div id="obstetricBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
@@ -207,7 +294,7 @@
       <div class="flex items-center justify-between px-6 py-4 border-b">
         <div>
           <h3 class="text-lg font-semibold text-gray-900">Obstetrical History</h3>
-          <p class="text-xs text-gray-500">Gravida, para, LMP, and EDD details.</p>
+          <p class="text-xs text-gray-500">Gravida, para, abortion, LMP, and EDD details.</p>
         </div>
         <button id="closeObstetricModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
@@ -216,28 +303,63 @@
       <div class="overflow-auto max-h-[70vh]">
         <div class="px-6 py-8 flex justify-center">
           <div class="bg-white w-full">
-            <form class="space-y-6">
-              <div class="flex items-center gap-4">
-                <label class="w-60 text-sm font-medium text-gray-700">Gravida (Pregnancies):</label>
-                <input type="text" value="01" class="w-32 rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div class="flex items-center gap-4">
-                <label class="w-60 text-sm font-medium text-gray-700">Para (Live Births):</label>
-                <input type="text" value="00" class="w-32 rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div class="flex items-center gap-4">
-                <label class="w-60 text-sm font-medium text-gray-700">Abortion (Miscarriages):</label>
-                <input type="text" value="00" class="w-32 rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div class="flex items-center gap-4">
-                <label class="w-60 text-sm font-medium text-gray-700">Last Menstrual Period:</label>
-                <input type="text" value="01/01/2020" class="w-40 rounded-md border border-gray-300 px-3 py-2">
-              </div>
-              <div class="flex items-center gap-4">
-                <label class="w-60 text-sm font-medium text-gray-700">Expected Delivery Date:</label>
-                <input type="text" value="01/01/2020" class="w-40 rounded-md border border-gray-300 px-3 py-2">
-              </div>
-            </form>
+
+            {% if obst_hist %}
+              {% with oh=obst_hist.0 %}
+              <form class="space-y-6">
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Gravida (Pregnancies):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.gravida|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Para (Live Births):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.para|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Abortion (Miscarriages):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.abortion|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Last Menstrual Period:</label>
+                  <input
+                    type="text"
+                    value="{{ oh.last_menstrual_period|date:'m/d/Y' }}"
+                    class="w-40 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Expected Delivery Date:</label>
+                  <input
+                    type="text"
+                    value="{{ oh.expected_date_of_delivery|date:'m/d/Y' }}"
+                    class="w-40 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+              </form>
+              {% endwith %}
+            {% else %}
+              <p class="text-sm text-gray-500">
+                No obstetrical history recorded for this maternal health record.
+              </p>
+            {% endif %}
+
             <div class="pt-6 flex justify-end">
               <button id="closeObstetricModal2"
                       class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
@@ -251,7 +373,7 @@
   </div>
 </div>
 
-<!-- ===================== MATERNAL IMMUNIZATION MODAL ===================== -->
+<!-- ===================== MATERNAL IMMUNIZATION MODAL (DYNAMIC) ===================== -->
 <div id="maternalImmModal" class="fixed inset-0 z-[100] hidden">
   <div id="maternalImmBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
@@ -281,15 +403,71 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td class="px-4 py-2 border border-gray-300">Tetanus Toxoid (TT)</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                  <td class="px-4 py-2 border border-gray-300">—</td>
-                </tr>
+                {% if immu_track %}
+                  <tr>
+                    <td class="px-4 py-2 border border-gray-300">Tetanus Toxoid (TT)</td>
+
+                    <!-- 1st dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.first_dose_date %}
+                        {{ immu_track.first_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 2nd dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.second_dose_date %}
+                        {{ immu_track.second_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 3rd dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.third_dose_date %}
+                        {{ immu_track.third_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 4th dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fourth_dose_date %}
+                        {{ immu_track.fourth_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 5th dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fifth_dose_date %}
+                        {{ immu_track.fifth_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- FIM status -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fim_status %}
+                        Fully Immunized Mother (FIM)
+                      {% else %}
+                        Not yet FIM
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="7" class="px-4 py-2 border border-gray-300 text-sm text-gray-500">
+                      No immunization status recorded for this maternal health record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -321,45 +499,88 @@
           <div class="overflow-x-auto">
             <table class="w-full border border-gray-300">
               <thead class="bg-gray-100">
-                <tr>
-                  <th class="px-4 py-2 border border-gray-300 text-left">Trimester</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">Date</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">AOG</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">Height</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">Weight</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">BP</th>
-                  <th class="px-4 py-2 border border-gray-300 text-left">Notes</th>
-                </tr>
-              </thead>
+    <tr>
+      <th class="px-4 py-2 border border-gray-300 text-left">Trimester</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Date</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">AOG (weeks)</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Height</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Weight</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">BP</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Fetal Heart Rate</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Lab Result</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Notes</th>
+    </tr>
+  </thead>
               <tbody>
-                <tr>
-                  <td class="px-4 py-2 border border-gray-300">1</td>
-                  <td class="px-4 py-2 border border-gray-300">01/02/2020</td>
-                  <td class="px-4 py-2 border border-gray-300">30</td>
-                  <td class="px-4 py-2 border border-gray-300">80 cm</td>
-                  <td class="px-4 py-2 border border-gray-300">5 kg</td>
-                  <td class="px-4 py-2 border border-gray-300">36/2</td>
-                  <td class="px-4 py-2 border border-gray-300">None</td>
-                </tr>
-                <tr>
-                  <td class="px-4 py-2 border border-gray-300">2</td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                </tr>
-                <tr>
-                  <td class="px-4 py-2 border border-gray-300">3</td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                  <td class="px-4 py-2 border border-gray-300"></td>
-                </tr>
-              </tbody>
+    {% if checkups %}
+      {% for cu in checkups %}
+        <tr class="hover:bg-gray-50">
+          <!-- Trimester -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.trimester_name|default:"—" }}
+          </td>
+
+          <!-- Date -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.date_of_checkup|date:"m/d/Y"|default:"—" }}
+          </td>
+
+          <!-- AOG -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.aog_weeks|default:"—" }}
+          </td>
+
+          <!-- Height -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.height_cm %}
+              {{ cu.height_cm }} cm
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- Weight -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.weight_kg %}
+              {{ cu.weight_kg }} kg
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- BP -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.blood_pressure|default:"—" }}
+          </td>
+
+          <!-- Fetal Heart Rate -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.fetal_heart_rate %}
+              {{ cu.fetal_heart_rate }} bpm
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- Lab Result -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.laboratory_results|default:"—" }}
+          </td>
+
+          <!-- Notes -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.notes|default:"—" }}
+          </td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="9" class="px-4 py-3 text-center text-sm text-gray-500 border border-gray-300">
+          No checkup records found for this maternal record.
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
             </table>
           </div>
           <div class="pt-6 flex justify-end">
@@ -374,7 +595,7 @@
   </div>
 </div>
 
-<!-- ===================== INFECTIOUS DISEASE SCREENING MODAL ===================== -->
+<!-- ===================== INFECTIOUS DISEASE SCREENING MODAL (DYNAMIC) ===================== -->
 <div id="screeningModal" class="fixed inset-0 z-[100] hidden">
   <div id="screeningBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
@@ -397,21 +618,31 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Syphilis</td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Hepatitis B</td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">HIV Screening</td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                </tr>
+                {% if disease_surveillance %}
+                  {% for ds in disease_surveillance %}
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ds.disease_name }}
+                      </td>
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if ds.date_screened %}
+                          {{ ds.date_screened|date:"m/d/Y" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ds.result|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3" class="px-6 py-3 border border-gray-200 text-sm text-gray-500">
+                      No infectious disease screening records found for this maternal health record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -474,7 +705,7 @@
   </div>
 </div>
 
-<!-- ===================== LAB SCREENING RESULT (NESTED) MODAL ===================== -->
+<!-- ===================== LAB SCREENING RESULT (NESTED – dynamic) MODAL ===================== -->
 <div id="labResultModal" class="fixed inset-0 z-[110] hidden">
   <div id="labResultBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
@@ -482,7 +713,9 @@
       <div class="flex items-center justify-between px-6 py-4 border-b">
         <h3 class="text-lg font-semibold text-gray-900">Lab Screening Result</h3>
         <button id="closeLabResultModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
       <div class="overflow-auto max-h-[70vh]">
@@ -491,25 +724,54 @@
             <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
               <thead class="bg-gray-50 text-gray-800">
                 <tr>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Test Type</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Test Name</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Test Date</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Result</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Iron Given Date</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Iron Given</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">HGB</td>
-                  <td class="px-6 py-3 border border-gray-200">03/03/2024</td>
-                  <td class="px-6 py-3 border border-gray-200">Good</td>
-                  <td class="px-6 py-3 border border-gray-200">03/03/2024 - 30 Tabs</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">CBC</td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                  <td class="px-6 py-3 border border-gray-200"></td>
-                </tr>
+                {% if lab_screenings %}
+                  {% for ls in lab_screenings %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Test Name -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.test_name }}
+                      </td>
+
+                      <!-- Test Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.test_date|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Result -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.result|default:"—" }}
+                      </td>
+
+                      <!-- Iron Given Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.iron_tablet_given_date|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Iron Given (quantity) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if ls.iron_tablet_quantity %}
+                          {{ ls.iron_tablet_quantity }} tabs
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="5" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No laboratory screening records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -517,7 +779,7 @@
           <!-- Buttons -->
           <div class="pt-6">
             <button id="closeLabResultModal2"
-                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
               Back
             </button>
           </div>
@@ -526,6 +788,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- ===================== SUPPLEMENTS MODAL ===================== -->
 <div id="supplementsModal" class="fixed inset-0 z-[100] hidden">
@@ -551,42 +814,41 @@
                 </tr>
               </thead>
               <tbody>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iron</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iodine</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iron</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iodine</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iron</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Iodine</td>
-                  <td class="px-6 py-3 border border-gray-200">01/02/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">30 Tabs</td>
-                  <td class="px-6 py-3 border border-gray-200">2nd</td>
-                </tr>
+                {% if supplements %}
+                  {% for sup in supplements %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Supplement name -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.supplement_name }}
+                      </td>
+
+                      <!-- Date given -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.date_given|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Quantity (number of tablets) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if sup.number_of_tablets %}
+                          {{ sup.number_of_tablets }} tabs
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Trimester -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.trimester_name|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No supplement records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -620,33 +882,71 @@
               <thead class="bg-gray-50 text-gray-800">
                 <tr>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Outcome</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Delivery Date</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Place</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Baby Sex</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Weight</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold">Attendant</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Delivery Type</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Place of Delivery</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Ownership</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Delivery Date</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Time of Delivery</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Attendant(s)</th>
+                  
                 </tr>
               </thead>
               <tbody>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Live Birth</td>
-                  <td class="px-6 py-3 border border-gray-200">05/03/2021</td>
-                  <td class="px-6 py-3 border border-gray-200">Barangay Health Center</td>
-                  <td class="px-6 py-3 border border-gray-200">Male</td>
-                  <td class="px-6 py-3 border border-gray-200">3.2 kg</td>
-                  <td class="px-6 py-3 border border-gray-200">Midwife</td>
-                  <td class="px-6 py-3 border border-gray-200">Normal</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">Stillbirth</td>
-                  <td class="px-6 py-3 border border-gray-200">11/08/2020</td>
-                  <td class="px-6 py-3 border border-gray-200">Hospital</td>
-                  <td class="px-6 py-3 border border-gray-200">Female</td>
-                  <td class="px-6 py-3 border border-gray-200">2.5 kg</td>
-                  <td class="px-6 py-3 border border-gray-200">Doctor</td>
-                  <td class="px-6 py-3 border border-gray-200">Cesarean</td>
-                </tr>
+                {% if delivery_outcomes %}
+                  {% for do in delivery_outcomes %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Outcome -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.outcome_type|default:"—" }}
+                      </td>
+
+                      <!-- Delivery Type -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.delivery_type|default:"—" }}
+                      </td>
+
+                      <!-- Place of Delivery -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.place_delivery_type|default:"—" }}
+                      </td>
+
+                      <!-- Ownership -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.ownership_type|default:"—" }}
+                      </td>
+
+                      <!-- Delivery Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.date_terminated|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Time of Delivery -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if do.time_of_delivery %}
+                          {{ do.time_of_delivery|time:"h:i A" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Attendant(s) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if do.other_attendant %}
+                          {{ do.birth_attendant }} ({{ do.other_attendant }})
+                        {% else %}
+                          {{ do.birth_attendant|default:"—" }}
+                        {% endif %}
+                      </td>
+
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="8" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No delivery outcome record found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -683,48 +983,60 @@
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Weight</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Height</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Vitals</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Lab Notes</th>
                   <th class="px-6 py-3 border border-gray-200 font-semibold">Notes</th>
-                  <th class="px-6 py-3 border border-gray-200 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3 border border-gray-200">01/04/2025</td>
-                  <td class="px-6 py-3 border border-gray-200">60 kg</td>
-                  <td class="px-6 py-3 border border-gray-200">160 cm</td>
-                  <td class="px-6 py-3 border border-gray-200">BP: 110/70, Temp: 36.8</td>
-                  <td class="px-6 py-3 border border-gray-200">Good recovery</td>
-                  <td class="px-6 py-3 border border-gray-200">
-                    <div class="flex items-center justify-end gap-2">
-                      <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:bg-gray-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                          <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
-                        </svg>
-                      </button>
-                      <button class="h-8 w-8 flex items-center justify-center rounded-full border hover:bg-gray-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                  <td class="px-6 py-6 border border-gray-200"></td>
-                </tr>
+                {% if postpartum_visits %}
+                  {% for pv in postpartum_visits %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.date_of_visit|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Weight -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if pv.weight_kg %}
+                          {{ pv.weight_kg }} kg
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Height -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if pv.height_cm %}
+                          {{ pv.height_cm }} cm
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Vitals (BP) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.blood_pressure|default:"—" }}
+                      </td>
+
+                      <!-- Lab Notes -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.laboratory_notes|default:"—" }}
+                      </td>
+
+                      <!-- Notes -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.notes|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="6" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No postpartum visit records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -749,12 +1061,11 @@
     }
     function close(modal) {
       modal.classList.add('hidden');
-      // Only remove overflow lock if no other modals are open
-      const anyOpen = Array.from(document.querySelectorAll('[id$="Modal"]')).some(m => !m.classList.contains('hidden'));
+      const anyOpen = Array.from(document.querySelectorAll('[id$="Modal"]'))
+        .some(m => !m.classList.contains('hidden'));
       if (!anyOpen) document.body.classList.remove('overflow-hidden');
     }
 
-    // Helper to wire open/close groups
     function wire(openBtnId, modalId, closeIds) {
       const openBtn = document.getElementById(openBtnId);
       const modal = document.getElementById(modalId);
@@ -806,7 +1117,7 @@
     // Postpartum
     wire('openPostpartumModal', 'postpartumModal', ['closePostpartumModal', 'closePostpartumModal2', 'postpartumBackdrop']);
 
-    // ESC closes whichever modal(s) are open (top-level & nested)
+    // ESC closes any open modal(s)
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       ['labResultModal','surgicalModal','obstetricModal','maternalImmModal','checkupsModal','screeningModal','labModal','supplementsModal','deliveryModal','postpartumModal']

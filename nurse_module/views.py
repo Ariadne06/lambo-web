@@ -2,19 +2,18 @@ from django.shortcuts import render
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, Household, QuarterCatalog, HouseholdDetail, HouseholdFamilies
+from .models import Dashboard, AnnouncementRepo, ResidentList, Household, QuarterCatalog, HouseholdDetail, HouseholdFamilies, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow
 from datetime import datetime
 from typing import Optional, Dict, Any
-from django.shortcuts import render
 from django.utils.http import urlencode
-from django.utils.http import url_has_allowed_host_and_scheme
-from django.http import Http404
-from django.views.decorators.http import require_GET
 from utils.constants import LIMIT_OPTIONS
 from utils.flash import set_flash, get_flash
-from utils.db_message import _clean_db_error, _clean_params, coerce_message
+from utils.db_message import _clean_db_error
 from household_module.models import Household, Family
 from nurse_module.models import Household as HouseholdListModel
+from django.db import connection
+from django.http import JsonResponse, Http404
+import math
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -341,23 +340,266 @@ def nurse_household_more(request, household_id: int):
 @custom_login_required
 @role_required('Midwife')
 def childrecordList(request):
-    
-    return render(request, 'nurse_module/childrecordList.html')
+    search_query = (request.GET.get('q') or '').strip() or None
+
+    page_str = request.GET.get('page')
+    try:
+        page = int(page_str)
+        if page < 1:
+            page = 1
+    except (TypeError, ValueError):
+        page = 1
+
+    per_page = 25
+    offset = (page - 1) * per_page
+
+    error_message = None
+    rows = []
+    try:
+        # Fetch one extra to know if “next” page exists
+        rows = ChildHealthListRow.fetch(query=search_query, limit=per_page + 1, offset=offset)
+    except Exception as e:
+        error_message = str(e)
+
+    has_next = len(rows) > per_page
+    children = rows[:per_page]
+
+    has_prev = page > 1
+    next_page = page + 1 if has_next else None
+    prev_page = page - 1 if has_prev else None
+
+    base_query = {}
+    if search_query:
+        base_query['q'] = search_query
+    base_qs = urlencode(base_query)
+
+    context = {
+        'children': children,
+        'search_query': search_query or '',
+        'page': page,
+        'has_next': has_next,
+        'has_prev': has_prev,
+        'next_page': next_page,
+        'prev_page': prev_page,
+        'base_qs': base_qs,
+        'error_message': error_message,
+    }
+    return render(request, 'nurse_module/childrecordList.html', context)
 
 @custom_login_required
 @role_required('Midwife')
-def moreChildRecord(request):
-    return render(request, 'nurse_module/moreChildRecord.html')
+def moreChildRecord(request, child_health_id: int):   # <-- required
+    record = ChildHealthDetailRow.fetch_one(child_health_id)
+    if not record:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.error(request, "Child record not found or unavailable.")
+        return redirect('nurse_module:childrecordList')
+    return render(request, 'nurse_module/moreChildRecord.html', {'record': record})
+
+@custom_login_required
+@role_required('Midwife')
+def child_growth_monitoring_api(request, child_health_id: int):
+    rows = GrowthMonitoringRow.fetch(child_health_id)
+    # Optional: lightweight formatting of nulls is better in the frontend
+    return JsonResponse({"rows": rows})
+
+@custom_login_required
+@role_required('Midwife')
+def child_immunization_api(request, child_health_id: int):
+    rows = ImmunizationRow.fetch(child_health_id)
+    return JsonResponse({"rows": rows})
+
+def _dictfetchall(cur):
+    cols = [col[0] for col in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+@custom_login_required
+@role_required('Midwife')
+def childMedSurg(request, child_health_id: int):
+    """
+    JSON endpoint for Medical Conditions + Surgical History
+    Uses:
+      - view_specific_child_all_medical_condition(p_child_health_id INT)
+      - view_specific_child_all_surgical_history(p_child_health_id INT)
+    Returns:
+      { "medical": [...], "surgical": [...] }
+    """
+    try:
+        with connection.cursor() as cur:
+            # Medical conditions
+            cur.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
+            medical = _dictfetchall(cur)
+
+            # Surgical history
+            cur.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
+            surgical = _dictfetchall(cur)
+
+        return JsonResponse({"medical": medical, "surgical": surgical})
+    except Exception as e:
+        # Optional: log e
+        return JsonResponse({"medical": [], "surgical": [], "error": str(e)}, status=500)
+
+@custom_login_required
+@role_required('Midwife')
+def childSupplements(request, child_health_id: int):
+    """
+    Returns:
+      { "rows": [...] }
+    SQL: view_all_child_supplements(p_child_health_id INT)
+    """
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
+            rows = _dictfetchall(cur)
+        return JsonResponse({"rows": rows})
+    except Exception as e:
+        # Optional: log e
+        return JsonResponse({"rows": [], "error": str(e)}, status=500)
 
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
-    return render(request, 'nurse_module/maternalrecord.html')
+    # ---- Filters from GET ----
+    q = request.GET.get("q") or None  # name / resident_id search
+    family_code = request.GET.get("family_code") or None
+    record_status = request.GET.get("record_status") or None
 
+    date_from_str = request.GET.get("date_from") or ""
+    date_to_str = request.GET.get("date_to") or ""
+
+    date_from = _parse_date(date_from_str)
+    date_to = _parse_date(date_to_str)
+
+    # ---- Pagination ----
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    if page < 1:
+        page = 1
+
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    total_count = MaternalHealthListRow.count(
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    maternal_records = MaternalHealthListRow.fetch(
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=per_page,
+        offset=offset,
+    )
+
+    total_pages = max(1, math.ceil(total_count / per_page)) if total_count else 1
+    if page > total_pages:
+        page = total_pages
+
+    # Simple window around current page (e.g., 1 2 [3] 4 5)
+    window = 2
+    start_page = max(1, page - window)
+    end_page = min(total_pages, page + window)
+    page_range = list(range(start_page, end_page + 1))
+
+    # Build base query string for pagination links (keep filters, change page)
+    qs_params = {}
+    for key in ["q", "family_code", "record_status", "date_from", "date_to"]:
+        val = request.GET.get(key)
+        if val:
+            qs_params[key] = val
+    base_query = urlencode(qs_params)
+
+    context = {
+        "maternal_records": maternal_records,
+        "filters": {
+            "q": q or "",
+            "family_code": family_code or "",
+            "record_status": record_status or "",
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+        },
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "prev_page": page - 1,
+            "next_page": page + 1,
+            "page_range": page_range,
+        },
+        "base_query": base_query,
+    }
+    return render(request, 'nurse_module/maternalrecord.html', context)
+
+def _parse_date(value):
+    """Helper to safely parse YYYY-MM-DD from <input type='date'>."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    
 @custom_login_required
 @role_required('Midwife')
-def Morematernalrecord(request):
-    return render(request, 'nurse_module/Morematernalrecord.html')
+def Morematernalrecord(request, maternal_health_id: int):
+    # Main maternal health record header/info
+    mhr = MaternalHealthDetailRow.get_by_id(maternal_health_id)
+    if mhr is None:
+        raise Http404("Maternal health record not found.")
+
+    # Obstetrical history
+    obst_hist = ObstetricalHistoryRow.fetch_for_mhr(maternal_health_id)
+
+    # Medical conditions + surgical history
+    medical_conditions = MaternalMedicalConditionRow.fetch_for_mhr(maternal_health_id)
+    surgical_history = MaternalSurgicalHistoryRow.fetch_for_mhr(maternal_health_id)
+
+    # Immunization (TT + FIM)
+    immu_track = MaternalImmunizationStatusTrackRow.fetch_for_mhr(maternal_health_id)
+
+    # Disease surveillance / screening
+    disease_surveillance = MaternalDiseaseSurveillanceRow.fetch_for_mhr(maternal_health_id)
+
+    # Check ups
+    checkups = MaternalCheckupRow.fetch_for_mhr(maternal_health_id)
+
+    # Lab screenings
+    lab_screenings = MaternalLaboratoryScreeningRow.fetch_for_mhr(maternal_health_id)
+
+    # Supplements
+    supplements = MaternalSupplementRow.fetch_for_mhr(maternal_health_id)
+
+    # Delivery outcome
+    delivery_outcomes = MaternalDeliveryOutcomeRow.fetch_for_mhr(maternal_health_id)
+
+    # Postpartum visits (NEW)
+    postpartum_visits = MaternalPostpartumVisitRow.fetch_for_mhr(maternal_health_id)
+
+    context = {
+        "mhr": mhr,
+        "obst_hist": obst_hist,
+        "medical_conditions": medical_conditions,
+        "surgical_history": surgical_history,
+        "immu_track": immu_track,
+        "disease_surveillance": disease_surveillance,
+        "checkups": checkups,
+        "lab_screenings": lab_screenings,
+        "supplements": supplements,
+        "delivery_outcomes": delivery_outcomes,
+        "postpartum_visits": postpartum_visits,  # 👈 add this
+    }
+    return render(request, "nurse_module/Morematernalrecord.html", context)
 
 @custom_login_required
 @role_required('Midwife')
