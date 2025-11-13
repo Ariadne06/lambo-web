@@ -360,7 +360,7 @@
         <!-- Relationships -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Relationship of Family Head to HH <span class="text-red-600">*</span></label>
-          <select id="uf_fam_head_rel" name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed" disabled>
+          <select id="uf_fam_head_rel" name="fam_head_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed" disabled data-always-disabled>
             <option value="" selected disabled>— Select Relationship —</option>
             {% for r in relationship %}
               <option value="{{ r.rth_id }}">{{ r.description }}</option>
@@ -370,7 +370,7 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Relationship of Respondent to Family Head <span class="text-red-600">*</span></label>
-          <select id="uf_respondent_rel" name="respondent_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_respondent_rel" name="respondent_rel" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" disabled>— Select Relationship —</option>
             {% for fr in family_relationship %}
               <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
@@ -381,7 +381,7 @@
         <!-- Household env. -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Household Type <span class="text-red-600">*</span></label>
-          <select id="uf_household_type" name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_household_type" name="household_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Household Type —</option>
             {% for hht in household_type %}
               <option value="{{ hht.household_type_id }}">{{ hht.description }}</option>
@@ -391,7 +391,7 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Type of Waste Management <span class="text-red-600">*</span></label>
-          <select id="uf_waste_management_type" name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_waste_management_type" name="waste_management_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Waste Management Type —</option>
             {% for wmt in waste_management %}
               <option value="{{ wmt.waste_management_type_id }}">{{ wmt.description }}</option>
@@ -401,7 +401,7 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Type of Water Source <span class="text-red-600">*</span></label>
-          <select id="uf_water_source_type" name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_water_source_type" name="water_source_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Water Source Type —</option>
             {% for ws in water_source %}
               <option value="{{ ws.water_source_type_id }}">{{ ws.description }}</option>
@@ -411,7 +411,7 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Type of Toilet Facility <span class="text-red-600">*</span></label>
-          <select id="uf_toilet_facility_type" name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_toilet_facility_type" name="toilet_facility_type" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Toilet Facility Type —</option>
             {% for tf in toilet_facility %}
               <option value="{{ tf.toilet_facility_type_id }}">{{ tf.description }}</option>
@@ -422,7 +422,7 @@
         <!-- Flags -->
         <div>
           <label class="block text-sm font-medium text-gray-700">NHTS Status <span class="text-red-600">*</span></label>
-          <select id="uf_nhts_status" name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_nhts_status" name="nhts_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>Select…</option>
             <option value="true">YES</option>
             <option value="false">NO</option>
@@ -431,7 +431,7 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Indigent Status <span class="text-red-600">*</span></label>
-          <select id="uf_indigent_status" name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="uf_indigent_status" name="indigent_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>Select…</option>
             <option value="true">YES</option>
             <option value="false">NO</option>
@@ -442,394 +442,12 @@
         <div id="uf_ip_tribe_wrap" class="mt-2 hidden sm:col-span-2">
           <label for="uf_ip_tribe" class="block text-sm font-medium text-gray-700">Specify Tribe <span class="text-red-600">*</span></label>
           <input id="uf_ip_tribe" name="ip_tribe" type="text" placeholder="e.g., Manobo, Subanen"
-                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
         </div>
       </div>
 
       <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
         <button type="button" id="cancelUpdateFamilyModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Changes</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-
-<!-- Remove Family Confirmation Modal -->
-<div id="removeFamilyModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
-
-  <div class="relative z-10 w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
-    <div class="flex items-center justify-between border-b px-6 py-4">
-      <h3 class="text-base font-bold">Remove Family</h3>
-      <button id="closeRemoveFamilyModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
-      </button>
-    </div>
-
-      <form method="post" action="{% url 'bhw_module:familyDeactivate' %}" class="px-6 py-5">
-        {% csrf_token %}
-        <input type="hidden" name="family_id" id="rm_family_id">
-        <input type="hidden" name="household_id" value="{{ results.household_id }}">
-        <input type="hidden" name="household_number" value="{{ household_number }}">
-
-        <p class="text-sm text-gray-700">
-          Are you sure you want to remove
-          <span id="rm_family_label" class="font-medium text-gray-900"></span>
-          from this household?
-        </p>
-
-        <div class="mt-4">
-          <label for="rm_reason_sel" class="block text-sm font-medium text-gray-700">
-            Reason for removal <span class="text-red-600">*</span>
-          </label>
-          <select
-            id="rm_reason_sel"
-            name="reason"
-            required
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-          >
-            <option value="" selected disabled>— Select reason —</option>
-            <option value="Moved out">Moved out</option>
-            <option value="Relocated">Relocated</option>
-          </select>
-          <p class="mt-1 text-xs text-gray-500">Choose the most appropriate reason.</p>
-        </div>
-
-        <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
-          <button type="button" id="cancelRemoveFamilyModal"
-            class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            Cancel
-          </button>
-          <button type="submit"
-            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-            Remove
-          </button>
-        </div>
-      </form>
-  </div>
-</div>
-
-<!-- Update Household Modal -->
-<div id="updateHouseholdModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
-
-  <!-- Dialog -->
-  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
-    <div class="flex items-center justify-between border-b px-6 py-4">
-      <h3 class="text-base font-bold">Update Household Profile</h3>
-      <button id="closeUpdateHouseholdModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-    </div>
-
-    <form method="post" action="{% url 'bhw_module:householdUpdate' %}" class="px-6 py-5">
-      {% csrf_token %}
-      <input type="hidden" name="household_id" value="{{ results.household_id }}">
-      <input type="hidden" name="household_number" value="{{ household_number }}">
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <!-- Household Head (typeahead) -->
-        <div class="sm:col-span-1 relative"><!-- CHANGED: added relative wrapper for dropdown -->
-          <label class="block text-sm font-medium text-gray-700">Household Head <span class="text-red-600">*</span></label>
-
-          <!-- CHANGED: removed list="residentList"; added data-* for autocomplete and data-init-name -->
-          <input
-            id="upd_head_name"
-            name="head_name"
-            autocomplete="off"
-            placeholder="Search resident by name"
-            value="{{ results.household_head }}"
-            data-autocomplete="resident"               
-            data-target-hidden="#upd_head_id"          
-            data-init-name="{{ results.household_head }}" 
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-          <input type="hidden" id="upd_head_id" name="head_id" value="{{ results.household_head_id }}">
-
-          <!-- CHANGED: dropdown container for suggestions -->
-          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
-              data-autocomplete-list="#upd_head_name"></div>
-        </div>
-
-        <!-- Respondent Name (typeahead) -->
-        <div class="sm:col-span-2 relative"><!-- CHANGED: added relative wrapper for dropdown -->
-          <label class="block text-sm font-medium text-gray-700">Respondent Name <span class="text-red-600">*</span></label>
-
-          <!-- CHANGED: removed list="residentList"; added data-* for autocomplete and data-init-name -->
-          <input
-            id="upd_respondent_name"
-            name="respondent_name"
-            autocomplete="off"
-            placeholder="Search resident by name"
-            value="{{ results.respondent }}"
-            data-autocomplete="resident"                   
-            data-target-hidden="#upd_respondent_id"        
-            data-init-name="{{ results.respondent }}"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-          <input type="hidden" id="upd_respondent_id" name="respondent_id" value="{{ results.respondent_id }}">
-
-          <!-- CHANGED: dropdown container for suggestions -->
-          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
-              data-autocomplete-list="#upd_respondent_name"></div>
-
-          <p class="mt-1 text-xs text-gray-500">Person providing the information (may be the head).</p>
-        </div>
-
-        <!-- House Ownership -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">House Ownership <span class="text-red-600">*</span></label>
-          <select id="house_ownership" name="house_ownership"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-                <option value="" disabled>— Select Ownership —</option>
-                {% for ho in house_ownership %}
-                  <option value="{{ ho.house_ownership_id }}" {% if ho.house_ownership_id == results.house_ownership_id %}selected{% endif %}>{{ ho.description }}</option>
-                {% endfor %}
-          </select>
-          <p class="mt-1 text-xs text-gray-500">Specify if the house is owned, rented, or under another arrangement.</p>
-        </div>
-
-        <!-- Relationship to Household Head -->
-        <div class="sm:col-span-1">
-          <label class="block text-sm font-medium text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></label>
-          <select name="respondent_rth"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-            <option value="" disabled>— Select Relationship —</option>
-            {% for rel in relationship %}
-              <option value="{{ rel.rth_id }}" {% if rel.rth_id == results.respondent_rth_id %}selected{% endif %}>{{ rel.description }}</option>
-            {% endfor %}
-          </select>
-          <p class="mt-1 text-xs text-gray-500">Relationship of the respondent to the household head.</p>
-        </div>
-
-        <!-- House Type -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">House Type <span class="text-red-600">*</span></label>
-          <select id="house_type" name="house_type"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-                <option value="" disabled>— Select Type —</option>
-                {% for ht in house_type %}
-                  <option value="{{ ht.house_type_id }}" {% if ht.house_type_id == results.house_type_id %}selected{% endif %}>{{ ht.description }}</option>
-                {% endfor %}
-          </select>
-          <p class="mt-1 text-xs text-gray-500">e.g., concrete, semi-concrete, light materials.</p>
-        </div>
-
-        <!-- House Number -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">House Number <span class="text-red-600">*</span></label>
-          <input name="house_number"
-            value="{{ results.house_number }}"
-            placeholder="Enter Household Number"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-          <p class="mt-1 text-xs text-gray-500">Local numbering (digits or alphanumerics, max 20).</p>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between border-b py-4">
-        <h3 class="text-base font-bold">Address</h3>
-      </div>
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <!-- Sitio -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Sitio <span class="text-red-600">*</span></label>
-          <select name="sitio_id"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-            <option value="" disabled>— Select Sitio —</option>
-            {% for s in sitio %}
-              <option value="{{ s.sitio_id }}" {% if s.sitio_id == results.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <!-- Street -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Street</label>
-          <input name="street"
-                 value="{{ results.street }}"
-                 placeholder="e.g., Riverside St."
-                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-        </div>
-
-        <!-- Barangay (readonly as in Add form) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Barangay <span class="text-red-600">*</span></label>
-          <input name="barangay" value="{{ results.barangay|default:'Cansaga' }}"
-                 readonly
-                 class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 text-gray-700 shadow-sm" required>
-          <p class="mt-1 text-xs text-gray-500">Defaulted to Barangay Cansaga for LAMBO.</p>
-        </div>
-
-        <!-- Municipality / City (readonly as in Add form) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Municipality / City <span class="text-red-600">*</span></label>
-          <input name="municipality" value="{{ results.municipality|default:'Consolacion' }}"
-                 readonly
-                 class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 text-gray-700 shadow-sm" required>
-          <p class="mt-1 text-xs text-gray-500">Defaulted to Municipality of Consolacion for LAMBO.</p>
-        </div>
-      </div>
-
-      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
-        <button type="button" id="cancelUpdateHouseholdModal"
-                class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Cancel
-        </button>
-        <button type="submit"
-                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-          Save Changes
-        </button>
-      </div>
-    </form>
-
-    <!-- Reuse the same datalist you already have on the page -->
-    <datalist id="residentList">
-      {% if residents %}
-        {% for r in residents %}
-          <option data-id="{{ r.id }}" value="{{ r.full_name }}"></option>
-        {% endfor %}
-      {% endif %}
-    </datalist>
-  </div>
-</div>
-
-
-
-<!-- Add Member Modal -->
-<div id="addMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
-
-  <!-- Dialog -->
-  <div class="relative z-10 w-full max-w-3xl rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
-    <div class="flex items-center justify-between border-b px-6 py-4">
-      <h3 class="text-base font-semibold">Add Family Member</h3>
-      <button id="closeAddMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 11-1.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06 5.28 15.78a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
-      </button>
-    </div>
-
-    <form method="post" action="{% url 'bhw_module:familyMemberInsert' %}" class="px-6 py-5">
-      {% csrf_token %}
-
-      <!-- family hook (filled by JS when opening the modal) -->
-      <input type="hidden" name="family_id" id="member_family_number">
-      <input type="hidden" name="household_id" value="{{ results.household_id }}">
-      <input type="hidden" name="household_number" value="{{ household_number }}">
-
-      <!-- --------------- Identity ---------------- -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <!-- Full Name (search in residents) -->
-        <div class="sm:col-span-2 relative">
-          <label for="resident_full_name" class="block text-sm font-medium text-gray-700">
-            Full Name <span class="text-red-600">*</span>
-          </label>
-
-          <input
-            id="resident_full_name"
-            name="resident_full_name"
-            type="text"
-            autocomplete="off"
-            placeholder="Search resident by name"
-            data-autocomplete="resident"
-            data-target-hidden="#resident_id"
-            class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-
-          <input type="hidden" name="resident_id" id="resident_id">
-
-          <!-- suggestions dropdown for this input -->
-          <div
-            class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
-            data-autocomplete-list="#resident_full_name"></div>
-
-          <p class="mt-1 text-xs text-gray-500">Choose a resident from the suggestions so the ID is captured.</p>
-        </div>
-
-        <!-- Relationship of Family Member to Household Head (dropdown) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Relationship of Family Member to Household Head <span class="text-red-600">*</span></label>
-          <select name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-            <option value="" selected disabled>— Select Relationship —</option>
-            {% for r in relationship %}
-              <option value="{{ r.rth_id }}">{{ r.description }}</option>
-            {% endfor %}
-          </select>
-          <p class="text-xs text-gray-500 mt-1">How is the family member related to the household head</p>
-        </div>
-
-        <!-- Relationship of Family Member to Family Head (dropdown) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Relationship of Family Member to Family Head <span class="text-red-600">*</span></label>
-          <select name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-            <option value="" selected disabled>— Select Relationship —</option>
-            {% for fr in family_relationship %}
-              <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
-            {% endfor %}
-          </select>
-          <p class="text-xs text-gray-500 mt-1">How is the family member related to the family head</p>
-        </div>
-
-        <!-- PhilHealth Number (OPTIONAL by default) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            PhilHealth Number
-          </label>
-          <input id="philhealth_number" name="philhealth_number" type="text"
-                placeholder="e.g., 12-345678901-2"
-                class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-          <p class="text-xs text-gray-500 mt-1">Leave blank if none.</p>
-        </div>
-
-        <!-- Membership Type (OPTIONAL unless PhilHealth number provided) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700" for="membership_type">
-            PhilHealth Membership Type
-            <span class="text-red-600">*</span>
-          </label>
-          <select id="membership_type" name="membership_type"
-                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled>
-            <option value="" selected disabled>— Membership Type —</option>
-            <option value="M">Member</option>
-            <option value="D">Dependent</option>
-          </select>
-        </div>
-
-        <!-- PhilHealth Category (OPTIONAL unless PhilHealth number provided) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700" for="philhealth_category">
-            PhilHealth Category
-            <span class="text-red-600">*</span>
-          </label>
-          <select id="philhealth_category" name="philhealth_category"
-                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required disabled>
-            <option value="" selected disabled>— Select Category —</option>
-            {% for pc in philhealth_category %}
-              <option value="{{ pc.philhealth_category_id }}">{{ pc.description }}</option>
-            {% endfor %}
-          </select>
-          <p class="text-xs text-gray-500 mt-1">Select only if a PhilHealth number is entered.</p>
-        </div>
-
-        <!-- Nutritional Status (dropdown) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Nutritional Status</label>
-          <select name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-            <option value="" selected disabled>— Select Status —</option>
-            {% for ns in nutrition_status %}
-              <option value="{{ ns.nutrition_status_id }}">{{ ns.description }}</option>
-            {% endfor %}
-          </select>
-          <p class="text-xs text-gray-500 mt-1">
-            Choose the member’s current nutritional status based on the latest assessment.
-          </p>
-        </div>
-      </div>
-      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
-        <button type="button" id="cancelAddMemberModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Save Member</button>
       </div>
     </form>
   </div>
@@ -851,7 +469,7 @@
       </button>
     </div>
 
-    <form method="post" action="{% url 'bhw_module:familyMemberUpdate' %}" class="px-6 py-5">
+    <form method="post" action="" class="px-6 py-5">
       {% csrf_token %}
 
       <!-- Hidden context -->
@@ -863,7 +481,7 @@
         <!-- Relationship of Member to HH -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Relationship to Household Head <span class="text-red-600">*</span></label>
-          <select id="um_mem_rel_hh" name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="um_mem_rel_hh" name="mem_rel_hh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Relationship —</option>
             {% for r in relationship %}
               <option value="{{ r.rth_id }}">{{ r.description }}</option>
@@ -874,7 +492,7 @@
         <!-- Relationship of Member to Family Head -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Relationship to Family Head <span class="text-red-600">*</span></label>
-          <select id="um_mem_rel_fh" name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+          <select id="um_mem_rel_fh" name="mem_rel_fh" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Relationship —</option>
             {% for fr in family_relationship %}
               <option value="{{ fr.rtf_id }}">{{ fr.description }}</option>
@@ -887,7 +505,7 @@
           <label class="block text-sm font-medium text-gray-700">PhilHealth Number</label>
           <input id="um_philhealth_number" name="philhealth_number" type="text"
                  placeholder="e.g., 12-345678901-2"
-                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                 class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
           <p class="text-xs text-gray-500 mt-1">Leave blank if none.</p>
         </div>
 
@@ -895,7 +513,7 @@
         <div>
           <label class="block text-sm font-medium text-gray-700">PhilHealth Membership Type <span id="um_membership_required_star" class="text-red-600 hidden">*</span></label>
           <select id="um_membership_type" name="membership_type"
-                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled>
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Membership Type —</option>
             <option value="M">Member</option>
             <option value="D">Dependent</option>
@@ -906,7 +524,7 @@
         <div>
           <label class="block text-sm font-medium text-gray-700">PhilHealth Category <span id="um_category_required_star" class="text-red-600 hidden">*</span></label>
           <select id="um_philhealth_category" name="philhealth_category"
-                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled>
+                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Category —</option>
             {% for pc in philhealth_category %}
               <option value="{{ pc.philhealth_category_id }}">{{ pc.description }}</option>
@@ -917,7 +535,7 @@
         <!-- Nutritional Status -->
         <div>
           <label class="block text-sm font-medium text-gray-700">Nutritional Status</label>
-          <select id="um_nutritional_status" name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+          <select id="um_nutritional_status" name="nutritional_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
             <option value="" selected disabled>— Select Status —</option>
             {% for ns in nutrition_status %}
               <option value="{{ ns.nutrition_status_id }}">{{ ns.description }}</option>
@@ -932,71 +550,7 @@
             class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Cancel
           </button>
-          <button type="submit"
-            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-            Save Changes
-          </button>
         </div>
-    </form>
-  </div>
-</div>
-
-<!-- Remove Member Confirmation Modal -->
-<div id="removeMemberModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
-
-  <div class="relative z-10 w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
-    <div class="flex items-center justify-between border-b px-6 py-4">
-      <h3 class="text-base font-bold">Remove Family Member</h3>
-      <button id="closeRemoveMemberModal" class="rounded-lg p-2 hover:bg-gray-100" aria-label="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-    </div>
-
-    <form method="post" action="{% url 'bhw_module:familyMemberRemove' %}" class="px-6 py-5">
-      {% csrf_token %}
-      <input type="hidden" name="family_member_id" id="rm_member_id">
-      <input type="hidden" name="household_id" value="{{ results.household_id }}">
-      <input type="hidden" name="household_number" value="{{ household_number }}">
-      <input type="hidden" name="resident_id" id="rm_member_resident_id">
-      <input type="hidden" name="family_id" id="rm_member_family_id">
-
-      <p class="text-sm text-gray-700">
-        Are you sure you want to remove
-        <span id="rm_member_label" class="font-medium text-gray-900"></span>
-        from this family?
-      </p>
-
-      <div class="mt-4">
-        <label for="rmv_reason_sel" class="block text-sm font-medium text-gray-700">
-          Reason for removal <span class="text-red-600">*</span>
-        </label>
-        <select
-          id="rmv_reason_sel"
-          name="reason"
-          required
-          class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-        >
-          <option value="" selected disabled>— Select reason —</option>
-          <option value="New Family">New Family</option>
-          <option value="Relocated">Relocated</option>
-          <option value="Deceased">Deceased</option>
-        </select>
-        <p class="mt-1 text-xs text-gray-500">Choose the most appropriate reason.</p>
-      </div>
-
-      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
-        <button type="button" id="cancelRemoveMemberModal"
-          class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Cancel
-        </button>
-        <button type="submit"
-          class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-          Remove
-        </button>
-      </div>
     </form>
   </div>
 </div>
@@ -1025,54 +579,8 @@
       <input type="hidden" name="household_id" value="{{ results.household_id }}">
       <input type="hidden" name="household_number" value="{{ household_number }}">
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <!-- Resident (typeahead) -->
-        <div class="relative sm:col-span-2">
-          <label for="lr_resident_name" class="block text-gray-700 text-sm font-medium mb-1">
-            Resident to Link <span class="text-red-600">*</span>
-          </label>
-          <input id="lr_resident_name" name="lr_resident_name" type="text" required
-                 placeholder="Search resident by name"
-                 autocomplete="off"
-                 data-autocomplete="resident"
-                 data-target-hidden="#lr_resident_id"
-                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-          <input type="hidden" id="lr_resident_id" name="related_resident_id">
-          <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
-               data-autocomplete-list="#lr_resident_name"></div>
-          <p class="text-xs text-gray-500 mt-1">Pick from suggestions so we capture the correct resident ID.</p>
-        </div>
-
-        <!-- Relationship to the selected member -->
-        <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">
-            Relationship to this member <span class="text-red-600">*</span>
-          </label>
-          <!-- Reusing your existing family_relationship list -->
-          <select id="lr_relationship" name="relationship_id"
-                  class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
-            <option value="" selected disabled>— Select Relationship —</option>
-            {% for lr in link_relationship %}
-              <option value="{{ lr.relationship_id }}">{{ lr.relationship_name }}</option>
-            {% endfor %}
-          </select>
-          <p class="text-xs text-gray-500 mt-1">Ex: Father, Mother, Brother, Sister, Guardian, etc.</p>
-        </div>
-      </div>
-
-      <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
-        <button type="button" id="cancelLinkRelationshipModal"
-                class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Cancel
-        </button>
-        <button type="submit"
-                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-          Add Link
-        </button>
-      </div>
-
       <!-- Live list of linked residents -->
-      <div class="mt-6">
+      <div class="mt-1">
         <h4 class="text-sm font-semibold">Linked Residents</h4>
         <div id="lr_list" class="mt-3 space-y-2">
           <p class="text-xs text-gray-500">No linked residents yet.</p>
@@ -1102,10 +610,10 @@
 
     <form
       method="post"
-      action="{% url 'bhw_module:insertGeneralHealth' %}"
+      action=""
       class="px-6 py-5"
-      data-fetch-url="{% url 'bhw_module:generalHealthGetApi' %}"
-      data-update-action="{% url 'bhw_module:updateGeneralHealth' %}"
+      data-fetch-url="{% url 'nurse_module:generalHealthGetApi' %}"
+      data-update-action=""
     >
       {% csrf_token %}
       <!-- Hidden context -->
@@ -1123,19 +631,19 @@
             <legend class="text-sm font-medium text-gray-700">Medical History (select all that apply)</legend>
             <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="1" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 HPN – Hypertension
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="2" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 DM – Diabetes
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="3" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 TB – Tuberculosis
               </label>
               <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                <input type="checkbox" name="medical_history" value="4" class="h-4 w-4 text-red-600 focus:ring-red-500" disabled data-always-disabled>
                 S – Surgery
               </label>
             </div>
@@ -1144,7 +652,7 @@
           <!-- Smoker -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Smoker <span class="text-red-600">*</span></label>
-            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="smoker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -1154,7 +662,7 @@
           <!-- Alcohol Beverage Drinker -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Alcohol Beverage Drinker <span class="text-red-600">*</span></label>
-            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="alcohol_drinker" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -1164,7 +672,7 @@
           <!-- Sexually Active -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Sexually Active <span class="text-red-600">*</span></label>
-            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="sexually_active" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -1174,14 +682,14 @@
           <!-- LMP (Female only) -->
           <div id="gh_lmp_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">Last Menstrual Period</label>
-            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <input name="last_menstrual_period" type="date" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
           </div>
 
           <!-- Age of Menarche (Female only) -->
           <div id="gh_menarche_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">Age of MENARCHE</label>
             <input name="age_menarche" type="number" min="8" max="20" placeholder="Enter Age"
-                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                   class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
           </div>
         </div>
 
@@ -1190,7 +698,7 @@
           <!-- FP Use (women only) -->
           <div id="gh_fp_use_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Use</label>
-            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+            <select name="fp_use" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="">Select Yes/No</option>
               <option value="true">YES</option>
               <option value="false">NO</option>
@@ -1200,7 +708,7 @@
           <!-- FP Method (women only) -->
           <div id="gh_fp_method_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Method <span class="text-red-600">*</span></label>
-            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="fp_method" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Method —</option>
               {% for fm in fp_method %}
                 <option value="{{ fm.fp_method_id }}">{{ fm.description }}</option>
@@ -1211,7 +719,7 @@
           <!-- FP Status (women only) -->
           <div id="gh_fp_status_wrap" class="hidden">
             <label class="block text-sm font-medium text-gray-700">FP Status <span class="text-red-600">*</span></label>
-            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+            <select name="fp_status" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Status —</option>
               {% for fs in fp_status %}
                 <option value="{{ fs.fp_status_id }}">{{ fs.description }}</option>
@@ -1222,7 +730,7 @@
           <!-- Classification by Age / Health Risk Group -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Classification by Age<span class="text-red-600">*</span></label>
-              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+              <select name="class" class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" disabled data-always-disabled>
               <option value="" selected disabled>— Select Class —</option>
                 {% for c in class %}
                   <option value="{{ c.class_id }}">{{ c.class_description }}</option>
@@ -1234,9 +742,6 @@
 
       <div class="mt-6 flex items-center justify-end gap-3 border-t pt-4">
         <button type="button" id="cancelGeneralHealthModal" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" id="gh_submit_btn" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-          Save
-        </button>
       </div>
     </form>
   </div>
@@ -1337,7 +842,7 @@ function isHouseholdReadOnlyContext() {
 
   (function() {
     // CHANGED: reuse the same API URL as in HouseholdAdd
-    const SEARCH_URL = "{% url 'bhw_module:resident_search_api' %}";
+    const SEARCH_URL = "";
     const DEBOUNCE_MS = 250;
 
     function debounce(fn, ms) {
@@ -1630,15 +1135,15 @@ function isHouseholdReadOnlyContext() {
     const categorySel    = memberModal?.querySelector('#philhealth_category');
 
     function syncPhilHealthControls() {
+      if (isHouseholdReadOnlyContext()) return;  // <-- bail out in read-only
       const hasPh = (phNumber?.value || '').trim().length > 0;
-
-      if (membershipSel) {
+      if (membershipSel && !membershipSel.hasAttribute('data-always-disabled')) {
         membershipSel.disabled = !hasPh;
-        if (!hasPh) membershipSel.value = '';
+        membershipSel.required = !!hasPh;
       }
-      if (categorySel) {
+      if (categorySel && !categorySel.hasAttribute('data-always-disabled')) {
         categorySel.disabled = !hasPh;
-        if (!hasPh) categorySel.value = '';
+        categorySel.required = !!hasPh;
       }
     }
 
@@ -1665,6 +1170,7 @@ function isHouseholdReadOnlyContext() {
       resetAddMemberModal();                     // fresh state each open
       if (memberFamilyField) memberFamilyField.value = familyNum || '';
       openModal(memberModal);
+      setModalReadOnly(memberModal, isHouseholdReadOnlyContext());
     }
     const closeMemberModal = () => {             // discard unsaved edits on close
       resetAddMemberModal();
@@ -1753,29 +1259,42 @@ function isHouseholdReadOnlyContext() {
         });
       }
 
+      // Helper: make a wrap visible/hidden but always keep its inner fields disabled
+      function showButDisabled(wrap, visible) {
+        if (!wrap) return;
+        wrap.classList.toggle('hidden', !visible);
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          ctrl.disabled = true;                         // force disabled
+          ctrl.setAttribute('data-always-disabled',''); // protect from other togglers
+          if (!visible) {
+            if (ctrl.type === 'checkbox' || ctrl.type === 'radio') ctrl.checked = false;
+            else ctrl.value = '';
+            ctrl.removeAttribute('required');
+          }
+        });
+      }
+
       function setFemaleOnlyVisibility(sex) {
         const female = isFemale(sex);
-        setWrapVisibleAndDisable(ghLmpWrap,      female);
-        setWrapVisibleAndDisable(ghMenarcheWrap, female);
-        setWrapVisibleAndDisable(ghFpUseWrap,    female);
 
-        if (!female) {
-          setWrapVisibleAndDisable(ghFpMethodWrap, false);
-          setWrapVisibleAndDisable(ghFpStatusWrap, false);
-        } else {
-          syncFPControls();
-        }
+        // Visible if female, but inputs remain disabled
+        showButDisabled(ghLmpWrap,      female);
+        showButDisabled(ghMenarcheWrap, female);
+        showButDisabled(ghFpUseWrap,    female);
+
+        // FP method/status only visible for female + using FP; still disabled
+        const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
+        showButDisabled(ghFpMethodWrap, usingFp);
+        showButDisabled(ghFpStatusWrap, usingFp);
       }
 
       function syncFPControls() {
         const female = isFemale(ghMemberSex?.value);
         const usingFp = female && ghFpUseSel && ghFpUseSel.value === 'true';
 
-        setWrapVisibleAndDisable(ghFpMethodWrap, usingFp);
-        setWrapVisibleAndDisable(ghFpStatusWrap, usingFp);
-
-        setRequiredInWrap(ghFpMethodWrap, usingFp);
-        setRequiredInWrap(ghFpStatusWrap, usingFp);
+        // keep them disabled forever; just show/hide
+        showButDisabled(ghFpMethodWrap, usingFp);
+        showButDisabled(ghFpStatusWrap, usingFp);
 
         if (!usingFp) {
           if (ghFpMethodSel) ghFpMethodSel.value = '';
@@ -2349,13 +1868,13 @@ function isHouseholdReadOnlyContext() {
       const hasPh = (phNum?.value || '').trim().length > 0;
 
       if (memType) {
-        memType.disabled = !hasPh;
+        memType.disabled = !hasPh || hasPh;
         memType.required = !!hasPh;
         memStar?.classList.toggle('hidden', !hasPh);
         if (!hasPh) memType.value = '';
       }
       if (catSel) {
-        catSel.disabled = !hasPh;
+        catSel.disabled = !hasPh || hasPh;
         catSel.required = !!hasPh;
         catStar?.classList.toggle('hidden', !hasPh);
         if (!hasPh) catSel.value = '';
@@ -2652,9 +2171,9 @@ document.addEventListener('click', function (e) {
   ===================================== */
 (function () {
   // ---- Endpoints (adjust if your URLs differ) ----
-  const REL_LIST_URL   = "{% url 'bhw_module:residentLinksListApi' %}";   // GET ?member_id=&resident_id=
-  const REL_ADD_URL    = "{% url 'bhw_module:residentLinkInsert' %}";     // POST
-  const REL_REMOVE_URL = "{% url 'bhw_module:residentLinkRemove' %}";     // POST
+  const REL_LIST_URL   = "{% url 'nurse_module:nurse_residentLinksListApi' %}";   // GET ?member_id=&resident_id=
+  const REL_ADD_URL    = "";     // POST
+  const REL_REMOVE_URL = "";     // POST
 
   // ---- Elements ----
   const modal       = document.getElementById('linkRelationshipModal');
@@ -2704,10 +2223,6 @@ document.addEventListener('click', function (e) {
           <span class="font-medium text-gray-800">${it.full_name}</span>
           <span class="text-xs text-gray-500">${it.relationship_label}</span>
         </div>
-        <button type="button"
-          class="lr-remove rounded-lg border px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50">
-          Remove
-        </button>
       </div>
     `).join('');
 
