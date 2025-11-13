@@ -17,4 +17,5 @@ urlpatterns = [
      path('general-health/', views.nurseGeneralInfo, name='nurse_general_health'),
      path('ImmunizationStatus/', views.ImmunizationStatus),
      path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),
+     path('api/resident-links', views.resident_links_list_api, name='nurse_residentLinksListApi'),
 ]
