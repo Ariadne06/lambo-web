@@ -331,7 +331,7 @@
       createBtn.disabled = !!mustDisable;
       // Barangay Clearances: require resident + purpose selection
       const feeName = fee?.selectedOptions?.[0]?.dataset?.name || '';
-      if (/Barangay Clearances/i.test(feeName)) {
+      if (/Barangay\s*Clearance/i.test(feeName)) {
         const residentSelected = document.querySelector('input[name="applicant_id"]')?.value?.trim();
         const purposeSelected = purposeSelect?.value?.trim();
         createBtn.disabled = !(residentSelected && purposeSelected);
@@ -362,7 +362,7 @@
       // Show correct search placeholder and populate Purpose select depending on fee type
       const selectedOption = fee.selectedOptions?.[0];
       const feeName = selectedOption?.dataset?.name || '';
-  if (/Barangay Clearances/i.test(feeName)) {
+  if (/Barangay\s*Clearance/i.test(feeName)) {
         // Populate purpose-select from other_clearances-source if available; otherwise show a disabled hint
         const src = document.getElementById('other-clearances-source');
         const purpose = document.getElementById('purpose-select');
@@ -406,7 +406,7 @@
     // Enable search after choosing a purpose (business flows) and re-run filtering
     purposeSelect?.addEventListener('change', () => {
       const feeName = fee?.selectedOptions?.[0]?.dataset?.name || '';
-      const isBusinessFlow = !/Barangay Clearances/i.test(feeName);
+  const isBusinessFlow = !/Barangay\s*Clearance/i.test(feeName);
       if (isBusinessFlow) {
         search.disabled = !purposeSelect.value;
         if (!purposeSelect.value) {
@@ -473,7 +473,7 @@
       }
       // Base filter: hide businesses with status "Closed" regardless of purpose
       const feeName = fee?.selectedOptions?.[0]?.dataset?.name || '';
-      const isBusinessFlow = !/Barangay Clearances/i.test(feeName);
+  const isBusinessFlow = !/Barangay\s*Clearance/i.test(feeName);
       let filtered = data.filter(item => {
         if (!item || !item.business_id) return true; // keep non-business (e.g., residents)
         const st = String(item.business_status || '').toLowerCase();
@@ -683,7 +683,7 @@
       const feeSelect = document.getElementById('fee-type');
       const selectedOption = feeSelect?.selectedOptions?.[0];
       const feeName = selectedOption?.dataset?.name || '';
-      const isBusinessFlow = !/Barangay Clearances/i.test(feeName);
+  const isBusinessFlow = !/Barangay\s*Clearance/i.test(feeName);
       // For business flows, require a purpose before searching
       if (isBusinessFlow && !document.getElementById('purpose-select')?.value) {
         if (statusEl) statusEl.textContent = 'Select a purpose to start searching';
@@ -745,7 +745,7 @@
     // Preview button behavior: call backend preview for business or barangay clearance
     document.getElementById('preview-btn')?.addEventListener('click', async () => {
       const feeName = fee?.selectedOptions?.[0]?.dataset?.name || '';
-      const isBarangay = /Barangay Clearances/i.test(feeName);
+      const isBarangay = /Barangay\s*Clearance/i.test(feeName);
       const csrf = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
       try {
         if (isBarangay) {
@@ -1054,7 +1054,7 @@
     formEl?.addEventListener('submit', (e) => {
       // Only applies to business flows
       const feeName = fee?.selectedOptions?.[0]?.dataset?.name || '';
-      const isBusinessFlow = feeName && !/Barangay Clearances/i.test(feeName);
+      const isBusinessFlow = feeName && !/Barangay\s*Clearance/i.test(feeName);
       if (!isBusinessFlow) return; // resident/other clearance flows handled differently
       // If fee type is Business Clearance Fee, require a business selection
       if (isBusinessClearanceSelected() && !hasSelectedBusiness()) {
