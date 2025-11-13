@@ -1449,7 +1449,9 @@ def submit_business_application(request):
 
     acting_pid = _acting_personnel_id(request)
 
-    if fee_type_name.lower() == 'barangay clearances':
+    # Robust match: fee type labels may be "Barangay Clearance Fee" (renamed from "Barangay Clearances")
+    normalized_fee = fee_type_name.lower()
+    if 'barangay clearance' in normalized_fee:
         # Resident-based Barangay Clearance
         resident_id_raw = request.POST.get('applicant_id')
         purpose_id_raw = request.POST.get('purpose')  # holds other_clearance_id when barangay clearances
@@ -1513,7 +1515,8 @@ def submit_business_application(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def application_search(request):
     """AJAX search used by the walk-in UI.
-    If fee_name == 'Barangay Clearances' -> search residents; else -> search business/owner.
+    If fee_name contains 'Barangay Clearance' (supports legacy 'Barangay Clearances' and new 'Barangay Clearance Fee')
+    -> search residents; else -> search business/owner.
     """
     q = (request.GET.get('q') or '').strip()
     fee_name = (request.GET.get('fee_name') or '').strip()
@@ -1522,7 +1525,8 @@ def application_search(request):
     if not q:
         return JsonResponse([], safe=False)
     try:
-        if fee_name.lower() == 'barangay clearances':
+        normalized_fee = fee_name.lower()
+        if 'barangay clearance' in normalized_fee:
             # Use the new resident search tailored for clearance picker
             rows = SecretaryHelpers.search_resident_for_clearance(q, limit, offset, None, None, None)
             payload = [{
@@ -1658,23 +1662,47 @@ def print_application_pdf(request, application_id: int):
         is_barangay = (request_label == 'barangay clearance')
 
         if is_barangay:
-            # Barangay Clearance template and field mapping
-            template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template1_Clearance_LETTER.pdf')
-            if not os.path.exists(template_path):
-                messages.error(request, 'PDF generation error: Template1_Clearance_LETTER.pdf not found.')
-                return redirect('secretary_module:applications')
+            # Barangay Clearance template selection (with Residency variant)
+            purpose_label = (ctx.get('purpose') or '').strip().lower()
+            is_residency = (purpose_label == 'certificate of residency' or 'residency' in purpose_label)
 
-            fields = {
-                'full_name':        ctx.get('full_name') or '',
-                'full_address':     ctx.get('full_address') or '',
-                'purpose':          ctx.get('purpose') or '',
-                'day':              str(day or ''),
-                'month':            str(month or ''),
-                'year':             str(year or ''),
-                'or_number':        str(ctx.get('or_number') or ''),
-                'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
-                'fullname_captain': ctx.get('fullname_captain') or '',
-            }
+            if is_residency:
+                # Certificate of Residency uses Template3_Residency_LETTER.pdf
+                template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template3_Residency_LETTER.pdf')
+                if not os.path.exists(template_path):
+                    messages.error(request, 'PDF generation error: Template3_Residency_LETTER.pdf not found.')
+                    return redirect('secretary_module:applications')
+
+                fields = {
+                    'full_name':        ctx.get('full_name') or '',
+                    'full_address':     ctx.get('full_address') or '',
+                    'day':              str(day or ''),
+                    'month':            str(month or ''),
+                    'year':             str(year or ''),
+                    'or_number':        str(ctx.get('or_number') or ''),
+                    'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                    'fullname_captain': ctx.get('fullname_captain') or '',
+                }
+                suggested_name = 'residency_certificate'
+            else:
+                # Default Barangay Clearance
+                template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template1_Clearance_LETTER.pdf')
+                if not os.path.exists(template_path):
+                    messages.error(request, 'PDF generation error: Template1_Clearance_LETTER.pdf not found.')
+                    return redirect('secretary_module:applications')
+
+                fields = {
+                    'full_name':        ctx.get('full_name') or '',
+                    'full_address':     ctx.get('full_address') or '',
+                    'purpose':          ctx.get('purpose') or '',
+                    'day':              str(day or ''),
+                    'month':            str(month or ''),
+                    'year':             str(year or ''),
+                    'or_number':        str(ctx.get('or_number') or ''),
+                    'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                    'fullname_captain': ctx.get('fullname_captain') or '',
+                }
+                suggested_name = 'barangay_clearance'
         else:
             # Business Clearance/Closure template and field mapping
             template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template2_Business_Clearance_LETTER.pdf')
@@ -1705,6 +1733,7 @@ def print_application_pdf(request, application_id: int):
                 'or_number':          str(ctx.get('or_number') or ''),
                 'fullname_captain':   ctx.get('fullname_captain') or '',
             }
+            suggested_name = 'business_clearance'
 
         reader = PdfReader(template_path)
         writer = PdfWriter()
@@ -1795,7 +1824,8 @@ def print_application_pdf(request, application_id: int):
         writer.write(pdf_bytes)
         pdf_bytes.seek(0)
 
-        suggested_name = 'barangay_clearance' if is_barangay else 'business_clearance'
+        # suggested_name determined above per branch (defaults handled for safety)
+        suggested_name = locals().get('suggested_name') or ('barangay_clearance' if is_barangay else 'business_clearance')
         response = HttpResponse(pdf_bytes.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{suggested_name}_{application_id}.pdf"'
         return response

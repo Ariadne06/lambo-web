@@ -99,10 +99,12 @@
   </svg>
   <span>Certificates</span>
   <div class="ml-auto flex items-center gap-2">
-    <!-- Total applications today badge for Certificates -->
+    <!-- Total applications today badge for Certificates (hide when zero/empty) -->
+    {% if badges_applications.total_today %}
     <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">
       {{ badges_applications.total_today }}
     </span>
+    {% endif %}
     <svg id="cert-arrow" xmlns="http://www.w3.org/2000/svg"
        class="h-5 w-5 transition-transform duration-300 {% if request.resolver_match.url_name in 'create_application applications' %} rotate-180 {% endif %}"
        fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,9 +132,11 @@
                  {% endif %}">
     <span>Applications</span>
     <div class="ml-auto flex items-center gap-2">
+      {% if badges_applications.total_today %}
       <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">
         {{ badges_applications.total_today }}
       </span>
+      {% endif %}
       <svg id="apps-arrow" xmlns="http://www.w3.org/2000/svg"
            class="h-4 w-4 transition-transform duration-300 {% if request.resolver_match.url_name == 'applications' %} rotate-180 {% endif %}"
            fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,7 +154,9 @@
                 hover:bg-red-800/50
               {% endif %}">
       <span>Pending</span>
+      {% if badges_applications.pending_today %}
       <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.pending_today }}</span>
+      {% endif %}
     </a>
     <a href="{% url 'secretary_module:applications' %}?application_status=For+Payment"
        class="flex items-center justify-between px-3 py-2 rounded-md transition
@@ -160,7 +166,9 @@
                 hover:bg-red-800/50
               {% endif %}">
       <span>For Payment</span>
+      {% if badges_applications.for_payment_today %}
       <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.for_payment_today }}</span>
+      {% endif %}
     </a>
     <a href="{% url 'secretary_module:applications' %}?application_status=Approved"
        class="flex items-center justify-between px-3 py-2 rounded-md transition
@@ -170,7 +178,9 @@
                 hover:bg-red-800/50
               {% endif %}">
       <span>Approved</span>
+      {% if badges_applications.approved_today %}
       <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.approved_today }}</span>
+      {% endif %}
     </a>
   </div>
 </div>
@@ -297,151 +307,7 @@
     </div>
   </div>
 
-  {% comment %} <script>
-  // Define your accordion items once
-  // cluster groups prevent nested menus from collapsing their parent
-  // Items within the same cluster can be open together; opening an item
-  // closes items in other clusters only.
-  const ACCORDION = [
-    { btn: 'submenu-toggle', panel: 'submenu',       arrow: 'submenu-arrow', cluster: 'top'  },
-    { btn: 'logs-toggle',    panel: 'logs-submenu',  arrow: 'logs-arrow',    cluster: 'top'  },
-    { btn: 'price-toggle',   panel: 'price-submenu', arrow: 'price-arrow',   cluster: 'top'  },
-    { btn: 'cert-toggle',    panel: 'cert-submenu',  arrow: 'cert-arrow',    cluster: 'cert' },
-    // nested under Certificates
-    { btn: 'apps-toggle',    panel: 'apps-submenu',  arrow: 'apps-arrow',    cluster: 'cert' },
-  ];
-
-  function getEl(id){ return document.getElementById(id); }
-
-  function closeItem(item){
-    const panel = getEl(item.panel);
-    const arrow = getEl(item.arrow);
-    const btn   = getEl(item.btn);
-    if (!panel) return;
-    panel.classList.add('hidden');
-    arrow?.classList.remove('rotate-180');
-    btn?.setAttribute('aria-expanded', 'false');
-  }
-
-  function openItem(item){
-    const panel = getEl(item.panel);
-    const arrow = getEl(item.arrow);
-    const btn   = getEl(item.btn);
-    if (!panel) return;
-    panel.classList.remove('hidden');
-    arrow?.classList.add('rotate-180');
-    btn?.setAttribute('aria-expanded', 'true');
-  }
-
-  // Wire up clicks with cluster-aware behavior
-  ACCORDION.forEach((item) => {
-    const btn = getEl(item.btn);
-    const panel = getEl(item.panel);
-
-    // Initialize aria states from the server-rendered classes
-    if (btn && panel) {
-      const isOpen = !panel.classList.contains('hidden');
-      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      btn.setAttribute('aria-controls', item.panel);
-    }
-
-    btn?.addEventListener('click', () => {
-      const currentlyOpen = !getEl(item.panel).classList.contains('hidden');
-
-      if (currentlyOpen) {
-        // Close this item. If collapsing Certificates, also reset its nested submenu state.
-        closeItem(item);
-        if (item.btn === 'cert-toggle') {
-          const nested = ACCORDION.find(i => i.btn === 'apps-toggle');
-          if (nested) closeItem(nested);
-        }
-        return;
-      }
-
-      // Open flow: close items in other clusters only
-      ACCORDION.forEach(other => {
-        if (other !== item && other.cluster !== item.cluster) closeItem(other);
-      });
-
-      // If opening the nested Applications, ensure its parent Certificates is open
-      if (item.btn === 'apps-toggle') {
-        const parent = ACCORDION.find(i => i.btn === 'cert-toggle');
-        if (parent) openItem(parent);
-      }
-
-      openItem(item);
-    });
-  });
-
-  // Reminder: Make sure this Function cannot be changed or overwritten
-  // It handles idle logout and tab close detection
-  (function () {
-    const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
-    const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
-
-    const TAB_FLAG    = 'tabAuth';
-    const CLOSED_KEY  = 'closed_session_token';
-    const SESSION_TOKEN = "{{ request.session.session_token }}";
-
-    // First load in this tab?
-    if (!sessionStorage.getItem(TAB_FLAG)) {
-      sessionStorage.setItem(TAB_FLAG, '1');
-
-      // If a previous tab left a token, report it and logout now
-      const closedToken = localStorage.getItem(CLOSED_KEY);
-      if (closedToken) {
-        (async () => {
-          const body = new URLSearchParams();
-          body.set('session_token', closedToken);
-
-          try {
-            await fetch(TAB_CLOSE_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: body.toString(),
-              credentials: 'same-origin',
-              keepalive: true
-            });
-          } catch (_) { /* ignore */ }
-
-          try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
-            window.location.replace(TAB_CLOSE_URL);
-        })();
-        return;
-      }
-    }
-
-    // On tab/browser close: record token and call silent_logout
-    addEventListener('pagehide', () => {
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
-
-    addEventListener('beforeunload', () => {
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
-
-    // Idle detection (unchanged)
-    let last = Date.now(), timer;
-    function arm() {
-      clearTimeout(timer);
-      if (document.visibilityState !== 'visible') return;
-      timer = setTimeout(() => {
-        if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-          window.location.replace(LOGOUT_URL);
-        }
-      }, IDLE_LIMIT_MS + 100);
-    }
-
-    function bump(){ last = Date.now(); arm(); }
-    ['mousemove','keydown','click','wheel','scroll','touchstart']
-    .forEach(evt => addEventListener(evt, bump, { passive: true }));
-    addEventListener('visibilitychange', arm, { capture: true });
-    arm();
-  })();
-</script> {% endcomment %}
+  {% comment %} Removed duplicate inline script block to avoid redeclaring ACCORDION for linters. {% endcomment %}
 
 <script>
 // Simple accordion wiring (unchanged)
