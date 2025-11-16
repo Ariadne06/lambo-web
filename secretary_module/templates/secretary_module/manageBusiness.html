@@ -1250,7 +1250,7 @@
         const num = (typeof v === 'number') ? v : Number(v || 0);
         return `₱${num.toFixed(2)}`;
       };
-      const toRows = (raw) => {
+      const toRows = (raw) =>           {
         if (raw == null) return [];
         let details = raw;
         if (typeof details === 'string') {
