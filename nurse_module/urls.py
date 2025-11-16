@@ -18,6 +18,7 @@ urlpatterns = [
      path('maternalrecord', views.maternalrecord, name='maternalrecord'),
      path("maternalrecord/<int:maternal_health_id>/", views.Morematernalrecord, name="Morematernalrecord"),
      path("maternalrecord/<int:maternal_health_id>/add-disease/", views.add_maternal_disease_screening, name="add_maternal_disease_screening"),
+     path("maternal/<int:maternal_health_id>/lab/add/", views.add_maternal_lab_screening, name="add_maternal_lab_screening"),
      path('maternalLabScreening/', views.maternalLabScreening),
      path('maternalIron/', views.maternalIron),
      path('general-health/', views.nurseGeneralInfo, name='nurse_general_health'),

@@ -1157,3 +1157,33 @@ class DiseaseTypeRow(models.Model):
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
         except ProgrammingError:
             return []
+
+
+class TestTypeRow(models.Model):
+    """
+    Simple unmanaged model to read from Test_Type reference table.
+    Used for the Add Lab Screening form.
+    """
+    test_type_id = models.IntegerField(primary_key=True)
+    test_name = models.TextField()
+
+    class Meta:
+        managed = False
+        db_table = "Test_Type"  # exact SQL table name
+
+    @staticmethod
+    def fetch_all() -> list[dict]:
+        from django.db import connection, ProgrammingError
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT test_type_id, test_name
+                    FROM Test_Type
+                    ORDER BY test_name
+                    """
+                )
+                cols = [c[0] for c in cur.description]
+                return [dict(zip(cols, row)) for row in cur.fetchall()]
+        except ProgrammingError:
+            return []
