@@ -1,94 +1,403 @@
-{% extends 'base_captain.html' %}
+{% extends "base_captain.html" %}
 
-{% block title %}
-    Business List
-{% endblock %}
+{% block title %}Business List{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-100 px-10 py-6">
+<div class="px-6 py-8 bg-gray-50">
 
-  <!-- Page Title -->
-  <h1 class="text-xl font-bold text-red-700 mb-4">Business List</h1>
-
-  <!-- Main Card -->
-  <div class="bg-white rounded-md shadow-md p-6">
-
-    <!-- Search and Filters -->
-    <div class="flex justify-end items-center mb-4 space-x-4">
-      <!-- Search Bar -->
-      <div class="relative w-1/4">
-        <input type="text" placeholder="Search Business"
-               class="w-full bg-gray-100 h-10 px-4 pr-10 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-        <span class="absolute right-3 top-2.5 text-gray-500">
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387-1.414 1.414-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z"/>
-          </svg>
-        </span>
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="h-8 w-1.5 rounded-full bg-red-600"></span>
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-red-600">Business List</h1>
+        <p class="text-xs text-gray-500">View all registered businesses in Barangay Cansaga.</p>
       </div>
+    </div>
+  </div>
 
-      <!-- Advanced Filters -->
-      <button class="text-sm text-gray-600 hover:underline flex items-center gap-1">
-        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            d="M3 5h14a1 1 0 100-2H3a1 1 0 000 2zm0 6h10a1 1 0 100-2H3a1 1 0 000 2zm0 6h6a1 1 0 100-2H3a1 1 0 000 2z"/>
-        </svg>
-        Advanced Filters
-      </button>
+  <!-- Card -->
+  <div class="bg-white shadow-sm rounded-2xl border border-gray-200 flex flex-col h-[calc(100vh-8rem)]">
+
+    <!-- Toolbar -->
+    <div class="px-4 md:px-6 py-4 border-b border-gray-100">
+      <form method="get" class="flex flex-nowrap items-center gap-3">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+
+        <!-- Search -->
+        <div class="relative w-64 shrink-0">
+          <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            placeholder="Search business name or owner…"
+            class="w-full h-10 rounded-xl border border-gray-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+               viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm8.7 13.3 3 3-1.4 1.4-3-3 1.4-1.4Z"/>
+          </svg>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <!-- Actions -->
+        <div class="shrink-0 flex items-center gap-2">
+          <a href="?" class="h-10 inline-flex items-center rounded-xl border border-gray-300 px-4 text-sm hover:bg-gray-50">
+            Reset
+          </a>
+          <button type="submit"
+                  class="h-10 inline-flex items-center rounded-xl bg-red-600 px-5 text-sm font-medium text-white shadow hover:bg-red-700">
+            Apply
+          </button>
+        </div>
+      </form>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full table-fixed text-sm text-left border border-gray-300">
-        <thead class="bg-gray-100 text-gray-800 font-semibold">
+    <!-- Scrollable table area -->
+    <div class="flex-1 overflow-y-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 sticky top-0 z-10">
           <tr>
-            <th class="px-4 py-2 border w-[10%]">Business ID.</th>
-            <th class="px-4 py-2 border w-[25%]">Business Name</th>
-            <th class="px-4 py-2 border w-[35%]">Address</th>
-            <th class="px-4 py-2 border w-[10%]">Status</th>
-            <th class="px-4 py-2 border w-[10%] text-center">Actions</th>
+            <th class="px-4 py-3 text-left font-semibold">Business ID</th>
+            <th class="px-4 py-3 text-left font-semibold">Business Name</th>
+            <th class="px-4 py-3 text-left font-semibold">Owner</th>
+            <th class="px-4 py-3 text-left font-semibold">Address</th>
+            <th class="px-4 py-3 text-left font-semibold">Status</th>
+            <th class="px-4 py-3 text-right font-semibold">Action</th>
           </tr>
         </thead>
-        <tbody class="text-gray-700">
-          <!-- Static Sample Business Entry -->
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-2 border">1000</td>
-            <td class="px-4 py-2 border">Adriane Store</td>
-            <td class="px-4 py-2 border">Purok 3, Cansaga, Consolacion</td>
-            <td class="px-4 py-2 border font-medium text-green-700">Active</td>
-            <td class="px-4 py-2 border text-center">
-              <button class="text-black hover:text-red-600">&#x22EE;</button>
-            </td>
-          </tr>
+        <tbody class="divide-y divide-gray-100">
+          {% for r in rows %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ r.business_id }}</td>
+              <td class="px-4 py-3">{{ r.business_name }}</td>
+              <td class="px-4 py-3 text-xs text-gray-600">Owner: {{ r.owner_name }}</td>
+              <td class="px-4 py-3">{{ r.address }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold
+                             {% if r.status|lower == 'active' %}
+                               bg-emerald-100 text-emerald-700
+                             {% else %}
+                               bg-amber-100 text-amber-700
+                             {% endif %}">
+                  {{ r.status }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button type="button"
+                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600"
+                        onclick="openBusinessView('{{ r.business_id }}')">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
+                  </svg>
+                  View
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                No businesses found.
+              </td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="mt-4 flex justify-center text-sm text-gray-600 space-x-1">
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">1</a>
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">2</a>
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">3</a>
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">4</a>
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">5</a>
-      <span class="px-2 py-1">…</span>
-      <a href="#" class="px-2 py-1 hover:bg-gray-200 rounded">60</a>
-    </div>
+    <!-- Footer / Pagination -->
+    <div class="px-4 md:px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm">
+      <span class="text-gray-500">
+        Showing {{ showing_start }}–{{ showing_end }} of {{ total }}
+      </span>
+      <div class="flex items-center gap-2">
+        {% if prev_url %}
+          <a href="{{ prev_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Prev</a>
+        {% else %}
+          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Prev</button>
+        {% endif %}
 
-    <!-- Bottom Right Red Button -->
-    <div class="mt-6 flex justify-end">
-      <button class="bg-red-600 text-white px-5 py-2 text-sm font-medium rounded hover:bg-red-700 flex items-center gap-2">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M6 9V2h12v7h4v11h-4v3H6v-3H2V9h4zm2-5v5h8V4H8zm8 14v3H8v-3h8zm2-6a1 1 0 100 2 1 1 0 000-2z"/>
-        </svg>
-        Business List
-      </button>
-    </div>
+        <span class="text-gray-500">
+          Page {{ page }} of {{ pages }}
+        </span>
 
+        {% if next_url %}
+          <a href="{{ next_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+        {% else %}
+          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Next</button>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- ===== View Business Modal (VIEW ONLY) ===== -->
+<div id="modalBusinessView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalBusinessView')"></div>
+
+  <!-- Dialog -->
+  <div class="relative mx-auto my-8 w-[96%] max-w-3xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 bg-white border-b">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-red-100 text-red-700 grid place-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 6V5a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v1h4a2 2 0 0 1 2 2v4h-9v2h9v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4h9v-2H2V8a2 2 0 0 1 2-2h5Zm2 0h2V5a1 1 0 0 0-2 0v1Z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Business Details</h2>
+            <p class="text-xs text-gray-500">
+              ID: <span id="mbv_business_id" class="font-medium text-gray-700"></span>
+            </p>
+          </div>
+        </div>
+        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                aria-label="Close modal" onclick="closeModal('modalBusinessView')">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-6 space-y-6">
+        <!-- Summary -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 rounded-xl border bg-white p-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-sm text-gray-500">Business Name</div>
+                <div id="mbv_business_name" class="text-base font-semibold text-gray-900"></div>
+                <div class="mt-1 text-xs text-gray-500">
+                  Owner: <span id="mbv_owner_name" class="font-medium text-gray-700"></span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm text-gray-500">Status</div>
+                <span id="mbv_business_status"
+                      class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                </span>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="rounded-lg bg-gray-50 p-3">
+                <div class="text-xs text-gray-500">Business Type</div>
+                <div id="mbv_business_type" class="text-sm font-medium text-gray-800"></div>
+              </div>
+              <div class="rounded-lg bg-gray-50 p-3">
+                <div class="text-xs text-gray-500">Total Gross Income</div>
+                <div id="mbv_total_gross_income" class="text-sm font-medium text-gray-800"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clearance -->
+          <div class="rounded-xl border bg-white p-4">
+            <div class="text-sm text-gray-500">Clearance Category</div>
+            <div id="mbv_clearance_category" class="text-sm font-semibold text-gray-900"></div>
+
+            <div id="mbv_clearance_row" class="mt-3 hidden">
+              <div class="text-xs text-gray-500">Issuance Date</div>
+              <div id="mbv_clearance_date" class="text-sm font-medium text-gray-800"></div>
+            </div>
+
+            <div id="mbv_units_row" class="mt-3">
+              <div class="text-xs text-gray-500">Total Units</div>
+              <div id="mbv_total_units" class="text-sm font-medium text-gray-800"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Amusement block -->
+        <div id="mbv_amusement_wrap" class="hidden rounded-xl border bg-white p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-900">Amusement Devices</h3>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold uppercase">
+              Category: Amusement
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="text-xs text-gray-500">Videoke Units</div>
+              <div id="mbv_videoke_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="text-xs text-gray-500">Billiard Tables</div>
+              <div id="mbv_billiard_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+            <div class="rounded-lg border bg-gray-50 p-3">
+              <div class="text-xs text-gray-500">Other Devices</div>
+              <div id="mbv_other_device_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] text-gray-500">Zeros are valid values and indicate absence of that device type.</p>
+        </div>
+
+        <!-- Address -->
+        <div class="rounded-xl border bg-white p-4">
+          <div class="text-sm font-semibold text-gray-900 mb-1">Business Address</div>
+          <div id="mbv_address" class="text-sm text-gray-800"></div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4">
+        <button type="button"
+                class="rounded-xl bg-white border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onclick="closeModal('modalBusinessView')">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    document.documentElement.classList.add('overflow-hidden');
+  }
+
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    document.documentElement.classList.remove('overflow-hidden');
+  }
+
+  const CLEARANCE_CATEGORY_LABELS = {
+    "1": "Corporation",
+    "2": "Partnership",
+    "3": "Sole Proprietorship (≤ ₱30,000)",
+    "4": "Sole Proprietorship (> ₱30,000)",
+    "5": "Market Vendor / Stall Owner",
+    "6": "Lessor – Commercial / Subdivision",
+    "7": "Lessor – Apartment (Light Materials ≤ 5 units)",
+    "8": "Lessor – Apartment (Concrete ≤ 5 units)",
+    "9": "Lessor – Bed Spacer / Room Rentals",
+    "10": "Lessor – Lot Property",
+    "11": "Internet Café",
+    "12": "Amusement",
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('modalBusinessView');
+    }
+  });
+
+  async function openBusinessView(businessId) {
+    const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+    const detailUrl = detailTpl.replace("99999", businessId);
+
+    const pick = (obj, keys, def = '') => {
+      for (const k of keys) {
+        if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+      }
+      return def;
+    };
+
+    try {
+      const res = await fetch(detailUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
+
+      const ct = res.headers.get('content-type') || '';
+      const text = await res.text();
+      let d = {};
+
+      if (ct.includes('application/json')) {
+        try {
+          d = JSON.parse(text);
+        } catch (e) {
+          console.error('View parse error:', e, text.slice(0, 200));
+          alert('Error loading business details (could not parse).');
+          return;
+        }
+      } else {
+        console.error('View non-JSON response:', res.status, text.slice(0, 200));
+        alert('Error loading business details.');
+        return;
+      }
+
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName === 'INPUT') el.value = val ?? '';
+        else el.textContent = val ?? '';
+      };
+
+      setVal("mbv_business_id",        pick(d, ['business_id','id']));
+      setVal("mbv_owner_name",         pick(d, ['owner_name','resident_name','owner_full_name']));
+      setVal("mbv_business_name",      pick(d, ['business_name','biz_name']));
+      setVal("mbv_business_type",      pick(d, ['business_type','type_name','business_type_name']));
+
+      const catText = pick(d, ['clearance_category_name', 'clearance_category', 'category_name'], '');
+      let catId = pick(d, ['clearance_category_id', 'clearance_categoryid'], '');
+      catId = (catId !== '' && catId !== null && catId !== undefined) ? Number(catId) : null;
+
+      if (catText) setVal('mbv_clearance_category', catText);
+      else setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[String(catId)] || '—');
+
+      setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
+      setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
+
+      // Units
+      const units = pick(d, ['total_units','units','unit_count'], null);
+      const unitsRow = document.getElementById('mbv_units_row');
+      if (unitsRow) {
+        if (units !== null && units !== undefined && units !== '') {
+          unitsRow.classList.remove('hidden');
+          setVal("mbv_total_units", units);
+        } else {
+          unitsRow.classList.add('hidden');
+          setVal("mbv_total_units", "");
+        }
+      }
+
+      // Amusement
+      const isAmusement = (String(catId) === '12') || (String(catText || '').toLowerCase() === 'amusement');
+      const amuseWrap = document.getElementById('mbv_amusement_wrap');
+      if (amuseWrap) {
+        if (isAmusement) {
+          amuseWrap.classList.remove('hidden');
+          setVal('mbv_videoke_count',      pick(d, ['videoke_count','videoke','videoke_units'], 0));
+          setVal('mbv_billiard_count',     pick(d, ['billiard_count','billiards','billiard_tables'], 0));
+          setVal('mbv_other_device_count', pick(d, ['other_device_count','other_devices'], 0));
+        } else {
+          amuseWrap.classList.add('hidden');
+          setVal('mbv_videoke_count', '');
+          setVal('mbv_billiard_count', '');
+          setVal('mbv_other_device_count', '');
+        }
+      }
+
+      setVal("mbv_address", pick(d, ['address','full_address','addr']));
+
+      const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
+      const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
+      const clearanceRow = document.getElementById("mbv_clearance_row");
+      if (clearanceRow) {
+        if (rawStatus === 'active' && issuanceDate) {
+          clearanceRow.classList.remove("hidden");
+          setVal("mbv_clearance_date", issuanceDate);
+        } else {
+          clearanceRow.classList.add("hidden");
+          setVal("mbv_clearance_date", "");
+        }
+      }
+
+      openModal("modalBusinessView");
+    } catch (err) {
+      console.error('View fetch error:', err);
+      alert("Network error while loading business details.");
+    }
+  }
+</script>
 {% endblock %}
-
-
-
-
