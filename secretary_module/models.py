@@ -909,4 +909,26 @@ class SecretaryHelpers:
             cur.execute("SELECT secretary_cancel_application(%s,%s,%s)", [application_id, personnel_id, cancellation_reason])
         return "Application cancelled."
 
+    # ---- Reprint (Business Clearance) ----
+    @staticmethod
+    def create_reprint_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_reprint_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function now resolves the Business Clearance fee type internally.
+        Returns newly created application_id or None.
+        Underlying SQL enforces ACTIVE status and pulls amusement device
+        counts from Business when category = 12.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_reprint_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
     
+
