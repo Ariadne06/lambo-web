@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow
+from .models import Dashboard, AnnouncementRepo, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -980,7 +980,8 @@ def Morematernalrecord(request, maternal_health_id: int):
     delivery_outcomes = MaternalDeliveryOutcomeRow.fetch_for_mhr(maternal_health_id)
     postpartum_visits = MaternalPostpartumVisitRow.fetch_for_mhr(maternal_health_id)
 
-    disease_types = DiseaseTypeRow.fetch_all()  # 👈 for dropdown in the Add modal
+    disease_types = DiseaseTypeRow.fetch_all()
+    test_types = TestTypeRow.fetch_all()   # 👈 for Lab Screening dropdown
 
     context = {
         "mhr": mhr,
@@ -994,7 +995,8 @@ def Morematernalrecord(request, maternal_health_id: int):
         "supplements": supplements,
         "delivery_outcomes": delivery_outcomes,
         "postpartum_visits": postpartum_visits,
-        "disease_types": disease_types,  # 👈 pass to template
+        "disease_types": disease_types,
+        "test_types": test_types,          # 👈 pass to template
     }
     return render(request, "nurse_module/Morematernalrecord.html", context)
 
@@ -1050,6 +1052,67 @@ def get_current_personnel_id(request) -> int | None:
             return row[0] if row and row[0] is not None else None
     except DatabaseError:
         return None
+
+
+@custom_login_required
+@role_required("Midwife")
+def add_maternal_lab_screening(request, maternal_health_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    # Resolve personnel_id
+    personnel_id = get_current_personnel_id(request)
+    if not personnel_id:
+        messages.error(request, "Unable to resolve current personnel account for this action.")
+        return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+    # Get form values
+    test_type_id = request.POST.get("test_type_id") or None
+    test_date = request.POST.get("test_date") or None          # YYYY-MM-DD string
+    result = request.POST.get("result") or None
+
+    iron_tablet_given_date = request.POST.get("iron_tablet_given_date") or None
+    iron_quantity_raw = request.POST.get("iron_tablet_quantity") or None
+
+    iron_tablet_quantity = None
+    if iron_quantity_raw not in (None, ""):
+        try:
+            iron_tablet_quantity = int(iron_quantity_raw)
+        except ValueError:
+            messages.error(request, "Iron tablet quantity must be a whole number.")
+            return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT add_lab_screening_record(
+                  %s,  -- p_maternal_health_id
+                  %s,  -- p_test_type_id
+                  %s,  -- p_test_date
+                  %s,  -- p_result
+                  %s,  -- p_iron_tablet_given_date
+                  %s,  -- p_iron_tablet_quantity
+                  %s   -- p_personnel_id
+                )
+                """,
+                [
+                    maternal_health_id,
+                    test_type_id,
+                    test_date,
+                    result,
+                    iron_tablet_given_date,
+                    iron_tablet_quantity,
+                    personnel_id,
+                ],
+            )
+            new_id = cur.fetchone()[0]  # lab_screening_id
+        messages.success(request, "Laboratory screening record added.")
+    except DatabaseError as e:
+        # If you later want to decode custom ERRCODEs (M4701..M4704), you can inspect e.__cause__
+        messages.error(request, f"Unable to add laboratory screening record: {e}")
+
+    return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
 
 @custom_login_required
 @role_required('Midwife')
