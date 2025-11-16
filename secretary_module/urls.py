@@ -50,4 +50,5 @@ urlpatterns = [
     path('applications/search/', views.application_search, name='application_search'),
     path('applications/preview/', views.preview_business_clearance, name='preview_business_clearance'),
     path('applications/preview/barangay/', views.preview_barangay_clearance, name='preview_barangay_clearance'),
+    path('applications/reprint/', views.create_reprint_business_clearance, name='create_reprint_business_clearance'),
 ]

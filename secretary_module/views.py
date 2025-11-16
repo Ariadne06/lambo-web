@@ -1957,6 +1957,35 @@ def preview_business_clearance(request):
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_reprint_business_clearance(request):
+    """Create a REPRINT business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_reprint_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
+        # Return a specific, cleaned DB error instead of a vague default
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def print_application(request, application_id: int):
     """Deprecated HTML print: redirect to the PDF generator instead."""
     return redirect('secretary_module:print_application_pdf', application_id=application_id)
@@ -2224,3 +2253,5 @@ def preview_barangay_clearance(request):
         })
     except Exception as e:
         return JsonResponse({'ok': False, 'message': coerce_message(e)}, status=400)
+
+    
