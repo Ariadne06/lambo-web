@@ -1022,4 +1022,45 @@ class SecretaryHelpers:
             row = cur.fetchone()
         return row[0] if row and row[0] is not None else None
     
+    # ---- Renewal (Business Clearance) ----
+    @staticmethod
+    def create_renewal_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_renewal_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally, detects category, and
+        pulls amusement device counts from Business when needed.
+        Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_renewal_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+
+    # ---- Registration (Business Clearance) ----
+    @staticmethod
+    def create_registration_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_registration_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally and enforces status rules.
+        Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_registration_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+    
 

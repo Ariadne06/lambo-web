@@ -780,6 +780,40 @@ def business_detail_json(request, business_id: int):
         raise Http404("Business not found")
     return JsonResponse(data, safe=False)
 
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def business_renewal_summary_json(request, business_id: int):
+    """Return renewal summary using get_business_renewal_summary(business_id).
+
+    Response shape:
+      { ok, business_id, business_status, needs_renewal, renewal_total, renewal_total_details }
+    """
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_business_renewal_summary(%s)", [business_id])
+            row = cur.fetchone()
+            if not row:
+                return JsonResponse({
+                    'ok': False,
+                    'message': 'No data returned for business.'
+                }, status=404)
+
+            cols = [c[0] for c in cur.description]
+            payload = dict(zip(cols, row))
+
+        # Normalize numeric for JSON
+        total = payload.get('renewal_total')
+        try:
+            payload['renewal_total'] = float(total) if total is not None else None
+        except Exception:
+            pass
+
+        payload['ok'] = True
+        return JsonResponse(payload)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
 def _count_get_all_businesses(q, status):
     with connection.cursor() as cur:
         cur.execute(
@@ -2051,6 +2085,64 @@ def create_reprint_business_clearance(request):
         return JsonResponse({'ok': True, 'application_id': app_id})
     except Exception as e:
         # Return a specific, cleaned DB error instead of a vague default
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_renewal_business_clearance(request):
+    """Create a RENEWAL business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_renewal_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_registration_business_clearance(request):
+    """Create a REGISTRATION business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_registration_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
         return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
 
 
