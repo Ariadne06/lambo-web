@@ -780,6 +780,40 @@ def business_detail_json(request, business_id: int):
         raise Http404("Business not found")
     return JsonResponse(data, safe=False)
 
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def business_renewal_summary_json(request, business_id: int):
+    """Return renewal summary using get_business_renewal_summary(business_id).
+
+    Response shape:
+      { ok, business_id, business_status, needs_renewal, renewal_total, renewal_total_details }
+    """
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_business_renewal_summary(%s)", [business_id])
+            row = cur.fetchone()
+            if not row:
+                return JsonResponse({
+                    'ok': False,
+                    'message': 'No data returned for business.'
+                }, status=404)
+
+            cols = [c[0] for c in cur.description]
+            payload = dict(zip(cols, row))
+
+        # Normalize numeric for JSON
+        total = payload.get('renewal_total')
+        try:
+            payload['renewal_total'] = float(total) if total is not None else None
+        except Exception:
+            pass
+
+        payload['ok'] = True
+        return JsonResponse(payload)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
 def _count_get_all_businesses(q, status):
     with connection.cursor() as cur:
         cur.execute(
@@ -1884,7 +1918,9 @@ def submit_business_application(request):
 
     acting_pid = _acting_personnel_id(request)
 
-    if fee_type_name.lower() == 'barangay clearances':
+    # Robust match: fee type labels may be "Barangay Clearance Fee" (renamed from "Barangay Clearances")
+    normalized_fee = fee_type_name.lower()
+    if 'barangay clearance' in normalized_fee:
         # Resident-based Barangay Clearance
         resident_id_raw = request.POST.get('applicant_id')
         purpose_id_raw = request.POST.get('purpose')  # holds other_clearance_id when barangay clearances
@@ -1948,7 +1984,8 @@ def submit_business_application(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def application_search(request):
     """AJAX search used by the walk-in UI.
-    If fee_name == 'Barangay Clearances' -> search residents; else -> search business/owner.
+    If fee_name contains 'Barangay Clearance' (supports legacy 'Barangay Clearances' and new 'Barangay Clearance Fee')
+    -> search residents; else -> search business/owner.
     """
     q = (request.GET.get('q') or '').strip()
     fee_name = (request.GET.get('fee_name') or '').strip()
@@ -1957,7 +1994,8 @@ def application_search(request):
     if not q:
         return JsonResponse([], safe=False)
     try:
-        if fee_name.lower() == 'barangay clearances':
+        normalized_fee = fee_name.lower()
+        if 'barangay clearance' in normalized_fee:
             # Use the new resident search tailored for clearance picker
             rows = SecretaryHelpers.search_resident_for_clearance(q, limit, offset, None, None, None)
             payload = [{
@@ -2017,6 +2055,93 @@ def preview_business_clearance(request):
             'total_amount_details': preview.get('total_amount_details'),
         }
         return JsonResponse(resp)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_reprint_business_clearance(request):
+    """Create a REPRINT business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_reprint_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
+        # Return a specific, cleaned DB error instead of a vague default
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_renewal_business_clearance(request):
+    """Create a RENEWAL business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_renewal_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_registration_business_clearance(request):
+    """Create a REGISTRATION business clearance application.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_registration_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
     except Exception as e:
         return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
 
@@ -2093,23 +2218,47 @@ def print_application_pdf(request, application_id: int):
         is_barangay = (request_label == 'barangay clearance')
 
         if is_barangay:
-            # Barangay Clearance template and field mapping
-            template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template1_Clearance_LETTER.pdf')
-            if not os.path.exists(template_path):
-                messages.error(request, 'PDF generation error: Template1_Clearance_LETTER.pdf not found.')
-                return redirect('secretary_module:applications')
+            # Barangay Clearance template selection (with Residency variant)
+            purpose_label = (ctx.get('purpose') or '').strip().lower()
+            is_residency = (purpose_label == 'certificate of residency' or 'residency' in purpose_label)
 
-            fields = {
-                'full_name':        ctx.get('full_name') or '',
-                'full_address':     ctx.get('full_address') or '',
-                'purpose':          ctx.get('purpose') or '',
-                'day':              str(day or ''),
-                'month':            str(month or ''),
-                'year':             str(year or ''),
-                'or_number':        str(ctx.get('or_number') or ''),
-                'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
-                'fullname_captain': ctx.get('fullname_captain') or '',
-            }
+            if is_residency:
+                # Certificate of Residency uses Template3_Residency_LETTER.pdf
+                template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template3_Residency_LETTER.pdf')
+                if not os.path.exists(template_path):
+                    messages.error(request, 'PDF generation error: Template3_Residency_LETTER.pdf not found.')
+                    return redirect('secretary_module:applications')
+
+                fields = {
+                    'full_name':        ctx.get('full_name') or '',
+                    'full_address':     ctx.get('full_address') or '',
+                    'day':              str(day or ''),
+                    'month':            str(month or ''),
+                    'year':             str(year or ''),
+                    'or_number':        str(ctx.get('or_number') or ''),
+                    'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                    'fullname_captain': ctx.get('fullname_captain') or '',
+                }
+                suggested_name = 'residency_certificate'
+            else:
+                # Default Barangay Clearance
+                template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template1_Clearance_LETTER.pdf')
+                if not os.path.exists(template_path):
+                    messages.error(request, 'PDF generation error: Template1_Clearance_LETTER.pdf not found.')
+                    return redirect('secretary_module:applications')
+
+                fields = {
+                    'full_name':        ctx.get('full_name') or '',
+                    'full_address':     ctx.get('full_address') or '',
+                    'purpose':          ctx.get('purpose') or '',
+                    'day':              str(day or ''),
+                    'month':            str(month or ''),
+                    'year':             str(year or ''),
+                    'or_number':        str(ctx.get('or_number') or ''),
+                    'fulldate_issue':   getattr(fulldate, 'strftime', lambda *_: '')('%B %d, %Y') if fulldate else (ctx.get('fulldate_issue') or ''),
+                    'fullname_captain': ctx.get('fullname_captain') or '',
+                }
+                suggested_name = 'barangay_clearance'
         else:
             # Business Clearance/Closure template and field mapping
             template_path = os.path.join(settings.BASE_DIR, 'static', 'prints', 'Template2_Business_Clearance_LETTER.pdf')
@@ -2140,6 +2289,7 @@ def print_application_pdf(request, application_id: int):
                 'or_number':          str(ctx.get('or_number') or ''),
                 'fullname_captain':   ctx.get('fullname_captain') or '',
             }
+            suggested_name = 'business_clearance'
 
         reader = PdfReader(template_path)
         writer = PdfWriter()
@@ -2230,7 +2380,8 @@ def print_application_pdf(request, application_id: int):
         writer.write(pdf_bytes)
         pdf_bytes.seek(0)
 
-        suggested_name = 'barangay_clearance' if is_barangay else 'business_clearance'
+        # suggested_name determined above per branch (defaults handled for safety)
+        suggested_name = locals().get('suggested_name') or ('barangay_clearance' if is_barangay else 'business_clearance')
         response = HttpResponse(pdf_bytes.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{suggested_name}_{application_id}.pdf"'
         return response
@@ -2264,3 +2415,5 @@ def preview_barangay_clearance(request):
         })
     except Exception as e:
         return JsonResponse({'ok': False, 'message': coerce_message(e)}, status=400)
+
+    
