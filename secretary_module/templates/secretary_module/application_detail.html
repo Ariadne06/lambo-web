@@ -210,13 +210,13 @@
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 9V2h12v7h2a2 2 0 0 1 2 2v6h-4v5H6v-5H2v-6a2 2 0 0 1 2-2h2Zm2-5v5h8V4H8Zm8 16v-3H8v3h8Z"/></svg>
                     Download &amp; Print
                   </a>
-                  <form method="post" action="{% url 'secretary_module:set_application_to_completed' application_id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="mark-complete-btn w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow transition-shadow focus:ring-2 focus:ring-emerald-400 focus:outline-none">
-                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14.414-4.707-4.707 1.414-1.414L11 13.586l5.293-5.293 1.414 1.414L11 16.414Z"/></svg>
-                      Mark as Completed
-                    </button>
-                  </form>
+                  <!-- Open confirmation modal -->
+                  <button type="button" id="btnOpenCompleteModal" class="mark-complete-btn w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow transition-shadow focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14.414-4.707-4.707 1.414-1.414L11 13.586l5.293-5.293 1.414 1.414L11 16.414Z"/></svg>
+                    Mark as Completed
+                  </button>
+
+                  
                 {% elif ast == 'completed' %}
                   <button class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 text-gray-600 px-4 py-2 text-sm font-semibold cursor-not-allowed" disabled>Download &amp; Print</button>
                   <span class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 text-emerald-900 px-4 py-2 text-sm font-semibold ring-1 ring-emerald-200">
@@ -251,6 +251,35 @@
     </div> <!-- /p-6 -->
   </div> <!-- /white card -->
 </div> <!-- /outer container -->
+<!-- Global confirmation modal (centered like payments modal) -->
+<div id="completeModal" class="fixed inset-0 z-[60] hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" data-overlay></div>
+  <!-- Dialog container -->
+  <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+      <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-900">Mark application as Completed?</h3>
+        <button type="button" id="btnCloseCompleteModal" class="inline-flex items-center justify-center rounded-md p-1 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-400" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811 4.811 6.225 10.586 12l-5.775 5.775 1.414 1.414L12 13.414l5.775 5.775 1.414-1.414L13.414 12l5.775-5.775-1.414-1.414L12 10.586 6.225 4.811Z"/></svg>
+        </button>
+      </div>
+      <div class="px-5 pt-4 pb-2 text-sm text-gray-700">
+        <p>This will finalize the application. You won’t be able to re-generate the certificate after completion.</p>
+      </div>
+      <div class="px-5 pb-5 pt-2 flex items-center gap-3 justify-end">
+        <button type="button" id="btnCancelCompleteModal" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+        <form method="post" action="{% url 'secretary_module:set_application_to_completed' application_id %}">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700 shadow">
+            Yes, mark as Completed
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+</div>
 <style>
   .btn-complete { display:inline-flex; align-items:center; gap:.5rem; background:#059669; color:#fff; padding:.5rem 1rem; font-size:.75rem; font-weight:600; border-radius:.75rem; box-shadow:0 1px 2px rgba(0,0,0,.15); border:1px solid #047857; }
   .btn-complete:hover { background:#047857; }
@@ -262,4 +291,26 @@
   .forward-treasurer-btn { background:#2563eb !important; color:#ffffff !important; border:1px solid #1d4ed8 !important; }
   .forward-treasurer-btn:hover { background:#1d4ed8 !important; }
 </style>
+<script>
+  // Lightweight modal controller for "Mark as Completed"
+  (function(){
+    const MC_OPEN = document.getElementById('btnOpenCompleteModal');
+    const MC_MODAL = document.getElementById('completeModal');
+    const MC_CANCEL = document.getElementById('btnCancelCompleteModal');
+    const MC_CLOSE = document.getElementById('btnCloseCompleteModal');
+    const MC_OVERLAY = MC_MODAL ? MC_MODAL.querySelector('[data-overlay]') : null;
+
+    const open = () => MC_MODAL && MC_MODAL.classList.remove('hidden');
+    const close = () => MC_MODAL && MC_MODAL.classList.add('hidden');
+
+    MC_OPEN && MC_OPEN.addEventListener('click', open);
+    MC_CANCEL && MC_CANCEL.addEventListener('click', close);
+    MC_CLOSE && MC_CLOSE.addEventListener('click', close);
+    MC_OVERLAY && MC_OVERLAY.addEventListener('click', close);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && MC_MODAL && !MC_MODAL.classList.contains('hidden')) close();
+    });
+  })();
+</script>
 {% endblock %}
