@@ -780,6 +780,33 @@ def business_detail_json(request, business_id: int):
         raise Http404("Business not found")
     return JsonResponse(data, safe=False)
 
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def business_detail_page(request, business_id: int):
+    """Server-rendered full page for a specific business.
+
+    Provides the business row plus a lightweight renewal summary so the
+    template can render details and client JS can handle previews.
+    """
+    data = Business.sp_get_business_detail(business_id)
+    if not data:
+        raise Http404("Business not found")
+    # Optional renewal summary
+    renewal = {}
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_business_renewal_summary(%s)", [business_id])
+            row = cur.fetchone()
+            if row:
+                cols = [c[0] for c in cur.description]
+                renewal = dict(zip(cols, row))
+    except Exception:
+        renewal = {}
+    return render(request, 'secretary_module/business_detail.html', {
+        'business': data,
+        'renewal': renewal,
+    })
+
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -1234,7 +1261,18 @@ def application_detail(request, application_id: int):
 def set_application_to_completed(request, application_id: int):
     """Mark an Approved application as Completed (finalized/printed)."""
     try:
-        SecretaryHelpers.set_application_to_completed(application_id)
+        # Prefer posted personnel_id (if supplied by form), otherwise derive from session/user
+        posted_pid = request.POST.get('personnel_id')
+        try:
+            personnel_id = int(posted_pid) if posted_pid is not None else None
+        except (TypeError, ValueError):
+            personnel_id = None
+        if not personnel_id:
+            personnel_id = _acting_personnel_id(request)
+        if not personnel_id:
+            raise ValueError('Missing personnel_id for completion.')
+
+        SecretaryHelpers.set_application_to_completed(application_id, personnel_id)
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Application marked as Completed.'})
         set_flash(request, 'Application marked as Completed.', 'success')
@@ -1286,11 +1324,6 @@ def set_application_to_for_payment(request, application_id: int):
             return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
         set_flash(request, _clean_db_error(e), 'error')
         return redirect('secretary_module:applications')
-
-@custom_login_required
-@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
-def announcement(request):
-    return render(request, 'secretary_module/announcement.html')
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -2135,6 +2168,35 @@ def create_registration_business_clearance(request):
     try:
         personnel_id = _acting_personnel_id(request)
         app_id = SecretaryHelpers.create_registration_business_clearance(
+            business_id=business_id,
+            requested_by='personnel',
+            requested_by_id=personnel_id,
+        )
+        if not app_id:
+            return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        return JsonResponse({'ok': True, 'application_id': app_id})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def create_closure_business_clearance(request):
+    """Create a BUSINESS CLOSURE application for an INACTIVE business.
+
+    POST params:
+      - business_id
+    Returns JSON { ok: true, application_id } or { ok: false, message }
+    """
+    try:
+        business_id = int(request.POST.get('business_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid business_id'}, status=400)
+
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_closure_business_clearance(
             business_id=business_id,
             requested_by='personnel',
             requested_by_id=personnel_id,

@@ -13,6 +13,7 @@ urlpatterns = [
     path('Addbusiness/', views.Addbusiness, name="Addbusiness"),
     path("business_list/", views.business_list, name="business_list"),
     path("business_detail_json/<int:business_id>", views.business_detail_json, name="business_detail_json"),
+    path("business/<int:business_id>/", views.business_detail_page, name="business_detail_page"),
     path("business/<int:business_id>/renewal-summary", views.business_renewal_summary_json, name="business_renewal_summary_json"),
     path("businesses/<int:business_id>/update", views.business_update, name="business_update"),
     path("business/<int:business_id>/close/", views.business_close, name="business_close"),
@@ -51,4 +52,5 @@ urlpatterns = [
     path('applications/reprint/', views.create_reprint_business_clearance, name='create_reprint_business_clearance'),
     path('applications/renewal/', views.create_renewal_business_clearance, name='create_renewal_business_clearance'),
     path('applications/registration/', views.create_registration_business_clearance, name='create_registration_business_clearance'),
+    path('applications/closure/', views.create_closure_business_clearance, name='create_closure_business_clearance'),
 ]
