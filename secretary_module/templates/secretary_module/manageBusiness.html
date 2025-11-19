@@ -58,12 +58,12 @@
       <table class="min-w-full text-sm">
         <thead class="sticky top-0 z-10 bg-rose-600 text-white">
           <tr>
-            <th class="px-4 py-3 text-left font-semibold">Business ID</th>
-            <th class="px-4 py-3 text-left font-semibold">Business Name</th>
-            <th class="px-4 py-3 text-left font-semibold">Owners Name</th>
-            <th class="px-4 py-3 text-left font-semibold">Address</th>
-            <th class="px-4 py-3 text-left font-semibold">Status</th>
-            <th class="px-4 py-3 text-center font-semibold">Actions</th>
+            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Business ID</th>
+            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Business Name</th>
+            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Owners Name</th>
+            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Address</th>
+            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Status</th>
+            <th class="px-4 py-4 text-center font-semibold whitespace-nowrap">Actions</th>
           </tr>
         </thead>
        <tbody class="divide-y divide-gray-100">
@@ -80,14 +80,14 @@
               </td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-2">
-                <button type="button"
-                  class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                  onclick="openBusinessView('{{ r.business_id }}')">
+                <a href="{% url 'secretary_module:business_detail_page' r.business_id %}"
+                   onclick="return goToBusinessDetail(event, '{{ r.business_id }}', this.href)"
+                   class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
                   </svg>
                   View
-                </button>
+                </a>
                 <button type="button"
                         class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
                         onclick="UB.open('{{ r.business_id }}')">
@@ -96,9 +96,9 @@
                   </svg>
                   Edit
                 </button>
-                <button type="button"
+                    <button type="button"
                       class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5 text-red-600"
-                      onclick="closeBusiness('{{ r.business_id }}')">
+                      onclick="openClosureModal('{{ r.business_id }}','{{ r.status|lower }}')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -149,304 +149,67 @@
   </div>
 </div>
 
-<!-- Loading Modal for Business View -->
-<div id="modalBusinessLoading" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-black/50"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-sm">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden p-6">
-      <div class="flex items-center gap-3">
-        <svg class="animate-spin h-5 w-5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle class="opacity-25" cx="12" cy="12" r="10"></circle>
-          <path class="opacity-75" d="M4 12a8 8 0 018-8"/>
-        </svg>
-        <div>
-          <div class="text-base font-semibold text-gray-900">Loading business details…</div>
-          <div class="text-sm text-gray-500">Please wait a moment.</div>
-        </div>
-      </div>
+<!-- Removed legacy Business View modal markup (migrated to standalone page) -->
+
+<!-- Page Loading Overlay for smooth navigation to detail -->
+<div id="pageLoadingOverlay" class="hidden fixed inset-0 z-50 bg-white/80 backdrop-blur-sm">
+  <div class="w-full h-full flex items-center justify-center p-4">
+    <div class="rounded-xl bg-white shadow-lg border border-gray-200 px-6 py-5 flex items-center gap-3">
+      <div class="loader-spinner" aria-hidden="true"></div>
+      <div id="pageLoadingText" class="text-sm text-gray-700">Opening business…</div>
     </div>
   </div>
-  
+  <span class="sr-only" role="status">Loading…</span>
+  <button type="button" class="absolute inset-0 w-full h-full" tabindex="-1" aria-hidden="true"></button>
+  <!-- overlay is intentionally not closable while navigating -->
 </div>
 
-<!-- View Business Modal -->
-<div id="modalBusinessView" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalBusinessView')"></div>
-
-  <!-- Dialog -->
-  <div class="relative mx-auto my-8 w-[96%] max-w-3xl">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 bg-white border-b">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-rose-100 text-rose-700 grid place-items-center">
-            <!-- briefcase icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 6V5a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v1h4a2 2 0 0 1 2 2v4h-9v2h9v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4h9v-2H2V8a2 2 0 0 1 2-2h5Zm2 0h2V5a1 1 0 0 0-2 0v1Z"/>
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">Business Details</h2>
-            <p class="text-xs text-gray-500">ID: <span id="mbv_business_id" class="font-medium text-gray-700"></span></p>
-          </div>
-        </div>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                aria-label="Close modal" onclick="closeModal('modalBusinessView')">&times;</button>
-      </div>
-
-      <!-- Body -->
-      <div class="px-6 py-6 space-y-6">
-        <!-- Top summary -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-2 rounded-xl border bg-white p-4">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <div class="text-sm text-gray-500">Business Name</div>
-                <div id="mbv_business_name" class="text-base font-semibold text-gray-900"></div>
-                <div class="mt-1 text-xs text-gray-500">
-                  Owner: <span id="mbv_owner_name" class="font-medium text-gray-700"></span>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-sm text-gray-500">Status</div>
-                <span id="mbv_business_status"
-                      class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
-                </span>
-              </div>
-            </div>
-            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="rounded-lg bg-gray-50 p-3">
-                <div class="text-xs text-gray-500">Business Type</div>
-                <div id="mbv_business_type" class="text-sm font-medium text-gray-800"></div>
-              </div>
-              <div class="rounded-lg bg-gray-50 p-3">
-                <div class="text-xs text-gray-500">Total Gross Income</div>
-                <div id="mbv_total_gross_income" class="text-sm font-medium text-gray-800"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Clearance card -->
-          <div class="rounded-xl border bg-white p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm text-gray-500">Clearance Category</div>
-                <div id="mbv_clearance_category" class="text-sm font-semibold text-gray-900"></div>
-              </div>
-            </div>
-
-            <!-- Issuance date (only when active) -->
-            <div id="mbv_clearance_row" class="mt-3 hidden">
-              <div class="text-xs text-gray-500">Issuance Date</div>
-              <div id="mbv_clearance_date" class="text-sm font-medium text-gray-800"></div>
-            </div>
-
-            <!-- Total Units (conditionally shown) -->
-            <div id="mbv_units_row" class="mt-3">
-              <div class="text-xs text-gray-500">Total Units</div>
-              <div id="mbv_total_units" class="text-sm font-medium text-gray-800"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Amusement Devices block (clean + modern) -->
-        <div id="mbv_amusement_wrap" class="hidden rounded-xl border bg-white p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <div class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700 grid place-items-center">
-                <!-- sparkles icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M5 3h2v2H5V3Zm6 0h2v2h-2V3ZM3 5h2v2H3V5Zm16 0h2v2h-2V5Zm-6 0h2v2h-2V5ZM5 19h2v2H5v-2Zm6 0h2v2h-2v-2Zm-8-6h2v2H3v-2Zm16 0h2v2h-2v-2ZM9 7.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5L1.5 15l5.5-2 2-5.5Z"/>
-                </svg>
-              </div>
-              <h3 class="text-sm font-semibold text-gray-900">Amusement Devices</h3>
-            </div>
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold tracking-wide uppercase">
-              Category: Amusement
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- Videoke -->
-            <div class="rounded-lg border bg-gray-50 p-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs text-gray-500">Videoke Units</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.5 6.5A3.5 3.5 0 1 1 16 3a3.5 3.5 0 0 1 3.5 3.5ZM13 7l4 4-7.5 7.5a2 2 0 0 1-2.8 0l-.2-.2a2 2 0 0 1 0-2.8L13 7Z"/>
-                </svg>
-              </div>
-              <div id="mbv_videoke_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
-            </div>
-
-            <!-- Billiard -->
-            <div class="rounded-lg border bg-gray-50 p-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs text-gray-500">Billiard Tables</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 7h16v2H4V7Zm-1 4h18v6H3v-6Zm2 2v2h3v-2H5Zm5 0v2h4v-2h-4Zm6 0v2h3v-2h-3Z"/>
-                </svg>
-              </div>
-              <div id="mbv_billiard_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
-            </div>
-
-            <!-- Other -->
-            <div class="rounded-lg border bg-gray-50 p-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs text-gray-500">Other Devices</div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 6h16v2H4V6Zm0 4h16v2H4v-2Zm0 4h10v2H4v-2Z"/>
-                </svg>
-              </div>
-              <div id="mbv_other_device_count" class="mt-1 text-lg font-bold text-gray-900">0</div>
-            </div>
-          </div>
-
-          <p class="mt-2 text-[11px] text-gray-500">Zeros are valid values and indicate absence of that device type.</p>
-        </div>
-
-        <!-- Address -->
-        <div class="rounded-xl border bg-white p-4">
-          <div class="text-sm font-semibold text-gray-900 mb-1">Business Address</div>
-          <div id="mbv_address" class="text-sm text-gray-800"></div>
-        </div>
-
-        <!-- Renewal Summary card (secretary-oriented) -->
-        <div class="rounded-xl border bg-white p-4 space-y-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-start gap-3">
-              <div class="mt-0.5 rounded-lg bg-indigo-50 p-2 text-indigo-600">
-                <!-- Revised icon: document with refresh arrow -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m0 0l-2-2m2 2l2-2" />
-                </svg>
-              </div>
-              <div>
-                <div id="mbv_renewal_title" class="text-sm font-semibold text-gray-900">Renewal Assessment</div>
-                <div id="mbv_renewal_subtitle" class="text-xs text-gray-500">Current computed fees if this business proceeds to renewal.</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button type="button" id="btnRegistrationCreate"
-                class="btn-gray rounded-lg px-3.5 py-2 text-sm font-semibold hidden">
-                Create Registration
-              </button>
-              <button type="button" id="btnRenewalPreview"
-                class="btn-blue rounded-lg px-4 py-2 text-sm font-semibold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13 5v6h6v2h-8V5h2z"/></svg>
-                Create Renewal
-              </button>
-            </div>
-          </div>
-
-          <!-- Loading shimmer -->
-          <div id="mbv_renewal_loading" class="hidden"><div class="h-10 w-full rounded-lg bg-gray-100 animate-pulse"></div></div>
-          <!-- Neutral info message -->
-          <div id="mbv_renewal_info" class="text-xs text-gray-600"></div>
-          <!-- Total row -->
-          <div id="mbv_renewal_total_row" class="hidden">
-            <div class="flex items-center justify-between rounded-lg border bg-gray-50 px-3 py-2">
-              <span class="text-sm text-gray-700">Total Renewal Fees</span>
-              <span id="mbv_renewal_total" class="text-sm font-semibold text-gray-900">—</span>
-            </div>
-          </div>
-          <!-- Breakdown -->
-          <div id="mbv_renewal_breakdown_wrap" class="hidden">
-            <button type="button" id="mbv_renewal_breakdown_toggle" class="text-[11px] text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
-              View detailed breakdown
-            </button>
-            <div id="mbv_renewal_breakdown" class="mt-2 hidden">
-              <div class="overflow-hidden rounded-lg border">
-                <table class="min-w-full text-xs">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="text-left px-3 py-2 font-medium text-gray-700">Description</th>
-                      <th class="text-right px-3 py-2 font-medium text-gray-700">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mbv_renewal_details_tbody" class="divide-y divide-gray-100"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Business Clearance info + Reprint -->
-        <div class="rounded-xl border bg-white p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-sm font-semibold text-gray-900">Business Clearance</div>
-              <div class="text-xs text-gray-500">Reprint the latest clearance (when status is Active).</div>
-            </div>
-            <button type="button" id="btnReprintClearance"
-              class="rounded-xl px-4 py-2 text-sm font-semibold bg-gray-200 text-gray-500 cursor-not-allowed" disabled>
-              Reprint
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="flex items-center justify-between gap-3 border-t bg-gray-50 px-6 py-4">
-        <div class="flex items-center gap-3">
-          <button type="button"
-                  class="rounded-xl bg-white border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  onclick="closeModal('modalBusinessView')">
-            Close
-          </button>
-          <button type="button"
-                  class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700"
-                  onclick="openModal('modalPaymentHistory')">
-            Payment History
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Renewal Preview Modal -->
-<div id="modalRenewalPreview" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalRenewalPreview')"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-md">
+<!-- Business Closure Modal -->
+<div id="modalClosure" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalClosure')"></div>
+  <div class="relative mx-auto my-10 w-[96%] max-w-xl">
     <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b bg-gray-50/60">
-        <h2 class="text-base font-semibold text-gray-900">Renewal Preview</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                aria-label="Close modal" onclick="closeModal('modalRenewalPreview')">&times;</button>
+        <h2 id="cl_title" class="text-base font-semibold text-gray-900">Close Business</h2>
+        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold" aria-label="Close modal" onclick="closeModal('modalClosure')">&times;</button>
       </div>
       <div class="px-5 py-4 space-y-3 text-sm">
-        <div id="rp_alert" class="hidden rounded-md px-3 py-2"></div>
-        <div id="rp_loading" class="text-gray-500">Loading preview…</div>
-        <div id="rp_content" class="hidden space-y-4">
-          <!-- Business summary (filled via JS from existing view modal fields) -->
-          <div id="rp_summary" class="text-xs text-gray-600 space-y-1"></div>
-          <!-- Breakdown table -->
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-xs" id="rp_table">
-              <thead>
-                <tr class="bg-gray-50 text-gray-700">
-                  <th class="px-3 py-2 border border-gray-200 text-left">Description</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody id="rp_tbody" class="divide-y divide-gray-100"></tbody>
-              <tfoot>
-                <tr class="bg-white">
-                  <th class="px-3 py-2 border border-gray-200 text-left font-semibold">Total</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right font-semibold" id="rp_total"></th>
-                </tr>
-              </tfoot>
-            </table>
+        <div id="cl_alert" class="hidden rounded-md px-3 py-2"></div>
+
+        <!-- Confirm-only block (Active/For Renewal) -->
+        <div id="cl_confirm" class="hidden space-y-2">
+          <p class="text-gray-700">No payment is needed. Proceed to close this business?</p>
+        </div>
+
+        <!-- Preview block (Inactive) -->
+        <div id="cl_preview_wrap" class="hidden space-y-3">
+          <div id="cl_loading" class="text-gray-500">Loading closure preview…</div>
+          <div id="cl_preview" class="hidden space-y-3">
+            <div id="cl_summary" class="text-xs text-gray-600"></div>
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse text-xs">
+                <thead>
+                  <tr class="bg-gray-50 text-gray-700">
+                    <th class="px-3 py-2 border border-gray-200 text-left">Description</th>
+                    <th class="px-3 py-2 border border-gray-200 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="cl_tbody" class="divide-y divide-gray-100"></tbody>
+                <tfoot>
+                  <tr class="bg-white">
+                    <th class="px-3 py-2 border border-gray-200 text-left font-semibold">Total</th>
+                    <th id="cl_total" class="px-3 py-2 border border-gray-200 text-right font-semibold"></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </div>
       </div>
       <div class="flex items-center justify-end gap-3 px-5 py-4 border-t bg-gray-50">
-        <button type="button" class="btn-gray rounded-xl px-4 py-2 text-sm font-semibold"
-                onclick="closeModal('modalRenewalPreview')">Cancel</button>
-        <button type="button" id="rp_create_btn" class="btn-blue rounded-xl px-4 py-2 text-sm font-semibold">Create Renewal Request</button>
+        <button type="button" class="btn-gray rounded-xl px-4 py-2 text-sm font-semibold" onclick="closeModal('modalClosure')">Cancel</button>
+        <button type="button" id="cl_confirm_btn" class="hidden btn-blue rounded-xl px-4 py-2 text-sm font-semibold">Close Business</button>
+        <button type="button" id="cl_create_btn" class="hidden btn-blue rounded-xl px-4 py-2 text-sm font-semibold">Create Closure Request</button>
       </div>
     </div>
   </div>
@@ -454,161 +217,13 @@
 </div>
 
 <!-- Action Result Modal -->
-<div id="modalActionResult" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalActionResult')"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-md">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 border-b bg-gray-50/60">
-        <h2 id="ar_title" class="text-base font-semibold text-gray-900">Action Result</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold" aria-label="Close modal" onclick="closeModal('modalActionResult')">&times;</button>
-      </div>
-      <div class="px-5 py-4 space-y-3 text-sm">
-        <div id="ar_message" class="rounded-md px-3 py-2 text-sm" role="alert"></div>
-        <div id="ar_links" class="text-sm"></div>
-      </div>
-      <div class="flex items-center justify-end gap-3 px-5 py-4 border-t bg-gray-50">
-        <button type="button" class="btn-blue rounded-xl px-4 py-2 text-sm font-semibold" onclick="closeModal('modalActionResult')">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <!-- Registration Preview Modal -->
-<div id="modalRegistrationPreview" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalRegistrationPreview')"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-md">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 border-b bg-gray-50/60">
-        <h2 class="text-base font-semibold text-gray-900">Registration Preview</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold" aria-label="Close modal" onclick="closeModal('modalRegistrationPreview')">&times;</button>
-      </div>
-      <div class="px-5 py-4 space-y-3 text-sm">
-        <div id="rgp_alert" class="hidden rounded-md px-3 py-2"></div>
-        <div id="rgp_loading" class="text-gray-500">Loading preview…</div>
-        <div id="rgp_content" class="hidden space-y-4">
-          <div id="rgp_summary" class="text-xs text-gray-600 space-y-1"></div>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-xs" id="rgp_table">
-              <thead>
-                <tr class="bg-gray-50 text-gray-700">
-                  <th class="px-3 py-2 border border-gray-200 text-left">Description</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody id="rgp_tbody" class="divide-y divide-gray-100"></tbody>
-              <tfoot>
-                <tr class="bg-white">
-                  <th class="px-3 py-2 border border-gray-200 text-left font-semibold">Total</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right font-semibold" id="rgp_total"></th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-3 px-5 py-4 border-t bg-gray-50">
-        <button type="button" class="btn-gray rounded-xl px-4 py-2 text-sm font-semibold" onclick="closeModal('modalRegistrationPreview')">Cancel</button>
-        <button type="button" id="rgp_create_btn" class="btn-blue rounded-xl px-4 py-2 text-sm font-semibold">Create Registration Request</button>
-      </div>
-    </div>
-  </div>
-  
-</div>
 
 <!-- Reprint Preview Modal -->
-<div id="modalReprintPreview" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalReprintPreview')"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-md">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 border-b bg-gray-50/60">
-        <h2 class="text-base font-semibold text-gray-900">Reprint Preview</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold" aria-label="Close modal" onclick="closeModal('modalReprintPreview')">&times;</button>
-      </div>
-      <div class="px-5 py-4 space-y-3 text-sm">
-        <div id="rpp_alert" class="hidden rounded-md px-3 py-2"></div>
-        <div id="rpp_loading" class="text-gray-500">Loading reprint preview…</div>
-        <div id="rpp_content" class="hidden space-y-4">
-          <div id="rpp_summary" class="text-xs text-gray-600 space-y-1"></div>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-xs" id="rpp_table">
-              <thead>
-                <tr class="bg-gray-50 text-gray-700">
-                  <th class="px-3 py-2 border border-gray-200 text-left">Description</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody id="rpp_tbody" class="divide-y divide-gray-100"></tbody>
-              <tfoot>
-                <tr class="bg-white">
-                  <th class="px-3 py-2 border border-gray-200 text-left font-semibold">Total</th>
-                  <th class="px-3 py-2 border border-gray-200 text-right font-semibold" id="rpp_total"></th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-3 px-5 py-4 border-t bg-gray-50">
-        <button type="button" class="btn-gray rounded-xl px-4 py-2 text-sm font-semibold" onclick="closeModal('modalReprintPreview')">Cancel</button>
-        <button type="button" id="rpp_create_btn" class="btn-blue rounded-xl px-4 py-2 text-sm font-semibold">Create Reprint Request</button>
-      </div>
-    </div>
-  </div>
-</div>
 
-
-<!-- Payment History Modal (unchanged) -->
-<div id="modalPaymentHistory" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="mph_title">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalPaymentHistory')"></div>
-  <div class="relative mx-auto my-8 w-[96%] max-w-4xl">
-    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-      <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50/60">
-        <h2 id="mph_title" class="text-base font-semibold text-gray-900">Payment History</h2>
-        <button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                aria-label="Close modal" onclick="closeModal('modalPaymentHistory')">&times;</button>
-      </div>
-      <div class="px-6 pt-6">
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-sm">
-            <thead>
-              <tr class="bg-gray-50 text-gray-700 font-medium">
-                <th class="px-4 py-2 border border-gray-200 text-left w-40">Date</th>
-                <th class="px-4 py-2 border border-gray-200 text-left">Transaction</th>
-                <th class="px-4 py-2 border border-gray-200 text-left w-40">Amount</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Barangay Clearance</td><td class="px-4 py-2 border border-gray-200">330 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Business Clearance</td><td class="px-4 py-2 border border-gray-200">300 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Residency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Certificate of Indigency</td><td class="px-4 py-2 border border-gray-200">200 Php</td></tr>
-              <tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Barangay Clearance</td><td class="px-4 py-2 border border-gray-200">330 Php</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="px-6 pb-6">
-        <div class="mt-4 flex items-center">
-          <button type="button" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                  onclick="closeModal('modalPaymentHistory')">Close</button>
-          <nav class="mx-auto text-sm text-gray-600">
-            <ul class="flex items-center gap-2">
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">1</a></li>
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">2</a></li>
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">3</a></li>
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">4</a></li>
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">5</a></li>
-              <li><span class="px-2 py-1">…</span></li>
-              <li><a href="#" class="px-2 py-1 hover:text-red-700">60</a></li>
-            </ul>
-          </nav>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Payment History modal removed: no triggers on this page -->
 
 <!-- Update Business Modal -->
 <div id="updateBusinessModal"
@@ -787,7 +402,8 @@
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('hidden');
-    const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden), #modalBusinessLoading:not(.hidden)');
+    // Improved: keep scroll locked while ANY dialog remains open
+    const anyOpen = document.querySelector('[role="dialog"]:not(.hidden), #updateBusinessModal:not(.hidden)');
     if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
   }
 
@@ -808,333 +424,11 @@
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeModal('modalBusinessView');
       closeModal('updateBusinessModal');
-      closeModal('modalPaymentHistory');
-      closeModal('modalBusinessLoading');
     }
   });
 
-  // ------------------------
-  // VIEW MODAL
-  // ------------------------
-  async function openBusinessView(businessId) {
-    // Show loading screen first, then display the fully loaded modal
-    openModal('modalBusinessLoading');
-
-    const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
-    const detailUrl = detailTpl.replace("99999", businessId);
-
-    const pick = (obj, keys, def = '') => {
-      for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
-      return def;
-    };
-
-    try {
-      const res = await fetch(detailUrl, {
-        method: 'GET',
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-      });
-
-      const ct = res.headers.get('content-type') || '';
-      const text = await res.text();
-      let d = {};
-      if (ct.includes('application/json')) {
-        try { d = JSON.parse(text); } catch (e) {
-          console.error('View parse error:', e, text.slice(0, 200));
-          alert('Error loading business details (could not parse).');
-          return;
-        }
-      } else {
-        console.error('View non-JSON response:', res.status, text.slice(0, 200));
-        if (res.status === 403 || /login/i.test(text)) {
-          alert('Not authenticated to view details. Please reload the page and try again.');
-        } else {
-          alert('Error loading business details (non-JSON response).');
-        }
-        return;
-      }
-
-      const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (el.tagName === 'INPUT') el.value = val ?? '';
-        else el.textContent = val ?? '';
-      };
-
-      setVal("mbv_business_id",        pick(d, ['business_id','id']));
-      setVal("mbv_owner_name",         pick(d, ['owner_name','resident_name','owner_full_name']));
-      setVal("mbv_business_name",      pick(d, ['business_name','biz_name']));
-      setVal("mbv_business_type",      pick(d, ['business_type','type_name','business_type_name']));
-
-      const catText = pick(d, ['clearance_category_name', 'clearance_category', 'category_name'], '');
-      let catId = pick(d, ['clearance_category_id', 'clearance_categoryid'], '');
-      catId = (catId !== '' && catId !== null && catId !== undefined) ? Number(catId) : null;
-
-      if (catText) setVal('mbv_clearance_category', catText);
-      else setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[String(catId)] || '—');
-
-      setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
-      setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
-
-      // Total Units
-      const units = pick(d, ['total_units','units','unit_count'], null);
-      const unitsRow = document.getElementById('mbv_units_row');
-      if (unitsRow) {
-        if (units !== null && units !== undefined && units !== '') {
-          unitsRow.classList.remove('hidden');
-          setVal("mbv_total_units", units);
-        } else {
-          unitsRow.classList.add('hidden');
-          setVal("mbv_total_units", "");
-        }
-      }
-
-      // Amusement devices
-      const isAmusement = (String(catId) === '12') || (String(catText || '').toLowerCase() === 'amusement');
-      const amuseWrap = document.getElementById('mbv_amusement_wrap');
-      if (amuseWrap) {
-        if (isAmusement) {
-          amuseWrap.classList.remove('hidden');
-          // Zeros are valid; default to 0 when undefined
-          setVal('mbv_videoke_count',      pick(d, ['videoke_count','videoke','videoke_units'], 0));
-          setVal('mbv_billiard_count',     pick(d, ['billiard_count','billiards','billiard_tables'], 0));
-          setVal('mbv_other_device_count', pick(d, ['other_device_count','other_devices'], 0));
-        } else {
-          amuseWrap.classList.add('hidden');
-          setVal('mbv_videoke_count', '');
-          setVal('mbv_billiard_count', '');
-          setVal('mbv_other_device_count', '');
-        }
-      }
-
-      setVal("mbv_address", pick(d, ['address','full_address','addr']));
-
-      const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
-      const rawStatus = String(pick(d, ['status','business_status','business_status_name'],'')).trim().toLowerCase();
-      const clearanceRow = document.getElementById("mbv_clearance_row");
-      if (clearanceRow) {
-        if (rawStatus === 'active' && issuanceDate) {
-          clearanceRow.classList.remove("hidden");
-          setVal("mbv_clearance_date", issuanceDate);
-        } else {
-          clearanceRow.classList.add("hidden");
-          setVal("mbv_clearance_date", "");
-        }
-      }
-
-      // Renewal Summary: secretary-oriented assessment (no status badge)
-      try {
-        const infoEl = document.getElementById('mbv_renewal_info');
-        const rowEl  = document.getElementById('mbv_renewal_total_row');
-        const totalEl= document.getElementById('mbv_renewal_total');
-        const btnEl  = document.getElementById('btnRenewalPreview');
-        const loadEl = document.getElementById('mbv_renewal_loading');
-        const bdWrap = document.getElementById('mbv_renewal_breakdown_wrap');
-        const bdTgl  = document.getElementById('mbv_renewal_breakdown_toggle');
-        const bdDiv  = document.getElementById('mbv_renewal_breakdown');
-        const bdBody = document.getElementById('mbv_renewal_details_tbody');
-        const titleHdr = document.getElementById('mbv_renewal_title');
-        const subHdr = document.getElementById('mbv_renewal_subtitle');
-        const regBtn = document.getElementById('btnRegistrationCreate');
-
-        // Reset UI state
-        [infoEl,rowEl,bdWrap,bdDiv].forEach(el=>{ if(!el) return; if(el===rowEl||el===bdWrap||el===bdDiv) el.classList.add('hidden'); if(el===infoEl) el.textContent=''; });
-        if (bdBody) bdBody.innerHTML='';
-        if (btnEl) { btnEl.disabled = true; btnEl.classList.add('opacity-60','cursor-not-allowed'); }
-        if (loadEl) loadEl.classList.remove('hidden');
-
-        const rsTpl = "{% url 'secretary_module:business_renewal_summary_json' 0 %}";
-        const rsUrl = rsTpl.replace('/0', '/' + String(pick(d, ['business_id','id'])));
-        const rsRes = await fetch(rsUrl, { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
-        const rsCT = rsRes.headers.get('content-type') || '';
-        const rsTxt = await rsRes.text();
-        let rs = null;
-        if (rsCT.includes('application/json')) { try { rs = JSON.parse(rsTxt); } catch(_){} }
-
-        const fmt = (v) => `₱${Number(v||0).toFixed(2)}`;
-        const humanize = (s) => (String(s||'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim().replace(/\b\w/g,c=>c.toUpperCase())) || 'Item';
-        const labelFrom = (obj, fallbackKey) => {
-          if (!obj || typeof obj !== 'object') return fallbackKey || 'Item';
-          for (const key of ['label','name','description','fee_name','fee','title']){
-            if (obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== '') return String(obj[key]);
-          }
-          if (fallbackKey && obj[fallbackKey] !== undefined) return String(obj[fallbackKey]);
-          const k = Object.keys(obj).find(k=>/name|label|desc|fee/i.test(k));
-          return k ? String(obj[k]) : (fallbackKey || 'Item');
-        };
-
-        if (rs && rs.ok) {
-          const isActive = String(rs.business_status || '').toLowerCase() === 'active';
-          const due = !(isActive || rs.needs_renewal === false);
-          const blockedByStatus = (rawStatus === 'pending' || rawStatus === 'closed');
-          const hideTotals = (rawStatus === 'closed' || rawStatus === 'active' || rawStatus === 'pending');
-
-          // Adjust header copy for Pending
-          if (rawStatus === 'pending') {
-            if (titleHdr) titleHdr.textContent = 'Registration';
-            if (subHdr) subHdr.textContent = 'This business is Pending. Create a Registration request to proceed.';
-          } else {
-            if (titleHdr) titleHdr.textContent = 'Renewal Assessment';
-            if (subHdr) subHdr.textContent = 'Current computed fees if this business proceeds to renewal.';
-          }
-          if (infoEl) {
-            if (rawStatus === 'pending') {
-              infoEl.textContent = 'Renewal is unavailable while business is Pending.';
-            } else if (rawStatus === 'closed') {
-              infoEl.textContent = 'Renewal is unavailable because the business is Closed.';
-            } else {
-              infoEl.textContent = due ? 'Pending renewal fees calculated below.' : 'No renewal action required based on current status.';
-            }
-          }
-
-          // Registration button: only when Pending
-          if (regBtn) {
-            if (rawStatus === 'pending') {
-              regBtn.classList.remove('hidden');
-            } else {
-              regBtn.classList.add('hidden');
-            }
-          }
-
-          // Hide the Create Renewal button entirely when Pending; disable when Closed
-          if (btnEl) {
-            if (rawStatus === 'pending') {
-              btnEl.classList.add('hidden');
-              btnEl.disabled = true;
-              btnEl.onclick = null;
-            } else if (rawStatus === 'closed') {
-              btnEl.classList.remove('hidden');
-              btnEl.disabled = true;
-              btnEl.classList.add('opacity-60','cursor-not-allowed');
-              btnEl.title = 'Disabled because business is Closed.';
-              btnEl.onclick = null;
-            } else {
-              btnEl.classList.remove('hidden');
-            }
-          }
-
-          if (due && !hideTotals) {
-            if (rowEl) rowEl.classList.remove('hidden');
-            if (totalEl) totalEl.textContent = (rs.renewal_total != null) ? fmt(rs.renewal_total) : '—';
-            if (btnEl) {
-              if (blockedByStatus) {
-                btnEl.disabled = true;
-                btnEl.classList.add('opacity-60','cursor-not-allowed');
-                btnEl.title = (rawStatus === 'pending') ? 'Disabled because business is Pending.' : 'Disabled because business is Closed.';
-              } else {
-                btnEl.disabled = false;
-                btnEl.classList.remove('opacity-60','cursor-not-allowed');
-                btnEl.removeAttribute('title');
-              }
-            }
-
-            // Breakdown rendering
-            const det = rs.renewal_total_details;
-            const items = Array.isArray(det) ? det : (det && typeof det === 'object' ? Object.values(det) : []);
-            if (items && items.length && bdWrap && bdBody) {
-              bdWrap.classList.remove('hidden');
-              for (const it of items) {
-                const tr = document.createElement('tr');
-                const tdL = document.createElement('td');
-                const tdR = document.createElement('td');
-                tdL.className = 'px-3 py-2 text-gray-700';
-                tdR.className = 'px-3 py-2 text-right font-medium text-gray-900';
-                const lbl = humanize(labelFrom(it,'label'));
-                const amt = (it && (it.amount ?? it.total ?? it.value));
-                tdL.textContent = lbl;
-                tdR.textContent = (amt !== undefined && amt !== null) ? fmt(amt) : '—';
-                tr.appendChild(tdL); tr.appendChild(tdR);
-                bdBody.appendChild(tr);
-              }
-              if (bdTgl) {
-                bdTgl.onclick = () => { bdDiv.classList.toggle('hidden'); bdTgl.querySelector('svg').classList.toggle('rotate-180'); bdTgl.lastChild.textContent = bdDiv.classList.contains('hidden') ? 'View breakdown' : 'Hide breakdown'; };
-              }
-            }
-          } else {
-            if (rowEl) rowEl.classList.add('hidden');
-            if (bdWrap) bdWrap.classList.add('hidden');
-          }
-        } else {
-          if (infoEl) infoEl.textContent = 'Could not load renewal summary.';
-          if (rowEl) rowEl.classList.add('hidden');
-        }
-        if (loadEl) loadEl.classList.add('hidden');
-      } catch (e) {
-        const infoEl = document.getElementById('mbv_renewal_info');
-        if (infoEl) infoEl.textContent = 'Could not load renewal summary.';
-        ['mbv_renewal_total_row','mbv_renewal_breakdown_wrap'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
-        const loadEl = document.getElementById('mbv_renewal_loading');
-        if (loadEl) loadEl.classList.add('hidden');
-        const btnEl  = document.getElementById('btnRenewalPreview');
-        if (btnEl) { btnEl.disabled = true; btnEl.classList.add('opacity-60','cursor-not-allowed'); }
-      }
-
-      // Wire up Renewal Preview button
-      const renewBtn = document.getElementById('btnRenewalPreview');
-      if (renewBtn) {
-        const id = String(pick(d, ['business_id','id']));
-        const statusLower = rawStatus;
-        if (statusLower === 'pending') {
-          // hide completely when Pending
-          renewBtn.classList.add('hidden');
-          renewBtn.disabled = true;
-          renewBtn.onclick = null;
-        } else if (statusLower === 'closed') {
-          // keep visible but disabled when Closed
-          renewBtn.classList.remove('hidden');
-          renewBtn.disabled = true;
-          renewBtn.classList.add('opacity-60','cursor-not-allowed');
-          renewBtn.title = 'Disabled for Pending/Closed business.';
-          renewBtn.onclick = null;
-        } else {
-          renewBtn.classList.remove('hidden');
-          renewBtn.onclick = () => openRenewalPreview(id);
-        }
-      }
-
-      // Wire up Registration create button (Pending only)
-      const regBtn2 = document.getElementById('btnRegistrationCreate');
-      if (regBtn2) {
-        const id = String(pick(d, ['business_id','id']));
-        if (rawStatus === 'pending') {
-          regBtn2.classList.remove('hidden');
-          regBtn2.onclick = () => openRegistrationPreview(id);
-        } else {
-          regBtn2.onclick = null;
-          regBtn2.classList.add('hidden');
-        }
-      }
-
-      // Enable/disable Reprint button by status
-      const reBtn = document.getElementById('btnReprintClearance');
-      if (reBtn) {
-        const enable = (rawStatus === 'active');
-        reBtn.disabled = !enable;
-        reBtn.classList.toggle('bg-gray-200', !enable);
-        reBtn.classList.toggle('text-gray-500', !enable);
-        reBtn.classList.toggle('cursor-not-allowed', !enable);
-        reBtn.classList.toggle('bg-blue-600', enable);
-        reBtn.classList.toggle('hover:bg-blue-700', enable);
-        reBtn.classList.toggle('text-white', enable);
-        if (enable) {
-          const id = String(pick(d, ['business_id','id']));
-          reBtn.onclick = () => openReprintPreview(id);
-        } else {
-          reBtn.onclick = null;
-        }
-      }
-
-      // Switch from loading overlay to the fully populated modal
-      closeModal('modalBusinessLoading');
-      openModal('modalBusinessView');
-    } catch (err) {
-      console.error('View fetch error:', err);
-      closeModal('modalBusinessLoading');
-      alert("Network error while loading business details. Check console/network tab.");
-    }
-  }
+  // Removed legacy View Business modal logic; detail now opens as a standalone page.
 
   // CSRF helper
   function getCookie(name) {
@@ -1414,7 +708,7 @@
       modal.classList.remove('flex');
       alertBox.className = 'hidden';
       alertBox.textContent = '';
-      const anyOpen = document.querySelector('#modalBusinessView:not(.hidden), #updateBusinessModal:not(.hidden), #modalPaymentHistory:not(.hidden)');
+      const anyOpen = document.querySelector('#updateBusinessModal:not(.hidden)');
       if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
     }
 
@@ -1471,7 +765,6 @@
 
       if (res.ok && payload.ok) {
         alert(payload.message || "Business marked as Closed.");
-        closeModal('modalBusinessView');
         window.location.reload();
       } else {
         alert((payload && payload.message) || text || "Failed to close business.");
@@ -1482,623 +775,239 @@
     }
   }
 
-  // ------------------------
-  // RENEWAL PREVIEW FLOW
-  // ------------------------
-  async function openRenewalPreview(businessId){
-    if (!businessId) return;
-    const loading = document.getElementById('rp_loading');
-    const content = document.getElementById('rp_content');
-    const tbody = document.getElementById('rp_tbody');
-    const total = document.getElementById('rp_total');
-    const alertBox = document.getElementById('rp_alert');
-    const createBtn = document.getElementById('rp_create_btn');
-    const summaryBox = document.getElementById('rp_summary');
 
-    // reset
-    alertBox.className = 'hidden';
-    alertBox.textContent = '';
-    tbody.innerHTML = '';
-    total.textContent = '';
-    loading.classList.remove('hidden');
-    content.classList.add('hidden');
-
-    openModal('modalRenewalPreview');
-
-    try {
-      const url = "{% url 'secretary_module:preview_business_clearance' %}";
-      const form = new FormData();
-      form.append('business_id', String(businessId));
-      form.append('purpose', 'Renewal');
-      form.append('videoke_qty', '0');
-      form.append('billiard_qty', '0');
-      form.append('other_device_qty', '0');
-
-      const res = await fetch(url, {
-        method: 'POST',
-        body: form,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCsrfToken()
-        },
-        credentials: 'same-origin'
+  function parseBreakdown(raw, totalAmount){
+    const humanize = (s) => {
+      if (!s || typeof s !== 'string') return 'Item';
+      const t = s.replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    };
+    const labelFrom = (obj, fallbackKey) => {
+      const cand = obj?.label ?? obj?.name ?? obj?.description ?? obj?.title ?? obj?.text ?? obj?.key ?? obj?.type ?? obj?.category ?? obj?.code ?? obj?.item ?? obj?.line ?? obj?.caption ?? null;
+      if (cand) return humanize(String(cand));
+      if (fallbackKey) return humanize(String(fallbackKey));
+      return 'Item';
+    };
+    const nearlyEqual = (a, b) => Math.abs(Number(a||0) - Number(b||0)) < 0.005;
+    const toRows = (input) => {
+      if (input == null) return [];
+      let details = input;
+      if (typeof details === 'string') { try { details = JSON.parse(details); } catch { return []; } }
+      const rows = [];
+      const pushObj = (fallbackKey, obj) => {
+        if (!obj) return;
+        const amount = obj.amount ?? obj.value ?? obj.total ?? obj.price ?? null;
+        const display = obj.amount_display ?? obj.display ?? null;
+        const each = obj.each ?? obj.unit_price ?? obj.price_each ?? obj.per_unit ?? obj.rate ?? null;
+        const qty = obj.qty ?? obj.quantity ?? obj.count ?? null;
+        const monthsLate = obj.months_late ?? obj.monthsLate ?? null;
+        const monthlyRate = obj.monthly_interest_percent ?? obj.monthlyInterestPercent ?? null;
+        const baseAmount = obj.interest_base_amount ?? obj.interestBaseAmount ?? null;
+        rows.push({ label: labelFrom(obj, fallbackKey), amount, display, each, qty, monthsLate, monthlyRate, baseAmount, isTotal: !!(obj.is_total || /total/i.test(obj?.label || obj?.name || fallbackKey || '')) });
+      };
+      if (Array.isArray(details)) { for (const it of details) pushObj(undefined, it); return rows; }
+      if (details && typeof details === 'object') {
+        const nested = details.items || details.details || details.breakdown || details.lines;
+        if (Array.isArray(nested)) return toRows(nested);
+        for (const [k, v] of Object.entries(details)) {
+          if (typeof v === 'number') rows.push({ label: humanize(k), amount: v, isTotal: /total/i.test(k) }); else pushObj(k, v);
+        }
+      }
+      return rows;
+    };
+    let rows = toRows(raw);
+    if (rows.length > 1) {
+      rows = rows.filter((r, idx, arr) => {
+        if (r.isTotal) return false;
+        if (nearlyEqual(r.amount, totalAmount)) {
+          const others = arr.filter((_x, j) => j !== idx);
+          const sum = others.reduce((a, b) => a + Number(b.amount || 0), 0);
+          if (nearlyEqual(sum, r.amount)) return false;
+        }
+        return true;
       });
-      const ct = res.headers.get('content-type') || '';
-      const rawText = await res.text();
-      let data = {};
-      if (ct.includes('application/json')) {
-        try { data = JSON.parse(rawText); } catch(e){ throw new Error('Invalid JSON in preview response'); }
-      } else {
-        throw new Error('Server returned non-JSON (possible CSRF or permission issue).');
-      }
-      if (!res.ok || !data || data.ok === false) throw new Error((data && (data.message || data.error)) || 'Failed to load preview');
-
-      // Business summary (pull from view modal if present)
-      if (summaryBox) {
-        const name = document.getElementById('mbv_business_name')?.textContent || '';
-        const bid  = document.getElementById('mbv_business_id')?.textContent || businessId;
-        const status = document.getElementById('mbv_business_status')?.textContent || '';
-        const addr = document.getElementById('mbv_address')?.textContent || '';
-        summaryBox.innerHTML = `
-          <div class="font-semibold text-gray-900 text-sm">${name} — <span class="font-normal">Renewal</span></div>
-          <div>Business ID: <span class="font-medium">${bid}</span> | Status: <span class="font-medium">${status}</span></div>
-          <div class="flex items-start gap-1"><span class="text-gray-400">📍</span><span>${addr}</span></div>
-        `;
-      }
-      // Render breakdown rows into table with better labels and deduped grand total
-      const humanize = (s) => {
-        if (!s || typeof s !== 'string') return 'Item';
-        const t = s.replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
-        return t.charAt(0).toUpperCase() + t.slice(1);
-      };
-      const labelFrom = (obj, fallbackKey) => {
-        const cand = obj?.label ?? obj?.name ?? obj?.description ?? obj?.title ?? obj?.text ?? obj?.key ?? obj?.type ?? obj?.category ?? obj?.code ?? obj?.item ?? obj?.line ?? obj?.caption ?? null;
-        if (cand) return humanize(String(cand));
-        if (fallbackKey) return humanize(String(fallbackKey));
-        return 'Item';
-      };
-      const nearlyEqual = (a, b) => Math.abs(Number(a||0) - Number(b||0)) < 0.005;
-      const pesosFmt = (v, display) => {
-        if (display && typeof display === 'string') return display;
-        const num = (typeof v === 'number') ? v : Number(v || 0);
-        return `₱${num.toFixed(2)}`;
-      };
-      const toRows = (raw) =>           {
-        if (raw == null) return [];
-        let details = raw;
-        if (typeof details === 'string') {
-          try { details = JSON.parse(details); } catch { return []; }
-        }
-        const rows = [];
-        const pushObj = (fallbackKey, obj) => {
-          if (obj == null) return;
-          const amount = obj.amount ?? obj.value ?? obj.total ?? obj.price ?? null;
-          const display = obj.amount_display ?? obj.display ?? null;
-          const each = obj.each ?? obj.unit_price ?? obj.price_each ?? obj.per_unit ?? obj.rate ?? null;
-          const qty = obj.qty ?? obj.quantity ?? obj.count ?? null;
-          rows.push({ label: labelFrom(obj, fallbackKey), amount, display, each, qty, isTotal: !!(obj.is_total || /total/i.test(obj?.label || obj?.name || fallbackKey || '')) });
-        };
-        if (Array.isArray(details)) {
-          for (const it of details) pushObj(undefined, it);
-          return rows;
-        }
-        if (details && typeof details === 'object') {
-          const nested = details.items || details.details || details.breakdown || details.lines;
-          if (Array.isArray(nested)) return toRows(nested);
-          for (const [k, v] of Object.entries(details)) {
-            if (typeof v === 'number') rows.push({ label: humanize(k), amount: v, isTotal: /total/i.test(k) });
-            else pushObj(k, v);
-          }
-        }
-        return rows;
-      };
-      let rows = toRows(data.total_amount_details);
-      // Remove duplicated grand total row if present in details
-      if (rows.length > 1) {
-        rows = rows.filter((r, idx, arr) => {
-          if (r.isTotal) return false;
-          if (nearlyEqual(r.amount, data.total_amount)) {
-            const others = arr.filter((_x, j) => j !== idx);
-            const sum = others.reduce((a, b) => a + Number(b.amount || 0), 0);
-            if (nearlyEqual(sum, r.amount)) return false;
-          }
-          return true;
-        });
-      }
-      
-      
-      if (rows.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="px-3 py-2 border border-gray-200 text-gray-500" colspan="2">No breakdown returned.</td>`;
-        tbody.appendChild(tr);
-      } else {
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          const labelText = (r.each !== null && r.each !== undefined)
-            ? `${r.label} (₱${Number(r.each || 0).toFixed(2)} Each)`
-            : r.label;
-          tr.innerHTML = `<td class="px-3 py-2 border border-gray-200">${labelText}</td><td class="px-3 py-2 border border-gray-200 text-right">${pesosFmt(r.amount, r.display)}</td>`;
-          tbody.appendChild(tr);
-        }
-      }
-      total.textContent = `₱${Number(data.total_amount || 0).toFixed(2)}`;
-      loading.classList.add('hidden');
-      content.classList.remove('hidden');
-
-      // Create button: POST to renewal endpoint and show result modal
-      createBtn.onclick = async () => {
-        createBtn.disabled = true;
-        createBtn.textContent = 'Creating…';
-        try {
-          const createUrl = "{% url 'secretary_module:create_renewal_business_clearance' %}";
-          const cform = new FormData();
-          cform.append('business_id', String(businessId));
-          const cres = await fetch(createUrl, {
-            method: 'POST',
-            body: cform,
-            headers: { 'X-CSRFToken': getCsrfToken() },
-            credentials: 'same-origin'
-          });
-          const ct = cres.headers.get('content-type') || '';
-          const ctext = await cres.text();
-          let cdata = {};
-          if (ct.includes('application/json')) {
-            try { cdata = JSON.parse(ctext); } catch(_) {}
-          }
-
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-
-          if (cres.ok && cdata && cdata.ok) {
-            const appId = cdata.application_id;
-            if (titleEl) titleEl.textContent = 'Renewal Request Created';
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-2';
-              msgEl.textContent = `The renewal application was created successfully. Application ID: ${appId}.`;
-            }
-            if (linksEl) {
-              const detailUrlTpl = "{% url 'secretary_module:application_detail' 0 %}";
-              const detailUrl = detailUrlTpl.replace('/0/', '/' + String(appId) + '/');
-              linksEl.innerHTML = `
-                <a href="${detailUrl}" class="text-indigo-600 hover:text-indigo-700 underline">View application details</a>
-              `;
-            }
-            closeModal('modalRenewalPreview');
-            openModal('modalActionResult');
-          } else {
-            const errMsg = (cdata && (cdata.message || cdata.error)) || ctext || 'Failed to create renewal request.';
-            if (titleEl) titleEl.textContent = "Couldn't Create Renewal";
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-              msgEl.textContent = errMsg;
-            }
-            if (linksEl) linksEl.innerHTML = '';
-            openModal('modalActionResult');
-            createBtn.disabled = false;
-            createBtn.textContent = 'Create Renewal Request';
-          }
-        } catch (err) {
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-          if (titleEl) titleEl.textContent = "Couldn't Create Renewal";
-          if (msgEl) {
-            msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-            msgEl.textContent = String(err && err.message ? err.message : err);
-          }
-          if (linksEl) linksEl.innerHTML = '';
-          openModal('modalActionResult');
-          createBtn.disabled = false;
-          createBtn.textContent = 'Create Renewal Request';
-        }
-      };
-    } catch (err) {
-      loading.classList.add('hidden');
-      alertBox.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-      alertBox.textContent = String(err && err.message ? err.message : err);
     }
+    return rows;
   }
 
-  // ------------------------
-  // REPRINT PREVIEW FLOW
-  // ------------------------
-  async function openReprintPreview(businessId){
-    if (!businessId) return;
-    const loading = document.getElementById('rpp_loading');
-    const content = document.getElementById('rpp_content');
-    const tbody = document.getElementById('rpp_tbody');
-    const total = document.getElementById('rpp_total');
-    const alertBox = document.getElementById('rpp_alert');
-    const createBtn = document.getElementById('rpp_create_btn');
-    const summaryBox = document.getElementById('rpp_summary');
+  function pesosFmt(v, display){
+    if (display && typeof display === 'string') return display;
+    const num = (typeof v === 'number') ? v : Number(v || 0);
+    return `₱${num.toFixed(2)}`;
+  }
 
-    alertBox.className = 'hidden';
-    alertBox.textContent = '';
-    tbody.innerHTML = '';
-    total.textContent = '';
-    loading.classList.remove('hidden');
-    content.classList.add('hidden');
-
-    openModal('modalReprintPreview');
-
+  async function fetchBusinessBasics(businessId){
     try {
+      const tpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+      const url = tpl.replace('99999', String(businessId));
+      const resp = await fetch(url, { headers: { 'Accept':'application/json' }, credentials: 'same-origin' });
+      if (!resp.ok) return null;
+      const ct = resp.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) return null;
+      return await resp.json();
+    } catch { return null; }
+  }
+
+  // ------- Smooth navigation to Business Detail -------
+  function showPageLoader(msg){
+    const ov = document.getElementById('pageLoadingOverlay');
+    const txt = document.getElementById('pageLoadingText');
+    if (txt && msg) txt.textContent = msg;
+    if (ov) ov.classList.remove('hidden');
+  }
+  function hidePageLoader(){
+    const ov = document.getElementById('pageLoadingOverlay');
+    if (ov) ov.classList.add('hidden');
+  }
+  function goToBusinessDetail(ev, businessId, url){
+    if (ev) ev.preventDefault();
+    // Show immediate feedback
+    showPageLoader('Opening business…');
+
+    // Best-effort prefetch to warm backend and keep UI engaged
+    try {
+      const tpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
+      const detailUrl = tpl.replace('99999', String(businessId));
+      const prefetch = fetch(detailUrl, { headers: { 'Accept':'application/json' }, credentials: 'same-origin' }).catch(() => {});
+      const delay = new Promise(r => setTimeout(r, 200));
+      Promise.race([prefetch, delay]).finally(() => { window.location.href = url; });
+    } catch (_) {
+      // Fallback: navigate right away
+      window.location.href = url;
+    }
+    return false;
+  }
+
+  // ------- Business Closure Flow -------
+  let __cl_business_id = null;
+  function showClAlert(ok, msg){
+    const el = document.getElementById('cl_alert');
+    if (!el) return;
+    el.className = 'rounded-md px-3 py-2 text-sm ' + (ok ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-rose-50 text-rose-800 ring-1 ring-rose-200');
+    el.textContent = msg || '';
+    el.classList.remove('hidden');
+  }
+
+  function openClosureModal(businessId, statusRaw){
+    __cl_business_id = businessId;
+    const status = String(statusRaw||'').toLowerCase();
+    const title = document.getElementById('cl_title');
+    const alertEl = document.getElementById('cl_alert');
+    const confirmBlk = document.getElementById('cl_confirm');
+    const previewWrap = document.getElementById('cl_preview_wrap');
+    const loading = document.getElementById('cl_loading');
+    const preview = document.getElementById('cl_preview');
+    const createBtn = document.getElementById('cl_create_btn');
+    const confirmBtn = document.getElementById('cl_confirm_btn');
+
+    // Reset UI
+    if (alertEl) { alertEl.className = 'hidden'; alertEl.textContent = ''; }
+    if (confirmBlk) confirmBlk.classList.add('hidden');
+    if (previewWrap) previewWrap.classList.add('hidden');
+    if (preview) preview.classList.add('hidden');
+    if (loading) loading.classList.add('hidden');
+    if (createBtn) { createBtn.classList.add('hidden'); createBtn.disabled = false; createBtn.textContent = 'Create Closure Request'; }
+    if (confirmBtn) { confirmBtn.classList.add('hidden'); confirmBtn.disabled = false; confirmBtn.textContent = 'Close Business'; }
+
+    if (status === 'inactive'){
+      if (title) title.textContent = 'Business Closure — Payment Preview';
+      if (previewWrap) previewWrap.classList.remove('hidden');
+      if (loading) loading.classList.remove('hidden');
+      if (createBtn) createBtn.classList.remove('hidden');
+      // Load preview
+      loadClosurePreview(businessId);
+    } else {
+      if (title) title.textContent = 'Close Business';
+      if (confirmBlk) confirmBlk.classList.remove('hidden');
+      if (confirmBtn) {
+        confirmBtn.classList.remove('hidden');
+        confirmBtn.onclick = () => closeBusiness(businessId);
+      }
+    }
+    openModal('modalClosure');
+  }
+
+  async function loadClosurePreview(businessId){
+    const tbody = document.getElementById('cl_tbody');
+    const total = document.getElementById('cl_total');
+    const loading = document.getElementById('cl_loading');
+    const preview = document.getElementById('cl_preview');
+    const summary = document.getElementById('cl_summary');
+    if (tbody) tbody.innerHTML=''; if (total) total.textContent='';
+    try{
       const url = "{% url 'secretary_module:preview_business_clearance' %}";
       const form = new FormData();
       form.append('business_id', String(businessId));
-      form.append('purpose', 'Reprint');
-      // quantities ignored for Reprint (DB pulls from Business)
-
-      const res = await fetch(url, {
-        method: 'POST',
-        body: form,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCsrfToken()
-        },
-        credentials: 'same-origin'
-      });
-      const ct = res.headers.get('content-type') || '';
-      const rawText = await res.text();
-      let data = {};
-      if (ct.includes('application/json')) {
-        try { data = JSON.parse(rawText); } catch(e){ throw new Error('Invalid JSON in preview response'); }
-      } else {
-        throw new Error('Server returned non-JSON (possible CSRF or permission issue).');
-      }
-      if (!res.ok || !data || data.ok === false) throw new Error((data && (data.message || data.error)) || 'Failed to load preview');
-      // Business summary
-      if (summaryBox) {
-        const name = document.getElementById('mbv_business_name')?.textContent || '';
-        const bid  = document.getElementById('mbv_business_id')?.textContent || businessId;
-        const status = document.getElementById('mbv_business_status')?.textContent || '';
-        const addr = document.getElementById('mbv_address')?.textContent || '';
-        summaryBox.innerHTML = `
-          <div class="font-semibold text-gray-900 text-sm">${name} — <span class="font-normal">Reprint</span></div>
-          <div>Business ID: <span class="font-medium">${bid}</span> | Status: <span class="font-medium">${status}</span></div>
-          <div class="flex items-start gap-1"><span class="text-gray-400">📍</span><span>${addr}</span></div>
-        `;
-      }
-      // Render breakdown rows into table with better labels and deduped grand total
-      const humanize = (s) => {
-        if (!s || typeof s !== 'string') return 'Item';
-        const t = s.replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
-        return t.charAt(0).toUpperCase() + t.slice(1);
-      };
-      const labelFrom = (obj, fallbackKey) => {
-        const cand = obj?.label ?? obj?.name ?? obj?.description ?? obj?.title ?? obj?.text ?? obj?.key ?? obj?.type ?? obj?.category ?? obj?.code ?? obj?.item ?? obj?.line ?? obj?.caption ?? null;
-        if (cand) return humanize(String(cand));
-        if (fallbackKey) return humanize(String(fallbackKey));
-        return 'Item';
-      };
-      const nearlyEqual = (a, b) => Math.abs(Number(a||0) - Number(b||0)) < 0.005;
-      const pesosFmt = (v, display) => {
-        if (display && typeof display === 'string') return display;
-        const num = (typeof v === 'number') ? v : Number(v || 0);
-        return `₱${num.toFixed(2)}`;
-      };
-      const toRows = (raw) => {
-        if (raw == null) return [];
-        let details = raw;
-        if (typeof details === 'string') {
-          try { details = JSON.parse(details); } catch { return []; }
-        }
-        const rows = [];
-        const pushObj = (fallbackKey, obj) => {
-          if (obj == null) return;
-          const amount = obj.amount ?? obj.value ?? obj.total ?? obj.price ?? null;
-          const display = obj.amount_display ?? obj.display ?? null;
-          const each = obj.each ?? obj.unit_price ?? obj.price_each ?? obj.per_unit ?? obj.rate ?? null;
-          const qty = obj.qty ?? obj.quantity ?? obj.count ?? null;
-          rows.push({ label: labelFrom(obj, fallbackKey), amount, display, each, qty, isTotal: !!(obj.is_total || /total/i.test(obj?.label || obj?.name || fallbackKey || '')) });
-        };
-        if (Array.isArray(details)) {
-          for (const it of details) pushObj(undefined, it);
-          return rows;
-        }
-        if (details && typeof details === 'object') {
-          const nested = details.items || details.details || details.breakdown || details.lines;
-          if (Array.isArray(nested)) return toRows(nested);
-          for (const [k, v] of Object.entries(details)) {
-            if (typeof v === 'number') rows.push({ label: humanize(k), amount: v, isTotal: /total/i.test(k) });
-            else pushObj(k, v);
+      form.append('purpose', 'Business Closure');
+      const res = await fetch(url, { method:'POST', body: form, headers: {'X-CSRFToken': getCsrfToken()}, credentials: 'same-origin' });
+      const ct = res.headers.get('content-type')||''; const raw = await res.text();
+      let data={}; if (ct.includes('application/json')){ try{ data=JSON.parse(raw);}catch(e){ throw new Error('Invalid JSON in preview response'); } } else { throw new Error('Non-JSON response'); }
+      if (!res.ok || !data || data.ok===false) throw new Error((data && (data.message||data.error))||'Failed to load preview');
+      const drows = parseBreakdown(data.total_amount_details ?? data, Number((data.total_amount ?? data.total ?? (data.total_amount_details && (data.total_amount_details.total ?? data.total_amount_details.amount)) ?? 0)));
+      const purpose = (data && (data.purpose)) || (data && data.total_amount_details && data.total_amount_details.purpose) || 'Business Closure';
+      if (summary) summary.textContent = `${purpose} dues breakdown`;
+      if (!drows || drows.length===0){ const tr=document.createElement('tr'); tr.innerHTML=`<td class="px-3 py-2 border border-gray-200 text-gray-500" colspan="2">No breakdown returned.</td>`; tbody.appendChild(tr); }
+      else {
+        for (const r of drows){
+          const tr=document.createElement('tr');
+          let labelText = (r.each!=null)?`${r.label} (₱${Number(r.each||0).toFixed(2)} Each)`:r.label;
+          if (r.monthsLate!=null || r.monthlyRate!=null){
+            const months = Number(r.monthsLate ?? 0);
+            const rate = Number(r.monthlyRate ?? 0);
+            const monthsText = `${months} month${months===1?'':'s'}`;
+            const rateText = `${rate.toFixed(2)}%/mo`;
+            labelText = `${labelText} — ${monthsText} @ ${rateText}`;
+            if (r.baseAmount != null) {
+              labelText = `${labelText} on ${pesosFmt(r.baseAmount)} base`;
+            }
           }
-        }
-        return rows;
-      };
-      let rows = toRows(data.total_amount_details);
-      // Remove duplicated grand total row if present in details
-      if (rows.length > 1) {
-        rows = rows.filter((r, idx, arr) => {
-          if (r.isTotal) return false;
-          if (nearlyEqual(r.amount, data.total_amount)) {
-            const others = arr.filter((_x, j) => j !== idx);
-            const sum = others.reduce((a, b) => a + Number(b.amount || 0), 0);
-            if (nearlyEqual(sum, r.amount)) return false;
-          }
-          return true;
-        });
-      }
-      if (rows.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class=\"px-3 py-2 border border-gray-200 text-gray-500\" colspan=\"2\">No breakdown returned.</td>`;
-        tbody.appendChild(tr);
-      } else {
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          const labelText = (r.each !== null && r.each !== undefined)
-            ? `${r.label} (₱${Number(r.each || 0).toFixed(2)} Each)`
-            : r.label;
-          tr.innerHTML = `<td class=\"px-3 py-2 border border-gray-200\">${labelText}</td><td class=\"px-3 py-2 border border-gray-200 text-right\">${pesosFmt(r.amount, r.display)}</td>`;
+          tr.innerHTML=`<td class="px-3 py-2 border border-gray-200">${labelText}</td><td class="px-3 py-2 border border-gray-200 text-right">${pesosFmt(r.amount, r.display)}</td>`;
           tbody.appendChild(tr);
         }
       }
-      total.textContent = `₱${Number(data.total_amount || 0).toFixed(2)}`;
-      loading.classList.add('hidden');
-      content.classList.remove('hidden');
-
-      createBtn.onclick = async () => {
-        createBtn.disabled = true;
-        createBtn.textContent = 'Creating…';
-        try {
-          const createUrl = "{% url 'secretary_module:create_reprint_business_clearance' %}";
-          const cform = new FormData();
-          cform.append('business_id', String(businessId));
-          const cres = await fetch(createUrl, { method: 'POST', body: cform, headers: { 'X-CSRFToken': getCsrfToken() }, credentials: 'same-origin' });
-
-          const cct = cres.headers.get('content-type') || '';
-          const ctxt = await cres.text();
-          let cdata = {};
-          if (cct.includes('application/json')) { try { cdata = JSON.parse(ctxt); } catch(_){} }
-
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-
-          if (cres.ok && cdata && cdata.ok) {
-            const appId = cdata.application_id;
-            if (titleEl) titleEl.textContent = 'Reprint Request Created';
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-2';
-              msgEl.textContent = `The reprint application was created successfully. Application ID: ${appId}.`;
-            }
-            if (linksEl) {
-              const detailUrlTpl = "{% url 'secretary_module:application_detail' 0 %}";
-              const detailUrl = detailUrlTpl.replace('/0/', '/' + String(appId) + '/');
-              linksEl.innerHTML = `<a href="${detailUrl}" class="text-indigo-600 hover:text-indigo-700 underline">View application details</a>`;
-            }
-            closeModal('modalReprintPreview');
-            openModal('modalActionResult');
-          } else {
-            const errMsg = (cdata && (cdata.message || cdata.error)) || ctxt || 'Failed to create reprint request.';
-            if (titleEl) titleEl.textContent = "Couldn't Create Reprint";
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-              msgEl.textContent = errMsg;
-            }
-            if (linksEl) linksEl.innerHTML = '';
-            openModal('modalActionResult');
-            createBtn.disabled = false;
-            createBtn.textContent = 'Create Reprint Request';
-          }
-        } catch (err) {
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-          if (titleEl) titleEl.textContent = "Couldn't Create Reprint";
-          if (msgEl) {
-            msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-            msgEl.textContent = String(err && err.message ? err.message : err);
-          }
-          if (linksEl) linksEl.innerHTML = '';
-          openModal('modalActionResult');
-          createBtn.disabled = false;
-          createBtn.textContent = 'Create Reprint Request';
-        }
-      };
-    } catch (err) {
-      loading.classList.add('hidden');
-      alertBox.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-      alertBox.textContent = String(err && err.message ? err.message : err);
-    }
+      if (total) {
+        const totalNum = Number(
+          (data && (data.total_amount ?? data.total))
+          ?? (data && data.total_amount_details && (data.total_amount_details.total ?? data.total_amount_details.amount))
+          ?? 0
+        );
+        total.textContent = pesosFmt(totalNum);
+      }
+      if (loading) loading.classList.add('hidden'); if (preview) preview.classList.remove('hidden');
+      const createBtn = document.getElementById('cl_create_btn');
+      if (createBtn){
+        createBtn.onclick = () => createClosureRequest(businessId);
+      }
+    } catch(err){ if (loading) loading.classList.add('hidden'); showClAlert(false, String(err && err.message ? err.message : err)); }
   }
 
-  // ------------------------
-  // REGISTRATION PREVIEW FLOW
-  // ------------------------
-  async function openRegistrationPreview(businessId){
-    if (!businessId) return;
-    const loading = document.getElementById('rgp_loading');
-    const content = document.getElementById('rgp_content');
-    const tbody = document.getElementById('rgp_tbody');
-    const total = document.getElementById('rgp_total');
-    const alertBox = document.getElementById('rgp_alert');
-    const createBtn = document.getElementById('rgp_create_btn');
-    const summaryBox = document.getElementById('rgp_summary');
-
-    alertBox.className = 'hidden';
-    alertBox.textContent = '';
-    tbody.innerHTML = '';
-    total.textContent = '';
-    loading.classList.remove('hidden');
-    content.classList.add('hidden');
-
-    openModal('modalRegistrationPreview');
-
-    try {
-      const url = "{% url 'secretary_module:preview_business_clearance' %}";
-      const form = new FormData();
-      form.append('business_id', String(businessId));
-      form.append('purpose', 'Registration');
-      form.append('videoke_qty', '0');
-      form.append('billiard_qty', '0');
-      form.append('other_device_qty', '0');
-
-      const res = await fetch(url, { method: 'POST', body: form, headers: { 'X-CSRFToken': getCsrfToken() }, credentials: 'same-origin' });
-      const ct = res.headers.get('content-type') || '';
-      const rawText = await res.text();
-      let data = {};
-      if (ct.includes('application/json')) {
-        try { data = JSON.parse(rawText); } catch(e){ throw new Error('Invalid JSON in preview response'); }
-      } else { throw new Error('Non-JSON response received'); }
-      if (!res.ok || !data || data.ok === false) throw new Error((data && (data.message || data.error)) || 'Failed to load preview');
-
-      // Summary styled consistently with other previews
-      if (summaryBox) {
-        const name = document.getElementById('mbv_business_name')?.textContent || '';
-        const bid  = document.getElementById('mbv_business_id')?.textContent || businessId;
-        const status = document.getElementById('mbv_business_status')?.textContent || '';
-        const addr = document.getElementById('mbv_address')?.textContent || '';
-        summaryBox.innerHTML = `
-          <div class="font-semibold text-gray-900 text-sm">${name} — <span class="font-normal">Registration</span></div>
-          <div>Business ID: <span class="font-medium">${bid}</span> | Status: <span class="font-medium">${status}</span></div>
-          <div class="flex items-start gap-1"><span class="text-gray-400">📍</span><span>${addr}</span></div>
-        `;
-      }
-
-      // Use the same robust breakdown parsing as Renewal/Reprint
-      const humanize = (s) => {
-        if (!s || typeof s !== 'string') return 'Item';
-        const t = s.replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
-        return t.charAt(0).toUpperCase() + t.slice(1);
-      };
-      const labelFrom = (obj, fallbackKey) => {
-        const cand = obj?.label ?? obj?.name ?? obj?.description ?? obj?.title ?? obj?.text ?? obj?.key ?? obj?.type ?? obj?.category ?? obj?.code ?? obj?.item ?? obj?.line ?? obj?.caption ?? null;
-        if (cand) return humanize(String(cand));
-        if (fallbackKey) return humanize(String(fallbackKey));
-        return 'Item';
-      };
-      const nearlyEqual = (a, b) => Math.abs(Number(a||0) - Number(b||0)) < 0.005;
-      const pesosFmt = (v, display) => {
-        if (display && typeof display === 'string') return display;
-        const num = (typeof v === 'number') ? v : Number(v || 0);
-        return `₱${num.toFixed(2)}`;
-      };
-      const toRows = (raw) => {
-        if (raw == null) return [];
-        let details = raw;
-        if (typeof details === 'string') {
-          try { details = JSON.parse(details); } catch { return []; }
-        }
-        const rows = [];
-        const pushObj = (fallbackKey, obj) => {
-          if (obj == null) return;
-          const amount = obj.amount ?? obj.value ?? obj.total ?? obj.price ?? null;
-          const display = obj.amount_display ?? obj.display ?? null;
-          const each = obj.each ?? obj.unit_price ?? obj.price_each ?? obj.per_unit ?? obj.rate ?? null;
-          const qty = obj.qty ?? obj.quantity ?? obj.count ?? null;
-          rows.push({ label: labelFrom(obj, fallbackKey), amount, display, each, qty, isTotal: !!(obj.is_total || /total/i.test(obj?.label || obj?.name || fallbackKey || '')) });
-        };
-        if (Array.isArray(details)) {
-          for (const it of details) pushObj(undefined, it);
-          return rows;
-        }
-        if (details && typeof details === 'object') {
-          const nested = details.items || details.details || details.breakdown || details.lines;
-          if (Array.isArray(nested)) return toRows(nested);
-          for (const [k, v] of Object.entries(details)) {
-            if (typeof v === 'number') rows.push({ label: humanize(k), amount: v, isTotal: /total/i.test(k) });
-            else pushObj(k, v);
-          }
-        }
-        return rows;
-      };
-      let rows = toRows(data.total_amount_details);
-      // Remove duplicated grand total row if present in details
-      if (rows.length > 1) {
-        rows = rows.filter((r, idx, arr) => {
-          if (r.isTotal) return false;
-          if (nearlyEqual(r.amount, data.total_amount)) {
-            const others = arr.filter((_x, j) => j !== idx);
-            const sum = others.reduce((a, b) => a + Number(b.amount || 0), 0);
-            if (nearlyEqual(sum, r.amount)) return false;
-          }
-          return true;
-        });
-      }
-      if (rows.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="px-3 py-2 border border-gray-200 text-gray-500" colspan="2">No breakdown returned.</td>`;
-        tbody.appendChild(tr);
+  async function createClosureRequest(businessId){
+    const btn = document.getElementById('cl_create_btn');
+    if (btn){ btn.disabled=true; btn.textContent='Creating…'; }
+    try{
+      const url = "{% url 'secretary_module:create_closure_business_clearance' %}";
+      const form = new FormData(); form.append('business_id', String(businessId));
+      const res = await fetch(url, { method:'POST', body: form, headers: {'X-CSRFToken': getCsrfToken()}, credentials: 'same-origin' });
+      const ct = res.headers.get('content-type')||''; const raw = await res.text();
+      let data={}; if (ct.includes('application/json')){ try{ data=JSON.parse(raw);}catch(_){} }
+      if (res.ok && data && data.ok){
+        showClAlert(true, 'Closure application created successfully.');
+        const appId = data.application_id;
+        // Offer a quick link if route exists
+        try{
+          const t = "{% url 'secretary_module:application_detail' 0 %}"; const u = t.replace('/0/','/'+String(appId)+'/');
+          showClAlert(true, `Closure application created. Application ID: ${appId}. You may now proceed to payment.\n`);
+          // Auto-navigate after short delay
+          setTimeout(()=>{ window.location.href = u; }, 800);
+        } catch(_){}
       } else {
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          const labelText = (r.each !== null && r.each !== undefined)
-            ? `${r.label} (₱${Number(r.each || 0).toFixed(2)} Each)`
-            : r.label;
-          tr.innerHTML = `<td class=\"px-3 py-2 border border-gray-200\">${labelText}</td><td class=\"px-3 py-2 border border-gray-200 text-right\">${pesosFmt(r.amount, r.display)}</td>`;
-          tbody.appendChild(tr);
-        }
+        const msg = (data && (data.message||data.error)) || raw || 'Failed to create closure request.';
+        showClAlert(false, msg);
+        if (btn){ btn.disabled=false; btn.textContent='Create Closure Request'; }
       }
-      total.textContent = `₱${Number(data.total_amount || 0).toFixed(2)}`;
-      loading.classList.add('hidden');
-      content.classList.remove('hidden');
-
-      // Create button: POST to registration endpoint and show result modal
-      createBtn.onclick = async () => {
-        createBtn.disabled = true;
-        createBtn.textContent = 'Creating…';
-        try {
-          const createUrl = "{% url 'secretary_module:create_registration_business_clearance' %}";
-          const cform = new FormData();
-          cform.append('business_id', String(businessId));
-          const cres = await fetch(createUrl, { method: 'POST', body: cform, headers: { 'X-CSRFToken': getCsrfToken() }, credentials: 'same-origin' });
-          const cct = cres.headers.get('content-type') || '';
-          const ctxt = await cres.text();
-          let cdata = {};
-          if (cct.includes('application/json')) { try { cdata = JSON.parse(ctxt); } catch(_){} }
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-          if (cres.ok && cdata && cdata.ok) {
-            const appId = cdata.application_id;
-            if (titleEl) titleEl.textContent = 'Registration Request Created';
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-2';
-              msgEl.textContent = `The registration application was created successfully. Application ID: ${appId}.`;
-            }
-            if (linksEl) {
-              const detailUrlTpl = "{% url 'secretary_module:application_detail' 0 %}";
-              const detailUrl = detailUrlTpl.replace('/0/', '/' + String(appId) + '/');
-              linksEl.innerHTML = `<a href="${detailUrl}" class="text-indigo-600 hover:text-indigo-700 underline">View application details</a>`;
-            }
-            closeModal('modalRegistrationPreview');
-          } else {
-            const errMsg = (cdata && (cdata.message || cdata.error)) || ctxt || 'Failed to create registration request.';
-            if (titleEl) titleEl.textContent = "Couldn't Create Registration";
-            if (msgEl) {
-              msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-              msgEl.textContent = errMsg;
-            }
-            if (linksEl) linksEl.innerHTML = '';
-            // Ensure preview closes so error modal is visible (z-index conflict otherwise)
-            closeModal('modalRegistrationPreview');
-          }
-          openModal('modalActionResult');
-        } catch (err) {
-          const titleEl = document.getElementById('ar_title');
-          const msgEl   = document.getElementById('ar_message');
-          const linksEl = document.getElementById('ar_links');
-          if (titleEl) titleEl.textContent = "Couldn't Create Registration";
-          if (msgEl) {
-            msgEl.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-            msgEl.textContent = String(err && err.message ? err.message : err);
-          }
-          if (linksEl) linksEl.innerHTML = '';
-          // Close preview on network/exception errors so the result modal shows
-          closeModal('modalRegistrationPreview');
-          openModal('modalActionResult');
-        } finally {
-          createBtn.disabled = false;
-          createBtn.textContent = 'Create Registration Request';
-        }
-      };
-    } catch (err) {
-      loading.classList.add('hidden');
-      alertBox.className = 'rounded-md bg-rose-50 text-rose-800 ring-1 ring-rose-200 px-3 py-2';
-      alertBox.textContent = String(err && err.message ? err.message : err);
-    }
+    } catch(err){ showClAlert(false, String(err && err.message ? err.message : err)); if (btn){ btn.disabled=false; btn.textContent='Create Closure Request'; } }
   }
+
 </script>
 
 <style>
@@ -2110,7 +1019,8 @@
   .btn-blue:hover{filter:brightness(.95)}
   .btn-gray{background:#f3f4f6;color:#111827!important}
   .btn-gray:hover{background:#e5e7eb}
-  /* Utility for rotating icon in breakdown toggle */
-  #mbv_renewal_breakdown_toggle svg{transition:transform .2s}
+  .loader-spinner{width:2.25rem;height:2.25rem;border-radius:9999px;border:3px solid #e5e7eb;border-top-color:#ef4444;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* (Removed) no in-page renewal breakdown toggle on list */
 </style>
 {% endblock %}

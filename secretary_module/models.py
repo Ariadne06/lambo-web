@@ -978,14 +978,16 @@ class SecretaryHelpers:
             return dict(zip(cols, row)) if row else None
 
     @staticmethod
-    def set_application_to_completed(application_id: int) -> None:
-        """Wrapper for set_application_to_completed(p_application_id).
+    def set_application_to_completed(application_id: int, personnel_id: int) -> None:
+        """Wrapper for revised set_application_to_completed(p_application_id INT, p_personnel_id INT).
 
         Only Approved applications can be completed (enforced in SQL). This will raise
-        if the application is not found or violates status rules.
+        if the application is not found or violates status rules. The `personnel_id`
+        identifies who performed the completion and is also used by downstream
+        business side-effects (e.g., set_closed_business).
         """
         with connection.cursor() as cur:
-            cur.execute("SELECT set_application_to_completed(%s)", [application_id])
+            cur.execute("SELECT set_application_to_completed(%s,%s)", [application_id, personnel_id])
 
     @staticmethod
     def secretary_cancel_application(application_id: int, personnel_id: int, cancellation_reason: Optional[str] = None) -> str:
@@ -1063,4 +1065,24 @@ class SecretaryHelpers:
             row = cur.fetchone()
         return row[0] if row and row[0] is not None else None
     
+    # ---- Closure (Business Clearance) ----
+    @staticmethod
+    def create_closure_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_closure_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally, enforces INACTIVE status for closure,
+        and pulls amusement device counts for category 12. Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_closure_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+
 
