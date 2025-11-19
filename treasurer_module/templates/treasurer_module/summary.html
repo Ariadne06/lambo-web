@@ -12,133 +12,138 @@
   <div class="bg-white shadow-sm rounded-2xl border border-gray-200">
     <!-- Top controls -->
     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 md:px-6 py-4">
-      <!-- Search -->
-      <div class="w-full md:w-1/3">
-        <div class="relative">
-          <input type="text" placeholder="Search Payment"
-                 class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 shadow-sm focus:outline-none focus:border-gray-400" />
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/>
-            </svg>
+      <!-- Search (preserves filters like Payments) -->
+      <form method="get" class="flex items-center gap-2 w-full md:w-1/2">
+        <div class="relative w-full">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search by application or month"
+                 class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pl-10 pr-3 shadow-sm focus:outline-none focus:border-gray-400" />
+          <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/></svg>
           </span>
+          {% for al in application_label_list %}
+            <input type="hidden" name="application_label" value="{{ al }}" />
+          {% endfor %}
+          <input type="hidden" name="year" value="{{ selected_year }}" />
+          <input type="hidden" name="month" value="{{ selected_month }}" />
         </div>
-      </div>
+        <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/></svg>
+          Search
+        </button>
+      </form>
 
-      <!-- Advanced Filters -->
-      <details class="w-full md:w-auto">
-        <summary class="flex cursor-pointer select-none items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm shadow-sm hover:bg-gray-50">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M6 12h12M10 18h4"/>
-          </svg>
-          Advanced Filters
+      <!-- Filters dropdown -->
+      <details class="relative">
+        <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/></svg>
+          Filters{% if application_label_list or selected_month %}<span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">1</span>{% endif %}
         </summary>
-        <div class="mt-3 grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Application</label>
-            <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2">
-              <option>All</option>
-              <option>Barangay Clearance</option>
-              <option>Business Clearance</option>
-              <option>Residency</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Month</label>
-            <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2">
-              <option>All</option>
-              <option>January</option><option>February</option><option>March</option>
-              <option>April</option><option>May</option><option>June</option>
-              <option>July</option><option>August</option><option>September</option>
-              <option>October</option><option>November</option><option>December</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Year</label>
-            <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2">
-              <option>2028</option>
-              <option>2027</option>
-              <option>2026</option>
-            </select>
-          </div>
-          <div class="md:col-span-3 flex items-center justify-end gap-2">
-            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">Reset</button>
-            <button class="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white shadow hover:bg-black">Apply Filters</button>
-          </div>
+        <div class="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4">
+          <form method="get" class="space-y-4">
+            <input type="hidden" name="q" value="{{ q }}" />
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Application</label>
+              <div class="grid grid-cols-1 gap-2 max-h-44 overflow-auto pr-1">
+                {% for label in application_label_options %}
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="application_label" value="{{ label }}" class="rounded" {% if label in application_label_list %}checked{% endif %}>
+                  <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Month</label>
+                <select name="month" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <option value="">All</option>
+                  {% for mn, mname in month_options %}
+                    <option value="{{ mn }}" {% if selected_month == mn %}selected{% endif %}>{{ mname }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Year</label>
+                <select name="year" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  {% for y in year_choices %}
+                    <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <a href="?q={{ q }}&year={{ selected_year }}" class="text-sm text-gray-600 hover:text-rose-700">Clear</a>
+              <button type="submit" class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">Apply Filters</button>
+            </div>
+          </form>
         </div>
       </details>
     </div>
+
+    {% if application_label_list %}
+      <div class="mb-3 flex items-center gap-2 text-sm px-4 md:px-6">
+        <span class="text-gray-600">Active:</span>
+        {% for chip in label_chips %}
+          <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">{{ chip.label }}<span class="ml-1 text-xs">✕</span></a>
+        {% endfor %}
+        <a href="{{ clear_all_url }}" class="ml-2 inline-flex items-center gap-1 text-gray-700 hover:text-rose-700"><span class="text-xs">✕</span> Clear all</a>
+      </div>
+    {% endif %}
 
     <!-- Table -->
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
           <tr class="text-left text-gray-600">
-            <th class="px-6 py-3 font-semibold">Applications</th>
-            <th class="px-6 py-3 font-semibold">Amount</th>
+            <th class="px-6 py-3 font-semibold">Application</th>
             <th class="px-6 py-3 font-semibold">Month</th>
-            <th class="px-6 py-3 font-semibold">No. of Applications</th>
+            <th class="px-6 py-3 font-semibold">Applications</th>
+            <th class="px-6 py-3 font-semibold">Total Collected</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
+          {% for r in rows %}
           <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">January</td>
-            <td class="px-6 py-4">15</td>
+            <td class="px-6 py-3">{{ r.application_label }}</td>
+            <td class="px-6 py-3">{{ r.month_name }}</td>
+            <td class="px-6 py-3">{{ r.applications_count }}</td>
+            <td class="px-6 py-3">₱{{ r.total_collected|floatformat:2 }}</td>
           </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Business Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">February</td>
-            <td class="px-6 py-4">12</td>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="px-6 py-6 text-center text-gray-500">No results found.</td>
           </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">March</td>
-            <td class="px-6 py-4">20</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">April</td>
-            <td class="px-6 py-4">15</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">May</td>
-            <td class="px-6 py-4">12</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">June</td>
-            <td class="px-6 py-4">20</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">Barangay Clearance</td>
-            <td class="px-6 py-4">300 Php</td>
-            <td class="px-6 py-4">July</td>
-            <td class="px-6 py-4">20</td>
-          </tr>
+          {% endfor %}
         </tbody>
+        <tfoot class="bg-gray-50">
+          <tr class="text-gray-800">
+            <th class="px-6 py-3 text-left font-semibold" colspan="2">Totals</th>
+            <th class="px-6 py-3 text-left font-semibold">{{ sum_applications }}</th>
+            <th class="px-6 py-3 text-left font-semibold">₱{{ sum_collected|floatformat:2 }}</th>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
     <!-- Pagination -->
-    <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
-      <span class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400 cursor-not-allowed">Prev</span>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">1</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">4</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">5</a>
-      <span class="px-3 py-1.5">...</span>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
-      <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
+    {% if total > 0 %}
+    <div class="mt-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-sm text-gray-600 px-4 md:px-6 pb-4">
+      <div>Page {{ page }} of {{ total_pages }} — {{ total }} total</div>
+      <nav class="flex items-center gap-1">
+        {% if has_prev %}<a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>{% endif %}
+        {% for it in page_items %}
+          {% if it.ellipsis %}
+            <span class="px-2">…</span>
+          {% elif it.current %}
+            <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.num }}</span>
+          {% else %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if has_next %}<a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>{% endif %}
+      </nav>
     </div>
+    {% endif %}
   </div>
 
   <!-- Print -->
@@ -151,4 +156,8 @@
     </button>
   </div>
 </div>
+<style>
+  .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+  .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+</style>
 {% endblock %}

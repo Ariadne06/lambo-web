@@ -15,6 +15,7 @@ urlpatterns = [
     path("business_detail_json/<int:business_id>", views.business_detail_json, name="business_detail_json"),
     path("business/<int:business_id>/", views.business_detail_page, name="business_detail_page"),
     path("business/<int:business_id>/renewal-summary", views.business_renewal_summary_json, name="business_renewal_summary_json"),
+    path("business/<int:business_id>/payment-history", views.business_payment_history_json, name="business_payment_history_json"),
     path("businesses/<int:business_id>/update", views.business_update, name="business_update"),
     path("business/<int:business_id>/close/", views.business_close, name="business_close"),
     path('applications/create/', views.add_certificate, name='create_application'),
