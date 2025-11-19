@@ -807,6 +807,119 @@ def business_detail_page(request, business_id: int):
         'renewal': renewal,
     })
 
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def business_payment_history_json(request, business_id: int):
+    """Return paginated payment history for a specific business.
+
+    Query params:
+      q (search text)
+      status (payment_status filter)
+      date_from (YYYY-MM-DD)
+      date_to (YYYY-MM-DD)
+      page (1-based)
+      per_page (default 25)
+
+    Response JSON:
+      {
+        ok: true,
+        rows: [ { date_paid, amount, amount_display?, payment_status, request_label, application_id, or_number, fee_type_name } ],
+        total, page, pages, per_page
+      }
+    """
+    # Validate business existence quickly (optional; fail fast)
+    try:
+        b = Business.sp_get_business_detail(business_id)
+        if not b:
+            return JsonResponse({'ok': False, 'message': 'Business not found.'}, status=404)
+    except Exception:
+        return JsonResponse({'ok': False, 'message': 'Business lookup failed.'}, status=400)
+
+    q = (request.GET.get('q') or '').strip() or None
+    status = (request.GET.get('status') or '').strip() or None
+    date_from = (request.GET.get('date_from') or '').strip() or None
+    date_to = (request.GET.get('date_to') or '').strip() or None
+    try:
+        page = max(int(request.GET.get('page', 1)), 1)
+    except Exception:
+        page = 1
+    try:
+        per_page = max(min(int(request.GET.get('per_page', 25)), 100), 1)
+    except Exception:
+        per_page = 25
+    offset = (page - 1) * per_page
+
+    try:
+        result = SecretaryHelpers.get_business_payment_history(
+            business_id=business_id,
+            query=q,
+            payment_status=status,
+            date_from=date_from or None,
+            date_to=date_to or None,
+            limit=per_page,
+            offset=offset
+        )
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
+
+    total = result['total']
+    pages = max(ceil(total / per_page), 1)
+
+    # Normalize rows (Decimal/Date serialization)
+    from datetime import date, datetime
+    from decimal import Decimal as D
+    def ser(v):
+        if isinstance(v, D):
+            try:
+                return float(v)
+            except Exception:
+                return str(v)
+        if isinstance(v, (date, datetime)):
+            return v.isoformat()
+        return v
+    rows = []
+    for r in result['rows']:
+        sr = {k: ser(v) for k, v in r.items()}
+        # Canonicalize common fields to stabilize frontend rendering
+        def pick(obj, keys):
+            for k in keys:
+                v = obj.get(k)
+                if v is not None and v != '':
+                    return v
+            return None
+        # Request label variations
+        sr.setdefault('request_label', pick(sr, [
+            'request_label', 'request', 'request_name', 'fee_type_name', 'purpose', 'label', 'description'
+        ]))
+        # Payment status variations
+        sr.setdefault('payment_status', pick(sr, ['payment_status', 'status', 'paymentstate']))
+        # Date paid variations
+        sr.setdefault('date_paid', pick(sr, ['date_paid', 'paid_at', 'payment_date', 'date', 'created_at']))
+        # OR number variations
+        sr.setdefault('or_number', pick(sr, ['or_number', 'or_no', 'official_receipt_number']))
+        # Application id variations
+        sr.setdefault('application_id', pick(sr, ['application_id', 'app_id', 'id']))
+        # Amount numeric
+        amt = pick(sr, ['amount', 'paid', 'paid_amount', 'amount_paid', 'total', 'total_amount', 'payment_amount', 'net_amount'])
+        try:
+            sr['amount'] = float(amt) if amt is not None else None
+        except Exception:
+            # keep original if cannot coerce
+            sr['amount'] = amt
+        # Optional display text
+        sr.setdefault('amount_display', pick(sr, ['amount_display', 'display']))
+        rows.append(sr)
+
+    return JsonResponse({
+        'ok': True,
+        'rows': rows,
+        'total': total,
+        'page': page,
+        'pages': pages,
+        'per_page': per_page,
+    })
+
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')

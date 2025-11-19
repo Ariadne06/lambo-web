@@ -1085,4 +1085,52 @@ class SecretaryHelpers:
             row = cur.fetchone()
         return row[0] if row and row[0] is not None else None
 
+    # ---- Business Payment History ----
+    @staticmethod
+    def get_business_payment_history(
+        business_id: int,
+        query: Optional[str] = None,
+        payment_status: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict:
+        """Fetch paginated payment history rows for a business using
+        get_specific_business_payment_history(...).
+
+        Expected Postgres function signature (assumed):
+          get_specific_business_payment_history(
+              p_business_id INT,
+              p_query TEXT,
+              p_payment_status TEXT,
+              p_date_from DATE,
+              p_date_to DATE,
+              p_limit INT,
+              p_offset INT
+          ) RETURNS SETOF RECORD
+
+        This helper returns a dict: { rows: [...], total: int, limit: int, offset: int }
+        where total is derived via a separate COUNT(*) invocation using a very
+        large limit.
+        """
+        # Primary page of rows
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_specific_business_payment_history(%s,%s,%s,%s,%s,%s,%s)",
+                [business_id, query, payment_status, date_from, date_to, limit, offset]
+            )
+            cols = [c[0] for c in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        # Total count
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM get_specific_business_payment_history(%s,%s,%s,%s,%s,%s,%s)",
+                [business_id, query, payment_status, date_from, date_to, 2_147_483_647, 0]
+            )
+            total = int(cur.fetchone()[0]) if cur.rowcount else 0
+
+        return {"rows": rows, "total": total, "limit": limit, "offset": offset}
+
 
