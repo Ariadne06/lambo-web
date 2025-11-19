@@ -193,7 +193,7 @@
 				<a href="{% url 'secretary_module:business_list' %}"
 					 class="rounded-xl bg-white border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">Close</a>
 				<button type="button" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-700"
-								onclick="openModal('modalPaymentHistory')">Payment History</button>
+							onclick="openPaymentHistory()">Payment History</button>
 			</div>
 		</div>
 	</div>
@@ -318,28 +318,51 @@
 					<h2 id="mph_title" class="text-base font-semibold text-gray-900">Payment History</h2>
 					<button type="button" class="text-gray-500 hover:text-gray-700 text-xl font-bold" aria-label="Close modal" onclick="closeModal('modalPaymentHistory')">&times;</button>
 				</div>
-				<div class="px-6 pt-6">
-					<div class="overflow-x-auto">
-						<table class="w-full border-collapse text-sm">
-							<thead>
-								<tr class="bg-gray-50 text-gray-700 font-medium">
-									<th class="px-4 py-2 border border-gray-200 text-left w-40">Date</th>
-									<th class="px-4 py-2 border border-gray-200 text-left">Transaction</th>
-									<th class="px-4 py-2 border border-gray-200 text-left w-40">Amount</th>
+				<div class="px-6 pt-5 space-y-5">
+					<form id="mph_filters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+						<div>
+							<label class="block font-medium text-gray-700 mb-1">Search</label>
+							<input type="text" name="q" class="w-full rounded-md border-gray-300 text-sm" placeholder="Reference / OR / label">
+						</div>
+						<div>
+							<label class="block font-medium text-gray-700 mb-1">Status</label>
+							<select name="status" class="w-full rounded-md border-gray-300 text-sm">
+								<option value="">All</option>
+								<option>Paid</option>
+								<option>Unpaid</option>
+								<option>Cancelled</option>
+							</select>
+						</div>
+						<div>
+							<label class="block font-medium text-gray-700 mb-1">Date From</label>
+							<input type="date" name="date_from" class="w-full rounded-md border-gray-300 text-sm">
+						</div>
+						<div>
+							<label class="block font-medium text-gray-700 mb-1">Date To</label>
+							<input type="date" name="date_to" class="w-full rounded-md border-gray-300 text-sm">
+						</div>
+					</form>
+					<div class="mt-2 text-xs text-gray-500" id="mph_meta">&nbsp;</div>
+					<div class="overflow-x-auto border rounded-lg">
+						<table class="w-full border-collapse text-xs" id="mph_table">
+							<thead class="bg-gray-50 text-gray-700">
+								<tr>
+									<th class="px-3 py-2 border text-left w-32">Date Paid</th>
+									<th class="px-3 py-2 border text-left">Request</th>
+									<th class="px-3 py-2 border text-left w-24">Status</th>
+									<th class="px-3 py-2 border text-right w-32">Amount</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-gray-100">
-								<tr><td class="px-4 py-2 border border-gray-200">03/01/2020</td><td class="px-4 py-2 border border-gray-200">Barangay Clearance</td><td class="px-4 py-2 border border-gray-200">330 Php</td></tr>
-							</tbody>
+							<tbody id="mph_tbody" class="divide-y divide-gray-100"></tbody>
 						</table>
+						<div id="mph_loading" class="p-4 text-center text-gray-500 hidden">Loading…</div>
+						<div id="mph_empty" class="p-4 text-center text-gray-500 hidden">No payment history found.</div>
+						<div id="mph_error" class="p-4 text-center text-rose-600 hidden"></div>
+						<!-- Django-style pagination links get rendered here by JS -->
+						<nav id="mph_page_links" class="flex flex-wrap items-center justify-center gap-1 p-3 border-t bg-white"></nav>
 					</div>
 				</div>
-				<div class="px-6 pb-6">
-					<div class="mt-4 flex items-center">
-						<button type="button" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-										onclick="closeModal('modalPaymentHistory')">Close</button>
-					</div>
-				</div>
+				<!-- Removed bottom Close button as requested; users can use the header X or overlay -->
 			</div>
 		</div>
 	</div>
@@ -477,6 +500,75 @@
 			if(loadEl) loadEl.classList.add('hidden');
 		} catch(e){ const infoEl=document.getElementById('mbv_renewal_info'); if(infoEl) infoEl.textContent='Could not load renewal summary.'; const loadEl=document.getElementById('mbv_renewal_loading'); if(loadEl) loadEl.classList.add('hidden'); }
 	});
+
+	// ---------- Payment History Logic ----------
+	async function openPaymentHistory(){
+		const root=document.getElementById('bizPage'); const businessId=root?.dataset?.businessId; if(!businessId) return;
+		openModal('modalPaymentHistory');
+		const form=document.getElementById('mph_filters'); const tbody=document.getElementById('mph_tbody'); const loading=document.getElementById('mph_loading'); const empty=document.getElementById('mph_empty'); const errorBox=document.getElementById('mph_error'); const meta=document.getElementById('mph_meta'); const pageLinks=document.getElementById('mph_page_links');
+		let page=1; const perPage=25; let latestReqId=0;
+		function fmtPeso(v){ const n=Number(v||0); return `₱${n.toFixed(2)}`; }
+		function badge(status){ const s=(status||'').toLowerCase(); const base='inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide '; if(s==='paid') return base+'bg-emerald-100 text-emerald-700'; if(s==='cancelled') return base+'bg-rose-100 text-rose-700'; if(s==='unpaid') return base+'bg-amber-100 text-amber-700'; return base+'bg-gray-100 text-gray-600'; }
+		function renderPagination(curr, totalPages){
+			if(!pageLinks) return; pageLinks.innerHTML='';
+			if(!totalPages || totalPages<=1) return;
+			// Windowed numeric pagination similar to Django style
+			const makeBtn=(p,label=String(p),isActive=false)=>{
+				const a=document.createElement('button');
+				a.type='button';
+				a.className='min-w-8 h-8 px-2 rounded border text-xs '+(isActive? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50');
+				a.textContent=label;
+				a.onclick=()=>{ if(page!==p){ page=p; load(); } };
+				return a;
+			};
+			const addEllipsis=()=>{ const s=document.createElement('span'); s.className='px-1 text-xs text-gray-400'; s.textContent='…'; pageLinks.appendChild(s); };
+			const windowSize=2;
+			// First page
+			pageLinks.appendChild(makeBtn(1,'1', curr===1));
+			let start=Math.max(2, curr-windowSize), end=Math.min(totalPages-1, curr+windowSize);
+			if(start>2) addEllipsis();
+			for(let p=start; p<=end; p++){ pageLinks.appendChild(makeBtn(p,String(p), curr===p)); }
+			if(end<totalPages-1) addEllipsis();
+			if(totalPages>1) pageLinks.appendChild(makeBtn(totalPages,String(totalPages), curr===totalPages));
+		}
+		async function load(){
+			const reqId = ++latestReqId;
+			loading.classList.remove('hidden'); empty.classList.add('hidden'); errorBox.classList.add('hidden'); tbody.innerHTML=''; meta.textContent=''; if(pageLinks) pageLinks.innerHTML='';
+			const params=new URLSearchParams(); params.set('page', String(page)); params.set('per_page', String(perPage)); const q=form.q.value.trim(); if(q) params.set('q', q); const st=form.status.value.trim(); if(st) params.set('status', st); const df=form.date_from.value; if(df) params.set('date_from', df); const dt=form.date_to.value; if(dt) params.set('date_to', dt);
+			try{
+				const url = `{% url 'secretary_module:business_payment_history_json' 0 %}`.replace('/0/','/'+String(businessId)+'/') + '?' + params.toString();
+				const res=await fetch(url,{headers:{'Accept':'application/json'}, credentials:'same-origin'}); const text=await res.text(); let data={}; if(res.headers.get('content-type')?.includes('application/json')){ try{ data=JSON.parse(text);}catch(e){ throw new Error('Invalid JSON response'); } } else { throw new Error('Unexpected response'); }
+				// Ignore stale responses if a newer request has started
+				if(reqId !== latestReqId) return;
+				if(!res.ok || !data.ok) throw new Error(data.message||data.error||'Failed to load');
+				const rows=data.rows||[]; if(rows.length===0){ empty.classList.remove('hidden'); } else {
+						for(const r of rows){ const tr=document.createElement('tr'); tr.className='bg-white hover:bg-gray-50';
+							const d=new Date(r.date_paid || r.paid_at || r.payment_date || r.date || r.created_at || Date.now()); const dateStr = isNaN(d.getTime())? (r.date_paid||'—') : d.toLocaleDateString();
+							const reqLabel = r.request_label || r.request || r.request_name || r.fee_type_name || r.purpose || r.label || r.description || '—';
+							const amtVal = (r.amount ?? r.paid ?? r.paid_amount ?? r.amount_paid ?? r.total ?? r.total_amount ?? 0);
+							tr.innerHTML=`<td class='px-3 py-2 border text-gray-700'>${dateStr}</td><td class='px-3 py-2 border'>${reqLabel}<div class='text-[10px] text-gray-400'>App #${r.application_id||'—'}${r.or_number? ' • OR '+r.or_number:''}</div></td><td class='px-3 py-2 border'><span class='${badge(r.payment_status || r.status)}'>${r.payment_status||r.status||'—'}</span></td><td class='px-3 py-2 border text-right font-medium'>${fmtPeso(amtVal, r.amount_display)}</td>`;
+						tbody.appendChild(tr); }
+				}
+				const start = rows.length ? ((data.page-1)*perPage + 1) : 0;
+				const end = (data.page-1)*perPage + rows.length;
+				meta.textContent = `Showing ${start}-${end} of ${data.total}`;
+				renderPagination(data.page, data.pages);
+			} catch(err){ errorBox.textContent=String(err.message||err); errorBox.classList.remove('hidden'); }
+			finally{ loading.classList.add('hidden'); }
+		}
+		// Bind filters only once per page lifetime
+		if(!form.dataset.bound){
+			form.dataset.bound='1';
+			// Debounce text search
+			let t=null; form.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(()=>{ page=1; load(); }, 300); });
+			// Other filters trigger immediately
+			form.status.addEventListener('change', ()=>{ page=1; load(); });
+			form.date_from.addEventListener('change', ()=>{ page=1; load(); });
+			form.date_to.addEventListener('change', ()=>{ page=1; load(); });
+			form.addEventListener('submit', (e)=>{ e.preventDefault(); page=1; load(); });
+		}
+		load();
+	}
 
 	// ------- Preview flows (copied from list page) -------
 	async function openRenewalPreview(businessId){
