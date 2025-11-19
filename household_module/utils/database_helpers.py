@@ -160,16 +160,86 @@ def update_general_health_for_member(
 # child health helpers
 
 def search_child(query):
-    """Search for children in families"""
+    """
+    Search for children by name, family code, or resident ID
+    
+    Args:
+        query (str): Search term (required - at least 2 characters)
+    
+    Returns:
+        list: List of matching children with parent/family information
+    """
     try:
+        # Validate query
+        if not query or len(query.strip()) < 2:
+            return []
+        
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM search_child(%s)", [query])
+            cursor.execute("""
+                SELECT * FROM search_child(%s)
+            """, [query.strip()])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                
+                # Convert date to ISO format if present
+                if record.get('dob'):
+                    record['dob'] = record['dob'].isoformat()
+                
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
-        print(f"❌ Failed to search child: {str(e)}")
-        raise Exception(f"Failed to search child: {str(e)}")
+        print(f"Failed to search children: {str(e)}")
+        raise Exception(f"Failed to search children: {str(e)}")
+
+
+def view_all_child_health_records(query=None, limit=50, offset=0):
+    """
+    View all child health records with optional search and pagination
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM view_all_child_health_record(
+                    p_query := %s,
+                    p_limit := %s,
+                    p_offset := %s
+                )
+            """, [
+                query.strip() if query and query.strip() else None,
+                limit,
+                offset
+            ])
+            
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                
+                # Convert dates to ISO format
+                if record.get('dob'):
+                    record['dob'] = record['dob'].isoformat()
+                if record.get('tt_status_date'):
+                    record['tt_status_date'] = record['tt_status_date'].isoformat()
+                if record.get('created_at'):
+                    record['created_at'] = record['created_at'].isoformat()
+                
+                results.append(record)
+            
+            return results
+            
+    except Exception as e:
+        print(f"Failed to view child health records: {str(e)}")
+        raise Exception(f"Failed to view child health records: {str(e)}")
+
 
 
 def insert_child_health_record(data):
@@ -226,15 +296,41 @@ def update_child_health_record(child_health_id, data):
 
 
 def view_specific_child_health_record(child_health_id):
-    """View specific child health record"""
+    """
+    View specific child health record with all details
+    """
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_health_record(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_specific_child_health_record(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
-            return dict(zip(columns, row)) if row else None
+            
+            if not row:
+                return None
+                
+            record = dict(zip(columns, row))
+            
+            # Convert dates/times to ISO format
+            if record.get('dob'):
+                record['dob'] = record['dob'].isoformat()
+            if record.get('time_of_birth'):
+                record['time_of_birth'] = record['time_of_birth'].isoformat()
+            if record.get('tt_status_date'):
+                record['tt_status_date'] = record['tt_status_date'].isoformat()
+            if record.get('newborn_screening_status_date'):
+                record['newborn_screening_status_date'] = record['newborn_screening_status_date'].isoformat()
+            if record.get('created_at'):
+                record['created_at'] = record['created_at'].isoformat()
+            if record.get('updated_at'):
+                record['updated_at'] = record['updated_at'].isoformat()
+            
+            return record
+            
     except Exception as e:
-        print(f"❌ Failed to view child health record: {str(e)}")
+        print(f"Failed to view child health record: {str(e)}")
         raise Exception(f"Failed to view child health record: {str(e)}")
 
 
@@ -373,12 +469,23 @@ def view_specific_child_all_surgical_history(child_health_id):
 
 
 def add_child_growth_monitoring(child_health_id, weight_kg, height_cm, temp_c, resp_rate, pulse_rate, notes, personnel_id):
-    """Add growth monitoring record"""
+    """Add growth monitoring record - SQL function calculates age automatically"""
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT add_child_growth_monitoring(%s, %s, %s, %s, %s, %s, %s, %s)
-            """, [child_health_id, weight_kg, height_cm, temp_c, resp_rate, pulse_rate, notes, personnel_id])
+                SELECT add_child_growth_monitoring(
+                    %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, [
+                child_health_id,
+                weight_kg,
+                height_cm,
+                temp_c,
+                resp_rate,
+                pulse_rate,
+                notes,
+                personnel_id
+            ])
             result = cursor.fetchone()
             return result[0] if result else None
     except Exception as e:
@@ -390,10 +497,101 @@ def view_specific_child_all_growth_monitoring(child_health_id):
     """View all growth monitoring records"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_all_growth_monitoring(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_specific_child_all_growth_monitoring(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                
+                # Format date properly
+                if record.get('date_of_visit'):
+                    record['date_of_visit'] = record['date_of_visit'].isoformat()
+                
+                # Calculate total months for display
+                age_years = record.get('age_years', 0) or 0
+                age_months = record.get('age_months', 0) or 0
+                record['age_in_months'] = (age_years * 12) + age_months
+                
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
         print(f"❌ Failed to view growth monitoring: {str(e)}")
         raise Exception(f"Failed to view growth monitoring: {str(e)}")
+
+
+def view_specific_child_all_growth_monitoring(child_health_id):
+    """View all growth monitoring records"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM view_specific_child_all_growth_monitoring(%s)
+            """, [child_health_id])
+            
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                
+                # Format date properly
+                if record.get('date_of_visit'):
+                    record['date_of_visit'] = record['date_of_visit'].isoformat()
+                
+                # ✅ Calculate total months for display
+                age_years = record.get('age_years', 0) or 0
+                age_months = record.get('age_months', 0) or 0
+                record['age_in_months'] = (age_years * 12) + age_months
+                
+                # ✅ Format numeric values properly
+                if record.get('weight_kg'):
+                    record['weight_kg'] = float(record['weight_kg'])
+                if record.get('height_cm'):
+                    record['height_cm'] = float(record['height_cm'])
+                if record.get('temp_c'):
+                    record['temp_c'] = float(record['temp_c'])
+                if record.get('resp_rate'):
+                    record['resp_rate'] = int(record['resp_rate'])
+                if record.get('pulse_rate'):
+                    record['pulse_rate'] = int(record['pulse_rate'])
+                
+                results.append(record)
+            
+            return results
+            
+    except Exception as e:
+        print(f"❌ Failed to view growth monitoring: {str(e)}")
+        raise Exception(f"Failed to view growth monitoring: {str(e)}")
+
+def update_child_health_record(child_health_id, data):
+    """Update child health record"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT update_child_health_record(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, [
+                child_health_id,
+                data.get('place_of_delivery'),
+                data.get('address_landmark'),
+                data.get('tt_status_of_mother'),
+                data.get('tt_status_date'),
+                data.get('newborn_screening_status'),
+                data.get('newborn_screening_status_date'),
+                data.get('feeding_method_id'),
+                data['personnel_id']
+            ])
+            
+            print(f"✅ Updated child health record {child_health_id}")
+            
+    except Exception as e:
+        print(f"❌ Failed to update child health record: {str(e)}")
+        raise Exception(f"Failed to update child health record: {str(e)}")

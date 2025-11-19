@@ -12,10 +12,10 @@ from .serializers import (
     HouseholdInsertSerializer, FamilyCreateSerializer, RelationshipToHouseholdHeadSerializer, PhilhealthCategorySerializer, MedicalHistoryTypeSerializer, ClassSerializer, 
     FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer, GeneralHealthUpdateSerializer, QuarterSerializer, RelationshipSerializer, HouseholdUpdateSerializer, FeedingMethodSerializer, MonthSerializer, TTStatusSerializer,
     VaccineTypeSerializer, DoseTypeSerializer, SupplementsSerializer,
-    ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer
+    ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer, ChildGrowthMonitoringCreateSerializer, ChildImmunizationCreateSerializer
 )
 from .utils.database_helpers import (
-    search_child, view_specific_child_health_record
+    search_child, view_specific_child_health_record, view_all_child_health_records
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -1656,29 +1656,80 @@ class ResidentUnlinkRelationView(APIView):
 # child health
 
 class SearchChildView(APIView):
-    """Search for children in families"""
+    """
+    Search for children (for form selection - child picker modal)
+    """
     
     def get(self, request):
-        query = request.GET.get('q', '')
+        query = request.GET.get('q', '').strip()
         
-        if not query:
+        # Require minimum query length
+        if not query or len(query) < 2:
             return Response({
                 'success': False,
-                'message': 'Query parameter required'
+                'error': 'Please enter at least 2 characters to search',
+                'data': [],
+                'count': 0
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            results = search_child(query)
+            children = search_child(query)
+            
             return Response({
                 'success': True,
-                'data': results
-            })
+                'data': children,
+                'count': len(children),
+                'query': query,
+                'message': f"Found {len(children)} {'child' if len(children) == 1 else 'children'} matching '{query}'"
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
+            print(f"Search child error: {str(e)}")
             return Response({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'data': [],
+                'count': 0
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class ChildHealthRecordListView(APIView):
+    """
+    View ALL child health records (for list screen - index.tsx)
+    """
+    
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
+        
+        # Validate pagination
+        limit = min(max(limit, 1), 500)
+        offset = max(offset, 0)
+        
+        try:
+            records = view_all_child_health_records(
+                query=query if query else None,
+                limit=limit,
+                offset=offset
+            )
+            
+            return Response({
+                'success': True,
+                'data': records,
+                'count': len(records),
+                'query': query if query else 'all',
+                'limit': limit,
+                'offset': offset
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f"View child health records error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e),
+                'data': [],
+                'count': 0
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ChildHealthRecordCreateView(APIView):
     """Create child health record"""
@@ -1745,24 +1796,179 @@ class ChildHealthRecordDetailView(APIView):
 
 
 class ChildHealthRecordUpdateView(APIView):
-    """Update child health record"""
+    """Update child health record - only non-sensitive fields"""
     parser_classes = (MultiPartParser, FormParser, JSONParser)
     
     def put(self, request, child_health_id):
+        try:
+            # Get personnel_id from request
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verify record exists
+            from .utils.database_helpers import view_specific_child_health_record
+            try:
+                existing_record = view_specific_child_health_record(child_health_id)
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': 'Child health record not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate and update
+            serializer = ChildHealthRecordUpdateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Perform update
+            serializer.update(child_health_id, serializer.validated_data)
+            
+            # Fetch updated record
+            updated_record = view_specific_child_health_record(child_health_id)
+            
+            return Response({
+                'success': True,
+                'message': 'Child health record updated successfully',
+                'data': updated_record
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            error_message = str(e)
+            
+            # Handle specific SQL error codes
+            if 'P4301' in error_message:
+                user_message = 'Child health record not found'
+            elif 'P4302' in error_message:
+                user_message = 'Invalid feeding method selected'
+            elif 'P4303' in error_message:
+                user_message = 'Invalid TT status selected'
+            elif 'P4304' in error_message:
+                user_message = 'Screening date is required when screening status is completed'
+            else:
+                user_message = 'Failed to update child health record'
+            
+            return Response({
+                'success': False,
+                'error': user_message,
+                'technical_error': error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+# ========================================
+# CHILD HEALTH - IMMUNIZATION ENDPOINTS
+# ========================================
+class ChildImmunizationListView(APIView):
+    """Get child's immunization records"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_specific_child_immunization_record
+            
+            records = view_specific_child_immunization_record(child_health_id)
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChildImmunizationCreateView(APIView):
+    """Add immunization record"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
         try:
             personnel_id = request.data.get('personnel_id')
             if not personnel_id:
                 return Response({
                     'success': False,
-                    'message': 'Personnel ID required'
+                    'error': 'Personnel ID required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            serializer = ChildHealthRecordUpdateSerializer(
+            serializer = ChildImmunizationCreateSerializer(
                 data=request.data,
-                context={
-                    'child_health_id': child_health_id,
-                    'personnel_id': personnel_id
-                }
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            immunization_id = serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Immunization added successfully',
+                'immunization_id': immunization_id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# CHILD HEALTH - SUPPLEMENTS ENDPOINTS
+# ========================================
+class ChildSupplementListView(APIView):
+    """Get child's supplement records"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_all_child_supplements
+            
+            records = view_all_child_supplements(child_health_id)
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChildSupplementCreateView(APIView):
+    """Add supplement record"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildSupplementCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
             )
             
             if not serializer.is_valid():
@@ -1776,10 +1982,285 @@ class ChildHealthRecordUpdateView(APIView):
             
             return Response({
                 'success': True,
-                'message': 'Child health record updated successfully'
-            })
+                'message': 'Supplement added successfully'
+            }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
             return Response({
                 'success': False,
                 'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# CHILD HEALTH - MEDICAL HISTORY ENDPOINTS
+# ========================================
+class ChildMedicalConditionListView(APIView):
+    """Get child's medical conditions"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_specific_child_all_medical_condition
+            
+            records = view_specific_child_all_medical_condition(child_health_id)
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChildMedicalConditionCreateView(APIView):
+    """Add medical condition"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildMedicalConditionCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            rmh_id = serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Medical condition added successfully',
+                'rmh_id': rmh_id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# CHILD HEALTH - SURGICAL HISTORY ENDPOINTS
+# ========================================
+class ChildSurgicalHistoryListView(APIView):
+    """Get child's surgical history"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_specific_child_all_surgical_history
+            
+            records = view_specific_child_all_surgical_history(child_health_id)
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChildSurgicalHistoryCreateView(APIView):
+    """Add surgical history"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildSurgicalHistoryCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            rsh_id = serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Surgical history added successfully',
+                'rsh_id': rsh_id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# CHILD HEALTH - GROWTH MONITORING ENDPOINTS
+# ========================================
+class ChildGrowthMonitoringListView(APIView):
+    """Get child's growth monitoring records"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_specific_child_all_growth_monitoring
+            
+            records = view_specific_child_all_growth_monitoring(child_health_id)
+            
+            # Get child info
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        r.first_name || ' ' || r.last_name as child_name
+                    FROM Child_Health_Record chr
+                    JOIN Resident r ON chr.child_id = r.resident_id
+                    WHERE chr.child_health_id = %s
+                """, [child_health_id])
+                
+                row = cursor.fetchone()
+                child_name = row[0] if row else 'Child'
+            
+            print(f"📊 Returning {len(records)} growth records")
+            print(f"Sample record: {records[0] if records else 'No records'}")  # Debug log
+            
+            return Response({
+                'success': True,
+                'data': records,
+                'child_name': child_name,
+                'count': len(records)
+            })
+            
+        except Exception as e:
+            print(f"❌ Failed to view growth monitoring: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class ChildGrowthMonitoringCreateView(APIView):
+    """Add growth monitoring record"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ChildGrowthMonitoringCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            cgm_id = serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Growth monitoring record added successfully',
+                'cgm_id': cgm_id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# CHILD HEALTH - EXCLUSIVE BREASTFEED ENDPOINTS
+# ========================================
+class ChildBreastfeedTrackView(APIView):
+    """Get child's exclusive breastfeed tracking"""
+    
+    def get(self, request, child_health_id):
+        try:
+            from .utils.database_helpers import view_specific_child_exclusive_breastfeed_track
+            
+            records = view_specific_child_exclusive_breastfeed_track(child_health_id)
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChildBreastfeedCreateView(APIView):
+    """Add exclusive breastfeed assessment"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, child_health_id):
+        try:
+            personnel_id = request.data.get('personnel_id')
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'Personnel ID required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = ExclusiveBreastfeedCreateSerializer(
+                data=request.data,
+                context={'personnel_id': personnel_id, 'child_health_id': child_health_id}
+            )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            results = serializer.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Breastfeed assessment added successfully',
+                'data': results
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
