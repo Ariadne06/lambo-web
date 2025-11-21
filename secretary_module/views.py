@@ -2592,3 +2592,104 @@ def preview_barangay_clearance(request):
         return JsonResponse({'ok': False, 'message': coerce_message(e)}, status=400)
 
     
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def submit_barangay_clearance_application(request):
+    """Create a barangay clearance application.
+
+    Accepts POST fields:
+      - applicant_id (resident id)
+      - other_clearance_id (purpose id)
+
+    Returns JSON when XHR or Accept header requests JSON; otherwise
+    falls back to redirect + Django messages.
+    """
+    def _is_ajax(r):
+        return r.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or 'application/json' in (r.headers.get('Accept',''))
+
+    resident_raw = (request.POST.get('applicant_id') or request.POST.get('resident_id') or '').strip()
+    purpose_raw  = (request.POST.get('other_clearance_id') or request.POST.get('purpose') or '').strip()
+
+    # Coerce ints safely
+    def _to_int(val):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return None
+
+    resident_id = _to_int(resident_raw)
+    other_clearance_id = _to_int(purpose_raw)
+
+    if not resident_id:
+        msg = 'Missing or invalid resident id.'
+        if _is_ajax(request):
+            return JsonResponse({'ok': False, 'error': msg}, status=400)
+        messages.error(request, msg)
+        return redirect('secretary_module:add_certificate')
+
+    if not other_clearance_id:
+        msg = 'Please select a valid purpose.'
+        if _is_ajax(request):
+            return JsonResponse({'ok': False, 'error': msg}, status=400)
+        messages.error(request, msg)
+        return redirect('secretary_module:add_certificate')
+
+    personnel_id = _acting_personnel_id(request)
+
+    try:
+        application_id = SecretaryHelpers.create_application_barangay_clearance(
+            personnel_id=personnel_id,
+            resident_id=resident_id,
+            other_clearance_id=other_clearance_id,
+        )
+        if not application_id:
+            raise RuntimeError('No application id returned from database function.')
+    except Exception as e:
+        # Prefer cleaned DB error message, fallback to str(e)
+        cleaned = _clean_db_error(e) if callable(_clean_db_error) else None
+        msg = cleaned or coerce_message(e) or str(e) or 'Unexpected error.'
+        if _is_ajax(request):
+            return JsonResponse({'ok': False, 'error': msg}, status=500)
+        messages.error(request, f'Failed to create barangay clearance: {msg}')
+        return redirect('secretary_module:add_certificate')
+
+    success_msg = 'Barangay clearance application created.'
+    if _is_ajax(request):
+        return JsonResponse({'ok': True, 'application_id': application_id, 'message': success_msg})
+
+    messages.success(request, success_msg)
+    return redirect('secretary_module:applications')
+    """Create a barangay clearance application for a selected resident and purpose.
+    The form posts `applicant_id` (resident) and `purpose` (which holds other_clearance_id).
+    """
+    resident_id = request.POST.get('applicant_id')
+    other_clearance_id = request.POST.get('purpose')  # value is other_clearance_id
+    # Support AJAX (fetch) submissions: return JSON instead of redirect/messages
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    if not resident_id or not other_clearance_id:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'message': 'Resident and purpose are required.'}, status=400)
+        messages.error(request, 'Resident and purpose are required.')
+        return redirect('secretary_module:create_application')
+    try:
+        personnel_id = _acting_personnel_id(request)
+        app_id = SecretaryHelpers.create_application_barangay_clearance(
+            personnel_id=personnel_id,
+            resident_id=int(resident_id),
+            other_clearance_id=int(other_clearance_id)
+        )
+        if app_id:
+            if is_ajax:
+                return JsonResponse({'ok': True, 'application_id': app_id, 'message': f'Barangay clearance application #{app_id} created.'})
+            messages.success(request, f'Barangay clearance application #{app_id} created.')
+            return redirect('secretary_module:application_detail', application_id=app_id)
+        if is_ajax:
+            return JsonResponse({'ok': False, 'message': 'Failed to create application.'}, status=500)
+        messages.error(request, 'Failed to create application.')
+    except Exception as e:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'message': f'Error creating application: {coerce_message(e)}'}, status=400)
+        messages.error(request, f'Error creating application: {e}')
+    return redirect('secretary_module:create_application')
+
