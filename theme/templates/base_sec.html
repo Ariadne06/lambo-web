@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <title>{% block title %}Secretary Dashboard{% endblock %}</title>
+  <title>{% block title %}Secretary{% endblock %}</title>
   {% tailwind_css %}
 </head>
 <body class="bg-gray-100 min-h-screen font-[Poppins]">
@@ -22,7 +22,7 @@
             <!-- Dashboard -->
           <a href="{% url 'secretary_module:secretary_dashboard' %}"
           class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                  {% if request.resolver_match.url_name == 'secretary_dashboard' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
                       hover:bg-red-800/80
@@ -30,7 +30,7 @@
           <img 
             src="{% static 'images/dashboard.svg' %}" 
             alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
+            {% if request.resolver_match.url_name == 'secretary_dashboard' %}
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
@@ -39,141 +39,228 @@
 
 <!-- Manage submenu -->
 <button id="submenu-toggle" type="button"
-        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
-                   bg-white text-red-700 font-semibold shadow-sm
-               {% else %}
-                   hover:bg-red-800/80
-               {% endif %}">
+    class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+         {% if request.resolver_match.url_name in 'resident_list household_list business_list' %}
+           bg-white text-red-700 font-semibold shadow-sm
+         {% else %}
+           hover:bg-red-800/80
+         {% endif %}">
   <img src="{% static 'images/manage.svg' %}" alt="Manage Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} invert {% endif %}">
+     class="h-5 w-5 {% if request.resolver_match.url_name in 'resident_list household_list business_list' %} invert {% endif %}">
   <span>Manage</span>
   <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg"
        class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} rotate-180 {% endif %}"
+        {% if request.resolver_match.url_name in 'resident_list household_list business_list' %} rotate-180 {% endif %}"
        fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
   </svg>
 </button>
-<div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+<div id="submenu" class="{% if request.resolver_match.url_name in 'resident_list household_list business_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
   <a href="{% url 'secretary_module:resident_list' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Resident List
+   class="block px-3 py-2 rounded-md transition
+      {% if request.resolver_match.url_name == 'resident_list' %}
+        bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+      {% else %}
+        hover:bg-red-800/60
+      {% endif %}">
+  Resident List
   </a>
   <a href="{% url 'secretary_module:household_list' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'password_request' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Household List
+   class="block px-3 py-2 rounded-md transition
+      {% if request.resolver_match.url_name == 'household_list' %}
+        bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+      {% else %}
+        hover:bg-red-800/60
+      {% endif %}">
+  Household List
   </a>
   <a href="{% url 'secretary_module:business_list' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'personnel_list' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Business List
+   class="block px-3 py-2 rounded-md transition
+      {% if request.resolver_match.url_name == 'business_list' %}
+        bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+      {% else %}
+        hover:bg-red-800/60
+      {% endif %}">
+  Business List
   </a>
-  
 </div>
 
 <!-- Certificates top-level submenu -->
 <button id="cert-toggle" type="button"
       class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-          {% if request.resolver_match.url_name in 'create_application manageCert1 manageCert2' %}
+          {% if request.resolver_match.url_name in 'create_application applications manageCert1 manageCert2' %}
             bg-white text-red-700 font-semibold shadow-sm
           {% else %}
              hover:bg-red-800/80
           {% endif %}">
-  <span>Certificates</span>
-  <svg id="cert-arrow" xmlns="http://www.w3.org/2000/svg"
-     class="h-5 w-5 ml-auto transition-transform duration-300"
-     fill="none" viewBox="0 0 24 24" stroke="currentColor">
-   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+  <!-- Inline certificate icon follows current text color (currentColor) -->
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M6 2a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V4a2 2 0 0 0-2-2H6Zm2 5h8v2H8V7Zm0 4h8v2H8v-2Z"/>
   </svg>
-</button>
+  <span>Certificates</span>
+  <div class="ml-auto flex items-center gap-2">
+    <!-- Total applications today badge for Certificates (hide when zero/empty) -->
+    {% if badges_applications.total_today %}
+    <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">
+      {{ badges_applications.total_today }}
+    </span>
+    {% endif %}
+    <svg id="cert-arrow" xmlns="http://www.w3.org/2000/svg"
+       class="h-5 w-5 transition-transform duration-300 {% if request.resolver_match.url_name in 'create_application applications' %} rotate-180 {% endif %}"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor">
+     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+  </button>
 
-  <div id="cert-submenu" class="hidden ml-10 space-y-1">
+  <div id="cert-submenu" class="{% if request.resolver_match.url_name in 'create_application applications' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
   <a href="{% url 'secretary_module:create_application' %}"
-    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">New Application (Walk‑in)</a>
-  <a href="{% url 'secretary_module:manageCert1' %}"
-    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Manage Certificates</a>
-  <a href="{% url 'secretary_module:applications' %}"
-    class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Applications</a>
+    class="block px-3 py-2 rounded-md transition
+           {% if request.resolver_match.url_name == 'create_application' %}
+             bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+           {% else %}
+             hover:bg-red-800/60
+           {% endif %}">New Application (Walk‑in)</a>
+  
+  <!-- Applications nested submenu -->
+  <a id="apps-toggle" href="{% url 'secretary_module:applications' %}"
+          class="flex items-center w-full gap-2 px-3 py-2 rounded-md transition
+                 {% if request.resolver_match.url_name == 'applications' %}
+                   bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+                 {% else %}
+                   hover:bg-red-800/60
+                 {% endif %}">
+    <span>Applications</span>
+    <div class="ml-auto flex items-center gap-2">
+      {% if badges_applications.total_today %}
+      <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">
+        {{ badges_applications.total_today }}
+      </span>
+      {% endif %}
+      <svg id="apps-arrow" xmlns="http://www.w3.org/2000/svg"
+           class="h-4 w-4 transition-transform duration-300 {% if request.resolver_match.url_name == 'applications' %} rotate-180 {% endif %}"
+           fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </a>
+  <!-- Increased indent (ml-8) for clearer hierarchy of status filters -->
+  <div id="apps-submenu" class="{% if request.resolver_match.url_name == 'applications' %} block {% else %} hidden {% endif %} ml-8 space-y-1">
+    <a href="{% url 'secretary_module:applications' %}?application_status=Pending"
+       class="flex items-center justify-between px-3 py-2 rounded-md transition
+              {% if request.resolver_match.url_name == 'applications' and request.GET.application_status == 'Pending' %}
+                bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+              {% else %}
+                hover:bg-red-800/50
+              {% endif %}">
+      <span>Pending</span>
+      {% if badges_applications.pending_today %}
+      <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.pending_today }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'secretary_module:applications' %}?application_status=For+Payment"
+       class="flex items-center justify-between px-3 py-2 rounded-md transition
+              {% if request.resolver_match.url_name == 'applications' and request.GET.application_status == 'For Payment' %}
+                bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+              {% else %}
+                hover:bg-red-800/50
+              {% endif %}">
+      <span>For Payment</span>
+      {% if badges_applications.for_payment_today %}
+      <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.for_payment_today }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'secretary_module:applications' %}?application_status=Approved"
+       class="flex items-center justify-between px-3 py-2 rounded-md transition
+              {% if request.resolver_match.url_name == 'applications' and request.GET.application_status == 'Approved' %}
+                bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+              {% else %}
+                hover:bg-red-800/50
+              {% endif %}">
+      <span>Approved</span>
+      {% if badges_applications.approved_today %}
+      <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-xs font-semibold bg-white text-red-700 ring-1 ring-red-300">{{ badges_applications.approved_today }}</span>
+      {% endif %}
+    </a>
+  </div>
 </div>
 
-<a href="{% url 'secretary_module:applications' %}"
-     class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-            {% if request.resolver_match.url_name == 'households_view' %}
-              bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-              hover:bg-red-800/80
-            {% endif %}">
-    <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
-         class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
-    <span>Applications</span>
-  </a>
+<!-- Removed standalone Applications link; Applications is accessible under Certificates submenu -->
 
 <!-- Price Update submenu -->
 <button id="price-toggle" type="button"
         class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %}
+               {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties business_fee_update amusement_update other_clearances_update tax_penalties_update' %}
                    bg-white text-red-700 font-semibold shadow-sm
                {% else %}
                    hover:bg-red-800/80
                {% endif %}">
   <img src="{% static 'images/manage.svg' %}" alt="Price Update Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} invert {% endif %}">
+       class="h-5 w-5 {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties business_fee_update amusement_update other_clearances_update tax_penalties_update' %} invert {% endif %}">
   <span>Price Update</span>
   <svg id="price-arrow" xmlns="http://www.w3.org/2000/svg"
        class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} rotate-180 {% endif %}"
+              {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties business_fee_update amusement_update other_clearances_update tax_penalties_update' %} rotate-180 {% endif %}"
        fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
   </svg>
 </button>
 
-<div id="price-submenu" class="{% if request.resolver_match.url_name in 'price_business price_amusement price_clearances price_tax' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'secretary_module:business_fee' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Business Fee</a>
-  <a href="{% url 'secretary_module:amusement' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Amusement Fee</a>
-  <a href="{% url 'secretary_module:other_clearances' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Other Clearances Fee</a>
-  <a href="{% url 'secretary_module:tax_penalties' %}" class="block px-3 py-2 rounded-md transition hover:bg-red-800/60">Tax & Penalties</a>
+<div id="price-submenu" class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties business_fee_update amusement_update other_clearances_update tax_penalties_update' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+  <a href="{% url 'secretary_module:business_fee' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name in 'business_fee business_fee_update' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+            {% else %}
+              hover:bg-red-800/60
+            {% endif %}">Business Fee</a>
+  <a href="{% url 'secretary_module:amusement' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name in 'amusement amusement_update' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+            {% else %}
+              hover:bg-red-800/60
+            {% endif %}">Amusement Fee</a>
+  <a href="{% url 'secretary_module:other_clearances' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name in 'other_clearances other_clearances_update' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+            {% else %}
+              hover:bg-red-800/60
+            {% endif %}">Other Clearances Fee</a>
+  <a href="{% url 'secretary_module:tax_penalties' %}"
+     class="block px-3 py-2 rounded-md transition
+            {% if request.resolver_match.url_name in 'tax_penalties tax_penalties_update' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+            {% else %}
+              hover:bg-red-800/60
+            {% endif %}">Tax & Penalties</a>
 </div>
 
 
   <a href="{% url 'secretary_module:approval' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-            {% if request.resolver_match.url_name == 'households_view' %}
-              bg-white text-red-700 font-semibold shadow-sm
+            {% if request.resolver_match.url_name == 'approval' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
             {% else %}
               hover:bg-red-800/80
             {% endif %}">
     <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
          class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+                {% if request.resolver_match.url_name == 'approval' %} invert {% endif %}">
     <span>Approval</span>
   </a>
 
   <a href="{% url 'secretary_module:announcement' %}"
      class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-            {% if request.resolver_match.url_name == 'households_view' %}
-              bg-white text-red-700 font-semibold shadow-sm
+            {% if request.resolver_match.url_name == 'announcement' %}
+              bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
             {% else %}
               hover:bg-red-800/80
             {% endif %}">
     <img src="{% static 'images/logs.svg' %}" alt="Household Icon"
          class="h-5 w-5
-                {% if request.resolver_match.url_name == 'households_view' %} invert {% endif %}">
+                {% if request.resolver_match.url_name == 'announcement' %} invert {% endif %}">
     <span>Announcement</span>
   </a>
     </div>
@@ -220,13 +307,17 @@
     </div>
   </div>
 
-  <script>
-  // Define your accordion items once
+  {% comment %} Removed duplicate inline script block to avoid redeclaring ACCORDION for linters. {% endcomment %}
+
+<script>
+// Simple accordion wiring (unchanged)
   const ACCORDION = [
-    { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
-    { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
-    { btn: 'price-toggle',  panel: 'price-submenu',  arrow: 'price-arrow'  },
-    { btn: 'cert-toggle',   panel: 'cert-submenu',   arrow: 'cert-arrow'   },
+    { btn: 'submenu-toggle', panel: 'submenu',       arrow: 'submenu-arrow', cluster: 'top'  },
+    { btn: 'logs-toggle',    panel: 'logs-submenu',  arrow: 'logs-arrow',    cluster: 'top'  },
+    { btn: 'price-toggle',   panel: 'price-submenu', arrow: 'price-arrow',   cluster: 'top'  },
+    { btn: 'cert-toggle',    panel: 'cert-submenu',  arrow: 'cert-arrow',    cluster: 'cert' },
+    // nested under Certificates
+    { btn: 'apps-toggle',    panel: 'apps-submenu',  arrow: 'apps-arrow',    cluster: 'cert' },
   ];
 
   function getEl(id){ return document.getElementById(id); }
@@ -251,7 +342,7 @@
     btn?.setAttribute('aria-expanded', 'true');
   }
 
-  // Wire up clicks so that opening one closes the others
+  // Wire up clicks with cluster-aware behavior
   ACCORDION.forEach((item) => {
     const btn = getEl(item.btn);
     const panel = getEl(item.panel);
@@ -267,86 +358,104 @@
       const currentlyOpen = !getEl(item.panel).classList.contains('hidden');
 
       if (currentlyOpen) {
-        // Simply close this one
+        // Close this item. If collapsing Certificates, also reset its nested submenu state.
         closeItem(item);
-      } else {
-        // Close all others
-        ACCORDION.forEach(other => { if (other !== item) closeItem(other); });
-        // Open the clicked one
-        openItem(item);
+        if (item.btn === 'cert-toggle') {
+          const nested = ACCORDION.find(i => i.btn === 'apps-toggle');
+          if (nested) closeItem(nested);
+        }
+        return;
       }
+
+      // Open flow: close items in other clusters only
+      ACCORDION.forEach(other => {
+        if (other !== item && other.cluster !== item.cluster) closeItem(other);
+      });
+
+      // If opening the nested Applications, ensure its parent Certificates is open
+      if (item.btn === 'apps-toggle') {
+        const parent = ACCORDION.find(i => i.btn === 'cert-toggle');
+        if (parent) openItem(parent);
+      }
+
+      openItem(item);
     });
   });
 
-  // Reminder: Make sure this Function cannot be changed or overwritten
-  // It handles idle logout and tab close detection
-  (function () {
-    const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
-    const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+// Idle + tab close + safe manual logout (Option A: no ping on unload)
+(function () {
+  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+  const LOGOUT_URL    = "{% url 'authentication:logout' %}";
+  const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}"; // still used for cross-tab cleanup
 
-    const TAB_FLAG    = 'tabAuth';
-    const CLOSED_KEY  = 'closed_session_token';
-    const SESSION_TOKEN = "{{ request.session.session_token }}";
+  const TAB_FLAG       = 'tabAuth';
+  const CLOSED_KEY     = 'closed_session_token';
+  const SESSION_TOKEN  = "{{ request.session.session_token|default:'' }}";
+  if (!SESSION_TOKEN) return;
 
-    // First load in this tab?
-    if (!sessionStorage.getItem(TAB_FLAG)) {
-      sessionStorage.setItem(TAB_FLAG, '1');
+  // --- Manual logout suppression ---
+  let suppressClosePing = false;
+  try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  document.getElementById('logout-link')?.addEventListener('click', () => {
+    suppressClosePing = true;
+    try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
 
-      // If a previous tab left a token, report it and logout now
-      const closedToken = localStorage.getItem(CLOSED_KEY);
-      if (closedToken) {
-        (async () => {
-          const body = new URLSearchParams();
-          body.set('session_token', closedToken);
+  async function pingSilentLogout(token) {
+    if (!token) return;
+    const body = new URLSearchParams();
+    body.set('session_token', token);
+    try {
+      await fetch(TAB_CLOSE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        credentials: 'omit',   // NO COOKIES
+        keepalive: true,
+        cache: 'no-store'
+      });
+    } catch (_) { /* ignore */ }
+  }
 
-          try {
-            await fetch(TAB_CLOSE_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: body.toString(),
-              credentials: 'same-origin',
-              keepalive: true
-            });
-          } catch (_) { /* ignore */ }
+  // First load in this tab? Clean foreign leftover token (but not our own)
+  if (!sessionStorage.getItem(TAB_FLAG)) {
+    sessionStorage.setItem(TAB_FLAG, '1');
+    const closedToken = localStorage.getItem(CLOSED_KEY);
+    if (closedToken && closedToken !== SESSION_TOKEN) {
+      // Only clean up an older/different tab's token
+      pingSilentLogout(closedToken);
+    }
+    try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
+  }
 
-          try { localStorage.removeItem(CLOSED_KEY); } catch(_) {}
-            window.location.replace(TAB_CLOSE_URL);
-        })();
-        return;
+  // On tab/browser close or reload — DO NOT ping here (Option A)
+  function handleClose() {
+    if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
+    // Stash our token so the next tab load can clean up the previous tab's token
+    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
+    // IMPORTANT: No pingSilentLogout here to avoid logging out during normal navigation
+  }
+  addEventListener('pagehide', handleClose);
+  addEventListener('beforeunload', handleClose);
+
+  // Idle detection -> go to real logout
+  let last = Date.now(), timer;
+  function arm() {
+    clearTimeout(timer);
+    if (document.visibilityState !== 'visible') return;
+    timer = setTimeout(() => {
+      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+        window.location.replace(LOGOUT_URL);
       }
-    }
-
-    // On tab/browser close: record token and call silent_logout
-    addEventListener('pagehide', () => {
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
-
-    addEventListener('beforeunload', () => {
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      sendClosePing(SESSION_TOKEN);
-    });
-
-    // Idle detection (unchanged)
-    let last = Date.now(), timer;
-    function arm() {
-      clearTimeout(timer);
-      if (document.visibilityState !== 'visible') return;
-      timer = setTimeout(() => {
-        if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-          window.location.replace(LOGOUT_URL);
-        }
-      }, IDLE_LIMIT_MS + 100);
-    }
-
-    function bump(){ last = Date.now(); arm(); }
-    ['mousemove','keydown','click','wheel','scroll','touchstart']
-    .forEach(evt => addEventListener(evt, bump, { passive: true }));
-    addEventListener('visibilitychange', arm, { capture: true });
-    arm();
-  })();
+    }, IDLE_LIMIT_MS + 100);
+  }
+  function bump(){ last = Date.now(); arm(); }
+  ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
+    addEventListener(evt, bump, { passive: true })
+  );
+  addEventListener('visibilitychange', arm, { capture: true });
+  arm();
+})();
 </script>
-
 </body>
 </html>

@@ -1,11 +1,30 @@
-{% extends 'base_admin.html' %}
+{% extends 'base_nurse.html' %}
 
-{% block title %}Nurse{% endblock %}
+{% block title %}Maternal Record{% endblock %}
 
 {% block content %}
 <div class="px-6 py-8">
   <!-- Page header -->
-  <h1 class="text-2xl font-semibold text-red-700 mb-6">Maternal Record</h1>
+  <h1 class="text-2xl font-semibold text-red-700 mb-6">
+    Maternal Record{% if mhr.full_name %} – {{ mhr.full_name }}{% endif %}
+  </h1>
+{% if messages %}
+  <div class="max-w-4xl mx-auto mt-4 space-y-2">
+    {% for message in messages %}
+      <div
+        class="px-4 py-2 rounded-md text-sm
+               {% if message.tags == 'error' %}
+                 bg-red-100 text-red-800 border border-red-200
+               {% elif message.tags == 'success' %}
+                 bg-green-100 text-green-800 border border-green-200
+               {% else %}
+                 bg-gray-100 text-gray-800 border border-gray-200
+               {% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 
   <!-- Card -->
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
@@ -15,35 +34,88 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Registration Date</label>
-          <input type="text" value="01/02/2025" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.registration_date|date:'m/d/Y' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Maternal Full Name</label>
-          <input type="text" value="Jereza Rodrigo" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.full_name }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">NHTS Status</label>
-          <input type="text" value="NHTS" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{% if mhr.nhts_status %}NHTS{% else %}Non-NHTS{% endif %}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <input type="text" value="Purok 7 Cansaga" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.full_address|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-          <input type="text" value="09672672606" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input
+            type="text"
+            value="{{ mhr.phone_number|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
       </div>
 
       <!-- Right column -->
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <input type="text" value="Active" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Maternal ID (Resident)</label>
+          <input
+            type="text"
+            value="{{ mhr.maternal_id }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Recorded By</label>
-          <input type="text" value="Cristel Mandauwe" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Family Code</label>
+          <input
+            type="text"
+            value="{{ mhr.family_code|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Age (years)</label>
+          <input
+            type="text"
+            value="{{ mhr.age_years|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+          <input
+            type="text"
+            value="{{ mhr.address_landmark|default:'—' }}"
+            class="w-full rounded-md border border-gray-300 px-3 py-2"
+            readonly
+          >
         </div>
       </div>
     </form>
@@ -52,67 +124,1216 @@
     <div class="mt-10 flex flex-wrap justify-center gap-3">
 
       <!-- Medical/Surgical -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11 7V5h2v2h2v2h-2v2h-2V9H9V7h2Zm-4 4V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6Z"/></svg>
+      <button type="button" id="openSurgicalModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 7V5h2v2h2v2h-2v2h-2V9H9V7h2Zm-4 4V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6Z"/>
+        </svg>
         Medical/Surgical
-      </a>
+      </button>
 
       <!-- Obstetrical History -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openObstetricModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10v2H7V4Zm-2 4h14v2H5V8Zm2 4h10v2H7v-2Zm-2 4h14v2H5v-2Z"/></svg>
         Obstetrical History
-      </a>
+      </button>
 
       <!-- Check Ups -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openCheckupsModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3h14v4H5V3Zm0 6h14v12H5V9Zm8 2h-2v3H8v2h3v3h2v-3h3v-2h-3v-3Z"/></svg>
         Check Ups
-      </a>
+      </button>
 
       <!-- Immunization -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openMaternalImmModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="m21 6-3-3-7.5 7.5-1-1L3 9l5.5 6.5 1-1L21 6Z"/></svg>
         Immunization
-      </a>
+      </button>
 
       <!-- Screenings -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openScreeningModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v10H4V5Zm0 12h16v2H4v-2Z"/></svg>
         Screenings
-      </a>
+      </button>
 
-      <!-- Lab Screening + Iron -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <!-- Lab Screening + Iron (NOW a modal) -->
+      <button type="button" id="openLabModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v2h-1v6l5 8v2H6v-2l5-8V4h-1V2Z"/></svg>
         Lab Screening + Iron
-      </a>
+      </button>
 
       <!-- Supplements -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openSupplementsModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 3h10v6H7V3Zm-2 8h14v10H5V11Zm7-6h4v2h-4V5Z"/></svg>
         Supplements
-      </a>
+      </button>
 
       <!-- Delivery Outcome -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openDeliveryModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a5 5 0 1 1 0 10A5 5 0 0 1 12 4Zm-7 14a7 7 0 0 1 14 0v2H5v-2Z"/></svg>
         Delivery Outcome
-      </a>
+      </button>
 
       <!-- Postpartum Visit -->
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+      <button type="button" id="openPostpartumModal"
+              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm-4 6c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>
         Postpartum Visit
-      </a>
+      </button>
     </div>
   </div>
 
   <!-- Footer Back -->
   <div class="mt-6">
-    <a href="#"
+    <a href="{% url 'nurse_module:maternalrecord' %}"
        class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
       Back
     </a>
   </div>
 </div>
+
+<!-- ===================== SURGICAL (MEDICAL + SURGICAL HISTORY) MODAL ===================== -->
+<div id="surgicalModal" class="fixed inset-0 z-[100] hidden">
+  <div id="surgicalBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Medical Conditions & Surgical History</h3>
+        <button id="closeSurgicalModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-8 space-y-10">
+
+          <!-- Medical Conditions (dynamic) -->
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Medical Conditions</h2>
+            <div class="max-w-md overflow-x-auto">
+              <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 border border-gray-200">
+                <thead class="bg-gray-50 text-gray-800">
+                  <tr>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Condition</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date Added</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if medical_conditions %}
+                    {% for mc in medical_conditions %}
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ mc.m_medical_history_name }}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ mc.date_added|date:"m/d/Y" }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="2" class="px-4 py-2 border border-gray-200 text-sm text-gray-500">
+                        No medical conditions recorded for this maternal health record.
+                      </td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Surgical History (dynamic) -->
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg sm:text-xl font-semibold text-red-700 mb-4">Surgical History</h2>
+            <div class="max-w-md overflow-x-auto">
+              <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 border border-gray-200">
+                <thead class="bg-gray-50 text-gray-800">
+                  <tr>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Procedure</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date of Surgery</th>
+                    <th class="px-4 py-2 border border-gray-200 font-semibold">Date Added</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if surgical_history %}
+                    {% for sh in surgical_history %}
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ sh.m_surgical_history_name }}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {% if sh.date_of_surgery %}
+                            {{ sh.date_of_surgery|date:"m/d/Y" }}
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
+                        <td class="px-4 py-2 border border-gray-200">
+                          {{ sh.date_added|date:"m/d/Y" }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="3" class="px-4 py-2 border border-gray-200 text-sm text-gray-500">
+                        No surgical history recorded for this maternal health record.
+                      </td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="flex justify-end">
+            <button id="closeSurgicalModal2"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 text-white text-sm font-medium shadow hover:from-red-500 hover:to-red-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== OBSTETRICAL HISTORY MODAL (DYNAMIC) ===================== -->
+<div id="obstetricModal" class="fixed inset-0 z-[100] hidden">
+  <div id="obstetricBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Obstetrical History</h3>
+          <p class="text-xs text-gray-500">Gravida, para, abortion, LMP, and EDD details.</p>
+        </div>
+        <button id="closeObstetricModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-8 flex justify-center">
+          <div class="bg-white w-full">
+
+            {% if obst_hist %}
+              {% with oh=obst_hist.0 %}
+              <form class="space-y-6">
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Gravida (Pregnancies):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.gravida|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Para (Live Births):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.para|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Abortion (Miscarriages):</label>
+                  <input
+                    type="text"
+                    value="{{ oh.abortion|default_if_none:'' }}"
+                    class="w-32 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Last Menstrual Period:</label>
+                  <input
+                    type="text"
+                    value="{{ oh.last_menstrual_period|date:'m/d/Y' }}"
+                    class="w-40 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+                <div class="flex items-center gap-4">
+                  <label class="w-60 text-sm font-medium text-gray-700">Expected Delivery Date:</label>
+                  <input
+                    type="text"
+                    value="{{ oh.expected_date_of_delivery|date:'m/d/Y' }}"
+                    class="w-40 rounded-md border border-gray-300 px-3 py-2"
+                    readonly
+                  >
+                </div>
+              </form>
+              {% endwith %}
+            {% else %}
+              <p class="text-sm text-gray-500">
+                No obstetrical history recorded for this maternal health record.
+              </p>
+            {% endif %}
+
+            <div class="pt-6 flex justify-end">
+              <button id="closeObstetricModal2"
+                      class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MATERNAL IMMUNIZATION MODAL (DYNAMIC) ===================== -->
+<div id="maternalImmModal" class="fixed inset-0 z-[100] hidden">
+  <div id="maternalImmBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Maternal Immunization</h3>
+          <p class="text-xs text-gray-500">Record of TT doses and FIM status.</p>
+        </div>
+        <button id="closeMaternalImmModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="w-full border border-gray-300 text-sm text-left text-gray-700">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-2 border border-gray-300">Vaccine</th>
+                  <th class="px-4 py-2 border border-gray-300">1st Dose</th>
+                  <th class="px-4 py-2 border border-gray-300">2nd Dose</th>
+                  <th class="px-4 py-2 border border-gray-300">3rd Dose</th>
+                  <th class="px-4 py-2 border border-gray-300">4th Dose</th>
+                  <th class="px-4 py-2 border border-gray-300">5th Dose</th>
+                  <th class="px-4 py-2 border border-gray-300">FIM Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if immu_track %}
+                  <tr>
+                    <td class="px-4 py-2 border border-gray-300">Tetanus Toxoid (TT)</td>
+
+                    <!-- 1st dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.first_dose_date %}
+                        {{ immu_track.first_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 2nd dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.second_dose_date %}
+                        {{ immu_track.second_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 3rd dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.third_dose_date %}
+                        {{ immu_track.third_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 4th dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fourth_dose_date %}
+                        {{ immu_track.fourth_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- 5th dose -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fifth_dose_date %}
+                        {{ immu_track.fifth_dose_date|date:"m/d/Y" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <!-- FIM status -->
+                    <td class="px-4 py-2 border border-gray-300">
+                      {% if immu_track.fim_status %}
+                        Fully Immunized Mother (FIM)
+                      {% else %}
+                        Not yet FIM
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="7" class="px-4 py-2 border border-gray-300 text-sm text-gray-500">
+                      No immunization status recorded for this maternal health record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-6 flex justify-end">
+            <button id="closeMaternalImmModal2"
+                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CHECK UPS MODAL ===================== -->
+<div id="checkupsModal" class="fixed inset-0 z-[100] hidden">
+  <div id="checkupsBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Check Ups</h3>
+        <button id="closeCheckupsModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="w-full border border-gray-300">
+              <thead class="bg-gray-100">
+    <tr>
+      <th class="px-4 py-2 border border-gray-300 text-left">Trimester</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Date</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">AOG (weeks)</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Height</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Weight</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">BP</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Fetal Heart Rate</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Lab Result</th>
+      <th class="px-4 py-2 border border-gray-300 text-left">Notes</th>
+    </tr>
+  </thead>
+              <tbody>
+    {% if checkups %}
+      {% for cu in checkups %}
+        <tr class="hover:bg-gray-50">
+          <!-- Trimester -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.trimester_name|default:"—" }}
+          </td>
+
+          <!-- Date -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.date_of_checkup|date:"m/d/Y"|default:"—" }}
+          </td>
+
+          <!-- AOG -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.aog_weeks|default:"—" }}
+          </td>
+
+          <!-- Height -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.height_cm %}
+              {{ cu.height_cm }} cm
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- Weight -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.weight_kg %}
+              {{ cu.weight_kg }} kg
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- BP -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.blood_pressure|default:"—" }}
+          </td>
+
+          <!-- Fetal Heart Rate -->
+          <td class="px-4 py-2 border border-gray-300">
+            {% if cu.fetal_heart_rate %}
+              {{ cu.fetal_heart_rate }} bpm
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- Lab Result -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.laboratory_results|default:"—" }}
+          </td>
+
+          <!-- Notes -->
+          <td class="px-4 py-2 border border-gray-300">
+            {{ cu.notes|default:"—" }}
+          </td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="9" class="px-4 py-3 text-center text-sm text-gray-500 border border-gray-300">
+          No checkup records found for this maternal record.
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
+            </table>
+          </div>
+          <div class="pt-6 flex justify-end">
+            <button id="closeCheckupsModal2"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== INFECTIOUS DISEASE SCREENING MODAL (DYNAMIC) ===================== -->
+<div id="screeningModal" class="fixed inset-0 z-[100] hidden">
+  <div id="screeningBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Infectious Disease Screening</h3>
+        <button id="closeScreeningModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
+              <thead class="bg-gray-50 text-gray-800">
+                <tr>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Disease Type</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Date Screened</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Result</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                {% if disease_surveillance %}
+                  {% for ds in disease_surveillance %}
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ds.disease_name }}
+                      </td>
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if ds.screening_date %}
+                          {{ ds.screening_date|date:"m/d/Y" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ds.result|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3" class="px-6 py-3 border border-gray-200 text-sm text-gray-500">
+                      No infectious disease screening records found for this maternal health record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer buttons: Add + Close -->
+          <div class="pt-4 flex justify-between items-center">
+  <button type="button" id="openAddDiseaseModal"
+          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+    <!-- plus icon -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
+    </svg>
+    Add Screening
+  </button>
+
+  <button id="closeScreeningModal2"
+          class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+    Close
+  </button>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADD INFECTIOUS DISEASE SCREENING (NESTED) MODAL ===================== -->
+<div id="addDiseaseModal" class="fixed inset-0 z-[110] hidden">
+  <div id="addDiseaseBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Add Infectious Disease Screening</h3>
+          <p class="text-xs text-gray-500">Record a new screening for this maternal health record.</p>
+        </div>
+        <button id="closeAddDiseaseModal" type="button"
+                class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <form method="post"
+              action="{% url 'nurse_module:add_maternal_disease_screening' mhr.maternal_health_id %}"
+              class="px-6 py-6 space-y-5">
+          {% csrf_token %}
+
+          <!-- Disease Type -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Disease Type <span class="text-red-500">*</span>
+            </label>
+            <select name="disease_type_id"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    required>
+              <option value="">Select disease</option>
+              {% for dt in disease_types %}
+                <option value="{{ dt.disease_type_id }}">{{ dt.disease_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Screening Date -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Screening Date <span class="text-red-500">*</span>
+            </label>
+            <input type="date"
+                   name="screening_date"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                   required>
+          </div>
+
+          <!-- Result -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Result
+              <span class="text-xs text-gray-400">
+                (required for all except HIV)
+              </span>
+            </label>
+            <input type="text"
+                   name="result"
+                   placeholder="e.g., Non-reactive, Negative, Positive"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-4 flex justify-end gap-3">
+            <button type="button" id="closeAddDiseaseModal2"
+                    class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+              Save Screening
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ===================== LAB SCREENING + IRON (SINGLE MODAL) ===================== -->
+<div id="labModal" class="fixed inset-0 z-[100] hidden">
+  <div id="labBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">
+          Lab Screening Result
+        </h3>
+        <button id="closeLabModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
+              <thead class="bg-gray-50 text-gray-800">
+                <tr>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Test Name</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Test Date</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Result</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Iron Given Date</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Iron Given</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if lab_screenings %}
+                  {% for ls in lab_screenings %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Test Name -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.test_name }}
+                      </td>
+
+                      <!-- Test Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.test_date|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Result -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.result|default:"—" }}
+                      </td>
+
+                      <!-- Iron Given Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ ls.iron_tablet_given_date|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Iron Given (quantity) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if ls.iron_tablet_quantity %}
+                          {{ ls.iron_tablet_quantity }} tabs
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="5" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No laboratory screening records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Buttons -->
+<div class="pt-6 flex justify-between items-center">
+  <!-- Add Lab Screening -->
+  <button type="button" id="openAddLabModal"
+          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
+    </svg>
+    Add Lab Screening
+  </button>
+
+  <!-- Close -->
+  <button id="closeLabModal2"
+          class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-600 hover:to-red-500 hover:scale-105 transition">
+    Close
+  </button>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================== ADD LAB SCREENING (NESTED) MODAL ===================== -->
+<div id="addLabModal" class="fixed inset-0 z-[110] hidden">
+  <div id="addLabBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Add Lab Screening</h3>
+          <p class="text-xs text-gray-500">Record a new laboratory test for this maternal health record.</p>
+        </div>
+        <button id="closeAddLabModal" type="button"
+                class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="overflow-auto max-h-[70vh]">
+        <form method="post"
+              action="{% url 'nurse_module:add_maternal_lab_screening' mhr.maternal_health_id %}"
+              class="px-6 py-6 space-y-5">
+          {% csrf_token %}
+
+          <!-- Test Type -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Test Type <span class="text-red-500">*</span>
+            </label>
+            <select name="test_type_id"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    required>
+              <option value="">Select test</option>
+              {% for tt in test_types %}
+                <option value="{{ tt.test_type_id }}">{{ tt.test_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Test Date -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Test Date <span class="text-red-500">*</span>
+            </label>
+            <input type="date"
+                   name="test_date"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                   required>
+          </div>
+
+          <!-- Result -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Result
+            </label>
+            <input type="text"
+                   name="result"
+                   placeholder="e.g., Normal, Within normal limits, Elevated"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <hr class="my-2">
+
+          <p class="text-xs text-gray-500 mb-1">
+            <span class="font-semibold">Iron Tablet Details</span> (usually applicable for CBC results only; optional for others)
+          </p>
+
+          <!-- Iron Given Date -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Iron Tablet Given Date
+            </label>
+            <input type="date"
+                   name="iron_tablet_given_date"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <!-- Iron Given Quantity -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Number of Iron Tablets
+            </label>
+            <input type="number"
+                   name="iron_tablet_quantity"
+                   min="0"
+                   placeholder="e.g., 30"
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-4 flex justify-end gap-3">
+            <button type="button" id="closeAddLabModal2"
+                    class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 hover:scale-105 transition">
+              Save Lab Screening
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ===================== SUPPLEMENTS MODAL ===================== -->
+<div id="supplementsModal" class="fixed inset-0 z-[100] hidden">
+  <div id="supplementsBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Supplement Records</h3>
+        <button id="closeSupplementsModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
+              <thead class="bg-gray-50 text-gray-800">
+                <tr>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Supplement</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Date Given</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Quantity</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Trimester</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if supplements %}
+                  {% for sup in supplements %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Supplement name -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.supplement_name }}
+                      </td>
+
+                      <!-- Date given -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.date_given|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Quantity (number of tablets) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if sup.number_of_tablets %}
+                          {{ sup.number_of_tablets }} tabs
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Trimester -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ sup.trimester_name|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No supplement records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <div class="pt-6 flex justify-end">
+            <button id="closeSupplementsModal2"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DELIVERY OUTCOME MODAL ===================== -->
+<div id="deliveryModal" class="fixed inset-0 z-[100] hidden">
+  <div id="deliveryBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Delivery Outcome</h3>
+        <button id="closeDeliveryModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
+              <thead class="bg-gray-50 text-gray-800">
+                <tr>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Outcome</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Delivery Type</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Place of Delivery</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Ownership</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Delivery Date</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Time of Delivery</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Attendant(s)</th>
+                  
+                </tr>
+              </thead>
+              <tbody>
+                {% if delivery_outcomes %}
+                  {% for do in delivery_outcomes %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Outcome -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.outcome_type|default:"—" }}
+                      </td>
+
+                      <!-- Delivery Type -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.delivery_type|default:"—" }}
+                      </td>
+
+                      <!-- Place of Delivery -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.place_delivery_type|default:"—" }}
+                      </td>
+
+                      <!-- Ownership -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.ownership_type|default:"—" }}
+                      </td>
+
+                      <!-- Delivery Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ do.date_terminated|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Time of Delivery -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if do.time_of_delivery %}
+                          {{ do.time_of_delivery|time:"h:i A" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Attendant(s) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if do.other_attendant %}
+                          {{ do.birth_attendant }} ({{ do.other_attendant }})
+                        {% else %}
+                          {{ do.birth_attendant|default:"—" }}
+                        {% endif %}
+                      </td>
+
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="8" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No delivery outcome record found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <div class="pt-6 flex justify-end">
+            <button id="closeDeliveryModal2"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== POSTPARTUM VISIT MODAL ===================== -->
+<div id="postpartumModal" class="fixed inset-0 z-[100] hidden">
+  <div id="postpartumBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-6xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Postpartum Visit</h3>
+        <button id="closePostpartumModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[70vh]">
+        <div class="px-6 py-6">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-700 border border-gray-200">
+              <thead class="bg-gray-50 text-gray-800">
+                <tr>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Date</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Weight</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Height</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Vitals</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Lab Notes</th>
+                  <th class="px-6 py-3 border border-gray-200 font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if postpartum_visits %}
+                  {% for pv in postpartum_visits %}
+                    <tr class="hover:bg-gray-50">
+                      <!-- Date -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.date_of_visit|date:"m/d/Y"|default:"—" }}
+                      </td>
+
+                      <!-- Weight -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if pv.weight_kg %}
+                          {{ pv.weight_kg }} kg
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Height -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {% if pv.height_cm %}
+                          {{ pv.height_cm }} cm
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <!-- Vitals (BP) -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.blood_pressure|default:"—" }}
+                      </td>
+
+                      <!-- Lab Notes -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.laboratory_notes|default:"—" }}
+                      </td>
+
+                      <!-- Notes -->
+                      <td class="px-6 py-3 border border-gray-200">
+                        {{ pv.notes|default:"—" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="6" class="px-6 py-3 text-center text-sm text-gray-500 border border-gray-200">
+                      No postpartum visit records found for this maternal record.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <div class="pt-6 flex justify-end">
+            <button id="closePostpartumModal2"
+                    class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    function open(modal) {
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+    function close(modal) {
+      modal.classList.add('hidden');
+      const anyOpen = Array.from(document.querySelectorAll('[id$="Modal"]'))
+        .some(m => !m.classList.contains('hidden'));
+      if (!anyOpen) document.body.classList.remove('overflow-hidden');
+    }
+
+    function wire(openBtnId, modalId, closeIds) {
+      const openBtn = document.getElementById(openBtnId);
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      openBtn && openBtn.addEventListener('click', () => open(modal));
+      closeIds.forEach(id => {
+        const el = document.getElementById(id);
+        el && el.addEventListener('click', () => close(modal));
+      });
+    }
+
+    // Surgical
+    wire('openSurgicalModal', 'surgicalModal', ['closeSurgicalModal', 'closeSurgicalModal2', 'surgicalBackdrop']);
+
+    // Obstetrical
+    wire('openObstetricModal', 'obstetricModal', ['closeObstetricModal', 'closeObstetricModal2', 'obstetricBackdrop']);
+
+    // Immunization
+    wire('openMaternalImmModal', 'maternalImmModal', ['closeMaternalImmModal', 'closeMaternalImmModal2', 'maternalImmBackdrop']);
+
+    // Check Ups
+    wire('openCheckupsModal', 'checkupsModal', ['closeCheckupsModal', 'closeCheckupsModal2', 'checkupsBackdrop']);
+
+    // Screening (view)
+    wire('openScreeningModal', 'screeningModal', ['closeScreeningModal', 'closeScreeningModal2', 'screeningBackdrop']);
+
+    // ✅ New: Add Disease Screening nested modal
+    wire('openAddDiseaseModal', 'addDiseaseModal', ['closeAddDiseaseModal', 'closeAddDiseaseModal2', 'addDiseaseBackdrop']);
+
+    // Lab Screening + Iron (parent)
+    wire('openLabModal', 'labModal', ['closeLabModal', 'closeLabModal2', 'labBackdrop']);
+
+    // Lab Result (nested)
+    const openLabResultBtn = document.getElementById('openLabResultModal');
+    const labResultModal = document.getElementById('labResultModal');
+    const closeLabResultBtn = document.getElementById('closeLabResultModal');
+    const closeLabResultBtn2 = document.getElementById('closeLabResultModal2');
+    const labResultBackdrop = document.getElementById('labResultBackdrop');
+    if (openLabResultBtn && labResultModal) {
+      openLabResultBtn.addEventListener('click', () => open(labResultModal));
+      [closeLabResultBtn, closeLabResultBtn2, labResultBackdrop].forEach(el => {
+        el && el.addEventListener('click', () => close(labResultModal));
+      });
+    }
+
+     // ✅ New: Add Lab Screening (nested inside Lab modal)
+    wire('openAddLabModal', 'addLabModal', ['closeAddLabModal', 'closeAddLabModal2', 'addLabBackdrop']);
+
+    // Supplements
+    wire('openSupplementsModal', 'supplementsModal', ['closeSupplementsModal', 'closeSupplementsModal2', 'supplementsBackdrop']);
+
+    // Delivery Outcome
+    wire('openDeliveryModal', 'deliveryModal', ['closeDeliveryModal', 'closeDeliveryModal2', 'deliveryBackdrop']);
+
+    // Postpartum
+    wire('openPostpartumModal', 'postpartumModal', ['closePostpartumModal', 'closePostpartumModal2', 'postpartumBackdrop']);
+
+    // ESC closes any open modal(s)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      [
+      'addLabModal', 
+        'labResultModal',
+        'addDiseaseModal',   // 👈 include new modal here
+        'surgicalModal',
+        'obstetricModal',
+        'maternalImmModal',
+        'checkupsModal',
+        'screeningModal',
+        'labModal',
+        'supplementsModal',
+        'deliveryModal',
+        'postpartumModal'
+      ]
+        .map(id => document.getElementById(id))
+        .forEach(m => m && !m.classList.contains('hidden') && close(m));
+    });
+  })();
+</script>
+
 {% endblock %}

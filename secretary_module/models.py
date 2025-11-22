@@ -3,6 +3,8 @@ import json
 from typing import Optional, List, Dict, Any
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
+from django.utils import timezone
+from math import ceil
 
 class Secretary(models.Model):
     class Meta:
@@ -45,13 +47,16 @@ class Secretary(models.Model):
         total_gross_income,
         dti_sec_cda_reg_number,   # optional
         clearance_category_id,    # required
-        total_units,              # <-- NEW (optional; may be None)
+        total_units,              # optional
+        videoke_count,            # <-- NEW (optional unless Amusement)
+        billiard_count,           # <-- NEW (optional unless Amusement)
+        other_device_count,       # <-- NEW (optional unless Amusement)
         clearance_date_issued,    # optional
         created_by,
     ):
         """
-        Calls register_business(...) which expects p_total_units
-        BETWEEN p_clearance_category_id and p_clearance_date_issued.
+        Calls register_business(...) which now expects amusement device counts
+        BETWEEN p_total_units and p_clearance_date_issued.
         """
         with connection.cursor() as cursor:
             cursor.callproc(
@@ -71,14 +76,107 @@ class Secretary(models.Model):
                     total_gross_income,
                     dti_sec_cda_reg_number,  # may be None
                     clearance_category_id,
-                    total_units,              # <-- keep position in sync with SQL
-                    clearance_date_issued,    # may be None
+                    total_units,             # keep order in sync with SQL
+                    videoke_count,           # <-- NEW
+                    billiard_count,          # <-- NEW
+                    other_device_count,      # <-- NEW
+                    clearance_date_issued,   # may be None
                     created_by,
                 ],
             )
             result = cursor.fetchone()
             return result[0]
         
+
+class ResidentList(models.Model):
+    """
+    Thin query layer for the Postgres function:
+      view_all_resident(p_query, p_sex, p_status_id, p_min_age, p_max_age, p_limit, p_offset)
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def _rows_to_dicts(cursor) -> List[Dict[str, Any]]:
+        cols = [col[0] for col in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+    @staticmethod
+    def search(
+        p_query: Optional[str] = None,
+        p_sex: Optional[str] = None,          # 'male'/'female'
+        p_status_id: Optional[int] = None,
+        p_min_age: Optional[int] = None,
+        p_max_age: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> Dict[str, Any]:
+        page = max(1, int(page or 1))
+        limit = max(0, int(page_size or 50))
+        offset = (page - 1) * limit
+
+        norm_sex = None
+        if p_sex:
+            s = str(p_sex).strip().lower()
+            if s in ("male", "female"):
+                norm_sex = s
+
+        # 1) paged rows
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM view_all_resident(%s,%s,%s,%s,%s,%s,%s);
+                """,
+                [p_query, norm_sex, p_status_id, p_min_age, p_max_age, limit, offset],
+            )
+            rows = ResidentList._rows_to_dicts(cursor)
+
+        # 2) total count (simple approach)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)::int
+                FROM view_all_resident(%s,%s,%s,%s,%s,%s,%s);
+                """,
+                [p_query, norm_sex, p_status_id, p_min_age, p_max_age, 2147483647, 0],
+            )
+            total = cursor.fetchone()[0] if cursor.rowcount != 0 else 0
+
+        pages = max(1, ceil(total / limit)) if limit else 1
+
+        # Build modal payloads (aligned with the template)
+        for r in rows:
+            payload = {
+                "resident_id": r.get("resident_id"),
+                "resident_code": r.get("resident_code"),
+                # Use full_name directly from SQL (don’t split)
+                "full_name": r.get("full_name") or "",         # <— send full_name directly
+                "sex": r.get("sex"),
+                "dob": str(r.get("dob")) if r.get("dob") else "",
+                "age": r.get("age"),
+                "religion": r.get("religion"),
+                "educ_attainment": r.get("educational_attainment"),
+                "religion": r.get("religion"), 
+                "civil_status": r.get("civil_status"),
+                "resident_status": r.get("status_name"),
+                # New: bind to full_address from SQL
+                "full_address": r.get("full_address"),
+                # Table fields you still show:
+                "household_number": r.get("household_number"),
+                "family_code": r.get("family_code"),
+            }
+            r["payload_json"] = json.dumps(payload, ensure_ascii=False)
+
+
+        return {
+            "rows": rows,
+            "total": total,
+            "page": page,
+            "pages": pages,
+            "limit": limit,
+            "offset": offset,
+        }
 
 class Business(models.Model):
     class Meta:
@@ -162,9 +260,20 @@ class Business(models.Model):
         total_gross_income=None,
         clearance_category_id=None,  # may be None
         dti_sec_cda_reg_number=None, # not editable
-        total_units=None,            # <-- NEW (may be None)
+        total_units=None,            # may be None
+        videoke_count=None,          # <-- NEW (may be None; 0 allowed)
+        billiard_count=None,         # <-- NEW (may be None; 0 allowed)
+        other_device_count=None,     # <-- NEW (may be None; 0 allowed)
         updated_by: int = None,
     ):
+        """
+        Calls update_business(...) in PostgreSQL.
+
+        Notes:
+        - The amusement device counts are required by the DB only if the category is Amusement.
+          Otherwise they can be NULL and will be ignored.
+        - Keep the argument order aligned with the SQL function definition.
+        """
         try:
             with connection.cursor() as cursor:
                 cursor.callproc(
@@ -185,7 +294,10 @@ class Business(models.Model):
                         country,                # p_country
                         total_gross_income,     # p_total_gross_income
                         clearance_category_id,  # p_clearance_category_id
-                        total_units,            # p_total_units  <-- keep position in sync
+                        total_units,            # p_total_units
+                        videoke_count,          # p_videoke_count      <-- NEW
+                        billiard_count,         # p_billiard_count     <-- NEW
+                        other_device_count,     # p_other_device_count <-- NEW
                         updated_by,             # p_updated_by
                     ],
                 )
@@ -598,17 +710,20 @@ class SecretaryHelpers:
         Uses: SELECT * FROM get_fee_types_dropdown()
         """
         with connection.cursor() as cur:
-            cur.execute("SELECT * FROM get_fee_types_dropdown()")
+            try:
+                cur.execute("SELECT * FROM get_fee_types_dropdown()")
+            except Exception:
+                # Fallback: read directly from Fee_Type table
+                cur.execute("SELECT fee_type_id, fee_type_name FROM Fee_Type ORDER BY fee_type_name")
             cols = [c[0] for c in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
     @staticmethod
     def get_other_clearance_purposes_dropdown() -> list[dict]:
-        """Return other_clearance_id / purpose_name using the DB helper.
-
-        Delegates to OtherClearanceType.sp_get_other_clearance_purposes_dropdown().
+        """Return other_clearance_id / purpose_name using the DB function
+        get_all_other_barangay_clearance_type().
         """
-        return OtherClearanceType.sp_get_other_clearance_purposes_dropdown()
+        return OtherClearanceType.sp_get_all_other_barangay_clearance_type()
 
     @staticmethod
     def search_owner(p_query: Optional[str], p_limit: int = 25, p_offset: int = 0) -> list[dict]:
@@ -624,11 +739,87 @@ class SecretaryHelpers:
 
     @staticmethod
     def search_resident(p_query: Optional[str], p_limit: int = 25, p_offset: int = 0) -> list[dict]:
-        """Call search_resident(...) and return rows as list[dict].
+        """Live resident search wrapper using search_residents_live_with_id(...).
 
-        Delegates to Secretary.sp_search_resident().
+        Returns list[dict] with keys:
+          resident_id, last_name, first_name, middle_name, dob, resident_status
+        Additionally we synthesize full_name & resident_code (placeholder None).
         """
-        return Secretary.sp_search_resident(p_query, p_limit, p_offset)
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM search_residents_live_with_id(%s,%s,%s,%s,%s,%s,%s)",
+                [p_query, p_limit, p_offset, None, None, None, None]
+            )
+            cols = [c[0] for c in cur.description]
+            rows = cur.fetchall()
+        out = []
+        for row in rows:
+            data = dict(zip(cols, row))
+            # Compose a full_name similar to other search endpoints
+            fn = " ".join([
+                str(data.get('first_name') or '').strip(),
+                str(data.get('middle_name') or '').strip(),
+                str(data.get('last_name') or '').strip(),
+            ]).replace('  ', ' ').strip()
+            data['full_name'] = fn
+            data['resident_code'] = None  # placeholder; not returned by function
+            out.append(data)
+        return out
+
+    @staticmethod
+    def search_resident_for_clearance(
+        p_query: Optional[str],
+        p_limit: int = 25,
+        p_offset: int = 0,
+        p_only_verified: Optional[bool] = None,
+        p_status_ids: Optional[list[int]] = None,
+        p_barangay: Optional[str] = None,
+    ) -> list[dict]:
+        """Wrapper for search_resident_for_clearance(...).
+
+        Returns list[dict] with keys:
+          resident_id, resident_code, full_name, dob, complete_address
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM search_resident_for_clearance(%s,%s,%s,%s,%s,%s)",
+                [p_query, p_limit, p_offset, p_only_verified, p_status_ids, p_barangay]
+            )
+            cols = [c[0] for c in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    @staticmethod
+    def secretary_preview_barangay_clearance(p_resident_id: int, p_other_clearance_id: int) -> Optional[dict]:
+        """Wrapper for resident_preview_barangay_clearance(resident_id, other_clearance_id).
+
+        Returns a dict with columns documented in SQL:
+          applicant_id, applicant_full_name, other_clearance_id, purpose,
+          total_amount, total_amount_details, has_open_application,
+          open_application_id
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM resident_preview_barangay_clearance(%s,%s)",
+                [p_resident_id, p_other_clearance_id]
+            )
+            cols = [c[0] for c in cur.description]
+            row = cur.fetchone()
+            return dict(zip(cols, row)) if row else None
+
+    @staticmethod
+    def create_application_barangay_clearance(
+        personnel_id: int,
+        resident_id: int,
+        other_clearance_id: int,
+    ) -> Optional[int]:
+        """Call secretary_create_barangay_clearance(...) and return new application_id."""
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT secretary_create_barangay_clearance(%s,%s,%s)",
+                [personnel_id, resident_id, other_clearance_id]
+            )
+            row = cur.fetchone()
+            return int(row[0]) if row and row[0] is not None else None
 
     @staticmethod
     def secretary_preview_business_clearance(
@@ -658,6 +849,7 @@ class SecretaryHelpers:
         purpose: Optional[str] = None,
         requested_by: Optional[str] = 'personnel',
         date_submitted: Optional[datetime] = None,
+        requested_by_id: Optional[int] = None,
     ) -> Optional[int]:
         """Call Create_Application_Business and return the new application_id.
 
@@ -671,13 +863,15 @@ class SecretaryHelpers:
             p_other_device_quantity INT DEFAULT NULL,
             p_purpose TEXT DEFAULT NULL,
             p_requested_by TEXT DEFAULT NULL,
-            p_date_submitted TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            p_date_submitted TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            p_requested_by_id INT DEFAULT NULL
           ) RETURNS INT
         """
         with connection.cursor() as cur:
             if date_submitted is not None:
+                # Caller supplied an explicit timestamp; pass it positionally
                 cur.execute(
-                    "SELECT Create_Application_Business(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "SELECT Create_Application_Business(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     [
                         fee_type_id,
                         business_id,
@@ -688,11 +882,27 @@ class SecretaryHelpers:
                         purpose,
                         requested_by,
                         date_submitted,
+                        requested_by_id,
                     ],
                 )
             else:
+                # Omit p_date_submitted so PostgreSQL uses DEFAULT CURRENT_TIMESTAMP.
+                # Achieve this by calling the function with named parameters excluding p_date_submitted.
+                # Since callproc/positional requires all args, we switch to an explicit SELECT with named args.
                 cur.execute(
-                    "SELECT Create_Application_Business(%s,%s,%s,%s,%s,%s,%s,%s)",
+                    """
+                    SELECT Create_Application_Business(
+                        p_fee_type_id => %s,
+                        p_business_id => %s,
+                        p_business_clearance_category => %s,
+                        p_videoke_quantity => %s,
+                        p_billiard_quantity => %s,
+                        p_other_device_quantity => %s,
+                        p_purpose => %s,
+                        p_requested_by => %s,
+                        p_requested_by_id => %s
+                    )
+                    """,
                     [
                         fee_type_id,
                         business_id,
@@ -702,6 +912,7 @@ class SecretaryHelpers:
                         other_device_qty,
                         purpose,
                         requested_by,
+                        requested_by_id,
                     ],
                 )
             row = cur.fetchone()
@@ -709,20 +920,33 @@ class SecretaryHelpers:
 
     # ---- Applications listing/detail/status helpers ----
     @staticmethod
-    def list_all_applications(p_query: Optional[str] = None, p_limit: int = 50, p_offset: int = 0) -> list[dict]:
-        """Wrapper for get_all_application(p_query, p_limit, p_offset)."""
+    def list_all_applications(
+        p_query: Optional[str] = None,
+        p_application_status: Optional[str] = None,
+        p_request_filter: Optional[str] = None,
+        p_limit: int = 50,
+        p_offset: int = 0,
+    ) -> list[dict]:
+        """Wrapper for get_all_application(p_query, p_application_status, p_request_filter, p_limit, p_offset)."""
         with connection.cursor() as cur:
-            cur.execute("SELECT * FROM get_all_application(%s,%s,%s)", [p_query, p_limit, p_offset])
+            cur.execute(
+                "SELECT * FROM get_all_application(%s,%s,%s,%s,%s)",
+                [p_query, p_application_status, p_request_filter, p_limit, p_offset],
+            )
             cols = [c[0] for c in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
     @staticmethod
-    def count_all_applications(p_query: Optional[str] = None) -> int:
-        """Count rows via SELECT COUNT(*) FROM get_all_application(...)."""
+    def count_all_applications(
+        p_query: Optional[str] = None,
+        p_application_status: Optional[str] = None,
+        p_request_filter: Optional[str] = None,
+    ) -> int:
+        """Count via SELECT COUNT(*) FROM get_all_application(p_query, p_application_status, p_request_filter, huge_limit, 0)."""
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM get_all_application(%s,%s,%s)",
-                [p_query, 1_000_000_000, 0]
+                "SELECT COUNT(*) FROM get_all_application(%s,%s,%s,%s,%s)",
+                [p_query, p_application_status, p_request_filter, 1_000_000_000, 0],
             )
             return int(cur.fetchone()[0])
 
@@ -753,4 +977,160 @@ class SecretaryHelpers:
             row = cur.fetchone()
             return dict(zip(cols, row)) if row else None
 
+    @staticmethod
+    def set_application_to_completed(application_id: int, personnel_id: int) -> None:
+        """Wrapper for revised set_application_to_completed(p_application_id INT, p_personnel_id INT).
+
+        Only Approved applications can be completed (enforced in SQL). This will raise
+        if the application is not found or violates status rules. The `personnel_id`
+        identifies who performed the completion and is also used by downstream
+        business side-effects (e.g., set_closed_business).
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_application_to_completed(%s,%s)", [application_id, personnel_id])
+
+    @staticmethod
+    def secretary_cancel_application(application_id: int, personnel_id: int, cancellation_reason: Optional[str] = None) -> str:
+        """Wrapper for revised secretary_cancel_application(p_application_id INT, p_personnel_id INT, p_reason TEXT DEFAULT NULL) RETURNS VOID.
+
+        Notes:
+        - Function is VOID; we don't expect a return row. Any rule violations will raise from DB.
+        - We return a friendly message on success.
+        """
+        with connection.cursor() as cur:
+            # VOID-returning function; SELECT invocation is fine in Postgres
+            cur.execute("SELECT secretary_cancel_application(%s,%s,%s)", [application_id, personnel_id, cancellation_reason])
+        return "Application cancelled."
+
+    # ---- Reprint (Business Clearance) ----
+    @staticmethod
+    def create_reprint_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_reprint_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function now resolves the Business Clearance fee type internally.
+        Returns newly created application_id or None.
+        Underlying SQL enforces ACTIVE status and pulls amusement device
+        counts from Business when category = 12.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_reprint_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
     
+    # ---- Renewal (Business Clearance) ----
+    @staticmethod
+    def create_renewal_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_renewal_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally, detects category, and
+        pulls amusement device counts from Business when needed.
+        Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_renewal_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+
+    # ---- Registration (Business Clearance) ----
+    @staticmethod
+    def create_registration_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_registration_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally and enforces status rules.
+        Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_registration_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+    
+    # ---- Closure (Business Clearance) ----
+    @staticmethod
+    def create_closure_business_clearance(
+        business_id: int,
+        requested_by: str = 'personnel',  # 'resident' | 'personnel'
+        requested_by_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Wrapper for create_closure_business_clearance(business_id, requested_by, requested_by_id).
+
+        The DB function resolves fee type internally, enforces INACTIVE status for closure,
+        and pulls amusement device counts for category 12. Returns the new application_id.
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT create_closure_business_clearance(%s,%s,%s);",
+                [business_id, requested_by, requested_by_id],
+            )
+            row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+
+    # ---- Business Payment History ----
+    @staticmethod
+    def get_business_payment_history(
+        business_id: int,
+        query: Optional[str] = None,
+        payment_status: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict:
+        """Fetch paginated payment history rows for a business using
+        get_specific_business_payment_history(...).
+
+        Expected Postgres function signature (assumed):
+          get_specific_business_payment_history(
+              p_business_id INT,
+              p_query TEXT,
+              p_payment_status TEXT,
+              p_date_from DATE,
+              p_date_to DATE,
+              p_limit INT,
+              p_offset INT
+          ) RETURNS SETOF RECORD
+
+        This helper returns a dict: { rows: [...], total: int, limit: int, offset: int }
+        where total is derived via a separate COUNT(*) invocation using a very
+        large limit.
+        """
+        # Primary page of rows
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_specific_business_payment_history(%s,%s,%s,%s,%s,%s,%s)",
+                [business_id, query, payment_status, date_from, date_to, limit, offset]
+            )
+            cols = [c[0] for c in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        # Total count
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM get_specific_business_payment_history(%s,%s,%s,%s,%s,%s,%s)",
+                [business_id, query, payment_status, date_from, date_to, 2_147_483_647, 0]
+            )
+            total = int(cur.fetchone()[0]) if cur.rowcount else 0
+
+        return {"rows": rows, "total": total, "limit": limit, "offset": offset}
+
+
