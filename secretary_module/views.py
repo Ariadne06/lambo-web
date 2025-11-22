@@ -2150,6 +2150,8 @@ def application_search(request):
                 'full_name': r.get('full_name'),
                 'dob': r.get('dob'),
                 'complete_address': r.get('complete_address'),
+                # Include status field returned by the function so UI can show Pending/Resident
+                'resident_status_name': r.get('resident_status_name') or r.get('resident_status') or None,
             } for r in rows]
             return JsonResponse(payload, safe=False)
         else:
@@ -2349,7 +2351,7 @@ def print_application_pdf(request, application_id: int):
             messages.warning(request, 'Completed applications cannot be re-generated.')
             return redirect('secretary_module:application_detail', application_id=application_id)
 
-        row = SecretaryHelpers.get_clearance_details_for_printing(application_id)
+        row = SecretaryHelpers.get_clearance_details_forz_printing(application_id)
         if not row:
             raise Http404('Application not found or no printable details.')
 
