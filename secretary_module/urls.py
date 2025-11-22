@@ -20,6 +20,7 @@ urlpatterns = [
     path("business/<int:business_id>/close/", views.business_close, name="business_close"),
     path('applications/create/', views.add_certificate, name='create_application'),
     path('applications/submit/', views.submit_business_application, name='submit_business_application'),
+    path('applications/submit/barangay/', views.submit_barangay_clearance_application, name='submit_barangay_clearance_application'),
     path('manageCert1/', views.manageCert1, name='manageCert1'),
     path('manageCert2/', views.manageCert2, name='manageCert2'),
     path('applications/', views.applications, name="applications"),

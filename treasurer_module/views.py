@@ -308,11 +308,6 @@ def treasurer_application_detail(request, application_id: int):
 
 @custom_login_required
 @role_required('Barangay Treasurer')
-def transactions(request):
-    return render(request, 'treasurer_module/transactions.html')
-
-@custom_login_required
-@role_required('Barangay Treasurer')
 def summary(request):
     """Reports: monthly summary by application type using treasurer_get_monthly_summary.
 
