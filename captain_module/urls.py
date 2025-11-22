@@ -6,7 +6,6 @@ app_name = 'captain_module'
 urlpatterns = [
      path('', views.captain_dashboard, name='captain_dashboard'),
      path('captain_viewResident/', views.captain_viewResident, name='captain_viewResident'),
-     path('captain_viewMoreResident/', views.captain_viewMoreResident),
      path('captain_householdList/', views.captain_householdList, name='captain_householdList'),
      path('captain_householdView/', views.captain_householdView, name='captain_householdView'),
      path('captain_businessList/', views.captain_businessList, name='captain_businessList'),
