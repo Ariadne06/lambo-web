@@ -81,34 +81,39 @@ urlpatterns = [
          name='child-supplements-add'),
     
     # CHILD HEALTH - MEDICAL CONDITIONS
-    path('child-health-records/<int:child_health_id>/medical-conditions/', 
-         views.ChildMedicalConditionListView.as_view(), 
-         name='child-medical-conditions-list'),
-    path('child-health-records/<int:child_health_id>/medical-conditions/add/', 
-         views.ChildMedicalConditionCreateView.as_view(), 
-         name='child-medical-conditions-add'),
-    
-    # CHILD HEALTH - SURGICAL HISTORY
-    path('child-health-records/<int:child_health_id>/surgical-history/', 
-         views.ChildSurgicalHistoryListView.as_view(), 
-         name='child-surgical-history-list'),
-    path('child-health-records/<int:child_health_id>/surgical-history/add/', 
-         views.ChildSurgicalHistoryCreateView.as_view(), 
-         name='child-surgical-history-add'),
-    
+     path('child-health-records/<int:child_health_id>/medical-conditions/', 
+          views.ChildMedicalConditionListView.as_view(), 
+          name='child-medical-conditions-list'),
+     path('child-health-records/<int:child_health_id>/medical-conditions/add/', 
+          views.ChildMedicalConditionCreateView.as_view(), 
+          name='child-medical-conditions-add'),
+
+     # CHILD HEALTH - SURGICAL HISTORY
+     path('child-health-records/<int:child_health_id>/surgical-history/', 
+          views.ChildSurgicalHistoryListView.as_view(), 
+          name='child-surgical-history-list'),
+     path('child-health-records/<int:child_health_id>/surgical-history/add/', 
+          views.ChildSurgicalHistoryCreateView.as_view(), 
+          name='child-surgical-history-add'),
+     
     # CHILD HEALTH - GROWTH MONITORING
-    path('child-health-records/<int:child_health_id>/growth-monitoring/', 
-         views.ChildGrowthMonitoringListView.as_view(), 
-         name='child-growth-monitoring-list'),
-    path('child-health-records/<int:child_health_id>/growth-monitoring/add/', 
-         views.ChildGrowthMonitoringCreateView.as_view(), 
-         name='child-growth-monitoring-add'),
+     path('child-health-records/<int:child_health_id>/growth-monitoring/', 
+          views.ChildGrowthMonitoringListView.as_view(), 
+          name='child-growth-monitoring-list'),
+     path('child-health-records/<int:child_health_id>/growth-monitoring/add/', 
+          views.ChildGrowthMonitoringCreateView.as_view(), 
+          name='child-growth-monitoring-add'),
     
     # CHILD HEALTH - EXCLUSIVE BREASTFEED
-    path('child-health-records/<int:child_health_id>/breastfeed-track/', 
-         views.ChildBreastfeedTrackView.as_view(), 
-         name='child-breastfeed-track'),
-    path('child-health-records/<int:child_health_id>/breastfeed-track/add/', 
-         views.ChildBreastfeedCreateView.as_view(), 
-         name='child-breastfeed-add'),
+     path('child-health-records/<int:child_health_id>/exclusive-breastfeed/', 
+         views.ExclusiveBreastfeedListView.as_view(), 
+         name='child-exclusive-breastfeed-list'),
+     path('child-health-records/<int:child_health_id>/exclusive-breastfeed/add/', 
+          views.ExclusiveBreastfeedCreateView.as_view(), 
+          name='child-exclusive-breastfeed-add'),
+     
+     # MONTHS LIST
+     path('months/', 
+          views.MonthsListView.as_view(), 
+          name='months-list'),
 ]

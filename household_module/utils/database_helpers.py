@@ -335,31 +335,115 @@ def view_specific_child_health_record(child_health_id):
 
 
 def add_exclusive_breastfeed_backfill(child_health_id, month_id, personnel_id):
-    """Add exclusive breastfeed assessment with backfill"""
+    """
+    Add exclusive breastfeed assessment (backfills all missing months up to target)
+    Returns list of inserted months
+    """
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM add_exclusive_breastfeed_backfill(%s, %s, %s)
-            """, [child_health_id, month_id, personnel_id])
+                SELECT * FROM add_exclusive_breastfeed_backfill(
+                    %s::INT,
+                    %s::INT,
+                    %s::INT
+                )
+            """, [
+                child_health_id,
+                month_id,
+                personnel_id
+            ])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                results.append(record)
+            
+            if not results:
+                raise Exception("No months were inserted")
+            
+            print(f"✅ Exclusive breastfeed backfill successful: {len(results)} month(s) inserted")
+            return results
+            
     except Exception as e:
-        print(f"❌ Failed to add breastfeed assessment: {str(e)}")
-        raise Exception(f"Failed to add breastfeed assessment: {str(e)}")
+        error_msg = str(e)
+        print(f"❌ Failed to add exclusive breastfeed: {error_msg}")
+        
+        # Handle specific SQL errors
+        if 'P4407' in error_msg or 'already assessed' in error_msg:
+            if 'Next month:' in error_msg:
+                # Example: "Next month: 5th Month" → Extract "5th Month"
+                next_month_part = error_msg.split('Next month:')[-1].strip().rstrip('.')
+                raise Exception(f"Assessment already recorded. Please select '{next_month_part}' to continue tracking.")
+            else:
+                raise Exception("This month has already been assessed. Please select the next available month.")
+        elif 'P4403' in error_msg or 'not allowed for Bottle/Mixed' in error_msg:
+            raise Exception("Exclusive breastfeeding tracking is only for breastfeeding infants")
+        elif 'P4402' in error_msg or 'Feeding method missing' in error_msg:
+            raise Exception("Child's feeding method is not set")
+        elif 'P4401' in error_msg or 'not found' in error_msg:
+            raise Exception("Child health record not found")
+        elif 'P4406' in error_msg or 'months 1..6' in error_msg:
+            raise Exception("Exclusive breastfeeding is tracked only for months 1 to 6")
+        else:
+            raise Exception(f"Failed to add exclusive breastfeed assessment: {error_msg}")
 
 
 def view_specific_child_exclusive_breastfeed_track(child_health_id):
-    """View child's exclusive breastfeed tracking"""
+    """
+    View exclusive breastfeed tracking for a child (months 1-6)
+    Returns all 6 months with assessment status
+    """
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_exclusive_breastfeed_track(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_specific_child_exclusive_breastfeed_track(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                # Convert datetime to ISO string
+                if 'date_assessed' in record and record['date_assessed']:
+                    record['date_assessed'] = record['date_assessed'].isoformat()
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
-        print(f"❌ Failed to view breastfeed track: {str(e)}")
-        raise Exception(f"Failed to view breastfeed track: {str(e)}")
+        print(f"❌ Failed to view exclusive breastfeed track: {str(e)}")
+        raise Exception(f"Failed to view exclusive breastfeed track: {str(e)}")
+
+
+def get_all_months():
+    """Get all months for dropdown"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT month_id, month_number, month_sequence_name
+                FROM Month
+                WHERE month_number BETWEEN 1 AND 6
+                ORDER BY month_number
+            """)
+            
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                results.append(record)
+            
+            return results
+            
+    except Exception as e:
+        print(f"❌ Failed to get months: {str(e)}")
+        raise Exception(f"Failed to get months: {str(e)}")
 
 
 def add_child_immunization(child_health_id, vaccine_type_id, dose_type_id, personnel_id):
@@ -390,25 +474,72 @@ def view_specific_child_immunization_record(child_health_id):
 
 
 def add_child_supplement(child_health_id, supplement_id, age_in_months, personnel_id):
-    """Add supplement record"""
+    """Add supplement record for child"""
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT add_child_supplement(%s, %s, %s, %s)
-            """, [child_health_id, supplement_id, age_in_months, personnel_id])
+                SELECT add_child_supplement(
+                    %s::INT,
+                    %s::INT,
+                    %s::INT,
+                    %s::INT
+                )
+            """, [
+                child_health_id,
+                supplement_id,
+                age_in_months,
+                personnel_id
+            ])
+            
+            result = cursor.fetchone()
+            child_health_id_returned = result[0] if result else None
+            
+            if child_health_id_returned is None:
+                raise Exception("Failed to add supplement - no ID returned")
+            
+            print(f"✅ Supplement added for child_health_id={child_health_id_returned}")
+            return child_health_id_returned
+            
     except Exception as e:
-        print(f"❌ Failed to add supplement: {str(e)}")
-        raise Exception(f"Failed to add supplement: {str(e)}")
+        error_msg = str(e)
+        print(f"❌ Failed to add supplement: {error_msg}")
+        
+        # Handle specific SQL errors
+        if 'P4704' in error_msg or 'already recorded' in error_msg:
+            raise Exception("This supplement has already been given at this age")
+        elif 'P4701' in error_msg or 'not found' in error_msg:
+            raise Exception("Child health record not found")
+        elif 'P4702' in error_msg or 'Invalid age' in error_msg:
+            raise Exception("Invalid age in months")
+        elif 'P4703' in error_msg or 'Supplement not found' in error_msg:
+            raise Exception("Supplement type not found")
+        elif 'P4706' in error_msg or 'inactive' in error_msg:
+            raise Exception("This supplement is no longer active")
+        else:
+            raise Exception(f"Failed to add supplement: {error_msg}")
 
 
 def view_all_child_supplements(child_health_id):
     """View all supplements given to child"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_all_child_supplements(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                # Convert datetime to ISO string
+                if 'date_given' in record and record['date_given']:
+                    record['date_given'] = record['date_given'].isoformat()
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
         print(f"❌ Failed to view supplements: {str(e)}")
         raise Exception(f"Failed to view supplements: {str(e)}")
@@ -419,23 +550,63 @@ def add_child_medical_condition(child_health_id, medical_condition, personnel_id
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT add_child_medical_condition(%s, %s, %s)
-            """, [child_health_id, medical_condition, personnel_id])
+                SELECT add_child_medical_condition(
+                    %s::INT,
+                    %s::TEXT,
+                    %s::INT
+                )
+            """, [
+                child_health_id,
+                medical_condition,
+                personnel_id
+            ])
+            
             result = cursor.fetchone()
-            return result[0] if result else None
+            rmh_id = result[0] if result else None
+            
+            if rmh_id is None:
+                raise Exception("Failed to add medical condition - no ID returned")
+            
+            print(f"✅ Medical condition added: rmh_id={rmh_id}")
+            return rmh_id
+            
     except Exception as e:
-        print(f"❌ Failed to add medical condition: {str(e)}")
-        raise Exception(f"Failed to add medical condition: {str(e)}")
+        error_msg = str(e)
+        print(f"❌ Failed to add medical condition: {error_msg}")
+        
+        # Handle specific SQL errors
+        if 'P4803' in error_msg or 'Duplicate medical condition' in error_msg:
+            raise Exception("This medical condition has already been recorded for this child")
+        elif 'P4802' in error_msg or 'not found' in error_msg:
+            raise Exception("Child health record not found")
+        elif 'P4801' in error_msg or 'cannot be blank' in error_msg:
+            raise Exception("Medical condition cannot be blank")
+        else:
+            raise Exception(f"Failed to add medical condition: {error_msg}")
+
 
 
 def view_specific_child_all_medical_condition(child_health_id):
     """View all medical conditions for child"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_specific_child_all_medical_condition(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                # Convert datetime to ISO string for JSON serialization
+                if 'date_added' in record and record['date_added']:
+                    record['date_added'] = record['date_added'].isoformat()
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
         print(f"❌ Failed to view medical conditions: {str(e)}")
         raise Exception(f"Failed to view medical conditions: {str(e)}")
@@ -446,23 +617,67 @@ def add_child_surgical_history(child_health_id, surgical_history_name, date_of_s
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT add_child_surgical_history(%s, %s, %s, %s)
-            """, [child_health_id, surgical_history_name, date_of_surgery, personnel_id])
+                SELECT add_child_surgical_history(
+                    %s::INT,
+                    %s::TEXT,
+                    %s::DATE,
+                    %s::INT
+                )
+            """, [
+                child_health_id,
+                surgical_history_name,
+                date_of_surgery,
+                personnel_id
+            ])
+            
             result = cursor.fetchone()
-            return result[0] if result else None
+            rsh_id = result[0] if result else None
+            
+            if rsh_id is None:
+                raise Exception("Failed to add surgical history - no ID returned")
+            
+            print(f"✅ Surgical history added: rsh_id={rsh_id}")
+            return rsh_id
+            
     except Exception as e:
-        print(f"❌ Failed to add surgical history: {str(e)}")
-        raise Exception(f"Failed to add surgical history: {str(e)}")
-
+        error_msg = str(e)
+        print(f"❌ Failed to add surgical history: {error_msg}")
+        
+        # Handle specific SQL errors
+        if 'P4904' in error_msg or 'Duplicate surgical history' in error_msg:
+            raise Exception("This surgical procedure has already been recorded for this date")
+        elif 'P4903' in error_msg or 'not found' in error_msg:
+            raise Exception("Child health record not found")
+        elif 'P4901' in error_msg or 'name required' in error_msg:
+            raise Exception("Surgical history name is required")
+        elif 'P4902' in error_msg or 'Date of surgery required' in error_msg:
+            raise Exception("Date of surgery is required")
+        else:
+            raise Exception(f"Failed to add surgical history: {error_msg}")
 
 def view_specific_child_all_surgical_history(child_health_id):
     """View all surgical history for child"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT * FROM view_specific_child_all_surgical_history(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                # Convert dates to ISO strings
+                if 'date_of_surgery' in record and record['date_of_surgery']:
+                    record['date_of_surgery'] = record['date_of_surgery'].isoformat()
+                if 'date_added' in record and record['date_added']:
+                    record['date_added'] = record['date_added'].isoformat()
+                results.append(record)
+            
+            return results
+            
     except Exception as e:
         print(f"❌ Failed to view surgical history: {str(e)}")
         raise Exception(f"Failed to view surgical history: {str(e)}")
