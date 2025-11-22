@@ -151,3 +151,31 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+    
+class Child(models.Model):
+
+    class Meta:
+        managed = False
+    
+    @staticmethod
+    def sp_view_all_child_health_record(
+            query,
+            sitio_id,
+            sex,
+            limit,
+            offset
+        ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_all_child_health_record', [
+                    query,
+                    sitio_id,
+                    sex,
+                    limit,
+                    offset
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e

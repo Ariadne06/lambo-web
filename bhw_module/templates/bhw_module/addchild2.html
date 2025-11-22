@@ -48,32 +48,32 @@
             <div class="space-y-4">
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Child Full Name</label>
-                <input type="text" value="Adrianne Medalla"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="child_name" name="child_name" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Mother’s Full Name</label>
-                <input type="text" value="Prescious Bugtai"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="mother_name" name="mother_name" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Father’s Full Name</label>
-                <input type="text" value="Miles Majarocon"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="father_name" name="father_name" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">PhilHealth ID Number</label>
-                <input type="text" placeholder="Enter ID Number"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="philhealth_no" name="philhealth_no" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Phone Number</label>
-                <input type="text" placeholder="Input Phone Number"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="phone_number" name="phone_number" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
             </div>
           </div>
@@ -83,16 +83,18 @@
             <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Sex</label>
-                <select class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-                  <option>Male</option>
-                  <option>Female</option>
+                <select id="sex" name="sex" disabled
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
+                  <option value="">Select sex</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
                 </select>
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Date of Birth</label>
-                <input type="text" value="01/01/2020"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input id="dob" name="dob" type="text" readonly
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50 cursor-not-allowed">
               </div>
 
               <div>
@@ -131,4 +133,28 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  // Get URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // Auto-fill all form fields from URL parameters
+  const childName = urlParams.get('child_name');
+  const motherName = urlParams.get('mother_name');
+  const fatherName = urlParams.get('father_name');
+  const sex = urlParams.get('sex');
+  const dob = urlParams.get('dob');
+  const philhealth = urlParams.get('philhealth_no');
+  const phone = urlParams.get('phone_number');
+  
+  if (childName) document.getElementById('child_name').value = childName;
+  if (motherName) document.getElementById('mother_name').value = motherName;
+  if (fatherName) document.getElementById('father_name').value = fatherName;
+  if (sex) document.getElementById('sex').value = sex;
+  if (dob) document.getElementById('dob').value = dob;
+  if (philhealth) document.getElementById('philhealth_no').value = philhealth;
+  if (phone) document.getElementById('phone_number').value = phone;
+})();
+</script>
 {% endblock %}
