@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params
-from .models import Captain, Dashboard, AnnouncementRepo
+from .models import Captain, Dashboard, AnnouncementRepo, ResidentList, BusinessList
 from django.utils.http import urlencode
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from django.contrib import messages
@@ -11,6 +11,8 @@ import json
 from household_module.models import Household, Family
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse
+from django.db import connection
+
 
 _UI_TO_SQL_AUDIENCE = {
     'EVERYONE': 'both',
@@ -141,16 +143,95 @@ def captain_dashboard(request):
     return render(request, "captain_module/captain_dashboard.html", ctx)
 
 
-
-@custom_login_required
-@role_required('Barangay Captain')
-def captain_viewMoreResident(request):
-    return render(request, 'captain_module/captain_viewMoreResident.html')
-
 @custom_login_required
 @role_required('Barangay Captain')
 def captain_viewResident(request):
-    return render(request, 'captain_module/captain_viewResident.html')
+    q = request.GET.get("q") or None
+    sex = request.GET.get("sex") or None            # 'male'/'female'
+    status_id = request.GET.get("status_id") or None
+    min_age = request.GET.get("min_age") or None
+    max_age = request.GET.get("max_age") or None
+    page = int(request.GET.get("page") or 1)
+    page_size = int(request.GET.get("page_size") or 50)
+
+    # Coerce ints
+    try:
+        status_id = int(status_id) if status_id not in (None, "",) else None
+    except ValueError:
+        status_id = None
+    try:
+        min_age = int(min_age) if min_age not in (None, "",) else None
+    except ValueError:
+        min_age = None
+    try:
+        max_age = int(max_age) if max_age not in (None, "",) else None
+    except ValueError:
+        max_age = None
+
+    result = ResidentList.search(
+        p_query=q,
+        p_sex=sex,
+        p_status_id=status_id,
+        p_min_age=min_age,
+        p_max_age=max_age,
+        page=page,
+        page_size=page_size,
+    )
+
+    # Use the values returned by the search result
+    page  = result["page"]
+    pages = result["pages"]
+
+    # Base params for pagination
+    from django.utils.http import urlencode
+    base_params = {
+        "q": q or "",
+        "sex": sex or "",
+        "status_id": status_id if status_id is not None else "",
+        "min_age": min_age if min_age is not None else "",
+        "max_age": max_age if max_age is not None else "",
+        "page_size": page_size,
+    }
+    def page_url(p):
+        params = base_params.copy()
+        params["page"] = p
+        return f"?{urlencode(params)}"
+
+    # Precompute URLs so template doesn't call functions
+    prev_url  = page_url(page - 1) if page > 1 else None
+    next_url  = page_url(page + 1) if page < pages else None
+    curr_url  = page_url(page)
+
+    p1_num, p1_url = page, curr_url
+    p2_num, p2_url = (page + 1, page_url(page + 1)) if page < pages else (None, None)
+    p3_num, p3_url = (page + 2, page_url(page + 2)) if page + 1 < pages else (None, None)
+    last_num, last_url = (pages, page_url(pages)) if pages > 1 else (None, None)
+
+    showing_start = (result["offset"] + 1) if result["total"] > 0 else 0
+    showing_end = min(result["offset"] + len(result["rows"]), result["total"])
+
+    with connection.cursor() as cur:
+        cur.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name;")
+        status_options = cur.fetchall()  # list of tuples [(id, name), ...]
+
+    context = {
+        "residents": result["rows"],
+        "total": result["total"],
+        "page": page,
+        "pages": pages,
+        "page_size": result["limit"],
+        "showing_start": showing_start,
+        "showing_end": showing_end,
+        # pagination links/numbers
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "p1_num": p1_num, "p1_url": p1_url,
+        "p2_num": p2_num, "p2_url": p2_url,
+        "p3_num": p3_num, "p3_url": p3_url,
+        "last_num": last_num, "last_url": last_url,
+        "status_options": status_options,
+    }
+    return render(request, 'captain_module/captain_viewResident.html', context)
 
 @custom_login_required
 @role_required('Barangay Captain')
@@ -514,9 +595,57 @@ def captain_householdView(request):
     })
 
 @custom_login_required
-@role_required('Barangay Captain')
+@role_required("Barangay Captain")
 def captain_businessList(request):
-    return render(request, 'captain_module/captain_businessList.html')
+    q = (request.GET.get("q") or "").strip() or None
+    status = request.GET.get("status") or None  # you can keep this for future filters
+    page = max(int(request.GET.get("page", 1)), 1)
+    page_size = max(min(int(request.GET.get("page_size", 10)), 100), 1)
+
+    result = BusinessList.search(
+        p_query=q,
+        p_status=status,
+        page=page,
+        page_size=page_size,
+    )
+
+    page = result["page"]
+    pages = result["pages"]
+    total = result["total"]
+
+    # For "Showing X–Y of Z"
+    showing_start = (result["offset"] + 1) if total > 0 else 0
+    showing_end = min(result["offset"] + len(result["rows"]), total)
+
+    # Pagination URLs
+    base_params = {
+        "q": q or "",
+        "status": status or "",
+        "page_size": page_size,
+    }
+
+    def page_url(p):
+        params = base_params.copy()
+        params["page"] = p
+        return f"?{urlencode(params)}"
+
+    prev_url = page_url(page - 1) if page > 1 else None
+    next_url = page_url(page + 1) if page < pages else None
+
+    context = {
+        "rows": result["rows"],
+        "q": q or "",
+        "status": status or "",
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "page_size": page_size,
+        "showing_start": showing_start,
+        "showing_end": showing_end,
+        "prev_url": prev_url,
+        "next_url": next_url,
+    }
+    return render(request, "captain_module/captain_businessList.html", context)
 
 @custom_login_required
 @role_required('Barangay Captain')
