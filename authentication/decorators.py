@@ -30,7 +30,7 @@ def role_required(*required_role):
             
             if user_role not in required_role:
                 set_flash(request, 'You do not have permission to access this page.', 'error')
-                return redirect('authentication:login') 
+                return redirect('authentication:login')
             return view_func(request, *args, **kwargs)
         return _wrapped_view
     return decorator
