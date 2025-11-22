@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo
+from .models import Dashboard, AnnouncementRepo, Child
 from household_module.models import Household, Family
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
@@ -193,7 +193,7 @@ def householdList(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -1720,7 +1720,108 @@ def residentAdd4(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def childList(request):
-    return render(request, 'bhw_module/childList.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    quarter_id = request.POST.get('quarter_id') or request.GET.get('quarter_id')
+    current_quarter_id = Household.sp_get_current_quarter_id()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_sitio = request.GET.get('sitio_id')
+
+    if quarter_id:
+        quarter_id = int(quarter_id)
+    elif current_quarter_id:
+        quarter_id = int(current_quarter_id)
+    else:
+        quarter_id = None
+
+    # ✅ Are we looking at the current quarter?
+    is_current_quarter = bool(
+        current_quarter_id is not None and quarter_id is not None and int(quarter_id) == int(current_quarter_id)
+    )
+    
+    try:
+        sitio_id = int(raw_sitio) if raw_sitio not in (None, '', '0') else None
+    except ValueError:
+        sitio_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Child.sp_view_all_child_health_record(
+            query=query,
+            sitio_id=sitio_id,
+            sex=sex,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, str(e), "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if sitio_id is not None:
+        base_params["sitio_id"] = sitio_id
+        
+    if sex is not None:
+        base_params["sex"] = sex
+
+    if quarter_id is not None:
+        base_params["quarter_id"] = quarter_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+
+    quarter = Household.sp_get_quarter()
+    sitio = Household.sp_get_sitio()
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/childList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "sex": sex,
+        'sitio_id': sitio_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'sitio': sitio,
+        'quarter': quarter,
+        'quarter_id': quarter_id,
+        'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
+        'is_current_quarter': is_current_quarter,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -1800,7 +1901,7 @@ def genInfo(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -1947,5 +2048,49 @@ def resident_search_api(request):
                 'dob': r.get('dob') or '',
             })
         return JsonResponse({'results': normalized})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def child_search_api(request):
+    q = (request.GET.get('q') or '').strip()
+    if not q:
+        return JsonResponse({'results': []})
+
+    try:
+        # Call your search_child() SQL function
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM search_child(%s)", [q])
+            cols = [col[0] for col in cursor.description]
+            raw_rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+        # Normalize / whitelist fields for the frontend
+        normalized = []
+        for r in raw_rows:
+            normalized.append({
+                'child_resident_id': r.get('child_resident_id'),
+                'full_name': r.get('child_full_name') or '',
+                'sex': r.get('sex') or '',
+                'dob': r.get('dob').isoformat() if r.get('dob') else '',
+                'family_code': r.get('family_code') or '',
+                'address': r.get('complete_address') or '',
+
+                'mother_resident_id': r.get('mother_resident_id'),
+                'mother_full_name': r.get('mother_full_name') or '',
+
+                'father_resident_id': r.get('father_resident_id'),
+                'father_full_name': r.get('father_full_name') or '',
+
+                'guardian_resident_id': r.get('guardian_resident_id'),
+                'guardian_full_name': r.get('guardian_full_name') or '',
+
+                'philhealth_no': r.get('philhealth_no') or '',
+                'phone_number': r.get('phone_number') or '',
+            })
+
+        return JsonResponse({'results': normalized})
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

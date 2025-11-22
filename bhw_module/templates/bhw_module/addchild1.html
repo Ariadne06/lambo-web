@@ -62,7 +62,6 @@
     <!-- Body (scrolls inside the card) -->
     <div class="h-full overflow-auto px-6 py-6">
       <form id="familyForm" class="space-y-6">
-
         <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
           <!-- Child -->
           <div class="rounded-2xl border border-gray-200 p-4 shadow-sm">
@@ -73,12 +72,22 @@
                 <p class="text-xs text-gray-500">Choose the child record</p>
               </div>
             </div>
-            <select id="child" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-              <option value="">Choose a child...</option>
-              <option value="Alex Johnson">C1001 — Alex Johnson</option>
-              <option value="Emma Williams">C1002 — Emma Williams</option>
-              <option value="Liam Brown">C1003 — Liam Brown</option>
-            </select>
+
+            <!-- Family Head (typeahead like Respondent) -->
+            <div class="relative">
+              <input id="child_name" name="child_name" type="text" required
+                    placeholder="Search child by name"
+                    autocomplete="off"
+                    data-autocomplete="child"
+                    data-target-hidden="#child_id"
+                    class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+              <input type="hidden" id="child_id" name="child_id">
+
+              <!-- dropdown -->
+              <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
+                data-autocomplete-list="#child_name">
+              </div>
+            </div>
           </div>
 
           <!-- Mother -->
@@ -86,16 +95,14 @@
             <div class="mb-3 flex items-center gap-3">
               <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 text-lg">👩</div>
               <div>
-                <p class="text-sm font-semibold text-gray-900">Select Mother</p>
-                <p class="text-xs text-gray-500">Choose the mother</p>
+                <p class="text-sm font-semibold text-gray-900">Mother</p>
+                <p class="text-xs text-gray-500">Auto-filled from child record</p>
               </div>
             </div>
-            <select id="mother" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-              <option value="">Choose mother...</option>
-              <option value="Sarah Johnson">R2001 — Sarah Johnson</option>
-              <option value="Jessica Williams">R2002 — Jessica Williams</option>
-              <option value="Olivia Brown">R2003 — Olivia Brown</option>
-            </select>
+            <input id="mother" name="mother" type="text" readonly
+                   placeholder="Will be auto-filled when child is selected"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 cursor-not-allowed">
+            <input type="hidden" id="mother_id" name="mother_id">
           </div>
 
           <!-- Father -->
@@ -103,23 +110,21 @@
             <div class="mb-3 flex items-center gap-3">
               <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 text-lg">👨</div>
               <div>
-                <p class="text-sm font-semibold text-gray-900">Select Father</p>
-                <p class="text-xs text-gray-500">Choose the father</p>
+                <p class="text-sm font-semibold text-gray-900">Father</p>
+                <p class="text-xs text-gray-500">Auto-filled from child record</p>
               </div>
             </div>
-            <select id="father" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-              <option value="">Choose father...</option>
-              <option value="Michael Johnson">R3001 — Michael Johnson</option>
-              <option value="David Williams">R3002 — David Williams</option>
-              <option value="Robert Brown">R3003 — Robert Brown</option>
-            </select>
+            <input id="father" name="father" type="text" readonly
+                   placeholder="Will be auto-filled when child is selected"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 cursor-not-allowed">
+            <input type="hidden" id="father_id" name="father_id">
           </div>
         </div>
 
         <!-- Footer (sticky inside card) -->
         <div class="sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-3">
           <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-            <a href="#" class="btn-ghost inline-flex h-10 items-center gap-2 px-4 text-sm">
+            <a href="{% url 'bhw_module:childList' %}" class="btn-ghost inline-flex h-10 items-center gap-2 px-4 text-sm">
               ← Cancel
             </a>
             <button id="nextBtn" type="submit" disabled
@@ -133,4 +138,175 @@
   </div>
 </div>
 
+<script>
+(function() {
+  const childInput = document.getElementById('child_name');
+  const childIdInput = document.getElementById('child_id');
+  const dropdown = document.querySelector('[data-autocomplete-list="#child_name"]');
+
+  const motherInput = document.getElementById('mother');
+  const fatherInput = document.getElementById('father');
+  const motherIdInput = document.getElementById('mother_id');
+  const fatherIdInput = document.getElementById('father_id');
+  const sumContainer = document.getElementById('summary');
+  const sumChild = document.getElementById('sumChild');
+  const sumMother = document.getElementById('sumMother');
+  const sumFather = document.getElementById('sumFather');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let debounceTimeout = null;
+
+  function updateSummary() {
+    const childName = childInput.value.trim();
+    const motherText = motherInput.value.trim();
+    const fatherText = fatherInput.value.trim();
+
+    sumChild.textContent = childName || 'Not selected';
+    sumMother.textContent = motherText || 'Not selected';
+    sumFather.textContent = fatherText || 'Not selected';
+
+    if (childName || motherText || fatherText) {
+      sumContainer.classList.remove('hidden');
+      sumContainer.classList.add('flex');
+    } else {
+      sumContainer.classList.add('hidden');
+      sumContainer.classList.remove('flex');
+    }
+  }
+
+  function updateNextButton() {
+    const valid = !!childIdInput.value && !!motherIdInput.value && !!fatherIdInput.value;
+    nextBtn.disabled = !valid;
+  }
+
+  function clearDropdown() {
+    dropdown.innerHTML = '';
+    dropdown.classList.add('hidden');
+  }
+
+  childInput.addEventListener('input', function() {
+    const q = this.value.trim();
+    childIdInput.value = '';
+
+    if (debounceTimeout) clearTimeout(debounceTimeout);
+
+    if (!q) {
+      clearDropdown();
+      motherInput.value = '';
+      motherIdInput.value = '';
+      fatherInput.value = '';
+      fatherIdInput.value = '';
+      updateSummary();
+      updateNextButton();
+      return;
+    }
+
+    debounceTimeout = setTimeout(function() {
+      fetch("{% url 'bhw_module:child_search_api' %}?q=" + encodeURIComponent(q), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(response => response.json())
+      .then(data => {
+        dropdown.innerHTML = '';
+
+        if (!data.results || !data.results.length) {
+          clearDropdown();
+          return;
+        }
+
+        data.results.forEach(item => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'block w-full px-3 py-2 text-left text-sm hover:bg-gray-100';
+
+          const dob = item.dob || '';
+          const meta = [
+            dob,
+            item.sex || ''
+          ].filter(Boolean).join(' • ');
+
+          btn.innerHTML = `
+            <div class="font-medium text-gray-900">${item.full_name}</div>
+            <div class="text-xs text-gray-500">${meta}</div>
+          `;
+
+          btn.addEventListener('click', function() {
+            childInput.value = item.full_name;
+            childIdInput.value = item.child_resident_id;
+            
+            // Auto-fill mother and father
+            motherInput.value = item.mother_full_name || 'Not available';
+            motherIdInput.value = item.mother_resident_id || '';
+            
+            fatherInput.value = item.father_full_name || 'Not available';
+            fatherIdInput.value = item.father_resident_id || '';
+            
+            // Store additional data for next step
+            childInput.dataset.sex = item.sex || '';
+            childInput.dataset.dob = item.dob || '';
+            childInput.dataset.philhealth = item.philhealth_no || '';
+            childInput.dataset.phone = item.phone_number || '';
+            
+            clearDropdown();
+            updateSummary();
+            updateNextButton();
+          });
+
+          dropdown.appendChild(btn);
+        });
+
+        dropdown.classList.remove('hidden');
+      })
+      .catch(err => {
+        console.error('child_search_api error:', err);
+        clearDropdown();
+      });
+    }, 250);
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!dropdown.contains(e.target) && e.target !== childInput) {
+      clearDropdown();
+    }
+  });
+
+  // Clear parent fields when child input is cleared
+  childInput.addEventListener('input', function() {
+    if (!this.value.trim()) {
+      motherInput.value = '';
+      motherIdInput.value = '';
+      fatherInput.value = '';
+      fatherIdInput.value = '';
+    }
+  });
+
+  // Form submission handler
+  document.getElementById('familyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!nextBtn.disabled) {
+      // Build URL with form data as query parameters
+      const params = new URLSearchParams({
+        child_id: childIdInput.value,
+        child_name: childInput.value,
+        mother_id: motherIdInput.value,
+        mother_name: motherInput.value,
+        father_id: fatherIdInput.value,
+        father_name: fatherInput.value,
+        sex: childInput.dataset.sex || '',
+        dob: childInput.dataset.dob || '',
+        philhealth_no: childInput.dataset.philhealth || '',
+        phone_number: childInput.dataset.phone || ''
+      });
+      
+      window.location.href = "{% url 'bhw_module:addchild2' %}?" + params.toString();
+    }
+  });
+
+  // Initial state
+  updateSummary();
+  updateNextButton();
+})();
+</script>
 {% endblock %}

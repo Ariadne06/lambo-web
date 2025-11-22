@@ -51,24 +51,7 @@
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
-          <span>Payment</span>
-        </a>
-
-        <a href="{% url 'treasurer_module:transactions' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'transactions' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'transactions' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Transaction</span>
+          <span>Transactions</span>
         </a>
 
         <a href="{% url 'treasurer_module:summary' %}"
@@ -85,7 +68,7 @@
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
-          <span>Summary</span>
+          <span>Reports</span>
         </a>
 
     </div>
