@@ -244,7 +244,7 @@ def household_list(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -615,7 +615,7 @@ def Addbusiness(request):
             )
             set_flash(request, "Successfully Submitted", "success")
         except Exception as e:
-            set_flash(request, str(e), "error")
+            set_flash(request, _clean_db_error(e), "error")
 
     flash = get_flash(request)
     return render(request, "secretary_module/Addbusiness.html", {
@@ -1231,7 +1231,7 @@ def approval_decide(request):
         msg = coerce_message(result)
         set_flash(request, msg, "success")
     except Exception as e:
-        set_flash(request, str(e), "error")
+        set_flash(request, -_clean_db_error(e), "error")
 
     return redirect("secretary_module:approval")
 

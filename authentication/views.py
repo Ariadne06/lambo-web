@@ -120,7 +120,10 @@ def login_view(request):
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
+    
 
+def error_404(request):
+    return render(request, 'authentication/404.html')
 
 # @custom_login_required
 # def logout_view(request):
