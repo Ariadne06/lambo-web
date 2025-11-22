@@ -300,7 +300,7 @@ def nurse_household(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -1224,7 +1224,7 @@ def nurseGeneralInfo(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
