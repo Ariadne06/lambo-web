@@ -2,6 +2,7 @@ from django.db import models, connection
 import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
+from math import ceil
 
 class Captain(models.Model):
     class Meta:
@@ -175,3 +176,152 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+    
+
+class ResidentList(models.Model):
+    """
+    Thin query layer for the Postgres function:
+      view_all_resident(p_query, p_sex, p_status_id, p_min_age, p_max_age, p_limit, p_offset)
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def _rows_to_dicts(cursor) -> List[Dict[str, Any]]:
+        cols = [col[0] for col in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+    @staticmethod
+    def search(
+        p_query: Optional[str] = None,
+        p_sex: Optional[str] = None,          # 'male'/'female'
+        p_status_id: Optional[int] = None,
+        p_min_age: Optional[int] = None,
+        p_max_age: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> Dict[str, Any]:
+        page = max(1, int(page or 1))
+        limit = max(0, int(page_size or 50))
+        offset = (page - 1) * limit
+
+        norm_sex = None
+        if p_sex:
+            s = str(p_sex).strip().lower()
+            if s in ("male", "female"):
+                norm_sex = s
+
+        # 1) paged rows
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM view_all_resident(%s,%s,%s,%s,%s,%s,%s);
+                """,
+                [p_query, norm_sex, p_status_id, p_min_age, p_max_age, limit, offset],
+            )
+            rows = ResidentList._rows_to_dicts(cursor)
+
+        # 2) total count (simple approach)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)::int
+                FROM view_all_resident(%s,%s,%s,%s,%s,%s,%s);
+                """,
+                [p_query, norm_sex, p_status_id, p_min_age, p_max_age, 2147483647, 0],
+            )
+            total = cursor.fetchone()[0] if cursor.rowcount != 0 else 0
+
+        pages = max(1, ceil(total / limit)) if limit else 1
+
+        # Build modal payloads (aligned with the template)
+        for r in rows:
+            payload = {
+                "resident_id": r.get("resident_id"),
+                "resident_code": r.get("resident_code"),
+                # Use full_name directly from SQL (don’t split)
+                "full_name": r.get("full_name") or "",         # <— send full_name directly
+                "sex": r.get("sex"),
+                "dob": str(r.get("dob")) if r.get("dob") else "",
+                "age": r.get("age"),
+                "religion": r.get("religion"),
+                "educ_attainment": r.get("educational_attainment"),
+                "religion": r.get("religion"), 
+                "civil_status": r.get("civil_status"),
+                "resident_status": r.get("status_name"),
+                # New: bind to full_address from SQL
+                "full_address": r.get("full_address"),
+                # Table fields you still show:
+                "household_number": r.get("household_number"),
+                "family_code": r.get("family_code"),
+            }
+            r["payload_json"] = json.dumps(payload, ensure_ascii=False)
+
+
+        return {
+            "rows": rows,
+            "total": total,
+            "page": page,
+            "pages": pages,
+            "limit": limit,
+            "offset": offset,
+        }
+
+
+class BusinessList(models.Model):
+    """
+    Thin unmanaged model to query the get_all_businesses(...) and get_business_detail(...) functions.
+    Used by the Barangay Captain to view businesses.
+    """
+
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def search(
+        p_query: Optional[str] = None,
+        p_status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Calls get_all_businesses(query, status, type_id, ownership_id, owner_id, limit, offset)
+        and returns { rows, total, page, pages, limit, offset }.
+        """
+        page = max(1, int(page or 1))
+        limit = max(1, min(int(page_size or 10), 100))
+        offset = (page - 1) * limit
+
+        # 1) Paged rows
+        with connection.cursor() as cursor:
+            cursor.callproc(
+                "get_all_businesses",
+                [p_query, p_status, None, None, None, limit, offset],
+            )
+            cols = [c[0] for c in cursor.description]
+            rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+        # 2) Total count
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM (
+                  SELECT 1
+                  FROM get_all_businesses(%s, %s, %s, %s, %s, %s, %s)
+                ) t
+                """,
+                [p_query, p_status, None, None, None, 1_000_000_000, 0],
+            )
+            total = cursor.fetchone()[0] if cursor.rowcount else 0
+
+        pages = max(1, ceil(total / limit)) if limit else 1
+
+        return {
+            "rows": rows,
+            "total": total,
+            "page": page,
+            "pages": pages,
+            "limit": limit,
+            "offset": offset,
+        }

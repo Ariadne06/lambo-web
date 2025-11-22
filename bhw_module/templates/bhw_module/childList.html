@@ -16,11 +16,12 @@
     .ch-topbtn:hover{background:linear-gradient(90deg,#fb7185,#ef4444) !important}
   </style>
 
-  <!-- Header -->
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-red-700">Child Health List</h1>
-    <div class="flex gap-3">
-      <a href="#"
+  <h1 class="text-2xl font-bold text-red-700">Child Health List</h1>
+
+  <!-- Top Controls -->
+  <div class="flex justify-between items-center mb-4">
+   <div class="flex gap-3">
+      <a href="{% url 'bhw_module:addchild1' %}"
          class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ch-topbtn">
         ➕ Add Child Record
       </a>
@@ -32,6 +33,85 @@
         Print Report
       </button>
     </div>
+
+    <form id="controlsForm" method="GET" class="flex items-center gap-3">
+      <div class="flex items-center gap-3">
+        <input type="text" placeholder="Search Child Record" name="query" id="queryInput"
+               value="{{ query|default:'' }}"
+               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
+      </div>
+
+      {% comment %} <label class="text-gray-600">Quarter: </label>
+      <select
+        name="quarter_id"
+        class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+        onchange="if(this.value) this.form.submit();"
+      >
+        <option value="" selected disabled>— Select Quarter —</option>
+        {% for q in quarter %}
+          <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
+            {{ q.quarter_name }}
+          </option>
+        {% endfor %}
+      </select> {% endcomment %}
+
+      <div class="flex items-center gap-2 text-sm">
+        <label for="limit" class="text-gray-600">Rows per page:</label>
+        <div class="relative inline-block">
+          <select id="limit" name="limit"
+                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+            {% for n in limit_options %}
+              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="relative">
+        <button type="button"
+                onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+                class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+          </svg>
+          Filters
+        </button>
+
+        <div id="filtersMenu"
+             class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+          <div>
+            <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
+            <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="">— Select Sitio —</option>
+              {% for s in sitio %}
+                <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="sex" class="block text-gray-600 mb-1">Sex</label>
+            <select id="sex" name="sex" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+              <option value="">— Select Sex —</option>
+              <option value="Male"  {% if sex == "Male" %}selected{% endif %}>Male</option>
+              <option value="Female" {% if sex == "Female" %}selected{% endif %}>Female</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+    </form>
+
+    {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
+      </div>
+    {% endif %}
   </div>
 
   <!-- Table -->
@@ -39,43 +119,93 @@
     <table class="min-w-full text-sm text-gray-700">
       <thead class="bg-red-600 text-white">
         <tr>
-          <th class="py-3 px-4 text-left">Child ID</th>
+          <th class="py-3 px-4 text-left">Child Health ID</th>
           <th class="py-3 px-4 text-left">Full Name</th>
-          <th class="py-3 px-4 text-left">DOB</th>
           <th class="py-3 px-4 text-left">Sex</th>
+          <th class="py-3 px-4 text-left">DOB</th>
+          <th class="py-3 px-4 text-left">Age</th>
           <th class="py-3 px-4 text-left">Mother’s Name</th>
+          <th class="py-3 px-4 text-left">Household Number</th>
           <th class="py-3 px-4 text-center">Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <tr class="border-b hover:bg-gray-50">
-          <td class="py-3 px-4">C1001</td>
-          <td class="py-3 px-4">Juan Dela Cruz</td>
-          <td class="py-3 px-4">05/12/2020</td>
-          <td class="py-3 px-4">Male</td>
-          <td class="py-3 px-4">Maria Dela Cruz</td>
-          <td class="py-3 px-4 text-center">
-            <div class="inline-flex gap-2">
-              <a href="#" class="ch-btn ch-btn--green">View</a>
-              <button onclick="toggleModal('editModal')" class="ch-btn ch-btn--blue">Edit</button>
-            </div>
-          </td>
-        </tr>
+
+      <tbody class="divide-y divide-gray-200">
+        {% if results|length == 0 %}
+          <tr>
+            <td colspan="7" class="py-10 px-4 text-center text-gray-500">
+              No child records available.
+            </td>
+          </tr>
+        {% elif results|length == 1 and results.0.household_id == 0 %}
+          <tr>
+            <td colspan="7" class="py-10 px-4 text-center text-gray-500">
+              No child records available.
+            </td>
+          </tr>
+        {% else %}
+          {% for person in results %}
+            {% if person.household_id != 0 %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3">{{ person.child_health_id }}</td>
+              <td class="px-6 py-3">{{ person.child_full_name }}</td>
+              <td class="px-6 py-3">{{ person.sex }}</td>
+              <td class="px-6 py-3">{{ person.dob }}</td>
+              <td class="px-6 py-3">{{ person.age }}</td>
+              <td class="px-6 py-3">{{ person.mother_full_name }}</td>
+              <td class="px-6 py-3">{{ person.household_number }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-center gap-2">
+                  <!-- View button -->
+                  <button type="button"
+                          onclick="location.href='{% url 'bhw_module:childView' %}'"
+                          class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
+                          data-family-member-id="{{ person.family_member_id }}"
+                          data-name="{{ person.full_name|default:'' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                    </svg>
+                    View
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
       </tbody>
     </table>
   </div>
+</div>
 
   <!-- Pagination -->
-  <div class="flex justify-center mt-6">
-    <nav class="flex items-center space-x-2 text-sm">
-      <a href="#" class="px-3 py-1 border rounded-md hover:bg-gray-200">1</a>
-      <a href="#" class="px-3 py-1 border rounded-md hover:bg-gray-200">2</a>
-      <a href="#" class="px-3 py-1 border rounded-md hover:bg-gray-200">3</a>
-      <span class="px-3 py-1">...</span>
-      <a href="#" class="px-3 py-1 border rounded-md hover:bg-gray-200">45</a>
-    </nav>
-  </div>
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+
+  <style>
+    .gh-red{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
+    .gh-red:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
+    .gh-gray{background:#f3f4f6;color:#111827!important}
+    .gh-gray:hover{background:#e5e7eb}
+    .gh-green{background:#22c55e;color:#fff!important}
+    .gh-green:hover{filter:brightness(.95)}
+    .gh-blue{background:#3b82f6;color:#fff!important}
+    .gh-blue:hover{filter:brightness(.95)}
+  </style>
 </div>
+
 <!-- ================== MODALS ================== -->
 
 <!-- Edit Modal (enhanced) -->
@@ -232,6 +362,31 @@
 
 
 <script>
+  // Debounce
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
+
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => { pageField.value = 1; form.requestSubmit(); });
+  });
+
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    const SEARCH_DEBOUNCE_MS = 1000;
+    queryInput.addEventListener('input', debounce(() => { pageField.value = 1; form.requestSubmit(); }, SEARCH_DEBOUNCE_MS));
+  }
+
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('filtersMenu');
+    if (!menu) return;
+    const clickedInsideMenu = e.target.closest('#filtersMenu');
+    const toggleBtn = e.target.closest('button');
+    const clickedToggleBtn = toggleBtn && toggleBtn.textContent.trim() === 'Filters';
+    if (!clickedInsideMenu && !clickedToggleBtn) menu.classList.add('hidden');
+  });
+
 function toggleModal(id) {
   const el = document.getElementById(id);
   const isHidden = el.classList.contains('hidden');
