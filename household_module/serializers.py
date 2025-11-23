@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from .models import MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family
+from .models import Relationship, MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements, ChildHealthRecord
 from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
-from .utils.database_helpers import insert_family_member, save_general_health_for_member
+from .utils.database_helpers import insert_family_member, save_general_health_for_member, insert_child_health_record, update_child_health_record, add_child_immunization, add_child_supplement, add_child_medical_condition, add_child_surgical_history, add_child_growth_monitoring, add_exclusive_breastfeed_backfill
+
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,6 +80,50 @@ class QuarterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quarter
         fields = ['quarter_id', 'quarter_number', 'quarter_name', 'year', 'start_date', 'end_date']
+
+class RelationshipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Relationship
+        fields = ['relationship_id', 'relationship_name']
+
+class FeedingMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeedingMethod
+        fields = ['feeding_method_id', 'method_name', 'is_active']
+
+
+class MonthSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Month
+        fields = ['month_id', 'month_sequence_name', 'month_number']
+
+
+class TTStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TTStatus
+        fields = ['tt_status_id', 'tt_code', 'tt_name']
+
+
+class VaccineTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VaccineType
+        fields = [
+            'vaccine_type_id', 'vaccine_name', 'at_birth', 
+            'first_dose', 'second_dose', 'third_dose',
+            'interval_between_doses', 'date_added', 'updated_at'
+        ]
+
+
+class DoseTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoseType
+        fields = ['dose_type_id', 'dose_name']
+
+
+class SupplementsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplements
+        fields = ['supplement_id', 'supplement_name', 'is_active']
 
 
 
@@ -495,3 +540,363 @@ class HouseholdUpdateSerializer(serializers.Serializer):
             })
         
         return data
+    
+
+class ChildHealthRecordCreateSerializer(serializers.Serializer):
+    """Create child health record"""
+    child_id = serializers.IntegerField(required=True)
+    time_of_birth = serializers.TimeField(required=False, allow_null=True)
+    birth_weight_kg = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    birth_length_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    place_of_delivery = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    address_landmark = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    tt_status_of_mother = serializers.IntegerField(required=False, allow_null=True)
+    tt_status_date = serializers.DateField(required=False, allow_null=True)
+    newborn_screening_status = serializers.BooleanField(required=False, allow_null=True)
+    newborn_screening_status_date = serializers.DateField(required=False, allow_null=True)
+    feeding_method_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        if not data.get('child_id'):
+            raise serializers.ValidationError({'child_id': 'Child ID is required'})
+        
+        if data.get('newborn_screening_status') is True and not data.get('newborn_screening_status_date'):
+            raise serializers.ValidationError({
+                'newborn_screening_status_date': 'Date required when screening status is TRUE'
+            })
+        
+        return data
+    
+    def create(self, validated_data):
+        try:
+            personnel_id = self.context.get('personnel_id')
+            if not personnel_id:
+                raise serializers.ValidationError({'personnel_id': 'Personnel ID is required'})
+            
+            validated_data['personnel_id'] = personnel_id
+            child_health_id = insert_child_health_record(validated_data)
+            
+            if not child_health_id:
+                raise serializers.ValidationError('Failed to create child health record')
+            
+            return {'child_health_id': child_health_id}
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to create record: {str(e)}")
+
+
+class ChildHealthRecordUpdateSerializer(serializers.Serializer):
+    """Update child health record - only non-sensitive fields"""
+    place_of_delivery = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    address_landmark = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    tt_status_of_mother = serializers.IntegerField(required=False, allow_null=True)
+    tt_status_date = serializers.DateField(required=False, allow_null=True)
+    newborn_screening_status = serializers.BooleanField(required=False, allow_null=True)
+    newborn_screening_status_date = serializers.DateField(required=False, allow_null=True)
+    feeding_method_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate(self, data):
+        # Validate screening date if status is True
+        if data.get('newborn_screening_status') is True:
+            if not data.get('newborn_screening_status_date'):
+                raise serializers.ValidationError(
+                    "Newborn screening date is required when status is True"
+                )
+        
+        return data
+    
+    def update(self, instance, validated_data):
+        """Update child health record"""
+        try:
+            # Get personnel_id from context
+            personnel_id = self.context.get('personnel_id')
+            if not personnel_id:
+                raise serializers.ValidationError("Personnel ID is required")
+            
+            # Call database helper
+            from .utils.database_helpers import update_child_health_record
+            
+            update_child_health_record(
+                child_health_id=instance,  # instance is the child_health_id
+                data={**validated_data, 'personnel_id': personnel_id}
+            )
+            
+            return instance
+            
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
+
+
+class ChildGrowthMonitoringCreateSerializer(serializers.Serializer):
+    """Serializer for creating child growth monitoring records"""
+    
+    # Required fields
+    weight_kg = serializers.DecimalField(max_digits=5, decimal_places=2, required=True)
+    height_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=True)
+    
+    # ✅ CHANGED: These are now REQUIRED (per your SQL function)
+    temp_c = serializers.DecimalField(max_digits=4, decimal_places=1, required=True)
+    resp_rate = serializers.IntegerField(required=True)
+    pulse_rate = serializers.IntegerField(required=True)
+    
+    # Optional notes
+    notes = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
+    
+    def validate_weight_kg(self, value):
+        """Validate weight is reasonable"""
+        if value <= 0:
+            raise serializers.ValidationError("Weight must be greater than 0")
+        if value > 150:
+            raise serializers.ValidationError("Weight seems unusually high. Please verify.")
+        return value
+    
+    def validate_height_cm(self, value):
+        """Validate height is reasonable"""
+        if value <= 0:
+            raise serializers.ValidationError("Height must be greater than 0")
+        if value > 220:
+            raise serializers.ValidationError("Height seems unusually high. Please verify.")
+        return value
+    
+    def validate_temp_c(self, value):
+        """Validate temperature"""
+        if value < 30 or value > 45:
+            raise serializers.ValidationError("Temperature must be between 30°C and 45°C")
+        return value
+    
+    def validate_resp_rate(self, value):
+        """Validate respiratory rate"""
+        if value < 10 or value > 100:
+            raise serializers.ValidationError("Respiratory rate must be between 10 and 100 bpm")
+        return value
+    
+    def validate_pulse_rate(self, value):
+        """Validate pulse rate"""
+        if value < 40 or value > 200:
+            raise serializers.ValidationError("Pulse rate must be between 40 and 200 bpm")
+        return value
+    
+    def create(self, validated_data):
+        """Create growth monitoring record"""
+        try:
+            child_health_id = self.context.get('child_health_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not child_health_id:
+                raise serializers.ValidationError("Missing child_health_id")
+            if not personnel_id:
+                raise serializers.ValidationError("Missing personnel_id")
+            
+            # ✅ Call database helper WITHOUT age_in_months
+            cgm_id = add_child_growth_monitoring(
+                child_health_id=child_health_id,
+                personnel_id=personnel_id,
+                weight_kg=validated_data['weight_kg'],
+                height_cm=validated_data['height_cm'],
+                temp_c=validated_data['temp_c'],
+                resp_rate=validated_data['resp_rate'],
+                pulse_rate=validated_data['pulse_rate'],
+                notes=validated_data.get('notes')
+            )
+            
+            if not cgm_id:
+                raise serializers.ValidationError("Failed to create growth monitoring record")
+            
+            return {'cgm_id': cgm_id}
+            
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to add growth record: {str(e)}")
+        
+class ChildImmunizationCreateSerializer(serializers.Serializer):
+    """Serializer for creating child immunization records"""
+    
+    vaccine_type_id = serializers.IntegerField(required=True)
+    dose_type_id = serializers.IntegerField(required=True)
+    date_given = serializers.DateField(required=True)
+    batch_number = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    remarks = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
+    
+    def validate_date_given(self, value):
+        """Validate date is not in the future"""
+        from datetime import date
+        if value > date.today():
+            raise serializers.ValidationError("Date cannot be in the future")
+        return value
+    
+    def create(self, validated_data):
+        try:
+            child_health_id = self.context.get('child_health_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not child_health_id or not personnel_id:
+                raise serializers.ValidationError("Missing child_health_id or personnel_id")
+            
+            immunization_id = add_child_immunization(
+                child_health_id=child_health_id,
+                vaccine_type_id=validated_data['vaccine_type_id'],
+                dose_type_id=validated_data['dose_type_id'],
+                date_given=validated_data['date_given'],
+                batch_number=validated_data.get('batch_number'),
+                remarks=validated_data.get('remarks'),
+                personnel_id=personnel_id
+            )
+            
+            return {'immunization_id': immunization_id}
+            
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to add immunization: {str(e)}")
+
+
+class ChildSupplementCreateSerializer(serializers.Serializer):
+    """Add supplement record"""
+    personnel_id = serializers.IntegerField(required=True)
+    supplement_id = serializers.IntegerField(required=True)
+    age_in_months = serializers.IntegerField(required=True, min_value=0)
+    
+    def validate_age_in_months(self, value):
+        """Ensure age is valid"""
+        if value < 0:
+            raise serializers.ValidationError("Age in months cannot be negative")
+        if value > 60:  # 5 years
+            raise serializers.ValidationError("Age exceeds program limits (>60 months)")
+        return value
+    
+    def create(self, validated_data):
+        """Call database helper to add supplement"""
+        child_health_id = self.context.get('child_health_id')
+        
+        child_health_id_returned = add_child_supplement(
+            child_health_id=child_health_id,
+            supplement_id=validated_data['supplement_id'],
+            age_in_months=validated_data['age_in_months'],
+            personnel_id=validated_data['personnel_id']
+        )
+        
+        return child_health_id_returned
+
+
+
+
+class ChildBreastfeedTrackingCreateSerializer(serializers.Serializer):
+    """Serializer for creating/updating breastfeed tracking records"""
+    
+    month_id = serializers.IntegerField(required=True)
+    feeding_method_id = serializers.IntegerField(required=True)
+    date_assessed = serializers.DateField(required=True)
+    notes = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
+    
+    def validate_month_id(self, value):
+        """Validate month_id is 1-6 (for exclusive breastfeeding tracking)"""
+        if value < 1 or value > 6:
+            raise serializers.ValidationError("Month must be between 1 and 6")
+        return value
+    
+    def validate_date_assessed(self, value):
+        from datetime import date
+        if value > date.today():
+            raise serializers.ValidationError("Date cannot be in the future")
+        return value
+    
+    def create(self, validated_data):
+        try:
+            child_health_id = self.context.get('child_health_id')
+            personnel_id = self.context.get('personnel_id')
+            
+            if not child_health_id or not personnel_id:
+                raise serializers.ValidationError("Missing child_health_id or personnel_id")
+            
+            tracking_id = add_exclusive_breastfeed_backfill(
+                child_health_id=child_health_id,
+                month_id=validated_data['month_id'],
+                feeding_method_id=validated_data['feeding_method_id'],
+                date_assessed=validated_data['date_assessed'],
+                notes=validated_data.get('notes'),
+                personnel_id=personnel_id
+            )
+            
+            return {'tracking_id': tracking_id}
+            
+        except Exception as e:
+            raise serializers.ValidationError(f"Failed to add breastfeed tracking: {str(e)}")
+
+
+class ChildMedicalConditionCreateSerializer(serializers.Serializer):
+    """Add medical condition for child"""
+    personnel_id = serializers.IntegerField(required=True)
+    medical_condition = serializers.CharField(max_length=200, required=True)
+    
+    def validate_medical_condition(self, value):
+        """Validate and normalize medical condition name"""
+        trimmed = value.strip()
+        if len(trimmed) < 2:
+            raise serializers.ValidationError("Medical condition must be at least 2 characters")
+        return trimmed
+    
+    def create(self, validated_data):
+        """Call database helper to add medical condition"""
+        child_health_id = self.context.get('child_health_id')
+        
+        rmh_id = add_child_medical_condition(
+            child_health_id=child_health_id,
+            medical_condition=validated_data['medical_condition'],
+            personnel_id=validated_data['personnel_id']
+        )
+        
+        return rmh_id
+
+
+class ChildSurgicalHistoryCreateSerializer(serializers.Serializer):
+    """Add surgical history for child"""
+    personnel_id = serializers.IntegerField(required=True)
+    surgical_history_name = serializers.CharField(max_length=200, required=True)
+    date_of_surgery = serializers.DateField(required=True)
+    
+    def validate_surgical_history_name(self, value):
+        """Validate and normalize surgical procedure name"""
+        trimmed = value.strip()
+        if len(trimmed) < 2:
+            raise serializers.ValidationError("Surgical procedure name must be at least 2 characters")
+        return trimmed
+    
+    def validate_date_of_surgery(self, value):
+        """Ensure surgery date is not in the future"""
+        from datetime import date
+        if value > date.today():
+            raise serializers.ValidationError("Surgery date cannot be in the future")
+        return value
+    
+    def create(self, validated_data):
+        """Call database helper to add surgical history"""
+        child_health_id = self.context.get('child_health_id')
+        
+        rsh_id = add_child_surgical_history(
+            child_health_id=child_health_id,
+            surgical_history_name=validated_data['surgical_history_name'],
+            date_of_surgery=validated_data['date_of_surgery'],
+            personnel_id=validated_data['personnel_id']
+        )
+        
+        return rsh_id
+
+
+class ExclusiveBreastfeedCreateSerializer(serializers.Serializer):
+    """Add exclusive breastfeed assessment"""
+    personnel_id = serializers.IntegerField(required=True)
+    month_id = serializers.IntegerField(required=True)
+    
+    def validate_month_id(self, value):
+        """Ensure month_id is valid (1-6)"""
+        if value < 1 or value > 6:
+            raise serializers.ValidationError("Month must be between 1 and 6")
+        return value
+    
+    def create(self, validated_data):
+        """Call database helper to add exclusive breastfeed assessment"""
+        child_health_id = self.context.get('child_health_id')
+        
+        results = add_exclusive_breastfeed_backfill(
+            child_health_id=child_health_id,
+            month_id=validated_data['month_id'],
+            personnel_id=validated_data['personnel_id']
+        )
+        
+        return results
