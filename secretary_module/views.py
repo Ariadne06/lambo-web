@@ -2351,7 +2351,7 @@ def print_application_pdf(request, application_id: int):
             messages.warning(request, 'Completed applications cannot be re-generated.')
             return redirect('secretary_module:application_detail', application_id=application_id)
 
-        row = SecretaryHelpers.get_clearance_details_forz_printing(application_id)
+        row = SecretaryHelpers.get_clearance_details_for_printing(application_id)
         if not row:
             raise Http404('Application not found or no printable details.')
 
