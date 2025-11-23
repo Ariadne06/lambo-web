@@ -381,9 +381,13 @@
       statusModal.classList.remove('hidden');
       document.documentElement.classList.add('overflow-hidden');
     }
+    let shouldRefresh = false;
     function closeStatus(){
       statusModal.classList.add('hidden');
       document.documentElement.classList.remove('overflow-hidden');
+      if(shouldRefresh){
+        window.location.reload();
+      }
     }
     statusClose && statusClose.addEventListener('click', closeStatus);
     overlay && overlay.addEventListener('click', closeStatus);
@@ -420,6 +424,7 @@
             }
             // Hide completion modal if open
             if(modal) modal.classList.add('hidden');
+            shouldRefresh = true;
             openStatus(true, data.message || 'Application marked as Completed.');
           } else {
             // Show error modal
