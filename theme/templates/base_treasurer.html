@@ -51,24 +51,7 @@
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
-          <span>Payment</span>
-        </a>
-
-        <a href="{% url 'treasurer_module:transactions' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'transactions' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'transactions' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Transaction</span>
+          <span>Transactions</span>
         </a>
 
         <a href="{% url 'treasurer_module:summary' %}"
@@ -85,7 +68,7 @@
               src="{% static 'images/dashboard-red.svg' %}"
             {% endif %}>
 
-          <span>Summary</span>
+          <span>Reports</span>
         </a>
 
     </div>
@@ -97,13 +80,15 @@
           <p class="text-sm font-semibold truncate">{{ request.session.username }}</p>
           <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
         </div>
-       <a href="{% url 'authentication:logout' %}"
-          class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
-                  hover:bg-red-800 ring-1 ring-white/20 transition">
-          <!-- keep the white icon; no invert so it stays visible on dark red -->
-          <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
-          <span class="text-xs">Logout</span>
-        </a>
+        <form method="POST" action="{% url 'authentication:logout' %}" class="inline">
+         {% csrf_token %}
+         <button type="submit" id="logout-link"
+                 class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
+                         hover:bg-red-800 ring-1 ring-white/20 transition">
+           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
+           <span class="text-xs">Logout</span>
+         </button>
+        </form>
       </div>
     </div>
   </nav>
@@ -181,6 +166,7 @@ ACCORDION.forEach((item) => {
   try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
   document.getElementById('logout-link')?.addEventListener('click', () => {
     suppressClosePing = true;
+    // Don't call markNavigation() - let server handle logout time recording
     try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
   });
 
@@ -211,24 +197,69 @@ ACCORDION.forEach((item) => {
     try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
   }
 
-  // On tab/browser close or reload — DO NOT ping here (Option A)
-  function handleClose() {
-    if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
-    // Stash our token so the next tab load can clean up the previous tab's token
-    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-    // IMPORTANT: No pingSilentLogout here to avoid logging out during normal navigation
+  // Comprehensive navigation detection
+  let isNavigating = false;
+  let navigationTimer = null;
+  
+  function markNavigation() {
+    isNavigating = true;
+    clearTimeout(navigationTimer);
+    navigationTimer = setTimeout(() => isNavigating = false, 100);
   }
-  addEventListener('pagehide', handleClose);
-  addEventListener('beforeunload', handleClose);
+  
+  // Track navigation types (exclude logout button)
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('a, button[type="submit"], input[type="submit"]');
+    if (target && target.id !== 'logout-link') {
+      markNavigation();
+    }
+  });
+  
+  // Track form submissions (exclude logout form)
+  document.addEventListener('submit', (e) => {
+    if (!e.target.querySelector('#logout-link')) {
+      markNavigation();
+    }
+  });
+  
+  // Track browser navigation (back/forward)
+  addEventListener('popstate', () => markNavigation());
+  
+  // Browser/tab close detection - single event listener
+  addEventListener('beforeunload', (e) => {
+    console.log('beforeunload triggered:', {
+      suppressClosePing,
+      skipSilent: sessionStorage.getItem('skipSilent'),
+      isNavigating,
+      SESSION_TOKEN: SESSION_TOKEN ? 'present' : 'missing'
+    });
+    
+    // Check if this is a page refresh
+    if (e.returnValue !== undefined || performance.navigation?.type === 1) {
+      markNavigation();
+    }
+    
+    // Record logout time for browser/tab close (not navigation)
+    if (!suppressClosePing && sessionStorage.getItem('skipSilent') !== '1' && !isNavigating) {
+      console.log('Sending beacon for logout');
+      const formData = new FormData();
+      formData.append('session_token', SESSION_TOKEN);
+      navigator.sendBeacon(TAB_CLOSE_URL, formData);
+    } else {
+      console.log('Beacon blocked by conditions');
+    }
+  });
 
-  // Idle detection -> go to real logout
+  // Idle detection -> call silent logout then redirect
   let last = Date.now(), timer;
   function arm() {
     clearTimeout(timer);
     if (document.visibilityState !== 'visible') return;
     timer = setTimeout(() => {
       if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-        window.location.replace(LOGOUT_URL);
+        // Record logout time via silent_logout before redirecting
+        pingSilentLogout(SESSION_TOKEN);
+        window.location.replace(LOGOUT_URL + '?force=1');
       }
     }, IDLE_LIMIT_MS + 100);
   }

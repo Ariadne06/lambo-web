@@ -11,7 +11,66 @@ from django.views.decorators.http import require_http_methods, require_POST
 @custom_login_required
 @role_required('Barangay Treasurer')
 def treasurer_dashboard(request):
-    return render(request, 'treasurer_module/treasurer_dashboard.html')
+    # Year filter: default to the latest year available or current year if none
+    try:
+        year_choices = TreasurerRepo.get_year_for_filter_choice() or []
+    except Exception:
+        year_choices = []
+
+    import datetime
+    curr_year = datetime.date.today().year
+    raw_year = request.GET.get('year')
+    try:
+        sel_year = int(raw_year) if raw_year else (year_choices[-1] if year_choices else curr_year)
+    except (TypeError, ValueError):
+        sel_year = year_choices[-1] if year_choices else curr_year
+
+    # Monthly collections for the selected year
+    months = []
+    try:
+        months = TreasurerRepo.get_all_months_collections(sel_year)
+    except Exception:
+        months = []
+    months_labels = [str((m.get('month_name') or '').strip()) for m in months]
+    months_values = []
+    for m in months:
+        val = m.get('total_collected')
+        try:
+            months_values.append(float(val) if val is not None else 0.0)
+        except Exception:
+            months_values.append(0.0)
+
+    # KPIs
+    try:
+        kpi_total_today = TreasurerRepo.get_total_collections_today()
+    except Exception:
+        kpi_total_today = 0.0
+    try:
+        kpi_or_today = TreasurerRepo.get_total_or_issued_today()
+    except Exception:
+        kpi_or_today = 0
+    try:
+        kpi_pending = TreasurerRepo.get_pending_payments()
+    except Exception:
+        kpi_pending = 0
+
+    # Recent transactions (top 5)
+    try:
+        recent = TreasurerRepo.get_recent_transactions()
+    except Exception:
+        recent = []
+
+    ctx = {
+        'year_choices': year_choices,
+        'selected_year': sel_year,
+        'months_labels': months_labels,
+        'months_values': months_values,
+        'kpi_total_today': kpi_total_today,
+        'kpi_or_today': kpi_or_today,
+        'kpi_pending': kpi_pending,
+        'recent': recent,
+    }
+    return render(request, 'treasurer_module/treasurer_dashboard.html', ctx)
 
 @custom_login_required
 @role_required('Barangay Treasurer')
@@ -249,13 +308,166 @@ def treasurer_application_detail(request, application_id: int):
 
 @custom_login_required
 @role_required('Barangay Treasurer')
-def transactions(request):
-    return render(request, 'treasurer_module/transactions.html')
-
-@custom_login_required
-@role_required('Barangay Treasurer')
 def summary(request):
-    return render(request, 'treasurer_module/summary.html')
+    """Reports: monthly summary by application type using treasurer_get_monthly_summary.
+
+    Filters mimic Payments: search `q`, multi-select `application_label`, plus month and year.
+    We filter application_label and month in Python over the aggregated result set.
+    """
+    from django.core.paginator import Paginator
+    from urllib.parse import urlencode as _urlencode
+
+    q = (request.GET.get('q') or '').strip() or None
+    # Year (single select). Default to latest year with data or current year
+    try:
+        year_choices = TreasurerRepo.get_year_for_filter_choice() or []
+    except Exception:
+        year_choices = []
+    import datetime
+    curr_year = datetime.date.today().year
+    raw_year = request.GET.get('year')
+    try:
+        sel_year = int(raw_year) if raw_year else (year_choices[-1] if year_choices else curr_year)
+    except (TypeError, ValueError):
+        sel_year = year_choices[-1] if year_choices else curr_year
+
+    # Application labels (multi-select)
+    app_labels = [s.strip() for s in request.GET.getlist('application_label') if s and s.strip()]
+    # Month (single select; 1-12). Optional
+    try:
+        month = int(request.GET.get('month')) if request.GET.get('month') else None
+        if month is not None and (month < 1 or month > 12):
+            month = None
+    except Exception:
+        month = None
+
+    # Fetch summary rows from DB (already aggregated)
+    try:
+        rows_all = TreasurerRepo.get_monthly_summary(sel_year, q)
+    except Exception as e:
+        messages.error(request, f"Failed to load summary: {_clean_db_error(e)}")
+        rows_all = []
+
+    # Build options from data
+    try:
+        application_label_options = TreasurerRepo.get_distinct_application_labels(sel_year)
+    except Exception:
+        # Fallback to gathered set
+        application_label_options = sorted({(r.get('application_label') or '').strip() for r in rows_all if (r.get('application_label') or '').strip()})
+
+    # Month options present in the dataset (1..12 with names)
+    month_map = {}
+    for r in rows_all:
+        try:
+            mon_no = int(r.get('month_no'))
+            mon_name = str((r.get('month_name') or '').strip())
+            if mon_no and mon_name and mon_no not in month_map:
+                month_map[mon_no] = mon_name
+        except Exception:
+            continue
+    month_options = sorted(month_map.items(), key=lambda x: x[0])  # list[(no, name)]
+
+    # Apply Python-side filters for application_label and month
+    def _match(r):
+        if app_labels and (r.get('application_label') or '') not in app_labels:
+            return False
+        if month is not None and int(r.get('month_no') or 0) != month:
+            return False
+        return True
+
+    rows_filtered = [r for r in rows_all if _match(r)]
+
+    # Pagination
+    try:
+        page = max(int(request.GET.get('page', 1)), 1)
+    except Exception:
+        page = 1
+    try:
+        per_page = max(min(int(request.GET.get('per_page', 25)), 100), 1)
+    except Exception:
+        per_page = 25
+    paginator = Paginator(rows_filtered, per_page)
+    page_obj = paginator.get_page(page)
+    page = page_obj.number
+    total_pages = paginator.num_pages
+
+    # Build URLs that preserve multi-select filters
+    def _qs(base: dict, labels: list[str]) -> str:
+        params = []
+        for k, v in base.items():
+            if v is not None and v != '':
+                params.append((k, v))
+        for s in labels:
+            params.append(('application_label', s))
+        return _urlencode(params, doseq=True)
+
+    page_numbers = list(paginator.get_elided_page_range(number=page, on_each_side=1, on_ends=1))
+    page_urls = {}
+    for pn in page_numbers:
+        if isinstance(pn, int):
+            page_urls[pn] = '?' + _qs({'q': q or '', 'year': sel_year, 'month': month or '', 'page': pn, 'per_page': per_page}, app_labels)
+    page_items = []
+    for item in page_numbers:
+        if isinstance(item, int):
+            page_items.append({'num': item, 'url': page_urls.get(item, ''), 'current': item == page})
+        else:
+            page_items.append({'ellipsis': True})
+    has_prev = page_obj.has_previous()
+    has_next = page_obj.has_next()
+    prev_url = '?' + _qs({'q': q or '', 'year': sel_year, 'month': month or '', 'page': page - 1, 'per_page': per_page}, app_labels) if has_prev else ''
+    next_url = '?' + _qs({'q': q or '', 'year': sel_year, 'month': month or '', 'page': page + 1, 'per_page': per_page}, app_labels) if has_next else ''
+
+    # Chips
+    def _remove_label(val: str) -> str:
+        lst = list(app_labels)
+        if val in lst:
+            lst.remove(val)
+        return '?' + _qs({'q': q or '', 'year': sel_year, 'month': month or '', 'page': 1, 'per_page': per_page}, lst)
+
+    label_chips = [{'label': s, 'url': _remove_label(s)} for s in app_labels]
+    clear_all_url = '?' + _qs({'q': q or '', 'year': sel_year, 'month': month or '', 'page': 1, 'per_page': per_page}, [])
+
+    # Totals for current filtered set
+    from decimal import Decimal as D
+    total_apps = 0
+    total_collected = D('0')
+    for r in rows_filtered:
+        try:
+            total_apps += int(r.get('applications_count') or 0)
+        except Exception:
+            pass
+        try:
+            total_collected += (r.get('total_collected') or D('0'))
+        except Exception:
+            try:
+                total_collected += D(str(r.get('total_collected') or '0'))
+            except Exception:
+                pass
+
+    ctx = {
+        'q': q or '',
+        'year_choices': year_choices,
+        'selected_year': sel_year,
+        'application_label_options': application_label_options,
+        'application_label_list': app_labels,
+        'month_options': month_options,  # list of (no, name)
+        'selected_month': month or '',
+        'rows': list(page_obj.object_list),
+        'page': page,
+        'per_page': per_page,
+        'total': len(rows_filtered),
+        'total_pages': total_pages,
+        'has_prev': has_prev,
+        'has_next': has_next,
+        'prev_url': prev_url,
+        'next_url': next_url,
+        'page_items': page_items,
+        'label_chips': label_chips,
+        'clear_all_url': clear_all_url,
+        'sum_applications': total_apps,
+        'sum_collected': total_collected,
+    }
+    return render(request, 'treasurer_module/summary.html', ctx)
 
 
 # --- API endpoints for details and payment action ---

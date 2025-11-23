@@ -9,50 +9,35 @@
   <div class="flex items-end justify-between">
     <div>
       <h1 class="text-2xl font-extrabold tracking-tight text-gray-900">Treasurer Dashboard</h1>
-      <p class="text-sm text-gray-500">Collections, cashflow, and recent activity at a glance.</p>
+      <p class="text-sm text-gray-500">Collections and activity at a glance.</p>
     </div>
   </div>
  <!-- KPIs Row -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Monthly Revenue -->
-        <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Monthly Revenue</span>
-                <span class="text-green-600 text-sm font-semibold">▲ 8.2%</span>
-            </div>
-            <div class="text-2xl font-bold">₱999,999.00</div>
-            <div class="h-12">
-                <canvas id="monthlyRevenueChart"></canvas>
-            </div>
+      <!-- Collections Today -->
+      <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-500">Collections Today</span>
         </div>
-
-        <!-- Collection Rate -->
-        <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Collection Rate</span>
-                <span class="text-green-600 text-sm font-semibold">▲ 0.9%</span>
-            </div>
-            <div class="text-2xl font-bold">96.4%</div>
-            <div class="h-12">
-                <canvas id="collectionRateChart"></canvas>
-            </div>
+        <div class="text-2xl font-bold">₱{{ kpi_total_today|floatformat:2 }}</div>
+        <div class="text-xs text-gray-500">Paid total for today</div>
+      </div>
+      <!-- OR Issued Today -->
+      <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-500">OR Issued Today</span>
         </div>
-
-        <!-- No. of Transactions -->
-        <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">No. of Transactions</span>
-                <span class="text-green-600 text-sm font-semibold">▲ 3.1%</span>
-            </div>
-            <div class="text-2xl font-bold">123</div>
-            <div class="h-12">
-                <canvas id="transactionsChart"></canvas>
-            </div>
+        <div class="text-2xl font-bold">{{ kpi_or_today }}</div>
+        <div class="text-xs text-gray-500">Number of paid applications today</div>
+      </div>
+      <!-- Pending Payments -->
+      <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-500">Pending Payments</span>
         </div>
-        
-    <!-- Right: stacked cards -->
-    <div class="grid grid-rows-2 gap-4">
-    </div>
+        <div class="text-2xl font-bold">{{ kpi_pending }}</div>
+        <div class="text-xs text-gray-500">Awaiting payment</div>
+      </div>
     </div>
 
 
@@ -61,13 +46,25 @@
     <!-- Annual Revenue -->
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm">
       <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-        <h3 class="font-semibold text-gray-900">Annual Revenue</h3>
-        <span class="text-xs text-gray-500">FY 2020–2024</span>
+        <h3 class="font-semibold text-gray-900">Collections by Month</h3>
+        <form method="get" class="flex items-center gap-2" id="yearFilterForm">
+          <label for="yearFilter" class="text-xs font-medium text-gray-600">Year:</label>
+          <div class="relative">
+            <select id="yearFilter" name="year" class="peer appearance-none bg-none h-8 rounded-md border border-gray-300 pl-3 pr-9 text-xs font-medium text-gray-700 focus:border-rose-500 focus:ring-2 focus:ring-rose-500 transition-colors">
+              {% for y in year_choices %}
+                <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-500 peer-focus:text-rose-500 transition-colors">
+            </span>
+          </div>
+        </form>
       </div>
       <div class="p-4">
         <div class="h-72 lg:h-80">
           <canvas id="barAnnual"></canvas>
         </div>
+        <p class="mt-2 text-xs text-gray-500">Showing monthly collection totals for <span class="font-semibold">{{ selected_year }}</span>. Change the year to update the chart.</p>
       </div>
     </div>
 
@@ -80,58 +77,47 @@
   <section class="bg-white border border-gray-200 rounded-2xl shadow-sm">
     <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
       <h3 class="font-semibold text-gray-900">Recent Transactions</h3>
-      <a href="#" class="text-sm font-semibold text-red-600 hover:underline">View all</a>
+      <a href="{% url 'treasurer_module:payments' %}" class="text-sm font-semibold text-red-600 hover:underline">View all</a>
+    </div>
+    <div class="px-5 pt-2 text-xs text-gray-500">
+      Date Paid shows the timestamp of payment; pending requests display an em dash (—).
     </div>
     <div class="overflow-x-auto p-4">
       <table class="w-full text-sm">
         <thead class="bg-red-600 text-white">
           <tr>
-            <th class="py-2 px-3 text-left">Date</th>
-            <th class="py-2 px-3 text-left">OR #</th>
+            <th class="py-2 px-3 text-left">Date Paid</th>
+            <th class="py-2 px-3 text-left">Txn Code</th>
             <th class="py-2 px-3 text-left">Payer</th>
             <th class="py-2 px-3 text-left">Purpose</th>
-            <th class="py-2 px-3 text-left">Method</th>
             <th class="py-2 px-3 text-left">Amount</th>
             <th class="py-2 px-3 text-left">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y">
+          {% for t in recent %}
           <tr class="hover:bg-red-50/40 transition">
-            <td class="py-2 px-3">2025‑05‑05</td>
-            <td class="py-2 px-3">000123</td>
-            <td class="py-2 px-3">Adrianne Villarta</td>
-            <td class="py-2 px-3">Brgy. Clearance</td>
-            <td class="py-2 px-3">Cash</td>
-            <td class="py-2 px-3">₱ 300.00</td>
-            <td class="py-2 px-3"><span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700">PAID</span></td>
+            <td class="py-2 px-3">{{ t.date_paid|default:'—' }}</td>
+            <td class="py-2 px-3">{{ t.transaction_code|default:'—' }}</td>
+            <td class="py-2 px-3">{{ t.applicant_name|default:'—' }}</td>
+            <td class="py-2 px-3">{{ t.request|default:'—' }}</td>
+            <td class="py-2 px-3">₱{{ t.total_amount|floatformat:2 }}</td>
+            <td class="py-2 px-3">
+              {% with ps=t.payment_status|lower %}
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold
+                  {% if ps == 'paid' %} bg-green-100 text-green-700
+                  {% elif ps == 'pending' %} bg-amber-100 text-amber-700
+                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                  {{ t.payment_status|default:'—' }}
+                </span>
+              {% endwith %}
+            </td>
           </tr>
-          <tr class="hover:bg-red-50/40 transition">
-            <td class="py-2 px-3">2025‑05‑05</td>
-            <td class="py-2 px-3">000124</td>
-            <td class="py-2 px-3">Vinz Computer Shop</td>
-            <td class="py-2 px-3">Business Permit</td>
-            <td class="py-2 px-3">GCash</td>
-            <td class="py-2 px-3">₱ 1,250.00</td>
-            <td class="py-2 px-3"><span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700">PAID</span></td>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="py-3 px-3 text-center text-gray-500">No recent transactions.</td>
           </tr>
-          <tr class="hover:bg-red-50/40 transition">
-            <td class="py-2 px-3">2025‑05‑04</td>
-            <td class="py-2 px-3">000121</td>
-            <td class="py-2 px-3">Jereza Mae Rodrigo</td>
-            <td class="py-2 px-3">Residency</td>
-            <td class="py-2 px-3">Cash</td>
-            <td class="py-2 px-3">₱ 200.00</td>
-            <td class="py-2 px-3"><span class="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">PENDING</span></td>
-          </tr>
-          <tr class="hover:bg-red-50/40 transition">
-            <td class="py-2 px-3">2025‑05‑02</td>
-            <td class="py-2 px-3">000115</td>
-            <td class="py-2 px-3">Cristel Mandave</td>
-            <td class="py-2 px-3">Brgy. Clearance</td>
-            <td class="py-2 px-3">GCash</td>
-            <td class="py-2 px-3">₱ 300.00</td>
-            <td class="py-2 px-3"><span class="inline-flex rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700">REFUNDED</span></td>
-          </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
@@ -140,6 +126,9 @@
 
 <!-- Charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- JSON data payloads for chart using Django's json_script filter -->
+{{ months_labels|json_script:"months-labels" }}
+{{ months_values|json_script:"months-values" }}
 <script>
   // Colors
   const brand = {
@@ -152,13 +141,23 @@
     amber: '#f59e0b',  // amber-500
   };
 
-  // Annual Revenue (Bar)
+  // Monthly collections for selected year (Bar)
+  // Pull JSON from dedicated script tags to keep this block valid JS pre-render
+  const monthsLabels = JSON.parse(document.getElementById('months-labels').textContent);
+  const monthsValues = JSON.parse(document.getElementById('months-values').textContent);
+  // Auto-submit year filter on change
+  const yearSelect = document.getElementById('yearFilter');
+  if (yearSelect) {
+    yearSelect.addEventListener('change', () => {
+      document.getElementById('yearFilterForm').submit();
+    });
+  }
   new Chart(document.getElementById('barAnnual'), {
     type: 'bar',
     data: {
-      labels: ['2020','2021','2022','2023','2024'],
+      labels: monthsLabels,
       datasets: [{
-        data: [100000,110000,115000,108000,120000],
+        data: monthsValues,
         backgroundColor: 'rgba(239, 68, 68, .35)', // red-500 alpha
         borderColor: brand.red,
         borderWidth: 2,
@@ -175,63 +174,6 @@
           ticks: {
             color: '#6b7280',
             callback: (v) => '₱ ' + v.toLocaleString()
-          }
-        }
-      }
-    }
-  });
-
-  // Payment Mix (Doughnut)
-  new Chart(document.getElementById('donutMix'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Cash','GCash','Bank'],
-      datasets: [{
-        data: [52,36,12],
-        backgroundColor: [brand.red, brand.sky, brand.amber],
-        borderColor: '#ffffff',
-        borderWidth: 4
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#374151' } } },
-      cutout: '62%'
-    }
-  });
-
-  // Cashflow (Line)
-  new Chart(document.getElementById('lineCashflow'), {
-    type: 'line',
-    data: {
-      labels: ['W-1','W-2','W-3','W-4','W-5','W-6','W-7','W-8'],
-      datasets: [{
-        label: 'Inflows',
-        data: [18,22,20,24,28,26,30,32],
-        borderColor: brand.green,
-        backgroundColor: 'rgba(16,185,129,.15)',
-        tension: .35,
-        fill: true,
-        pointRadius: 3
-      },{
-        label: 'Outflows',
-        data: [10,12,9,11,14,13,15,16],
-        borderColor: brand.rose,
-        backgroundColor: 'rgba(244,63,94,.12)',
-        tension: .35,
-        fill: true,
-        pointRadius: 3
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#374151' } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7280' } },
-        y: {
-          ticks: {
-            color: '#6b7280',
-            callback: (v) => '₱' + v + 'k'
           }
         }
       }

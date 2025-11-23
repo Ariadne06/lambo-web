@@ -29,8 +29,9 @@ def role_required(*required_role):
             user_role = request.session.get('role_name')
             
             if user_role not in required_role:
-                set_flash(request, 'You do not have permission to access this page.', 'error')
-                return redirect('authentication:login') 
+                # Show 403 error instead of redirecting to login
+                from django.shortcuts import render
+                return render(request, 'authentication/403.html', status=403)
             return view_func(request, *args, **kwargs)
         return _wrapped_view
     return decorator

@@ -1,5 +1,4 @@
 {% extends 'base_nurse.html' %}
-
 {% block title %}Child Health Record{% endblock %}
 
 {% block content %}
@@ -11,6 +10,10 @@
       <div>
         <h2 class="text-xl font-semibold text-gray-900">Child Health Record</h2>
         <p class="text-sm text-gray-600">Review demographics, delivery details, and statuses.</p>
+        <p class="mt-1 text-xs text-gray-500">
+          Child ID: {{ record.child_id }}{% if record.family_code %} • Family: {{ record.family_code }}{% endif %}
+          {% if record.complete_address %} • Address: {{ record.complete_address }}{% endif %}
+        </p>
       </div>
 
       <div class="flex items-center gap-2">
@@ -18,33 +21,35 @@
            class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm hover:bg-gray-50">
           ← Back to List
         </a>
-       
       </div>
     </div>
 
-    <!-- Form -->
+    <!-- Form (read-only view) -->
     <form class="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-5">
       <!-- Column 1 -->
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Child Full Name</label>
-          <input type="text" value="Adrianne Medalla" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.child_full_name }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Mother's Full Name</label>
-          <input type="text" value="Prescious Bugtai" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.mother_full_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Father's Full Name</label>
-          <input type="text" value="Miles Majaroocon" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.father_full_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Philhealth ID Number</label>
-          <input type="text" value="0000" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">PhilHealth ID Number</label>
+          <input type="text" value="{{ record.philhealth_no|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input type="text" value="09672672606" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text"
+                 value="{% firstof record.mother_phone_number record.father_phone_number '—' %}"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2"
+                 readonly>
         </div>
       </div>
 
@@ -52,29 +57,29 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Sex</label>
-          <input type="text" value="Male" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.sex|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-          <input type="text" value="02/02/2020" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{% if record.dob %}{{ record.dob|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Time of Birth</label>
-          <input type="text" value="11:20 PM" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.time_of_birth|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Birth Weight (Kg)</label>
-            <input type="text" value="10 KG" class="w-full rounded-md border border-gray-300 px-3 py-2">
+            <input type="text" value="{{ record.birth_weight_kg|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Birth Height (Cm)</label>
-            <input type="text" value="120 CM" class="w-full rounded-md border border-gray-300 px-3 py-2">
+            <input type="text" value="{{ record.birth_length_cm|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Place of Delivery</label>
-          <input type="text" value="Cansaga" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.place_of_delivery|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
       </div>
 
@@ -82,19 +87,19 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">TT Status of Mother</label>
-          <input type="text" value="Active" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{{ record.tt_status_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Date TT Status is Assessed</label>
-          <input type="text" value="01/01/2020" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{% if record.tt_status_date %}{{ record.tt_status_date|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Newborn Screening Status</label>
-          <input type="text" value="Done" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <input type="text" value="{% if record.newborn_screening_status %}Done{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-          <input type="text" value="02/05/2023" class="w-full rounded-md border border-gray-300 px-3 py-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Record Created</label>
+          <input type="text" value="{% if record.created_at %}{{ record.created_at|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
         </div>
 
         <!-- Feeding Method -->
@@ -102,13 +107,13 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Feeding Method</label>
           <div class="mt-1 space-y-1">
             <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400"> Breastfeeding
+              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Breastfeeding' %}checked{% endif %} disabled> Breastfeeding
             </label>
             <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400"> Bottle feeding
+              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Bottle feeding' %}checked{% endif %} disabled> Bottle feeding
             </label>
             <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" checked class="h-3 w-3 rounded-full border-gray-400"> Mixed
+              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Mixed' %}checked{% endif %} disabled> Mixed
             </label>
           </div>
         </div>
@@ -117,15 +122,12 @@
 
     <!-- Buttons Section -->
     <div class="mt-10 flex flex-col md:flex-row items-center justify-between gap-4">
-      <!-- Back Button -->
       <a href="{% url 'nurse_module:childrecordList' %}"
          class="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-6 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
         Back to List
       </a>
 
-      <!-- Main Action Buttons -->
       <div class="flex flex-wrap justify-center gap-3">
-        <!-- Medical/Surgical (opens modal) -->
         <button type="button" id="openMedicalModal"
                 class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -134,7 +136,6 @@
           Medical/Surgical
         </button>
 
-        <!-- Immunization (opens modal) -->
         <button type="button" id="openImmunizationModal"
                 class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -143,7 +144,6 @@
           Immunization
         </button>
 
-        <!-- Growth Monitoring (opens modal) -->
         <button type="button" id="openGrowthModal"
                 class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -152,7 +152,6 @@
           Growth Monitoring
         </button>
 
-        <!-- Supplements (opens modal) -->
         <button type="button" id="openSupplementsModal"
                 class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -169,7 +168,7 @@
 <!-- ===================== MODALS ===================== -->
 
 <!-- Medical/Surgical Modal -->
-<div id="medicalModal" class="fixed inset-0 z-[100] hidden">
+<div id="medicalModal" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
   <div id="medicalBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
@@ -187,11 +186,9 @@
 
       <div class="overflow-auto max-h-[70vh]">
         <div class="px-6 py-8 space-y-12">
-
           <!-- Medical Conditions -->
           <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-xl font-semibold text-red-700 mb-6">Medical Conditions</h2>
-
             <div class="max-w-3xl mx-auto overflow-x-auto">
               <table class="min-w-full text-sm text-left text-gray-700">
                 <thead class="bg-gray-50 text-gray-800 border-b">
@@ -200,15 +197,8 @@
                     <th class="px-6 py-3 font-semibold">Notes</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Asthma</td>
-                    <td class="px-6 py-3">Diagnosed 2019</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Allergy</td>
-                    <td class="px-6 py-3">Penicillin</td>
-                  </tr>
+                <tbody class="divide-y divide-gray-100" id="med-conditions-rows">
+                  <tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -217,7 +207,6 @@
           <!-- Surgical History -->
           <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-xl font-semibold text-red-700 mb-6">Surgical History</h2>
-
             <div class="max-w-3xl mx-auto overflow-x-auto">
               <table class="min-w-full text-sm text-left text-gray-700">
                 <thead class="bg-gray-50 text-gray-800 border-b">
@@ -226,20 +215,12 @@
                     <th class="px-6 py-3 font-semibold">Notes</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Appendectomy</td>
-                    <td class="px-6 py-3">Done in 2018</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-6">&nbsp;</td>
-                    <td class="px-6 py-6">&nbsp;</td>
-                  </tr>
+                <tbody class="divide-y divide-gray-100" id="surg-rows">
+                  <tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
-
         </div>
       </div>
 
@@ -254,7 +235,7 @@
 </div>
 
 <!-- Immunization Modal -->
-<div id="immunizationModal" class="fixed inset-0 z-[100] hidden">
+<div id="immunizationModal" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
   <div id="immunizationBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
@@ -269,6 +250,21 @@
           </svg>
         </button>
       </div>
+
+      <!-- Add Immunization button inside Immunization modal -->
+      <div class="flex items-center justify-end px-6 pt-3">
+        <button
+          type="button"
+          id="openAddImmunizationModal"
+          class="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 5v14m7-7H5"/>
+          </svg>
+          Add Immunization
+        </button>
+      </div>
+
       <div class="overflow-auto max-h-[70vh]">
         <div class="px-6 py-4">
           <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
@@ -280,64 +276,14 @@
                   <th class="px-6 py-3 font-semibold">1st Dose</th>
                   <th class="px-6 py-3 font-semibold">2nd Dose</th>
                   <th class="px-6 py-3 font-semibold">3rd Dose</th>
+                  <th class="px-6 py-3 font-semibold">Last Given</th>
+                  <th class="px-6 py-3 font-semibold">Next Due</th>
+                  <th class="px-6 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">BCG</td>
-                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/05/2023</td>
-                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/25/2023</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">Hepa B</td>
-                  <td class="px-6 py-3 font-medium text-green-700 bg-green-50 rounded">02/05/2023</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">DPT-HepB-HiB</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">Oral Polio</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">IPV</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">MMR</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">PCV 13</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">Vitamin K</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
-                  <td class="px-6 py-3 text-gray-400">—</td>
+              <tbody id="immu-rows">
+                <tr>
+                  <td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td>
                 </tr>
               </tbody>
             </table>
@@ -356,8 +302,84 @@
   </div>
 </div>
 
+<!-- Add Immunization Modal -->
+<div id="addImmunizationModal" class="fixed inset-0 z-[110] hidden" aria-hidden="true">
+  <div id="addImmunizationBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900">Add Immunization</h3>
+          <p class="text-xs text-gray-500">Record a new vaccine dose for this child.</p>
+        </div>
+        <button id="closeAddImmunizationModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="addImmunizationForm" class="px-5 py-4 space-y-4">
+        {% csrf_token %}
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Vaccine</label>
+          <select
+            name="vaccine_type_id"
+            id="immu-vaccine"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            required
+          >
+            <option value="">Select vaccine…</option>
+            {% for v in vaccines %}
+              <option value="{{ v.vaccine_type_id }}">{{ v.vaccine_name }}</option>
+            {% endfor %}
+          </select>
+          <p class="mt-1 text-xs text-gray-500">
+            Only valid dose orders will be allowed; backend enforces sequence.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Dose</label>
+          <select
+            name="dose_type_id"
+            id="immu-dose"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            required
+          >
+            <option value="">Select dose…</option>
+            {% for d in dose_types %}
+              <option value="{{ d.dose_type_id }}">{{ d.dose_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <p id="immu-error" class="text-xs text-red-600 hidden"></p>
+        <p id="immu-success" class="text-xs text-green-600 hidden"></p>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-2">
+          <button
+            type="button"
+            id="cancelAddImmunization"
+            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Growth Monitoring Modal -->
-<div id="growthModal" class="fixed inset-0 z-[100] hidden">
+<div id="growthModal" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
   <div id="growthBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-6xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
@@ -379,86 +401,25 @@
             <table class="min-w-full text-sm text-left text-gray-700">
               <thead class="bg-gray-100 text-gray-800 border-b">
                 <tr>
-                  <th class="px-6 py-3 font-semibold">Age (mos)</th>
+                  <th class="px-6 py-3 font-semibold">Age (y/m)</th>
                   <th class="px-6 py-3 font-semibold">Date</th>
-                  <th class="px-6 py-3 font-semibold">Height</th>
-                  <th class="px-6 py-3 font-semibold">Weight</th>
-                  <th class="px-6 py-3 font-semibold">Temp</th>
+                  <th class="px-6 py-3 font-semibold">Height (cm)</th>
+                  <th class="px-6 py-3 font-semibold">Weight (kg)</th>
+                  <th class="px-6 py-3 font-semibold">Temp (°C)</th>
+                  <th class="px-6 py-3 font-semibold">Resp Rate (/min)</th>
+                  <th class="px-6 py-3 font-semibold">Pulse Rate (bpm)</th>
                   <th class="px-6 py-3 font-semibold">Notes</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">4</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">80 cm</td>
-                  <td class="px-6 py-3">5 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">None</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">5</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">90 cm</td>
-                  <td class="px-6 py-3">6 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">Fever</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">6</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">100 cm</td>
-                  <td class="px-6 py-3">7 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">Cough</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">7</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">110 cm</td>
-                  <td class="px-6 py-3">8 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">None</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">8</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">120 cm</td>
-                  <td class="px-6 py-3">9 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">Fever</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">9</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">130 cm</td>
-                  <td class="px-6 py-3">10 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">Cough</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-3">10</td>
-                  <td class="px-6 py-3">01/02/2020</td>
-                  <td class="px-6 py-3">140 cm</td>
-                  <td class="px-6 py-3">11 kg</td>
-                  <td class="px-6 py-3">36.7</td>
-                  <td class="px-6 py-3">None</td>
+              <tbody class="divide-y divide-gray-100" id="growth-rows">
+                <tr>
+                  <td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
-            <a class="px-3 py-1.5 rounded-md border border-gray-100 text-gray-400 cursor-not-allowed">Prev</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">1</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">2</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">3</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">4</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">5</a>
-            <span class="px-3 py-1.5">…</span>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">60</a>
-            <a href="#" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
-          </div>
+          <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm"></div>
         </div>
       </div>
 
@@ -473,7 +434,7 @@
 </div>
 
 <!-- Supplements Modal -->
-<div id="supplementsModal" class="fixed inset-0 z-[100] hidden">
+<div id="supplementsModal" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
   <div id="supplementsBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
@@ -502,63 +463,15 @@
                     <th class="px-6 py-3 font-semibold">Given By</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin A</td>
-                    <td class="px-6 py-3">4</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Adrianne Villarta</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin C</td>
-                    <td class="px-6 py-3">5</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Adrian Medalla</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Deworming</td>
-                    <td class="px-6 py-3">6</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Prescious Bugtai</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin A</td>
-                    <td class="px-6 py-3">7</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Charlz Arranchado</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin C</td>
-                    <td class="px-6 py-3">8</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Miles Majarocon</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin A</td>
-                    <td class="px-6 py-3">9</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Gwen Doong</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3">Vitamin C</td>
-                    <td class="px-6 py-3">10</td>
-                    <td class="px-6 py-3">01/02/2020</td>
-                    <td class="px-6 py-3">Jude Delo Santos</td>
+                <tbody class="divide-y divide-gray-100" id="supp-rows">
+                  <tr>
+                    <td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <!-- Pagination -->
-            <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm">
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50" href="#">1</a>
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">2</a>
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">3</a>
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">4</a>
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">5</a>
-              <span class="px-3 py-1.5">…</span>
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50" href="#">60</a>
-            </div>
+            <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm"></div>
           </div>
 
           <div class="mt-2 flex justify-end">
@@ -574,75 +487,323 @@
   </div>
 </div>
 
-<!-- ============== Tiny script to handle all four modals ============== -->
+<!-- ============== Script: modals + AJAX loaders ============== -->
 <script>
-  (function () {
-    // Helpers
-    function open(modal) {
-      modal.classList.remove('hidden');
-      document.body.classList.add('overflow-hidden');
-    }
-    function close(modal) {
-      modal.classList.add('hidden');
-      document.body.classList.remove('overflow-hidden');
-    }
+(function () {
+  // ---------- helpers ----------
+  function open(modal){ if(modal){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); } }
+  function close(modal){ if(modal){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); } }
+  function fmtDate(iso){ if(!iso) return '—'; var d=new Date(iso); if(isNaN(d)) return '—'; var mm=String(d.getMonth()+1).padStart(2,'0'); var dd=String(d.getDate()).padStart(2,'0'); return mm+'/'+dd+'/'+d.getFullYear(); }
+  function td(txt){ return '<td class="px-6 py-3">' + (txt!=null && txt!=='' ? txt : '—') + '</td>'; }
+  function badgeBool(v){ return v ? '<span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">✓</span>' : '<span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">—</span>'; }
+  function badgeDelay(v){ return v ? '<span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Delayed</span>' : '<span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">On track</span>'; }
+  function firstNonEmpty(obj, keys){ for (var i=0;i<keys.length;i++){ var k=keys[i]; if (obj[k]!=null && String(obj[k]).trim()!==''){ return obj[k]; } } return null; }
 
-    // Medical/Surgical
-    const openMed = document.getElementById('openMedicalModal');
-    const medModal = document.getElementById('medicalModal');
-    const closeMed = document.getElementById('closeMedicalModal');
-    const closeMed2 = document.getElementById('closeMedicalModal2');
-    const medBackdrop = document.getElementById('medicalBackdrop');
+  // ============== Growth Monitoring (already wired) ==============
+  var openGrowth = document.getElementById('openGrowthModal');
+  var growthModal = document.getElementById('growthModal');
+  var closeGrowth = document.getElementById('closeGrowthModal');
+  var closeGrowth2 = document.getElementById('closeGrowthModal2');
+  var growthBackdrop = document.getElementById('growthBackdrop');
 
-    openMed && openMed.addEventListener('click', () => open(medModal));
-    closeMed && closeMed.addEventListener('click', () => close(medModal));
-    closeMed2 && closeMed2.addEventListener('click', () => close(medModal));
-    medBackdrop && medBackdrop.addEventListener('click', () => close(medModal));
+  function loadGrowthRows() {
+    var tbody = document.getElementById('growth-rows');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>';
 
-    // Immunization
-    const openImm = document.getElementById('openImmunizationModal');
-    const immModal = document.getElementById('immunizationModal');
-    const closeImm = document.getElementById('closeImmunizationModal');
-    const closeImm2 = document.getElementById('closeImmunizationModal2');
-    const immBackdrop = document.getElementById('immunizationBackdrop');
+    var url = "{% url 'nurse_module:childGrowthMonitoring' record.child_health_id %}";
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+      .then(function(data){
+        var rows = (data && data.rows) ? data.rows : [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">No growth monitoring records yet.</td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i=0;i<rows.length;i++){
+          var r = rows[i];
+          var ay = firstNonEmpty(r, ['age_years','years']) || 0;
+          var am = firstNonEmpty(r, ['age_months','months']) || 0;
+          var age = (ay && ay>0) ? (ay+'y '+am+'m') : (am+'m');
+          var dov = firstNonEmpty(r, ['date_of_visit','visit_date','created_at']);
+          var height = firstNonEmpty(r, ['height_cm','height']);
+          var weight = firstNonEmpty(r, ['weight_kg','weight']);
+          var temp = firstNonEmpty(r, ['temp_c','temperature_c','temperature']);
+          var rr = firstNonEmpty(r, ['resp_rate','respiratory_rate']);
+          var pr = firstNonEmpty(r, ['pulse_rate','heart_rate']);
+          var notes = firstNonEmpty(r, ['notes','remarks','description']);
 
-    openImm && openImm.addEventListener('click', () => open(immModal));
-    closeImm && closeImm.addEventListener('click', () => close(immModal));
-    closeImm2 && closeImm2.addEventListener('click', () => close(immModal));
-    immBackdrop && immBackdrop.addEventListener('click', () => close(immModal));
+          html += '<tr class="hover:bg-gray-50">' +
+                    td(age) + td(fmtDate(dov)) + td(height) + td(weight) +
+                    td(temp) + td(rr) + td(pr) + td(notes) +
+                  '</tr>';
+        }
+        tbody.innerHTML = html;
+      })
+      .catch(function(){ tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-red-600">Failed to load growth monitoring data.</td></tr>'; });
+  }
 
-    // Growth
-    const openGrowth = document.getElementById('openGrowthModal');
-    const growthModal = document.getElementById('growthModal');
-    const closeGrowth = document.getElementById('closeGrowthModal');
-    const closeGrowth2 = document.getElementById('closeGrowthModal2');
-    const growthBackdrop = document.getElementById('growthBackdrop');
+  if (openGrowth) openGrowth.addEventListener('click', function(){ open(growthModal); loadGrowthRows(); });
+  if (closeGrowth) closeGrowth.addEventListener('click', function(){ close(growthModal); });
+  if (closeGrowth2) closeGrowth2.addEventListener('click', function(){ close(growthModal); });
+  if (growthBackdrop) growthBackdrop.addEventListener('click', function(){ close(growthModal); });
 
-    openGrowth && openGrowth.addEventListener('click', () => open(growthModal));
-    closeGrowth && closeGrowth.addEventListener('click', () => close(growthModal));
-    closeGrowth2 && closeGrowth2.addEventListener('click', () => close(growthModal));
-    growthBackdrop && growthBackdrop.addEventListener('click', () => close(growthModal));
+  // ============== Immunization (already wired) ==============
+  var openImm = document.getElementById('openImmunizationModal');
+  var immModal = document.getElementById('immunizationModal');
+  var closeImm = document.getElementById('closeImmunizationModal');
+  var closeImm2 = document.getElementById('closeImmunizationModal2');
+  var immBackdrop = document.getElementById('immunizationBackdrop');
 
-    // Supplements
-    const openSupp = document.getElementById('openSupplementsModal');
-    const suppModal = document.getElementById('supplementsModal');
-    const closeSupp = document.getElementById('closeSupplementsModal');
-    const closeSupp2 = document.getElementById('closeSupplementsModal2');
-    const suppBackdrop = document.getElementById('supplementsBackdrop');
+  function loadImmunizationRows() {
+    var tbody = document.getElementById('immu-rows');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>';
 
-    openSupp && openSupp.addEventListener('click', () => open(suppModal));
-    closeSupp && closeSupp.addEventListener('click', () => close(suppModal));
-    closeSupp2 && closeSupp2.addEventListener('click', () => close(suppModal));
-    suppBackdrop && suppBackdrop.addEventListener('click', () => close(suppModal));
+    var url = "{% url 'nurse_module:childImmunization' record.child_health_id %}";
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+      .then(function(data){
+        var rows = (data && data.rows) ? data.rows : [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">No immunization records yet.</td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i=0;i<rows.length;i++){
+          var r = rows[i];
+          var vname = firstNonEmpty(r, ['vaccine_name','vaccine','name']) || '—';
+          var ab = !!firstNonEmpty(r, ['at_birth_given','at_birth','dose_at_birth']);
+          var d1 = !!firstNonEmpty(r, ['first_dose_given','dose1','first_dose']);
+          var d2 = !!firstNonEmpty(r, ['second_dose_given','dose2','second_dose']);
+          var d3 = !!firstNonEmpty(r, ['third_dose_given','dose3','third_dose']);
+          var last = firstNonEmpty(r, ['last_administered','last_given','last_date']);
+          var next = firstNonEmpty(r, ['next_recommended_date','next_due','next_date']);
+          var delayed = !!firstNonEmpty(r, ['is_delayed','delayed']);
 
-    // ESC to close whichever is open
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
-      if (medModal && !medModal.classList.contains('hidden')) close(medModal);
-      if (immModal && !immModal.classList.contains('hidden')) close(immModal);
-      if (growthModal && !growthModal.classList.contains('hidden')) close(growthModal);
-      if (suppModal && !suppModal.classList.contains('hidden')) close(suppModal);
+          html += '<tr class="hover:bg-gray-50">' +
+                    '<td class="px-6 py-3 font-medium text-gray-900">' + vname + '</td>' +
+                    '<td class="px-6 py-3">' + (ab ? '✓' : '—') + '</td>' +
+                    '<td class="px-6 py-3">' + (d1 ? '✓' : '—') + '</td>' +
+                    '<td class="px-6 py-3">' + (d2 ? '✓' : '—') + '</td>' +
+                    '<td class="px-6 py-3">' + (d3 ? '✓' : '—') + '</td>' +
+                    td(fmtDate(last)) + td(fmtDate(next)) + '<td class="px-6 py-3">' + (delayed ? 'Delayed' : 'On time') + '</td>' +
+                  '</tr>';
+        }
+        tbody.innerHTML = html;
+      })
+      .catch(function(){ tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-6 text-center text-sm text-red-600">Failed to load immunization data.</td></tr>'; });
+  }
+
+  if (openImm) openImm.addEventListener('click', function(){ open(immModal); loadImmunizationRows(); });
+  if (closeImm) closeImm.addEventListener('click', function(){ close(immModal); });
+  if (closeImm2) closeImm2.addEventListener('click', function(){ close(immModal); });
+  if (immBackdrop) immBackdrop.addEventListener('click', function(){ close(immModal); });
+
+  // ============== Add Immunization (NEW) ==============
+  var openAddImm = document.getElementById('openAddImmunizationModal');
+  var addImmModal = document.getElementById('addImmunizationModal');
+  var closeAddImm = document.getElementById('closeAddImmunizationModal');
+  var addImmBackdrop = document.getElementById('addImmunizationBackdrop');
+  var cancelAddImm = document.getElementById('cancelAddImmunization');
+  var addImmForm = document.getElementById('addImmunizationForm');
+  var immuError = document.getElementById('immu-error');
+  var immuSuccess = document.getElementById('immu-success');
+
+  function openAddImmModal() {
+    if (!addImmModal) return;
+    if (immuError) { immuError.textContent = ''; immuError.classList.add('hidden'); }
+    if (immuSuccess) { immuSuccess.textContent = ''; immuSuccess.classList.add('hidden'); }
+    open(addImmModal);
+  }
+
+  function closeAddImmModal() {
+    close(addImmModal);
+  }
+
+  if (openAddImm) openAddImm.addEventListener('click', openAddImmModal);
+  if (closeAddImm) closeAddImm.addEventListener('click', closeAddImmModal);
+  if (cancelAddImm) cancelAddImm.addEventListener('click', closeAddImmModal);
+  if (addImmBackdrop) addImmBackdrop.addEventListener('click', closeAddImmModal);
+
+  if (addImmForm) {
+    addImmForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      if (immuError) { immuError.textContent = ''; immuError.classList.add('hidden'); }
+      if (immuSuccess) { immuSuccess.textContent = ''; immuSuccess.classList.add('hidden'); }
+
+      var vaccineSel = document.getElementById('immu-vaccine');
+      var doseSel = document.getElementById('immu-dose');
+      var vaccineId = vaccineSel ? vaccineSel.value : '';
+      var doseId = doseSel ? doseSel.value : '';
+
+      if (!vaccineId || !doseId) {
+        if (immuError) {
+          immuError.textContent = 'Please select both vaccine and dose.';
+          immuError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      var csrfInput = addImmForm.querySelector('input[name=csrfmiddlewaretoken]');
+      var csrfToken = csrfInput ? csrfInput.value : '';
+
+      var urlAdd = "{% url 'nurse_module:childImmunizationAdd' record.child_health_id %}";
+
+      fetch(urlAdd, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          vaccine_type_id: vaccineId,
+          dose_type_id: doseId
+        })
+      })
+      .then(function(res){
+        return res.json().then(function(data){
+          return { status: res.status, body: data };
+        });
+      })
+      .then(function(resp){
+        if (!resp.body) return;
+
+        if (resp.status >= 200 && resp.status < 300 && resp.body.ok) {
+          if (immuSuccess) {
+            immuSuccess.textContent = resp.body.message || 'Immunization saved.';
+            immuSuccess.classList.remove('hidden');
+          }
+          loadImmunizationRows();
+          setTimeout(function(){
+            closeAddImmModal();
+          }, 500);
+        } else {
+          if (immuError) {
+            immuError.textContent = resp.body.error || 'Failed to save immunization.';
+            immuError.classList.remove('hidden');
+          }
+        }
+      })
+      .catch(function(err){
+        if (immuError) {
+          immuError.textContent = 'Unexpected error while saving immunization.';
+          immuError.classList.remove('hidden');
+        }
+      });
     });
-  })();
+  }
+
+  // ============== Medical/Surgical (already wired) ==============
+  var openMed = document.getElementById('openMedicalModal');
+  var medModal = document.getElementById('medicalModal');
+  var closeMed = document.getElementById('closeMedicalModal');
+  var closeMed2 = document.getElementById('closeMedicalModal2');
+  var medBackdrop = document.getElementById('medicalBackdrop');
+
+  function loadMedSurgRows() {
+    var mtbody = document.getElementById('med-conditions-rows');
+    var stbody = document.getElementById('surg-rows');
+    if (mtbody) mtbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>';
+    if (stbody) stbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>';
+
+    var url = "{% url 'nurse_module:childMedSurg' record.child_health_id %}";
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+      .then(function(data){
+        var medical = (data && data.medical) ? data.medical : [];
+        if (!medical.length) {
+          if (mtbody) mtbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">No medical conditions recorded.</td></tr>';
+        } else if (mtbody) {
+          var mhtml = '';
+          for (var i=0;i<medical.length;i++){
+            var r = medical[i];
+            var name = firstNonEmpty(r, ['condition_name','medical_history_name','medical_condition','diagnosis','name']) || JSON.stringify(r);
+            var notes = firstNonEmpty(r, ['notes','remarks','description']);
+            mhtml += '<tr class="hover:bg-gray-50">' + td(name) + td(notes) + '</tr>';
+          }
+          mtbody.innerHTML = mhtml;
+        }
+
+        var surgical = (data && data.surgical) ? data.surgical : [];
+        if (!surgical.length) {
+          if (stbody) stbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-gray-500">No surgical history recorded.</td></tr>';
+        } else if (stbody) {
+          var shtml = '';
+          for (var j=0;j<surgical.length;j++){
+            var r2 = surgical[j];
+            var proc = firstNonEmpty(r2, ['procedure_name','surgical_history_name','procedure','operation','name']) || JSON.stringify(r2);
+            var notes2 = firstNonEmpty(r2, ['notes','remarks','description']);
+            shtml += '<tr class="hover:bg-gray-50">' + td(proc) + td(notes2) + '</tr>';
+          }
+          stbody.innerHTML = shtml;
+        }
+      })
+      .catch(function(){
+        if (mtbody) mtbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-red-600">Failed to load medical conditions.</td></tr>';
+        if (stbody) stbody.innerHTML = '<tr><td colspan="2" class="px-6 py-6 text-center text-sm text-red-600">Failed to load surgical history.</td></tr>';
+      });
+  }
+
+  if (openMed) openMed.addEventListener('click', function(){ open(medModal); loadMedSurgRows(); });
+  if (closeMed) closeMed.addEventListener('click', function(){ close(medModal); });
+  if (closeMed2) closeMed2.addEventListener('click', function(){ close(medModal); });
+  if (medBackdrop) medBackdrop.addEventListener('click', function(){ close(medModal); });
+
+  // ============== Supplements (NEW) ==============
+  var openSupp = document.getElementById('openSupplementsModal');
+  var suppModal = document.getElementById('supplementsModal');
+  var closeSupp = document.getElementById('closeSupplementsModal');
+  var closeSupp2 = document.getElementById('closeSupplementsModal2');
+  var suppBackdrop = document.getElementById('supplementsBackdrop');
+
+  function loadSuppRows(){
+    var tbody = document.getElementById('supp-rows');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">Loading…</td></tr>';
+
+    var url = "{% url 'nurse_module:childSupplements' record.child_health_id %}";
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+      .then(function(data){
+        var rows = (data && data.rows) ? data.rows : [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">No supplements recorded.</td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i=0;i<rows.length;i++){
+          var r = rows[i];
+          var typ = firstNonEmpty(r, ['supplement_type','supplement_name','type','name']);
+          var age = firstNonEmpty(r, ['age_months','age_in_months','age']);
+          var date = firstNonEmpty(r, ['date_given','given_at','given_date','date']);
+          var giver = firstNonEmpty(r, ['given_by_name','personnel_name','personnel_full_name','given_by','administered_by']);
+          html += '<tr class="hover:bg-gray-50">' + td(typ) + td(age) + td(fmtDate(date)) + td(giver) + '</tr>';
+        }
+        tbody.innerHTML = html;
+      })
+      .catch(function(){
+        tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-sm text-red-600">Failed to load supplements data.</td></tr>';
+      });
+  }
+
+  if (openSupp) openSupp.addEventListener('click', function(){ open(suppModal); loadSuppRows(); });
+  if (closeSupp) closeSupp.addEventListener('click', function(){ close(suppModal); });
+  if (closeSupp2) closeSupp2.addEventListener('click', function(){ close(suppModal); });
+  if (suppBackdrop) suppBackdrop.addEventListener('click', function(){ close(suppModal); });
+
+  // ESC to close whichever is open
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var ids = ['medicalModal','immunizationModal','growthModal','supplementsModal','addImmunizationModal'];
+    for (var i=0;i<ids.length;i++){
+      var m = document.getElementById(ids[i]);
+      if (m && !m.classList.contains('hidden')) { close(m); break; }
+    }
+  });
+})();
 </script>
 {% endblock %}

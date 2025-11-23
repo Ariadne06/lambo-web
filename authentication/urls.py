@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('silent_logout/', views.silent_logout, name='silent_logout'),
+    path('403_Error/', views.error_403, name='error_403'),
     path('req_pwd_change/', views.req_pwd_change, name='req_pwd_change'),
     path('reset_password/', views.reset_password, name='reset_password'),
     path('forgot_password/', views.forgot_password, name='forgot_password'),

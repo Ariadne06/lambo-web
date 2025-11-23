@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList
+from .models import Dashboard, AnnouncementRepo, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -11,8 +11,11 @@ from utils.constants import LIMIT_OPTIONS
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from household_module.models import Household, Family
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404, HttpResponseNotAllowed
 import json
+import math
+from django.db import DatabaseError
+from django.views.decorators.http import require_POST
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -297,7 +300,7 @@ def nurse_household(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -560,23 +563,556 @@ def nurse_householdView(request):
 @custom_login_required
 @role_required('Midwife')
 def childrecordList(request):
-    
-    return render(request, 'nurse_module/childrecordList.html')
+    # Search query
+    search_query = (request.GET.get('q') or '').strip() or None
+
+    # 🔹 Future-proof: sitio & sex filters (still optional)
+    raw_sitio = request.GET.get('sitio')  # e.g. ?sitio=3
+    sex = (request.GET.get('sex') or '').strip() or None  # e.g. 'Male' / 'Female'
+
+    sitio_id = None
+    if raw_sitio:
+        try:
+            sitio_id = int(raw_sitio)
+        except (TypeError, ValueError):
+            sitio_id = None  # ignore invalid values
+
+    # Pagination
+    page_str = request.GET.get('page')
+    try:
+        page = int(page_str)
+        if page < 1:
+            page = 1
+    except (TypeError, ValueError):
+        page = 1
+
+    per_page = 25
+    offset = (page - 1) * per_page
+
+    error_message = None
+    rows = []
+    try:
+        # Fetch one extra to know if “next” page exists
+        rows = ChildHealthListRow.fetch(
+            query=search_query,
+            sitio_id=sitio_id,
+            sex=sex,
+            limit=per_page + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        error_message = str(e)
+
+    has_next = len(rows) > per_page
+    children = rows[:per_page]
+
+    has_prev = page > 1
+    next_page = page + 1 if has_next else None
+    prev_page = page - 1 if has_prev else None
+
+    # Base querystring for pagination links
+    base_query = {}
+    if search_query:
+        base_query['q'] = search_query
+    if sitio_id is not None:
+        base_query['sitio'] = sitio_id
+    if sex:
+        base_query['sex'] = sex
+
+    base_qs = urlencode(base_query)
+
+    context = {
+        'children': children,
+        'search_query': search_query or '',
+        'page': page,
+        'has_next': has_next,
+        'has_prev': has_prev,
+        'next_page': next_page,
+        'prev_page': prev_page,
+        'base_qs': base_qs,
+        'error_message': error_message,
+        # Optional: pass filters back if you later bind them to inputs
+        'selected_sitio': sitio_id,
+        'selected_sex': sex or '',
+    }
+    return render(request, 'nurse_module/childrecordList.html', context)
+
+
+@custom_login_required
+@custom_login_required
+@role_required('Midwife')
+def moreChildRecord(request, child_health_id: int):
+    record = ChildHealthDetailRow.fetch_one(child_health_id)
+    if not record:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.error(request, "Child record not found or unavailable.")
+        return redirect('nurse_module:childrecordList')
+
+    # 🔹 Load vaccine list + dose types for the Add Immunization modal
+    vaccines = []
+    dose_types = []
+    try:
+        with connection.cursor() as cur:
+            # All vaccines
+            cur.execute("SELECT * FROM view_all_vaccine()")
+            vaccines = _dictfetchall(cur)
+
+            # All dose types
+            cur.execute(
+                "SELECT dose_type_id, dose_name FROM Dose_Type ORDER BY dose_type_id"
+            )
+            dose_types = _dictfetchall(cur)
+    except Exception:
+        # If something fails here, just leave them empty; UI will show fallback message
+        vaccines = []
+        dose_types = []
+
+    return render(
+        request,
+        'nurse_module/moreChildRecord.html',
+        {
+            'record': record,
+            'vaccines': vaccines,
+            'dose_types': dose_types,
+        },
+    )
 
 @custom_login_required
 @role_required('Midwife')
-def moreChildRecord(request):
-    return render(request, 'nurse_module/moreChildRecord.html')
+@require_POST
+def child_immunization_add_api(request, child_health_id: int):
+    """
+    POST (JSON or form):
+      - vaccine_type_id
+      - dose_type_id
+
+    Calls: add_immunization(p_child_health_id, p_vaccine_type_id, p_dose_type_id, p_personnel_id)
+    Returns JSON:
+      { "ok": true, "immunization_id": <int>, "message": "..." }
+      or
+      { "ok": false, "error": "..." }
+    """
+    # 1) Parse input (support JSON or regular POST)
+    if request.headers.get('Content-Type', '').startswith('application/json'):
+        try:
+            payload = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"ok": False, "error": "Invalid JSON payload."},
+                status=400,
+            )
+        vaccine_type_id = payload.get('vaccine_type_id')
+        dose_type_id = payload.get('dose_type_id')
+    else:
+        vaccine_type_id = request.POST.get('vaccine_type_id')
+        dose_type_id = request.POST.get('dose_type_id')
+
+    # 2) Basic validation and casting
+    try:
+        vaccine_type_id = int(vaccine_type_id)
+        dose_type_id = int(dose_type_id)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"ok": False, "error": "Vaccine and dose are required."},
+            status=400,
+        )
+
+    # 3) Resolve current personnel_id from logged-in user / session
+    personnel_id = _resolve_personnel_id(request)
+    if personnel_id is None:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Unable to resolve current personnel_id from your session. Please log out and log in again, or contact the system administrator.",
+            },
+            status=400,
+        )
+
+    # 4) Call the PostgreSQL function add_immunization(...)
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT add_immunization(%s, %s, %s, %s)",
+                [child_health_id, vaccine_type_id, dose_type_id, personnel_id],
+            )
+            row = cur.fetchone()
+            new_id = row[0] if row else None
+
+        return JsonResponse(
+            {
+                "ok": True,
+                "immunization_id": new_id,
+                "message": "Immunization successfully recorded.",
+            }
+        )
+
+    except DatabaseError as e:
+        # 🔴 This will capture your custom P4603–P4606 errors
+        friendly = _pg_error_message(e)
+        return JsonResponse(
+            {"ok": False, "error": friendly},
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"ok": False, "error": str(e)},
+            status=500,
+        )
+
+
+def _resolve_personnel_id(request):
+    """
+    Try to find the acting personnel_id from the logged-in user/session.
+    Adjust this if your auth layer stores it differently.
+    """
+    pid = getattr(request.user, 'personnel_id', None)
+
+    # If user has a related personnel object, e.g. request.user.personnel.personnel_id
+    if pid is None and hasattr(request.user, 'personnel'):
+        pid = getattr(request.user.personnel, 'personnel_id', None)
+
+    # Fallback: session
+    if pid is None:
+        pid = request.session.get('personnel_id')
+
+    # Final: cast to int if not None
+    try:
+        return int(pid) if pid is not None else None
+    except (TypeError, ValueError):
+        return None
+    
+
+def _pg_error_message(e: DatabaseError) -> str:
+    """
+    Extract a friendly message from a PostgreSQL error (with custom ERRCODEs like P4603–P4606).
+    """
+    orig = getattr(e, '__cause__', None)
+    code = getattr(orig, 'pgcode', None)
+    diag = getattr(orig, 'diag', None)
+    primary = getattr(diag, 'message_primary', None) if diag else None
+
+    # Map your custom codes to very user-friendly text
+    if code == 'P4603':
+        return "Vaccine type not found."
+    if code == 'P4604':
+        return "Dose type not found."
+    if code == 'P4605':
+        return "Invalid dose order or this dose is not enabled for this vaccine."
+    if code == 'P4606':
+        # 👈 THIS is the “already done” case from add_immunization()
+        return "This dose for this vaccine is already recorded for this child."
+
+    # Fallback: use the primary message if available, else whole exception
+    return primary or str(e)
+
+
+@custom_login_required
+@role_required('Midwife')
+def child_growth_monitoring_api(request, child_health_id: int):
+    rows = GrowthMonitoringRow.fetch(child_health_id)
+    # Optional: lightweight formatting of nulls is better in the frontend
+    return JsonResponse({"rows": rows})
+
+@custom_login_required
+@role_required('Midwife')
+def child_immunization_api(request, child_health_id: int):
+    rows = ImmunizationRow.fetch(child_health_id)
+    return JsonResponse({"rows": rows})
+
+def _dictfetchall(cur):
+    cols = [col[0] for col in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+@custom_login_required
+@role_required('Midwife')
+def childMedSurg(request, child_health_id: int):
+    """
+    JSON endpoint for Medical Conditions + Surgical History
+    Uses:
+      - view_specific_child_all_medical_condition(p_child_health_id INT)
+      - view_specific_child_all_surgical_history(p_child_health_id INT)
+    Returns:
+      { "medical": [...], "surgical": [...] }
+    """
+    try:
+        with connection.cursor() as cur:
+            # Medical conditions
+            cur.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
+            medical = _dictfetchall(cur)
+
+            # Surgical history
+            cur.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
+            surgical = _dictfetchall(cur)
+
+        return JsonResponse({"medical": medical, "surgical": surgical})
+    except Exception as e:
+        # Optional: log e
+        return JsonResponse({"medical": [], "surgical": [], "error": str(e)}, status=500)
+
+@custom_login_required
+@role_required('Midwife')
+def childSupplements(request, child_health_id: int):
+    """
+    Returns:
+      { "rows": [...] }
+    SQL: view_all_child_supplements(p_child_health_id INT)
+    """
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
+            rows = _dictfetchall(cur)
+        return JsonResponse({"rows": rows})
+    except Exception as e:
+        # Optional: log e
+        return JsonResponse({"rows": [], "error": str(e)}, status=500)
 
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
-    return render(request, 'nurse_module/maternalrecord.html')
+    # ---- Filters from GET ----
+    q = request.GET.get("q") or None  # name / resident_id search
+    family_code = request.GET.get("family_code") or None
+    record_status = request.GET.get("record_status") or None
+
+    date_from_str = request.GET.get("date_from") or ""
+    date_to_str = request.GET.get("date_to") or ""
+
+    date_from = _parse_date(date_from_str)
+    date_to = _parse_date(date_to_str)
+
+    # ---- Pagination ----
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    if page < 1:
+        page = 1
+
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    total_count = MaternalHealthListRow.count(
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    maternal_records = MaternalHealthListRow.fetch(
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=per_page,
+        offset=offset,
+    )
+
+    total_pages = max(1, math.ceil(total_count / per_page)) if total_count else 1
+    if page > total_pages:
+        page = total_pages
+
+    # Simple window around current page (e.g., 1 2 [3] 4 5)
+    window = 2
+    start_page = max(1, page - window)
+    end_page = min(total_pages, page + window)
+    page_range = list(range(start_page, end_page + 1))
+
+    # Build base query string for pagination links (keep filters, change page)
+    qs_params = {}
+    for key in ["q", "family_code", "record_status", "date_from", "date_to"]:
+        val = request.GET.get(key)
+        if val:
+            qs_params[key] = val
+    base_query = urlencode(qs_params)
+
+    context = {
+        "maternal_records": maternal_records,
+        "filters": {
+            "q": q or "",
+            "family_code": family_code or "",
+            "record_status": record_status or "",
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+        },
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "prev_page": page - 1,
+            "next_page": page + 1,
+            "page_range": page_range,
+        },
+        "base_query": base_query,
+    }
+    return render(request, 'nurse_module/maternalrecord.html', context)
+
+
+def _parse_date(value):
+    """Helper to safely parse YYYY-MM-DD from <input type='date'>."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    
 
 @custom_login_required
 @role_required('Midwife')
-def Morematernalrecord(request):
-    return render(request, 'nurse_module/Morematernalrecord.html')
+def Morematernalrecord(request, maternal_health_id: int):
+    mhr = MaternalHealthDetailRow.get_by_id(maternal_health_id)
+    if mhr is None:
+        raise Http404("Maternal health record not found.")
+
+    obst_hist = ObstetricalHistoryRow.fetch_for_mhr(maternal_health_id)
+    medical_conditions = MaternalMedicalConditionRow.fetch_for_mhr(maternal_health_id)
+    surgical_history = MaternalSurgicalHistoryRow.fetch_for_mhr(maternal_health_id)
+    immu_track = MaternalImmunizationStatusTrackRow.fetch_for_mhr(maternal_health_id)
+    disease_surveillance = MaternalDiseaseSurveillanceRow.fetch_for_mhr(maternal_health_id)
+    checkups = MaternalCheckupRow.fetch_for_mhr(maternal_health_id)
+    lab_screenings = MaternalLaboratoryScreeningRow.fetch_for_mhr(maternal_health_id)
+    supplements = MaternalSupplementRow.fetch_for_mhr(maternal_health_id)
+    delivery_outcomes = MaternalDeliveryOutcomeRow.fetch_for_mhr(maternal_health_id)
+    postpartum_visits = MaternalPostpartumVisitRow.fetch_for_mhr(maternal_health_id)
+
+    disease_types = DiseaseTypeRow.fetch_all()
+    test_types = TestTypeRow.fetch_all()   # 👈 for Lab Screening dropdown
+
+    context = {
+        "mhr": mhr,
+        "obst_hist": obst_hist,
+        "medical_conditions": medical_conditions,
+        "surgical_history": surgical_history,
+        "immu_track": immu_track,
+        "disease_surveillance": disease_surveillance,
+        "checkups": checkups,
+        "lab_screenings": lab_screenings,
+        "supplements": supplements,
+        "delivery_outcomes": delivery_outcomes,
+        "postpartum_visits": postpartum_visits,
+        "disease_types": disease_types,
+        "test_types": test_types,          # 👈 pass to template
+    }
+    return render(request, "nurse_module/Morematernalrecord.html", context)
+
+
+@custom_login_required
+@role_required("Midwife")
+def add_maternal_disease_screening(request, maternal_health_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    # 1. Resolve personnel_id (required by add_disease_screen_record)
+    personnel_id = get_current_personnel_id(request)
+    if not personnel_id:
+        messages.error(request, "Unable to resolve current personnel account for this action.")
+        return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+    # 2. Get form values
+    disease_type_id = request.POST.get("disease_type_id") or None
+    screening_date = request.POST.get("screening_date") or None  # YYYY-MM-DD string, psycopg2 will cast
+    result = request.POST.get("result") or None
+
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT add_disease_screen_record(%s, %s, %s, %s, %s)
+                """,
+                [maternal_health_id, disease_type_id, screening_date, result, personnel_id],
+            )
+            new_id = cur.fetchone()[0]  # ids_id
+        messages.success(request, "Infectious disease screening record added.")
+    except DatabaseError as e:
+        # Optional: inspect e.__cause__ / e.args for custom ERRCODEs like M4601..M4604
+        messages.error(request, f"Unable to add disease screening record: {e}")
+    
+    return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+def get_current_personnel_id(request) -> int | None:
+    # 1. Prefer session if you already store it during login
+    pid = request.session.get("personnel_id")
+    if pid:
+        return pid
+
+    # 2. Fallback: resolve via SQL helper, if you’re using it
+    user = getattr(request, "user", None)
+    if not user or not getattr(user, "id", None):
+        return None
+
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT resolve_current_personnel_id(%s)", [user.id])
+            row = cur.fetchone()
+            return row[0] if row and row[0] is not None else None
+    except DatabaseError:
+        return None
+
+
+@custom_login_required
+@role_required("Midwife")
+def add_maternal_lab_screening(request, maternal_health_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    # Resolve personnel_id
+    personnel_id = get_current_personnel_id(request)
+    if not personnel_id:
+        messages.error(request, "Unable to resolve current personnel account for this action.")
+        return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+    # Get form values
+    test_type_id = request.POST.get("test_type_id") or None
+    test_date = request.POST.get("test_date") or None          # YYYY-MM-DD string
+    result = request.POST.get("result") or None
+
+    iron_tablet_given_date = request.POST.get("iron_tablet_given_date") or None
+    iron_quantity_raw = request.POST.get("iron_tablet_quantity") or None
+
+    iron_tablet_quantity = None
+    if iron_quantity_raw not in (None, ""):
+        try:
+            iron_tablet_quantity = int(iron_quantity_raw)
+        except ValueError:
+            messages.error(request, "Iron tablet quantity must be a whole number.")
+            return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
+
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT add_lab_screening_record(
+                  %s,  -- p_maternal_health_id
+                  %s,  -- p_test_type_id
+                  %s,  -- p_test_date
+                  %s,  -- p_result
+                  %s,  -- p_iron_tablet_given_date
+                  %s,  -- p_iron_tablet_quantity
+                  %s   -- p_personnel_id
+                )
+                """,
+                [
+                    maternal_health_id,
+                    test_type_id,
+                    test_date,
+                    result,
+                    iron_tablet_given_date,
+                    iron_tablet_quantity,
+                    personnel_id,
+                ],
+            )
+            new_id = cur.fetchone()[0]  # lab_screening_id
+        messages.success(request, "Laboratory screening record added.")
+    except DatabaseError as e:
+        # If you later want to decode custom ERRCODEs (M4701..M4704), you can inspect e.__cause__
+        messages.error(request, f"Unable to add laboratory screening record: {e}")
+
+    return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
 
 @custom_login_required
 @role_required('Midwife')
@@ -688,7 +1224,7 @@ def nurseGeneralInfo(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
