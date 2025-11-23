@@ -10,4 +10,5 @@ app_name = 'certificate_issuance_module'
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('create-clearance-application/', views.CreateClearanceApplicationView.as_view(), name='create-clearance-application'),
 ]
