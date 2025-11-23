@@ -266,7 +266,7 @@ SUPABASE_SIGNED_SECONDS = int(os.environ.get("SUPABASE_SIGNED_SECONDS", "300"))
 # Use the official SendGrid backend so emails are sent via HTTPS, not blocked SMTP
 EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-DEFAULT_FROM_EMAIL = "LAMBO No-reply <lambonoreply@gmail.com>"
+DEFAULT_FROM_EMAIL = "LAMBO No-reply <bellisperennis143@gmail.com>"
 SITE_ORIGIN = os.getenv("SITE_ORIGIN", "https://lambo-web-5mka.onrender.com")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 
