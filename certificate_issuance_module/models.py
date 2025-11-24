@@ -13,10 +13,10 @@ class DocumentType(models.Model):
 
 class ClearancePurpose(models.Model):
     """Clearance purposes with associated fee."""
-    clearance_purpose_id = models.AutoField(primary_key=True)
-    purpose_name = models.CharField(max_length=120, unique=True)
-    fee = models.DecimalField(max_digits=10, decimal_places=2)
+    other_clearance_id = models.AutoField(primary_key=True, db_column='other_clearance_id')
+    purpose_name = models.CharField(max_length=120, db_column='purpose_name')
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, db_column='fee_amount')
 
     class Meta:
         managed = False
-        db_table = 'clearance_purpose'
+        db_table = 'other_barangay_clearance_type'
