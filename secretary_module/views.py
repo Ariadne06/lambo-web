@@ -2150,6 +2150,8 @@ def application_search(request):
                 'full_name': r.get('full_name'),
                 'dob': r.get('dob'),
                 'complete_address': r.get('complete_address'),
+                # Include status field returned by the function so UI can show Pending/Resident
+                'resident_status_name': r.get('resident_status_name') or r.get('resident_status') or None,
             } for r in rows]
             return JsonResponse(payload, safe=False)
         else:
