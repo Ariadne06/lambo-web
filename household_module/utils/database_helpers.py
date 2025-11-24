@@ -810,3 +810,77 @@ def update_child_health_record(child_health_id, data):
     except Exception as e:
         print(f"❌ Failed to update child health record: {str(e)}")
         raise Exception(f"Failed to update child health record: {str(e)}")
+
+
+def view_all_general_health(query=None, quarter_id=None, sitio_id=None, sex=None, limit=50, offset=0):
+    """
+    View all general health records with filtering
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM view_all_general_health(
+                    %s::TEXT,    -- query
+                    %s::INT,     -- quarter_id 
+                    %s::INT,     -- sitio_id 
+                    %s::TEXT,    -- sex 
+                    %s::INT,     -- limit
+                    %s::INT      -- offset
+                )
+            """, [query, quarter_id, sitio_id, sex, limit, offset])
+            
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            return [dict(zip(columns, row)) for row in rows]
+            
+    except Exception as e:
+        raise Exception(f"Failed to fetch records: {e}")
+
+
+def view_specific_resident_general_health(family_member_id, quarter_id=None):
+    """
+    View detailed general health record for a specific family member
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM view_specific_resident_general_health(
+                    %s::INT,
+                    %s::INT
+                )
+            """, [
+                family_member_id,
+                quarter_id
+            ])
+            
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            
+            if not row:
+                return None
+            
+            record = dict(zip(columns, row))
+            
+            # Convert arrays/jsonb to proper format
+            if 'medical_history_names' in record and record['medical_history_names']:
+                record['medical_history_names'] = list(record['medical_history_names'])
+            else:
+                record['medical_history_names'] = []
+            
+            # Convert dates to ISO strings
+            if 'last_menstrual_period' in record and record['last_menstrual_period']:
+                record['last_menstrual_period'] = record['last_menstrual_period'].isoformat()
+            
+            if 'created_at' in record and record['created_at']:
+                record['created_at'] = record['created_at'].isoformat()
+            
+            if 'updated_at' in record and record['updated_at']:
+                record['updated_at'] = record['updated_at'].isoformat()
+            
+            return record
+            
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Failed to view general health detail: {error_msg}")
+        raise Exception(f"Failed to view general health detail: {error_msg}")

@@ -116,4 +116,12 @@ urlpatterns = [
      path('months/', 
           views.MonthsListView.as_view(), 
           name='months-list'),
+
+     # GENERAL HEALTH
+     path('general-health/', 
+         views.GeneralHealthListView.as_view(), 
+         name='general-health-list'),
+     path('general-health/<int:family_member_id>/', 
+         views.GeneralHealthDetailView.as_view(), 
+         name='general-health-detail'),
 ]
