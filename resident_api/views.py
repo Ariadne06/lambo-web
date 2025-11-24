@@ -24,6 +24,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .utils.ocr_processing import validate_document_header
+from rest_framework.permissions import AllowAny
+
+
 
 # Local imports
 from .serializers import (
@@ -1073,3 +1076,282 @@ class CheckUsernameAvailabilityView(APIView):
                 'available': False,
                 'message': 'Failed to check username availability'
             }, status=500)
+        
+
+def _to_int(value, default=None):
+    """Safe int conversion with default fallback."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _dictfetchall(cursor):
+    """Return all rows from a cursor as a list of dicts."""
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+class LatestResidentAnnouncements(APIView):
+    """
+    GET /api/mobile/announcements/latest/
+
+    Query params:
+      - limit (int, default=3)
+      - offset (int, default=0)
+      - q (text, optional)         => search text applied to title/details
+      - date_from (YYYY-MM-DD, optional)
+      - date_to   (YYYY-MM-DD, optional)
+
+    Uses:
+      get_latest_announcements_for_residents(
+        p_limit,
+        p_offset,
+        p_q,
+        p_date_from,
+        p_date_to
+      )
+
+    Returns (example):
+      [
+        {
+          "id": 1,
+          "title": "Header title",
+          "text": "Details text...",
+          "image_path": "/path/to/image.png",
+          "date": "2025-07-25"
+        },
+        ...
+      ]
+    """
+    permission_classes = [AllowAny]  # change to IsAuthenticated for mobile later
+
+    def get(self, request, *args, **kwargs):
+        limit = _to_int(request.query_params.get("limit"), 3)
+        offset = _to_int(request.query_params.get("offset"), 0)
+        q = request.query_params.get("q") or None
+        date_from = request.query_params.get("date_from") or None
+        date_to = request.query_params.get("date_to") or None
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                      announcement_id,
+                      header_title,
+                      details,
+                      announcement_image_path,
+                      created_date
+                    FROM get_latest_announcements_for_residents(%s, %s, %s, %s, %s)
+                    """,
+                    [limit, offset, q, date_from, date_to],
+                )
+                rows = _dictfetchall(cursor)
+
+            data = []
+            for row in rows:
+                created_date = row.get("created_date")
+                data.append(
+                    {
+                        "id": row.get("announcement_id"),
+                        "title": row.get("header_title"),
+                        "text": row.get("details"),
+                        "image_path": row.get("announcement_image_path"),
+                        "date": created_date.isoformat() if created_date else None,
+                    }
+                )
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {
+                    "error": "E7100",
+                    "message": "Failed to fetch latest resident announcements.",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ResidentAnnouncementsList(APIView):
+    """
+    GET /mobile/announcements/
+
+    Query params:
+      - q (text, optional)
+      - date_from (YYYY-MM-DD, optional)
+      - date_to   (YYYY-MM-DD, optional)
+      - sort (text, optional)            => date_asc / date_desc / title_asc / title_desc
+      - limit (int, default=50)
+      - offset (int, default=0)
+      - created_by (int, optional)
+
+    Returns:
+      [
+        {
+          "id": 1,
+          "title": "Header title",
+          "text": "Details text...",
+          "image_path": "/path/to/image.png",
+          "date": "2025-07-25",
+          "audience": "resident" | "both"
+        },
+        ...
+      ]
+    """
+    permission_classes = [AllowAny]  # change later if needed
+
+    def get(self, request, *args, **kwargs):
+        q = request.query_params.get("q") or None
+        date_from = request.query_params.get("date_from") or None
+        date_to = request.query_params.get("date_to") or None
+        sort = request.query_params.get("sort") or "date_desc"
+        limit = _to_int(request.query_params.get("limit"), 50)
+        offset = _to_int(request.query_params.get("offset"), 0)
+
+        created_by_raw = request.query_params.get("created_by")
+        created_by = _to_int(created_by_raw) if created_by_raw is not None else None
+
+        # ❗ Do NOT force audience here – we will filter outside
+        p_audience = None
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                      g.announcement_id,
+                      g.header_title,
+                      a.details,
+                      a.announcement_image_path,
+                      g.created_date,
+                      g.audience
+                    FROM get_all_announcement(%s, %s, %s, %s, %s, %s, %s, %s) AS g
+                    JOIN announcement a
+                      ON a.announcement_id = g.announcement_id
+                    WHERE g.audience IN ('resident','both')
+                    """,
+                    [
+                        q,
+                        date_from,
+                        date_to,
+                        created_by,
+                        sort,
+                        limit,
+                        offset,
+                        p_audience,  # NULL => no audience filter inside the function
+                    ],
+                )
+                rows = _dictfetchall(cursor)
+
+            data = []
+            for row in rows:
+                created_date = row.get("created_date")
+                data.append(
+                    {
+                        "id": row.get("announcement_id"),
+                        "title": row.get("header_title"),
+                        "text": row.get("details"),
+                        "image_path": row.get("announcement_image_path"),
+                        "date": created_date.isoformat() if created_date else None,
+                        "audience": row.get("audience"),
+                    }
+                )
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {
+                    "error": "E7110",
+                    "message": "Failed to fetch resident announcements list.",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+
+def _to_int(value, default=None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+def _dictfetchall(cursor):
+    desc = cursor.description
+    if not desc:
+        return []
+    columns = [col[0] for col in desc]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+class OwnerBusinessesMobileView(APIView):
+    """
+    GET /api/mobile/businesses/?owner_id=<resident_id>&q=&status=&limit=&offset=
+
+    Uses get_all_businesses_mobile_by_owner(p_owner_id, p_search, p_status, p_limit, p_offset)
+    and returns a list of businesses owned by the resident.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        owner_id_raw = request.query_params.get("owner_id")
+        owner_id = _to_int(owner_id_raw)
+
+        if owner_id is None:
+            return Response(
+                {
+                    "error": "M9001",
+                    "message": "owner_id (resident_id) is required as a query parameter.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        q = request.query_params.get("q") or None
+        status_filter = request.query_params.get("status") or None
+        limit = _to_int(request.query_params.get("limit"), 50)
+        offset = _to_int(request.query_params.get("offset"), 0)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM get_all_businesses_mobile_by_owner(%s, %s, %s, %s, %s);
+                    """,
+                    [owner_id, q, status_filter, limit, offset],
+                )
+                rows = _dictfetchall(cursor)
+
+            data = []
+            for row in rows:
+                updated_at = row.get("updated_at")
+                data.append(
+                    {
+                        "business_id": row.get("business_id"),
+                        "business_name": row.get("business_name"),
+                        "business_status_name": row.get("business_status_name"),
+                        "business_type_name": row.get("business_type_name"),
+                        "ownership_name": row.get("ownership_name"),
+                        "clearance_category_name": row.get("clearance_category_name"),
+                        "reg_number": row.get("reg_number"),
+                        "total_gross_income": row.get("total_gross_income"),
+                        "address_id": row.get("address_id"),
+                        "full_address": row.get("full_address"),
+                        "updated_at": updated_at.isoformat() if updated_at else None,
+                    }
+                )
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {
+                    "error": "M9199",
+                    "message": "Failed to load businesses for owner.",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
