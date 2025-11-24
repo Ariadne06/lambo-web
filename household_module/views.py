@@ -2405,3 +2405,121 @@ class MonthsListView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GeneralHealthListView(APIView):
+    """
+    GET: List all general health records with filtering
+    Query params:
+        - q: search query (name, family code, resident code, age)
+        - quarter_id: filter by quarter (default: current)
+        - sitio_id: filter by sitio
+        - sex: filter by sex (Male/Female)
+        - limit: pagination limit (default: 50, max: 500)
+        - offset: pagination offset (default: 0)
+    """
+    def get(self, request):
+        try:
+            # Get query parameters
+            query = request.GET.get('q', None)
+            quarter_id = request.GET.get('quarter_id', None)
+            sitio_id = request.GET.get('sitio_id', None)
+            sex = request.GET.get('sex', None)
+            limit = int(request.GET.get('limit', 50))
+            offset = int(request.GET.get('offset', 0))
+            
+            # Validate limits
+            if limit <= 0:
+                limit = 50
+            if limit > 500:
+                limit = 500
+            if offset < 0:
+                offset = 0
+            
+            # Convert to int if provided
+            if quarter_id:
+                quarter_id = int(quarter_id)
+            if sitio_id:
+                sitio_id = int(sitio_id)
+            
+            print(f"📋 Fetching general health records: query={query}, quarter={quarter_id}, sitio={sitio_id}, sex={sex}")
+            
+            # Call database helper
+            from .utils.database_helpers import view_all_general_health
+            
+            records = view_all_general_health(
+                query=query,
+                quarter_id=quarter_id,
+                sitio_id=sitio_id,
+                sex=sex,
+                limit=limit,
+                offset=offset
+            )
+            
+            return Response({
+                'success': True,
+                'data': records,
+                'count': len(records),
+                'limit': limit,
+                'offset': offset
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ General health list error: {error_msg}")
+            return Response({
+                'success': False,
+                'error': error_msg
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GeneralHealthDetailView(APIView):
+    """
+    GET: View detailed general health record for a family member
+    """
+    def get(self, request, family_member_id):
+        try:
+            quarter_id = request.GET.get('quarter_id', None)
+            if quarter_id:
+                quarter_id = int(quarter_id)
+            
+            print(f"📋 Fetching general health detail for family_member_id={family_member_id}")
+            
+            from .utils.database_helpers import view_specific_resident_general_health
+            
+            record = view_specific_resident_general_health(
+                family_member_id=family_member_id,
+                quarter_id=quarter_id
+            )
+            
+            if not record:
+                return Response({
+                    'success': False,
+                    'error': 'General health record not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Check if sentinel row (record_id = 0 means no GH data for quarter)
+            if record.get('record_id') == 0:
+                return Response({
+                    'success': True,
+                    'has_record': False,
+                    'message': 'No general health record for this quarter',
+                    'data': {
+                        'family_member_id': family_member_id,
+                        'sex': record.get('sex'),
+                        'quarter_id': record.get('quarter_id')
+                    }
+                }, status=status.HTTP_200_OK)
+            
+            return Response({
+                'success': True,
+                'has_record': True,
+                'data': record
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ General health detail error: {error_msg}")
+            return Response({
+                'success': False,
+                'error': error_msg
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
