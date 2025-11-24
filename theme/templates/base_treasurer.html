@@ -197,56 +197,14 @@ ACCORDION.forEach((item) => {
     try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
   }
 
-  // Comprehensive navigation detection
-  let isNavigating = false;
-  let navigationTimer = null;
-  
-  function markNavigation() {
-    isNavigating = true;
-    clearTimeout(navigationTimer);
-    navigationTimer = setTimeout(() => isNavigating = false, 100);
-  }
-  
-  // Track navigation types (exclude logout button)
-  document.addEventListener('click', (e) => {
-    const target = e.target.closest('a, button[type="submit"], input[type="submit"]');
-    if (target && target.id !== 'logout-link') {
-      markNavigation();
-    }
-  });
-  
-  // Track form submissions (exclude logout form)
-  document.addEventListener('submit', (e) => {
-    if (!e.target.querySelector('#logout-link')) {
-      markNavigation();
-    }
-  });
-  
-  // Track browser navigation (back/forward)
-  addEventListener('popstate', () => markNavigation());
-  
-  // Browser/tab close detection - single event listener
-  addEventListener('beforeunload', (e) => {
-    console.log('beforeunload triggered:', {
-      suppressClosePing,
-      skipSilent: sessionStorage.getItem('skipSilent'),
-      isNavigating,
-      SESSION_TOKEN: SESSION_TOKEN ? 'present' : 'missing'
-    });
-    
-    // Check if this is a page refresh
-    if (e.returnValue !== undefined || performance.navigation?.type === 1) {
-      markNavigation();
-    }
-    
-    // Record logout time for browser/tab close (not navigation)
-    if (!suppressClosePing && sessionStorage.getItem('skipSilent') !== '1' && !isNavigating) {
-      console.log('Sending beacon for logout');
+  // Browser close detection using pagehide event
+  addEventListener('pagehide', (e) => {
+    // e.persisted = true means page is going into cache (navigation)
+    // e.persisted = false means page is being unloaded (browser close)
+    if (!e.persisted && !suppressClosePing && sessionStorage.getItem('skipSilent') !== '1') {
       const formData = new FormData();
       formData.append('session_token', SESSION_TOKEN);
       navigator.sendBeacon(TAB_CLOSE_URL, formData);
-    } else {
-      console.log('Beacon blocked by conditions');
     }
   });
 
@@ -254,9 +212,8 @@ ACCORDION.forEach((item) => {
   let last = Date.now(), timer;
   function arm() {
     clearTimeout(timer);
-    if (document.visibilityState !== 'visible') return;
     timer = setTimeout(() => {
-      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+      if (Date.now() - last >= IDLE_LIMIT_MS) {
         // Record logout time via silent_logout before redirecting
         pingSilentLogout(SESSION_TOKEN);
         window.location.replace(LOGOUT_URL + '?force=1');
