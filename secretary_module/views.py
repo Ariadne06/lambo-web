@@ -999,50 +999,108 @@ def business_update(request, business_id: int):
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
+        # -----------------------------
         # Current state (for rule checks)
+        # -----------------------------
         current = Business.sp_get_business_detail(business_id) or {}
-        curr_own = int(current.get('ownership_id') or 0)
-        curr_cat = int(current.get('clearance_category_id') or 0)
 
-        # Optional owner transfer via name (uses your resolver)
+        # Ownership
+        curr_own = _to_int_or_none(current.get('ownership_id')) or 0
+
+        # Try to read old clearance category:
+        # 1) (optional) from POST hidden field, if you later add it
+        curr_cat = _to_int_or_none(request.POST.get("old_clearance_category_id"))
+        # 2) from the DB result if POST didn’t provide it
+        if not curr_cat:
+            curr_cat = _extract_clearance_cat(current)
+
+        # -----------------------------
+        # Optional owner transfer via name
+        # -----------------------------
         resident_name = (request.POST.get("resident_name") or "").strip()
         resident_id = None
         if resident_name:
             # Owner change only if NOT sole proprietorship (id=1)
             if curr_own == 1:
-                return JsonResponse({"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."}, status=400)
+                return JsonResponse(
+                    {"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."},
+                    status=400
+                )
             resident_id = _find_resident_id_by_name(resident_name)
 
-        # New (requested) clearance category
-        new_cat = _to_int_or_none(request.POST.get("clearance_category_id"))
+        # -----------------------------
+        # Clearance Category rules
+        # -----------------------------
+        raw_new_cat = request.POST.get("clearance_category_id")
+        new_cat = _to_int_or_none(raw_new_cat)
 
-        # Rule: Clearance Category can change only:
-        # - Sole Prop (3/4): within {3,4}
-        # - Lessor (6..10): within 6..10
-        # - Others: cannot change
+        # Only run rules if there is a requested change
         if new_cat is not None and new_cat != curr_cat:
-            if curr_cat in (3, 4):
-                if new_cat not in (3, 4):
-                    return JsonResponse({"ok": False, "message": "Sole Proprietorship may switch only between categories 3 and 4."}, status=400)
-            elif 6 <= curr_cat <= 10:
-                if not (6 <= new_cat <= 10):
-                    return JsonResponse({"ok": False, "message": "Lessor categories may switch only within 6–10."}, status=400)
-            else:
-                return JsonResponse({"ok": False, "message": "This clearance category cannot be changed."}, status=400)
 
-        # Parse units and amusement device counts (zeros are valid)
+            # 1) Validate that the new category exists
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM business_clearance_category "
+                    "WHERE clearance_category_id = %s",
+                    [new_cat],
+                )
+                if cur.fetchone() is None:
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": f"Unknown clearance_category_id {new_cat}."
+                        },
+                        status=400,
+                    )
+
+            # 2) Transition rules
+            if curr_cat in (3, 4):
+                # Sole Proprietorship: can switch only between 3 and 4
+                if new_cat not in (3, 4):
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": "Sole Proprietorship category can switch only between 3 and 4."
+                        },
+                        status=400,
+                    )
+
+            elif 6 <= curr_cat <= 10:
+                # Lessor: can switch only within 6–10
+                if not (6 <= new_cat <= 10):
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": "Lessor category can switch only within 6–10."
+                        },
+                        status=400,
+                    )
+
+            else:
+                # All other categories cannot change
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "message": f"This clearance category cannot be updated "
+                                   f"(old={curr_cat}, new={new_cat})."
+                    },
+                    status=400,
+                )
+
+        # -----------------------------
+        #  Rest of update logic
+        # -----------------------------
         total_units        = _to_int_or_none(request.POST.get("total_units"))
         videoke_count      = _to_int_or_none(request.POST.get("videoke_count"))
         billiard_count     = _to_int_or_none(request.POST.get("billiard_count"))
         other_device_count = _to_int_or_none(request.POST.get("other_device_count"))
 
-        # Build payload (leave non-editables as None so proc won’t touch them)
         payload = {
             "business_name":          _none_if_blank(request.POST.get("business_name")),
             "business_type_id":       None,  # not editable
             "nature_of_business":     _none_if_blank(request.POST.get("nature_of_business")),
             "ownership_id":           None,  # not editable
-            "resident_id":            resident_id,  # only when provided and allowed
+            "resident_id":            resident_id,
             "house_number":           _none_if_blank(request.POST.get("house_number")),
             "street":                 _none_if_blank(request.POST.get("street")),
             "barangay":               _none_if_blank(request.POST.get("barangay")),
@@ -1050,12 +1108,12 @@ def business_update(request, business_id: int):
             "city_municipality":      _none_if_blank(request.POST.get("city_municipality")),
             "country":                _none_if_blank(request.POST.get("country")),
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
-            "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
+            "clearance_category_id":  new_cat,   # may be None or same as old
             "dti_sec_cda_reg_number": None,      # not editable
             "total_units":            total_units,
-            "videoke_count":          videoke_count,       # <-- NEW
-            "billiard_count":         billiard_count,      # <-- NEW
-            "other_device_count":     other_device_count,  # <-- NEW
+            "videoke_count":          videoke_count,
+            "billiard_count":         billiard_count,
+            "other_device_count":     other_device_count,
         }
 
         result = Business.sp_update_business(
@@ -1070,7 +1128,41 @@ def business_update(request, business_id: int):
         return JsonResponse({"ok": False, "message": str(ve)}, status=400)
     except Exception as e:
         return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)
-        
+
+
+def _extract_clearance_cat(current: dict) -> int:
+    """
+    Try to find the current clearance category ID from the dict returned
+    by sp_get_business_detail, regardless of the exact column name.
+    """
+    if not current:
+        return 0
+
+    # 1) Look for any key that clearly looks like a clearance category id
+    for key, val in current.items():
+        if not key:
+            continue
+        lk = str(key).lower()
+        # match things like 'clearance_category_id', 'business_clearance_category_id', etc.
+        if 'clearance' in lk and 'category' in lk and 'id' in lk:
+            v = _to_int_or_none(val)
+            if v is not None:
+                return v
+
+    # 2) Fallback to some common explicit names
+    for k in [
+        'clearance_category_id',
+        'business_clearance_category_id',
+        'clearance_categoryid',
+        'clearance_cat_id',
+    ]:
+        v = _to_int_or_none(current.get(k))
+        if v is not None:
+            return v
+
+    # 3) Give up
+    return 0
+
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 @require_POST
@@ -2150,6 +2242,8 @@ def application_search(request):
                 'full_name': r.get('full_name'),
                 'dob': r.get('dob'),
                 'complete_address': r.get('complete_address'),
+                # Include status field returned by the function so UI can show Pending/Resident
+                'resident_status_name': r.get('resident_status_name') or r.get('resident_status') or None,
             } for r in rows]
             return JsonResponse(payload, safe=False)
         else:

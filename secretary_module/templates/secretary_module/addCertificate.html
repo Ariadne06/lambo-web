@@ -132,6 +132,7 @@
   const selName = document.getElementById('sel-name');
   const selAddr = document.getElementById('sel-address');
   const selMeta = document.getElementById('sel-meta');
+  const selTypePill = document.getElementById('sel-type-pill');
   const formEl = document.getElementById('create-app-form');
   const createBtn = document.getElementById('create-btn');
   let debounceId = null, currentController = null, activeIndex = -1;
@@ -152,7 +153,69 @@
   function setClearVisible(show){ clearBtn.classList.toggle('hidden', !show); }
   function highlight(text,q){ if(!text) return ''; const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); if(!q) return esc(text); try{ const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'ig'); return esc(text).replace(re,'<mark>$1</mark>'); }catch{return esc(text);} }
   function setActive(idx){ const items=Array.from(results.querySelectorAll('[role="option"]')); items.forEach((el,i)=>{ el.classList.toggle('active',i===idx); el.setAttribute('aria-selected', i===idx?'true':'false'); }); activeIndex=idx; if(idx>=0 && items[idx]) items[idx].scrollIntoView({block:'nearest'}); }
-  async function renderResults(data){ results.innerHTML=''; if(!Array.isArray(data)||data.length===0){ statusEl.textContent='No results'; results.innerHTML='<div class="text-sm text-gray-500">No results</div>'; resetSelection(); return; } const filtered=data.filter(r=>r&&r.resident_id); if(filtered.length===0){ statusEl.textContent='No resident results'; results.innerHTML='<div class="text-sm text-gray-500">No resident results</div>'; resetSelection(); return; } statusEl.textContent=`${filtered.length} result${filtered.length>1?'s':''}`; filtered.forEach(item=>{ const div=document.createElement('div'); div.className='result-item p-3 border border-gray-200 rounded-lg cursor-pointer shadow-sm hover:shadow transition-shadow flex items-start gap-3'; div.setAttribute('role','option'); div.setAttribute('tabindex','-1'); div.dataset.type='resident'; div.dataset.id=item.resident_id; if(item.resident_code) div.dataset.residentCode=item.resident_code; if(item.complete_address) div.dataset.completeAddress=item.complete_address; if(item.dob) div.dataset.dob=item.dob; const title=item.full_name||''; const code=item.resident_code?`Code: ${item.resident_code}`:''; const addr=item.complete_address?item.complete_address:''; const dob=item.dob?`DOB: ${item.dob}`:''; const meta=[code,dob].filter(Boolean).join(' · '); div.innerHTML=`<div class='mt-0.5 shrink-0 text-gray-500' aria-hidden='true'><svg class='h-5 w-5' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 9a7 7 0 0 1 14 0v1H5v-1Z'/></svg></div><div class='min-w-0'><div class='flex items-center gap-2'><span class='id-pill'>Resident</span><div class='text-sm font-medium text-gray-900 truncate'>${highlight(title,search.value)}</div></div><div class='text-[11px] text-gray-500 flex flex-col gap-0.5'>${meta?`<span>${meta}</span>`:''}${addr?`<span class='truncate' title='${highlight(addr,search.value)}'>${highlight(addr,search.value)}</span>`:''}</div></div><div class='ml-2 self-center text-gray-400' aria-hidden='true'>›</div>`; results.appendChild(div); div.addEventListener('click',()=>{ Array.from(results.querySelectorAll('[role="option"]')).forEach(el=>el.classList.remove('active')); div.classList.add('active'); activeIndex=Array.from(results.querySelectorAll('[role="option"]')).indexOf(div); const labelEl=div.querySelector('.text-sm.font-medium'); selName.textContent=labelEl?.textContent||''; const rid=document.querySelector('input[name="applicant_id"]')||(()=>{ const i=document.createElement('input'); i.type='hidden'; i.name='applicant_id'; formEl.appendChild(i); return i; })(); rid.value=div.dataset.id; selMeta.textContent=meta; selMeta.classList.toggle('hidden', !meta); selAddr.textContent=addr; selAddr.classList.toggle('hidden', !addr); selected.classList.remove('hidden'); updateCreateDisabled(); }); }); setActive(-1); }
+  async function renderResults(data){
+    results.innerHTML='';
+    if(!Array.isArray(data)||data.length===0){
+      statusEl.textContent='No results';
+      results.innerHTML='<div class="text-sm text-gray-500">No results</div>';
+      resetSelection();
+      return;
+    }
+    const filtered=data.filter(r=>r&&r.resident_id);
+    if(filtered.length===0){
+      statusEl.textContent='No resident results';
+      results.innerHTML='<div class="text-sm text-gray-500">No resident results</div>';
+      resetSelection();
+      return;
+    }
+    statusEl.textContent=`${filtered.length} result${filtered.length>1?'s':''}`;
+    filtered.forEach(item=>{
+      const div=document.createElement('div');
+      div.className='result-item p-3 border border-gray-200 rounded-lg cursor-pointer shadow-sm hover:shadow transition-shadow flex items-start gap-3';
+      div.setAttribute('role','option');
+      div.setAttribute('tabindex','-1');
+      div.dataset.type='resident';
+      div.dataset.id=item.resident_id;
+      if(item.resident_code) div.dataset.residentCode=item.resident_code;
+      if(item.complete_address) div.dataset.completeAddress=item.complete_address;
+      if(item.dob) div.dataset.dob=item.dob;
+      // Support multiple possible backend keys for status
+      const rawStatus = [item.resident_status_name, item.resident_status, item.status_name, item.status]
+        .find(v => v !== undefined && v !== null && String(v).trim().length);
+      if(rawStatus) div.dataset.status=rawStatus;
+      const title=item.full_name||'';
+      const code=item.resident_code?`Code: ${item.resident_code}`:'';
+      const addr=item.complete_address?item.complete_address:'';
+      const dob=item.dob?`DOB: ${item.dob}`:'';
+      const meta=[code,dob].filter(Boolean).join(' · ');
+      const statusLabel = (() => {
+        const s = String(rawStatus||'Resident').trim().toLowerCase();
+        if(!s) return 'Resident';
+        if(['pending','pend','incomplete'].includes(s)) return 'Pending';
+        if(['resident','active','approved'].includes(s)) return 'Resident';
+        return s; // other statuses as-is
+      })();
+      div.innerHTML=`<div class='mt-0.5 shrink-0 text-gray-500' aria-hidden='true'><svg class='h-5 w-5' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 9a7 7 0 0 1 14 0v1H5v-1Z'/></svg></div><div class='min-w-0'><div class='flex items-center gap-2'><span class='id-pill'>${statusLabel}</span><div class='text-sm font-medium text-gray-900 truncate'>${highlight(title,search.value)}</div></div><div class='text-[11px] text-gray-500 flex flex-col gap-0.5'>${meta?`<span>${meta}</span>`:''}${addr?`<span class='truncate' title='${highlight(addr,search.value)}'>${highlight(addr,search.value)}</span>`:''}</div></div><div class='ml-2 self-center text-gray-400' aria-hidden='true'>›</div>`;
+      results.appendChild(div);
+      div.addEventListener('click',()=>{
+        Array.from(results.querySelectorAll('[role="option"]')).forEach(el=>el.classList.remove('active'));
+        div.classList.add('active');
+        activeIndex=Array.from(results.querySelectorAll('[role="option"]')).indexOf(div);
+        const labelEl=div.querySelector('.text-sm.font-medium');
+        selName.textContent=labelEl?.textContent||'';
+        const rid=document.querySelector('input[name="applicant_id"]')||(()=>{ const i=document.createElement('input'); i.type='hidden'; i.name='applicant_id'; formEl.appendChild(i); return i; })();
+        rid.value=div.dataset.id;
+        selMeta.textContent=meta;
+        selMeta.classList.toggle('hidden', !meta);
+        selAddr.textContent=addr;
+        selAddr.classList.toggle('hidden', !addr);
+        if(selTypePill) selTypePill.textContent=statusLabel;
+        selected.classList.remove('hidden');
+        updateCreateDisabled();
+      });
+    });
+    setActive(-1);
+  }
   async function doSearchImmediate(){ const q=search.value.trim(); setClearVisible(q.length>0); resetSelection(); if(!q){ results.innerHTML=''; selected.classList.add('hidden'); return; } if(currentController) currentController.abort(); currentController=new AbortController(); const {signal}=currentController; setSpinner(true); try{ const url=new URL('{% url "secretary_module:application_search" %}', window.location.origin); url.searchParams.set('q', q); url.searchParams.set('fee_name','Barangay Clearance'); const resp=await fetch(url.toString(),{signal}); if(!resp.ok) throw new Error('Search failed'); const data=await resp.json(); await renderResults(data); } catch(err){ if(err.name!=='AbortError'){ results.innerHTML=`<div class='text-sm text-red-500'>Search error: ${err.message}</div>`; } } finally { setSpinner(false); } }
   search.addEventListener('input', ()=>{ const q=search.value; setClearVisible(q.length>0); resetSelection(); if(debounceId) clearTimeout(debounceId); debounceId=setTimeout(doSearchImmediate,500); });
   search.addEventListener('keydown', e=>{ const items=Array.from(results.querySelectorAll('[role="option"]')); if(e.key==='ArrowDown'){ e.preventDefault(); if(items.length) setActive(Math.min(items.length-1, activeIndex+1)); } else if(e.key==='ArrowUp'){ e.preventDefault(); if(items.length) setActive(Math.max(0, activeIndex-1)); } else if(e.key==='Enter'){ if(items.length && activeIndex>=0){ e.preventDefault(); items[activeIndex].click(); } else { e.preventDefault(); if(debounceId) clearTimeout(debounceId); doSearchImmediate(); } } });
