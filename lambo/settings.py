@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'bhw_module',
     'household_module',
     'certificate_issuance_module',
+    'reports_module', # Reports Module
 
     'django_browser_reload', # Browser Reload
 
