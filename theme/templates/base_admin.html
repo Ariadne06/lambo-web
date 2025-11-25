@@ -331,11 +331,19 @@ ACCORDION.forEach((item) => {
 
   // --- Manual logout suppression ---
   let suppressClosePing = false;
+  let formSubmitting = false;
   try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  
   document.getElementById('logout-link')?.addEventListener('click', () => {
     suppressClosePing = true;
     // Don't call markNavigation() - let server handle logout time recording
     try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
+  
+  // Detect form submissions to prevent logout during form operations
+  document.addEventListener('submit', () => {
+    formSubmitting = true;
+    setTimeout(() => formSubmitting = false, 10000); // Reset after 10 seconds
   });
 
   async function pingSilentLogout(token) {
@@ -369,7 +377,7 @@ ACCORDION.forEach((item) => {
   addEventListener('pagehide', (e) => {
     // e.persisted = true means page is going into cache (navigation)
     // e.persisted = false means page is being unloaded (browser close)
-    if (!e.persisted && !suppressClosePing && sessionStorage.getItem('skipSilent') !== '1') {
+    if (!e.persisted && !suppressClosePing && !formSubmitting && sessionStorage.getItem('skipSilent') !== '1') {
       const formData = new FormData();
       formData.append('session_token', SESSION_TOKEN);
       navigator.sendBeacon(TAB_CLOSE_URL, formData);
@@ -381,95 +389,25 @@ ACCORDION.forEach((item) => {
   function arm() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (Date.now() - last >= IDLE_LIMIT_MS) {
+      if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
         // Record logout time via silent_logout before redirecting
         pingSilentLogout(SESSION_TOKEN);
         window.location.replace(LOGOUT_URL + '?force=1');
       }
     }, IDLE_LIMIT_MS + 100);
   }
-  function bump(){ last = Date.now(); arm(); }
+  function bump(){ 
+    if (!formSubmitting) {
+      last = Date.now(); 
+      arm(); 
+    }
+  }
   ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
     addEventListener(evt, bump, { passive: true })
   );
   addEventListener('visibilitychange', arm, { capture: true });
   arm();
 })();
-
-{% comment %} // Idle + tab close + safe manual logout (Option A: no ping on unload)
-(function () {
-  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
-  const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-  const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}"; // still used for cross-tab cleanup
-
-  const TAB_FLAG       = 'tabAuth';
-  const CLOSED_KEY     = 'closed_session_token';
-  const SESSION_TOKEN  = "{{ request.session.session_token|default:'' }}";
-  if (!SESSION_TOKEN) return;
-
-  // --- Manual logout suppression ---
-  let suppressClosePing = false;
-  try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
-  document.getElementById('logout-link')?.addEventListener('click', () => {
-    suppressClosePing = true;
-    try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
-  });
-
-  async function pingSilentLogout(token) {
-    if (!token) return;
-    const body = new URLSearchParams();
-    body.set('session_token', token);
-    try {
-      await fetch(TAB_CLOSE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-        credentials: 'omit',   // NO COOKIES
-        keepalive: true,
-        cache: 'no-store'
-      });
-    } catch (_) { /* ignore */ }
-  }
-
-  // First load in this tab? Clean foreign leftover token (but not our own)
-  if (!sessionStorage.getItem(TAB_FLAG)) {
-    sessionStorage.setItem(TAB_FLAG, '1');
-    const closedToken = localStorage.getItem(CLOSED_KEY);
-    if (closedToken && closedToken !== SESSION_TOKEN) {
-      // Only clean up an older/different tab's token
-      pingSilentLogout(closedToken);
-    }
-    try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
-  }
-
-  // On tab/browser close or reload — DO NOT ping here (Option A)
-  function handleClose() {
-    if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
-    // Stash our token so the next tab load can clean up the previous tab's token
-    try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-    // IMPORTANT: No pingSilentLogout here to avoid logging out during normal navigation
-  }
-  addEventListener('pagehide', handleClose);
-  addEventListener('beforeunload', handleClose);
-
-  // Idle detection -> go to real logout
-  let last = Date.now(), timer;
-  function arm() {
-    clearTimeout(timer);
-    if (document.visibilityState !== 'visible') return;
-    timer = setTimeout(() => {
-      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-        window.location.replace(LOGOUT_URL);
-      }
-    }, IDLE_LIMIT_MS + 100);
-  }
-  function bump(){ last = Date.now(); arm(); }
-  ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
-    addEventListener(evt, bump, { passive: true })
-  );
-  addEventListener('visibilitychange', arm, { capture: true });
-  arm();
-})(); {% endcomment %}
 </script>
 </body>
 </html>
