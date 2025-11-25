@@ -37,7 +37,12 @@
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/>
         </svg>
-        Filters{% if status_chips or sitio_chips %}<span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">{{ status_chips|length|add:sitio_chips|length }}</span>{% endif %}
+        Filters
+        {% if filter_count %}
+          <span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">
+            {{ filter_count }}
+          </span>
+        {% endif %}
       </summary>
       <div class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4">
         <form method="get" class="space-y-3">

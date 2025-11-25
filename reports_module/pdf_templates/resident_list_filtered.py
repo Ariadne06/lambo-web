@@ -9,9 +9,36 @@ from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 )
+from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
+from .base import draw_barangay_header, get_standard_styles
+
+
+class ResidentListCanvas(canvas.Canvas):
+    """Custom canvas that draws the barangay header on each page."""
+    
+    def __init__(self, *args, **kwargs):
+        canvas.Canvas.__init__(self, *args, **kwargs)
+        self._saved_page_states = []
+    
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+    
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations()
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+    
+    def draw_page_decorations(self):
+        """Draw header on each page."""
+        width, height = A4
+        draw_barangay_header(self, width, height, top_margin=0.5*inch)
 
 
 def generate_resident_list_pdf(residents, filters_applied, total_count):
@@ -34,14 +61,14 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
         pagesize=A4,
         rightMargin=0.5*inch,
         leftMargin=0.5*inch,
-        topMargin=0.75*inch,
+        topMargin=2.25*inch,  # Increased to accommodate header
         bottomMargin=0.75*inch
     )
     
     elements = []
-    styles = getSampleStyleSheet()
+    styles = get_standard_styles()
     
-    # Custom styles
+    # Custom styles using Times-Roman
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -49,7 +76,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
         textColor=colors.HexColor('#991B1B'),
         spaceAfter=6,
         alignment=TA_CENTER,
-        fontName='Helvetica-Bold'
+        fontName='Times-Bold'
     )
     
     subtitle_style = ParagraphStyle(
@@ -59,7 +86,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
         textColor=colors.HexColor('#4B5563'),
         spaceAfter=12,
         alignment=TA_CENTER,
-        fontName='Helvetica'
+        fontName='Times-Roman'
     )
     
     filter_style = ParagraphStyle(
@@ -69,7 +96,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
         textColor=colors.HexColor('#374151'),
         spaceAfter=4,
         alignment=TA_LEFT,
-        fontName='Helvetica'
+        fontName='Times-Roman'
     )
     
     header_info_style = ParagraphStyle(
@@ -78,7 +105,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
         fontSize=8,
         textColor=colors.HexColor('#6B7280'),
         alignment=TA_RIGHT,
-        fontName='Helvetica'
+        fontName='Times-Roman'
     )
     
     # Header
@@ -109,8 +136,8 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
             filter_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F3F4F6')),
                 ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
-                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTNAME', (0, 0), (0, -1), 'Times-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Times-Roman'),
                 ('FONTSIZE', (0, 0), (-1, -1), 8),
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'LEFT'),
@@ -190,7 +217,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
             # Header row
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
@@ -198,7 +225,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
             ('TOPPADDING', (0, 0), (-1, 0), 8),
             
             # Data rows
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
             ('FONTSIZE', (0, 1), (-1, -1), 7),
             ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Code
             ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Name
@@ -231,7 +258,7 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
             fontSize=11,
             textColor=colors.HexColor('#6B7280'),
             alignment=TA_CENTER,
-            fontName='Helvetica-Oblique'
+            fontName='Times-Italic'
         )
         elements.append(Spacer(1, 0.5*inch))
         elements.append(Paragraph("No residents found matching the specified filters.", no_data_style))
@@ -239,15 +266,16 @@ def generate_resident_list_pdf(residents, filters_applied, total_count):
     # Footer with page numbers
     def add_page_number(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica', 8)
+        canvas.setFont('Times-Roman', 8)
         canvas.setFillColor(colors.HexColor('#6B7280'))
         page_num = f"Page {canvas.getPageNumber()}"
         canvas.drawRightString(A4[0] - 0.5*inch, 0.5*inch, page_num)
         canvas.drawString(0.5*inch, 0.5*inch, "Barangay Management System - Confidential Document")
         canvas.restoreState()
     
-    # Build PDF
-    doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+    # Build PDF with custom canvas
+    doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number,
+              canvasmaker=ResidentListCanvas)
     
     buffer.seek(0)
     return buffer

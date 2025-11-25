@@ -16,6 +16,153 @@ from io import BytesIO
 from datetime import datetime
 
 
+def get_standard_styles():
+    """
+    Get standard paragraph styles for all PDF templates using Times-Roman font.
+    
+    Returns:
+        StyleSheet with custom Times-Roman styles
+    """
+    styles = getSampleStyleSheet()
+    
+    # Override/add standard styles with Times-Roman font
+    
+    # Title style
+    if 'CustomTitle' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomTitle',
+            parent=styles['Title'],
+            fontSize=18,
+            textColor=colors.HexColor('#1f2937'),
+            spaceAfter=12,
+            alignment=TA_CENTER,
+            fontName='Times-Bold'
+        ))
+    
+    # Subtitle style
+    if 'CustomSubtitle' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#4b5563'),
+            spaceAfter=6,
+            alignment=TA_CENTER,
+            fontName='Times-Roman'
+        ))
+    
+    # Header style
+    if 'CustomHeader' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomHeader',
+            parent=styles['Heading1'],
+            fontSize=14,
+            textColor=colors.HexColor('#1f2937'),
+            spaceAfter=10,
+            fontName='Times-Bold'
+        ))
+    
+    # Body text
+    if 'CustomBody' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomBody',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.HexColor('#374151'),
+            alignment=TA_JUSTIFY,
+            fontName='Times-Roman'
+        ))
+    
+    # Small text
+    if 'CustomSmall' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomSmall',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.HexColor('#6b7280'),
+            fontName='Times-Roman'
+        ))
+    
+    return styles
+
+
+def get_standard_table_style():
+    """
+    Get standard table style for all PDF templates using Times-Roman font.
+    
+    Returns:
+        TableStyle object
+    """
+    return TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ])
+
+
+def draw_barangay_header(canvas, width, height, top_margin=0.75*inch):
+    """
+    Draw the standard Barangay Cansaga header on a PDF canvas.
+    
+    Args:
+        canvas: ReportLab canvas object
+        width: Page width
+        height: Page height
+        top_margin: Distance from top of page (default: 0.75 inch)
+    
+    Returns:
+        float: Y-position after the header (where content should start)
+    """
+    canvas.saveState()
+    
+    # Calculate starting Y position
+    y_pos = height - top_margin
+    
+    # Header text - all centered, font size 12, Times-Roman
+    canvas.setFont('Times-Roman', 12)
+    
+    # Line 1: Republic of the Philippines
+    canvas.drawCentredString(width / 2, y_pos, 'Republic of the Philippines')
+    y_pos -= 16  # Move down for next line
+    
+    # Line 2: Province of Cebu
+    canvas.drawCentredString(width / 2, y_pos, 'Province of Cebu')
+    y_pos -= 16
+    
+    # Line 3: Municipality of Consolacion
+    canvas.drawCentredString(width / 2, y_pos, 'Municipality of Consolacion')
+    y_pos -= 16
+    
+    # Line 4: Barangay Cansaga (bold)
+    canvas.setFont('Times-Bold', 12)
+    canvas.drawCentredString(width / 2, y_pos, 'Barangay Cansaga')
+    y_pos -= 16
+    
+    # Line 5: Tel. #344 – 3092
+    canvas.setFont('Times-Roman', 12)
+    canvas.drawCentredString(width / 2, y_pos, 'Tel. #344 – 3092')
+    y_pos -= 20  # Extra space before the line
+    
+    # Horizontal line
+    canvas.setStrokeColor(colors.black)
+    canvas.setLineWidth(1)
+    canvas.line(0.75*inch, y_pos, width - 0.75*inch, y_pos)
+    
+    canvas.restoreState()
+    
+    # Return Y position after header (with some spacing)
+    return y_pos - 12  # 12 points spacing after the line
+
+
 class BasePDFGenerator:
     """Base class for all PDF report generators."""
     

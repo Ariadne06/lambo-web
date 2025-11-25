@@ -248,6 +248,10 @@ def resident_list(request):
         start_idx = offset
         end_idx = offset + page_size
         residents = unique_residents[start_idx:end_idx]
+        
+        # Set single values to None for context (not used when multiple filters)
+        status_id = None
+        sitio_id = None
     else:
         # Single or no filters - use DB function directly (more efficient)
         status_id = status_id_list[0] if status_id_list else None
@@ -368,6 +372,9 @@ def resident_list(request):
         })
 
     clear_all_url = build_url(q=q, status_id="", sitio_id="", page=1)
+    
+    # Calculate total filter count
+    filter_count = len(status_chips) + len(sitio_chips)
 
     context = {
         "residents": residents,
@@ -389,6 +396,7 @@ def resident_list(request):
         "sitio_id_list": sitio_id_list,
         "status_chips": status_chips,
         "sitio_chips": sitio_chips,
+        "filter_count": filter_count,
         "clear_all_url": clear_all_url,
     }
     return render(request, 'secretary_module/resident_list.html', context)
