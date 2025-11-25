@@ -61,7 +61,8 @@
 
     <!-- Body (scrolls inside the card) -->
     <div class="h-full overflow-auto px-6 py-6">
-      <form id="familyForm" class="space-y-6">
+      <form id="familyForm" method="post" action="{% url 'bhw_module:addchild2' %}" class="space-y-6">
+        {% csrf_token %}
         <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
           <!-- Child -->
           <div class="rounded-2xl border border-gray-200 p-4 shadow-sm">
@@ -82,6 +83,8 @@
                     data-target-hidden="#child_id"
                     class="mt-1 w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
               <input type="hidden" id="child_id" name="child_id">
+              <input type="hidden" id="mother_id" name="mother_id">
+              <input type="hidden" id="father_id" name="father_id">
 
               <!-- dropdown -->
               <div class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow max-h-60 overflow-auto hidden"
@@ -241,6 +244,10 @@
             fatherInput.value = item.father_full_name || 'Not available';
             fatherIdInput.value = item.father_resident_id || '';
             
+            // Update hidden field values for form submission
+            document.getElementById('mother_id').value = item.mother_resident_id || '';
+            document.getElementById('father_id').value = item.father_resident_id || '';
+            
             // Store additional data for next step
             childInput.dataset.sex = item.sex || '';
             childInput.dataset.dob = item.dob || '';
@@ -283,25 +290,28 @@
 
   // Form submission handler
   document.getElementById('familyForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    if (!nextBtn.disabled) {
-      // Build URL with form data as query parameters
-      const params = new URLSearchParams({
-        child_id: childIdInput.value,
-        child_name: childInput.value,
-        mother_id: motherIdInput.value,
-        mother_name: motherInput.value,
-        father_id: fatherIdInput.value,
-        father_name: fatherInput.value,
-        sex: childInput.dataset.sex || '',
-        dob: childInput.dataset.dob || '',
-        philhealth_no: childInput.dataset.philhealth || '',
-        phone_number: childInput.dataset.phone || ''
-      });
-      
-      window.location.href = "{% url 'bhw_module:addchild2' %}?" + params.toString();
+    if (nextBtn.disabled) {
+      e.preventDefault();
+      return;
     }
+    
+    // Add hidden fields with additional data before submission
+    const hiddenFields = [
+      {name: 'sex', value: childInput.dataset.sex || ''},
+      {name: 'dob', value: childInput.dataset.dob || ''},
+      {name: 'philhealth_no', value: childInput.dataset.philhealth || ''},
+      {name: 'phone_number', value: childInput.dataset.phone || ''},
+      {name: 'mother_name', value: motherInput.value || ''},
+      {name: 'father_name', value: fatherInput.value || ''}
+    ];
+    
+    hiddenFields.forEach(field => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = field.name;
+      input.value = field.value;
+      this.appendChild(input);
+    });
   });
 
   // Initial state
