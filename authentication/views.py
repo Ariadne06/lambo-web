@@ -166,10 +166,15 @@ def silent_logout(request):
     elif request.method == "GET":
         token = (request.GET.get("session_token") or "").strip()
 
-    if token:
+    try:
+        if token:
+            try:
+                authentication.sp_logout_user(token)
+            except Exception:
+                pass
+    finally:
         try:
-            # This will record the logout time in the database
-            authentication.sp_logout_user(token)
+            request.session.flush()
         except Exception:
             pass
 
