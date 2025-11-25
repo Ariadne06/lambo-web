@@ -199,11 +199,19 @@ ACCORDION.forEach((item) => {
 
   // --- Manual logout suppression ---
   let suppressClosePing = false;
+  let formSubmitting = false;
   try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  
   document.getElementById('logout-link')?.addEventListener('click', () => {
     suppressClosePing = true;
     // Don't call markNavigation() - let server handle logout time recording
     try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
+  
+  // Detect form submissions to prevent logout during form operations
+  document.addEventListener('submit', () => {
+    formSubmitting = true;
+    setTimeout(() => formSubmitting = false, 10000); // Reset after 10 seconds
   });
 
   async function pingSilentLogout(token) {
@@ -237,7 +245,7 @@ ACCORDION.forEach((item) => {
   addEventListener('pagehide', (e) => {
     // e.persisted = true means page is going into cache (navigation)
     // e.persisted = false means page is being unloaded (browser close)
-    if (!e.persisted && !suppressClosePing && sessionStorage.getItem('skipSilent') !== '1') {
+    if (!e.persisted && !suppressClosePing && !formSubmitting && sessionStorage.getItem('skipSilent') !== '1') {
       const formData = new FormData();
       formData.append('session_token', SESSION_TOKEN);
       navigator.sendBeacon(TAB_CLOSE_URL, formData);
@@ -249,14 +257,19 @@ ACCORDION.forEach((item) => {
   function arm() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (Date.now() - last >= IDLE_LIMIT_MS) {
+      if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
         // Record logout time via silent_logout before redirecting
         pingSilentLogout(SESSION_TOKEN);
         window.location.replace(LOGOUT_URL + '?force=1');
       }
     }, IDLE_LIMIT_MS + 100);
   }
-  function bump(){ last = Date.now(); arm(); }
+  function bump(){ 
+    if (!formSubmitting) {
+      last = Date.now(); 
+      arm(); 
+    }
+  }
   ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
     addEventListener(evt, bump, { passive: true })
   );
