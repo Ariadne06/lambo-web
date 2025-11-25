@@ -15,7 +15,7 @@ from .serializers import (
     ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer, ChildGrowthMonitoringCreateSerializer, ChildImmunizationCreateSerializer, ChildMedicalConditionCreateSerializer, ChildSurgicalHistoryCreateSerializer, ChildSupplementCreateSerializer, ExclusiveBreastfeedCreateSerializer
 )
 from .utils.database_helpers import (
-    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track
+    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -2523,3 +2523,4 @@ class GeneralHealthDetailView(APIView):
                 'success': False,
                 'error': error_msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
