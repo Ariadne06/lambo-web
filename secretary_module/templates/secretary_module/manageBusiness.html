@@ -216,15 +216,6 @@
   
 </div>
 
-<!-- Action Result Modal -->
-
-
-<!-- Registration Preview Modal -->
-
-<!-- Reprint Preview Modal -->
-
-<!-- Payment History modal removed: no triggers on this page -->
-
 <!-- Update Business Modal -->
 <div id="updateBusinessModal"
      class="fixed inset-0 z-50 hidden bg-black/50 overflow-y-auto p-4">
@@ -238,6 +229,7 @@
       <!-- Form body -->
       <form id="updateBusinessForm" class="p-6 space-y-4 overflow-y-auto">
         <input type="hidden" name="business_id" id="ub_business_id">
+         <input type="hidden" name="old_clearance_category_id" id="ub_old_clearance_category_id">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Business ID (read-only) -->
@@ -392,6 +384,12 @@
 </div>
 
 <script>
+  function toIntOrNull(v) {
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function openModal(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -402,7 +400,7 @@
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('hidden');
-    // Improved: keep scroll locked while ANY dialog remains open
+    // keep scroll locked while ANY dialog remains open
     const anyOpen = document.querySelector('[role="dialog"]:not(.hidden), #updateBusinessModal:not(.hidden)');
     if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
   }
@@ -428,15 +426,12 @@
     }
   });
 
-  // Removed legacy View Business modal logic; detail now opens as a standalone page.
-
   // CSRF helper
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
-  // Unified CSRF token getter (cookie or hidden input fallback)
   function getCsrfToken(){
     let token = getCookie('csrftoken');
     if(!token){
@@ -505,7 +500,6 @@
         if (vEl) vEl.required = true;
         if (bEl) bEl.required = true;
         if (oEl) oEl.required = true;
-        // default to zeros if blank
         ensureZeroIfEmpty(vEl);
         ensureZeroIfEmpty(bEl);
         ensureZeroIfEmpty(oEl);
@@ -540,6 +534,10 @@
       if (ownerInput) ownerInput.value = '';
       toggleUnitsUI(false);
       toggleAmusementUI(false);
+
+      // also clear old clearance hidden in case
+      const oldClrInput = document.getElementById('ub_old_clearance_category_id');
+      if (oldClrInput) oldClrInput.value = '';
     }
 
     async function open(businessId) {
@@ -571,28 +569,36 @@
         }
         selectEl.value = v;
       };
+
       function restrictClearanceOptions(selectEl, currentId) {
         const note = document.getElementById('ub_clr_note');
         if (!selectEl) return;
 
-        ensureSelected(selectEl, currentId, CLEARANCE_CATEGORY_LABELS[String(currentId)]);
+        let cid = Number(currentId);
+        if (!Number.isFinite(cid) || cid <= 0) {
+          cid = Number(selectEl.value || 0);
+        }
+
+        ensureSelected(selectEl, cid, CLEARANCE_CATEGORY_LABELS[String(cid)]);
 
         const allow = new Set();
-        if (currentId === 3 || currentId === 4) {
-          ['3','4'].forEach(v => allow.add(v));
+
+        if (cid === 3 || cid === 4) {
+          ['3', '4'].forEach(v => allow.add(v));
           selectEl.disabled = false;
-          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          selectEl.classList.remove('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'Sole Proprietorship: you may switch only between categories 3 and 4.';
-        } else if (currentId >= 6 && currentId <= 10) {
-          for (let i=6;i<=10;i++) allow.add(String(i));
+        } else if (cid >= 6 && cid <= 10) {
+          for (let i = 6; i <= 10; i++) allow.add(String(i));
           selectEl.disabled = false;
-          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          selectEl.classList.remove('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'Lessor: you may switch only among categories 6–10.';
         } else {
           selectEl.disabled = true;
-          selectEl.classList.add('bg-gray-100','text-gray-600');
+          selectEl.classList.add('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'This clearance category cannot be changed.';
         }
+
         Array.from(selectEl.options).forEach(opt => {
           if (!opt.value) return;
           opt.hidden = (allow.size > 0) ? !allow.has(opt.value) : false;
@@ -660,19 +666,61 @@
         ensureSelected(ownSel,  ownId,  ownLabel);
 
         // Clearance category + rules
-        const clrSel   = document.getElementById('ub_clearance_category_id');
+        const clrSel = document.getElementById('ub_clearance_category_id');
         if (clrSel) {
-          const clrId    = Number(pick(d, ['clearance_category_id']));
-          const clrLabel = pick(d, ['clearance_category_name']) || CLEARANCE_CATEGORY_LABELS[String(clrId)];
-          ensureSelected(clrSel, clrId, clrLabel);
+          let clrId = toIntOrNull(
+            pick(d, [
+              'clearance_category_id',
+              'business_clearance_category_id',
+              'clearance_categoryid',
+              'clearance_cat_id',
+              'clr_category_id',
+            ])
+          );
+          let clrLabel = pick(d, [
+            'clearance_category_name',
+            'category_name',
+            'clearance_category',
+            'clearance',
+          ]);
+
+          // Fallback: derive id from label if possible
+          if (!clrId && clrLabel) {
+            const normalized = clrLabel.toLowerCase().trim();
+            for (const [id, label] of Object.entries(CLEARANCE_CATEGORY_LABELS)) {
+              const labNorm = label.toLowerCase().trim();
+              if (
+                labNorm === normalized ||
+                labNorm.startsWith(normalized) ||
+                normalized.startsWith(labNorm)
+              ) {
+                clrId = Number(id);
+                break;
+              }
+            }
+          }
+
+          if (!clrId) {
+            clrId = toIntOrNull(clrSel.value) || 0;
+          }
+
+          // NEW: store original category id in hidden input so backend knows "old"
+          const oldClrInput = document.getElementById('ub_old_clearance_category_id');
+          if (oldClrInput) {
+            oldClrInput.value = Number.isFinite(clrId) && clrId > 0 ? String(clrId) : '';
+          }
+
+          ensureSelected(
+            clrSel,
+            clrId,
+            clrLabel || CLEARANCE_CATEGORY_LABELS[String(clrId)] || `#${clrId}`
+          );
           restrictClearanceOptions(clrSel, clrId);
 
           // Units
           const currentUnits = pick(d, ['total_units','units','unit_count'], '');
           const inputUnits = document.getElementById('ub_total_units');
-          if (inputUnits !== null && inputUnits !== undefined) {
-            inputUnits.value = currentUnits ?? '';
-          }
+          if (inputUnits) inputUnits.value = currentUnits ?? '';
           const supportedFromDetail = pick(d, ['supported_units','units_supported','category_supports_units'], null);
           toggleUnitsUI(supportedFromDetail);
 
@@ -687,7 +735,9 @@
           if (bEl) bEl.value = (b === '' || b === null || b === undefined) ? '' : b;
           if (oEl) oEl.value = (o === '' || o === null || o === undefined) ? '' : o;
 
-          const isAmuseFromDetail = (String(clrId) === '12') || (String(clrLabel || '').toLowerCase() === 'amusement');
+          const isAmuseFromDetail =
+            String(clrId) === '12' ||
+            String((clrLabel || '')).toLowerCase() === 'amusement';
           toggleAmusementUI(isAmuseFromDetail);
 
           // Re-evaluate on change
@@ -775,7 +825,6 @@
     }
   }
 
-
   function parseBreakdown(raw, totalAmount){
     const humanize = (s) => {
       if (!s || typeof s !== 'string') return 'Item';
@@ -861,10 +910,8 @@
   }
   function goToBusinessDetail(ev, businessId, url){
     if (ev) ev.preventDefault();
-    // Show immediate feedback
     showPageLoader('Opening business…');
 
-    // Best-effort prefetch to warm backend and keep UI engaged
     try {
       const tpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
       const detailUrl = tpl.replace('99999', String(businessId));
@@ -872,7 +919,6 @@
       const delay = new Promise(r => setTimeout(r, 200));
       Promise.race([prefetch, delay]).finally(() => { window.location.href = url; });
     } catch (_) {
-      // Fallback: navigate right away
       window.location.href = url;
     }
     return false;
@@ -900,7 +946,6 @@
     const createBtn = document.getElementById('cl_create_btn');
     const confirmBtn = document.getElementById('cl_confirm_btn');
 
-    // Reset UI
     if (alertEl) { alertEl.className = 'hidden'; alertEl.textContent = ''; }
     if (confirmBlk) confirmBlk.classList.add('hidden');
     if (previewWrap) previewWrap.classList.add('hidden');
@@ -914,7 +959,6 @@
       if (previewWrap) previewWrap.classList.remove('hidden');
       if (loading) loading.classList.remove('hidden');
       if (createBtn) createBtn.classList.remove('hidden');
-      // Load preview
       loadClosurePreview(businessId);
     } else {
       if (title) title.textContent = 'Close Business';
@@ -993,11 +1037,9 @@
       if (res.ok && data && data.ok){
         showClAlert(true, 'Closure application created successfully.');
         const appId = data.application_id;
-        // Offer a quick link if route exists
         try{
           const t = "{% url 'secretary_module:application_detail' 0 %}"; const u = t.replace('/0/','/'+String(appId)+'/');
           showClAlert(true, `Closure application created. Application ID: ${appId}. You may now proceed to payment.\n`);
-          // Auto-navigate after short delay
           setTimeout(()=>{ window.location.href = u; }, 800);
         } catch(_){}
       } else {
@@ -1007,7 +1049,6 @@
       }
     } catch(err){ showClAlert(false, String(err && err.message ? err.message : err)); if (btn){ btn.disabled=false; btn.textContent='Create Closure Request'; } }
   }
-
 </script>
 
 <style>
@@ -1021,6 +1062,5 @@
   .btn-gray:hover{background:#e5e7eb}
   .loader-spinner{width:2.25rem;height:2.25rem;border-radius:9999px;border:3px solid #e5e7eb;border-top-color:#ef4444;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  /* (Removed) no in-page renewal breakdown toggle on list */
 </style>
 {% endblock %}
