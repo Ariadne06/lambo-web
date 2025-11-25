@@ -54,6 +54,8 @@ urlpatterns = [
     path('household_api/', include('household_module.urls')),
 
     path('certificate_api/', include('certificate_issuance_module.urls')),
+
+    path('reports/', include('reports_module.urls')),
 ]
 
 
