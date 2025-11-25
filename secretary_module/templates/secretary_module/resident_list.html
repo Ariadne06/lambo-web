@@ -1,287 +1,394 @@
-{% extends "base_sec.html" %}
+{% extends 'base_sec.html' %}
 
 {% block title %}Resident List{% endblock %}
 
 {% block content %}
-<div class="px-6 py-8">
-  <!-- Header -->
-  <div class="mb-6">
-    <div class="flex items-center gap-3">
-      <span class="h-8 w-1.5 rounded-full bg-red-600"></span>
-      <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-red-600">Resident List</h1>
+<div class="px-6 py-6">
+  <h2 class="text-lg font-semibold text-red-700 mb-4">Resident List</h2>
+
+  <!-- Search + Filters -->
+  <div class="mb-5 flex items-center gap-2">
+    <form method="get" class="flex items-center gap-2 grow">
+      <div class="relative w-full sm:w-[420px]">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by name, code, phone, email" 
+               class="w-full rounded-xl border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600" />
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z"/>
+        </svg>
       </div>
-    </div>
-  </div>
-
-  <!-- Card wrapper is flex column with fixed height; inner table area scrolls -->
-  <div class="bg-white shadow-sm rounded-2xl border border-gray-200 flex flex-col h-[calc(100vh-8rem)]">
-<!-- Toolbar: single line, aligned, no wrapping -->
-<div class="px-4 md:px-6 py-4 border-b border-gray-100">
-  <!-- horizontal scroll on very small screens instead of wrapping -->
-  <div class="-mx-2 overflow-x-auto">
-    <form method="get" class="flex flex-nowrap items-center gap-2 px-2">
-      <input type="hidden" name="page_size" value="{{ page_size }}">
-
-      <!-- Search (short) -->
-      <div class="relative shrink-0 w-64">
-        <label for="q" class="sr-only">Search</label>
-        <input id="q" name="q" value="{{ request.GET.q }}" type="text" placeholder="Name, code, household…"
-               class="w-full h-10 rounded-xl border border-gray-300 bg-white pl-4 pr-9 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400" />
-        <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500" aria-label="Search">
-          
-        </button>
-      </div>
-      <!-- Spacer pushes actions to the far right -->
-      <div class="flex-1"></div>
-
-      <!-- Sex -->
-      <div class="shrink-0 w-36">
-        <label for="sex" class="sr-only">Sex</label>
-        <select id="sex" name="sex"
-                class="w-full h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
-          <option value="" {% if not request.GET.sex %}selected{% endif %}>Sex: All</option>
-          <option value="male" {% if request.GET.sex == 'male' %}selected{% endif %}>Male</option>
-          <option value="female" {% if request.GET.sex == 'female' %}selected{% endif %}>Female</option>
-        </select>
-      </div>
-
-      <!-- Resident Status -->
-      <div class="shrink-0 w-56">
-        <label for="status_id" class="sr-only">Resident Status</label>
-        <select id="status_id" name="status_id"
-                class="w-full h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-red-400 focus:ring-1 focus:ring-red-100">
-          <option value="" {% if not request.GET.status_id %}selected{% endif %}>Resident Status: All</option>
-          {% for sid, sname in status_options %}
-            <option value="{{ sid }}" {% if request.GET.status_id|stringformat:"s" == sid|stringformat:"s" %}selected{% endif %}>
-              {{ sname }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      
-
-      <!-- Actions -->
-      <div class="shrink-0 flex items-center gap-2">
-        <a href="?" class="h-10 inline-flex items-center rounded-xl border border-gray-300 px-4 text-sm hover:bg-gray-50">
-          Reset
-        </a>
-        <button class="h-10 inline-flex items-center rounded-xl bg-red-600 px-5 text-sm font-medium text-white shadow hover:bg-red-700">
-          Apply
-        </button>
-      </div>
+      {# preserve multi-selected filters as hidden inputs #}
+      {% for s in status_id_list %}
+        <input type="hidden" name="status_id" value="{{ s }}" />
+      {% endfor %}
+      {% for st in sitio_id_list %}
+        <input type="hidden" name="sitio_id" value="{{ st }}" />
+      {% endfor %}
+      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/>
+        </svg>
+        Search
+      </button>
     </form>
+
+    <!-- Filters dropdown -->
+    <details class="relative">
+      <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/>
+        </svg>
+        Filters{% if status_chips or sitio_chips %}<span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">{{ status_chips|length|add:sitio_chips|length }}</span>{% endif %}
+      </summary>
+      <div class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4">
+        <form method="get" class="space-y-3">
+          <input type="hidden" name="q" value="{{ q }}" />
+          <input type="hidden" name="page_size" value="{{ page_size }}" />
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Resident Status</label>
+            <div class="grid grid-cols-1 gap-2">
+              {% for s in status_options %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="status_id" value="{{ s.id }}" 
+                         {% if s.id in status_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-600">
+                  <span class="text-sm">{{ s.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Sitio</label>
+            <div class="grid grid-cols-1 gap-2">
+              {% for st in sitio_options %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="sitio_id" value="{{ st.id }}" 
+                         {% if st.id in sitio_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-600">
+                  <span class="text-sm">{{ st.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <a href="?q={{ q }}" class="text-sm text-gray-600 hover:text-rose-700">Clear</a>
+            <button type="submit" class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">Apply Filters</button>
+          </div>
+        </form>
+      </div>
+    </details>
   </div>
-</div>
 
+  <!-- Active filter chips -->
+  {% if status_chips or sitio_chips %}
+    <div class="mb-3 flex items-center gap-2 text-sm">
+      <span class="text-gray-600">Active:</span>
+      {% for chip in status_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endfor %}
+      {% for chip in sitio_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endfor %}
+      <a href="{{ clear_all_url }}" class="ml-2 inline-flex items-center gap-1 text-gray-700 hover:text-rose-700">
+        <span class="text-xs">✕</span> Clear all
+      </a>
+    </div>
+  {% endif %}
 
-
-    <!-- Scrollable table area -->
-    <div class="flex-1 overflow-y-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-gray-600 sticky top-0 z-10">
-          <tr class="text-left">
-            <th class="px-6 py-3 font-semibold">Resident ID</th>
-            <th class="px-6 py-3 font-semibold">Resident Code</th>
-            <th class="px-6 py-3 font-semibold">Resident Name</th>
-            <th class="px-6 py-3 font-semibold">Household Number</th>
-            <th class="px-6 py-3 font-semibold">Family Code</th>
-            <th class="px-6 py-3 font-semibold text-right">Action</th>
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-gray-700 font-medium">
+            <th class="px-4 py-2 border border-gray-200 text-left">Code</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Full Name</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Date of Birth</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Address</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Phone</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Email</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Status</th>
+            <th class="px-4 py-2 border border-gray-200 text-center w-24">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
           {% for r in residents %}
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-3 font-medium text-gray-900">{{ r.resident_id }}</td>
-            <td class="px-6 py-3">
-              <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-0.5 text-xs bg-gray-50">
-                {{ r.resident_code }}
-              </span>
+          <tr class="hover:bg-gray-50/60">
+            <td class="px-4 py-2 border border-gray-200">{{ r.resident_code|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.full_name }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.dob|date:"m/d/Y"|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.full_address|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.phone_number|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.email|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200">
+              <span class="status-chip chip-blue">{{ r.resident_status|default:'—' }}</span>
             </td>
-            <td class="px-6 py-3">{{ r.full_name }}</td>
-            <td class="px-6 py-3">{{ r.household_number }}</td>
-            <td class="px-6 py-3">{{ r.family_code }}</td>
-            <td class="px-6 py-3 text-right">
-              <button type="button"
-                class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600"
-                data-modal-target="residentViewModal"
-                data-payload='{{ r.payload_json|escapejs }}'
-                data-full-name="{{ r.full_name|default_if_none:''|escape }}"
-                data-sex="{{ r.sex|default_if_none:''|escape }}"
-                data-status="{{ r.status_name|default_if_none:''|escape }}"
-                data-household-number="{{ r.household_number|default_if_none:''|escape }}"
-                data-family-code="{{ r.family_code|default_if_none:''|escape }}"
-                data-dob="{{ r.dob|default_if_none:'' }}"
-                data-age="{{ r.age|default_if_none:'' }}"
-                data-civil-status="{{ r.civil_status|default_if_none:''|escape }}"
-                data-educ-attainment="{{ r.educational_attainment|default_if_none:''|escape }}"
-                data-religion="{{ r.religion|default_if_none:''|escape }}"
-                data-full-address="{{ r.full_address|default_if_none:''|escape }}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7Z"/>
+            <td class="px-4 py-2 border border-gray-200 text-center">
+              <button type="button" 
+                      data-resident-id="{{ r.resident_id }}"
+                      class="btn btn-outline view-resident-btn">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
                 View
               </button>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="px-6 py-6 text-center text-gray-500">No residents found.</td></tr>
+          <tr>
+            <td colspan="8" class="px-4 py-8 text-center text-gray-500">No residents found.</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <!-- Footer / Pagination -->
-    <div class="px-4 md:px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm">
-      <span class="text-gray-500">
-        Showing {{ showing_start }}–{{ showing_end }} of {{ total }}
-      </span>
-      <nav class="flex items-center gap-1">
-        {% if prev_url %}
-          <a href="{{ prev_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Prev</a>
-        {% else %}
-          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Prev</button>
-        {% endif %}
-
-        <a href="{{ p1_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 bg-red-600 text-white">{{ p1_num }}</a>
-
-        {% if p2_url %}
-          <a href="{{ p2_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">{{ p2_num }}</a>
-        {% endif %}
-
-        {% if p3_url %}
-          <a href="{{ p3_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">{{ p3_num }}</a>
-        {% endif %}
-
-        {% if p3_num and p3_num < pages %}
-          <span class="px-3 py-1.5 text-gray-500">…</span>
-        {% endif %}
-        {% if last_url and last_num and last_num != p1_num and last_num != p2_num and last_num != p3_num %}
-          <a href="{{ last_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">{{ last_num }}</a>
-        {% endif %}
-
-        {% if next_url %}
-          <a href="{{ next_url }}" class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Next</a>
-        {% else %}
-          <button class="px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 cursor-not-allowed">Next</button>
-        {% endif %}
-      </nav>
+    <!-- Pagination -->
+    {% if total > 0 %}
+    <div class="mt-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-sm text-gray-600">
+      <div>
+        Page {{ page }} of {{ total_pages }} — {{ total }} total
+      </div>
+      <div class="flex items-center gap-3">
+        <nav class="flex items-center gap-1">
+          {% if has_prev %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>
+          {% endif %}
+          {% for it in page_items %}
+            {% if it.ellipsis %}
+              <span class="px-2">…</span>
+            {% elif it.current %}
+              <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.num }}</span>
+            {% else %}
+              <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.num }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if has_next %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>
+          {% endif %}
+        </nav>
+        
+        <!-- Generate PDF Button -->
+        <form method="get" action="{% url 'secretary_module:resident_list_pdf' %}" target="_blank">
+          <input type="hidden" name="q" value="{{ q }}" />
+          {% for s in status_id_list %}
+            <input type="hidden" name="status_id" value="{{ s }}" />
+          {% endfor %}
+          {% for st in sitio_id_list %}
+            <input type="hidden" name="sitio_id" value="{{ st }}" />
+          {% endfor %}
+          <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Generate PDF
+          </button>
+        </form>
+      </div>
     </div>
+    {% endif %}
   </div>
 </div>
 
-<!-- ===== View Modal (First Name / Last Name + Demographics) ===== -->
+<!-- View Resident Modal -->
 <div id="residentViewModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
   <div class="flex min-h-full items-center justify-center p-4">
     <div class="fixed inset-0 bg-black/40 opacity-0 transition-opacity duration-200 ease-out" data-overlay></div>
 
-    <section
-      class="relative bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden
-             translate-y-4 opacity-0 transition-[transform,opacity] duration-200 ease-out
-             w-[min(92vw,860px)] max-h-[80vh] flex flex-col"
-      role="dialog" aria-modal="true"
-      aria-labelledby="residentViewTitle" aria-describedby="residentViewDesc">
-
-      <header class="px-5 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 id="residentViewTitle" class="text-base font-semibold text-gray-900">Resident Details</h2>
-            <p id="residentViewDesc" class="text-xs text-gray-500 truncate">
-              <span class="font-medium">ID:</span> <span data-field="resident_id">—</span>
-              <span class="mx-2 text-gray-300">|</span>
-              <span class="font-medium">Code:</span> <span data-field="resident_code">—</span>
-              <span class="mx-2 text-gray-300">|</span>
-              <span data-field="full_name">—</span>
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="rounded-full text-[10px] px-2 py-0.5 border" data-chip-status>—</span>
+    <section class="relative bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden translate-y-4 opacity-0 transition-[transform,opacity] duration-200 ease-out w-[min(92vw,860px)] max-h-[80vh] flex flex-col"
+             role="dialog" aria-modal="true"
+             aria-labelledby="residentViewTitle" aria-describedby="residentViewDesc">
+      
+      <!-- Header -->
+      <header class="px-6 py-4 bg-gradient-to-r from-rose-50 to-pink-50 border-b border-rose-100 sticky top-0 z-10">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-1">
+              <h2 id="residentViewTitle" class="text-xl font-bold text-gray-900" data-field="display_name">—</h2>
+              <span class="rounded-full text-xs font-semibold px-3 py-1 border" data-chip-status>—</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+              </svg>
+              <span class="font-medium">ID:</span>
+              <span data-field="resident_id" class="font-mono">—</span>
+              <span class="text-gray-400">•</span>
+              <span class="font-medium">Code:</span>
+              <span data-field="resident_code" class="font-mono">—</span>
+            </div>
           </div>
         </div>
       </header>
 
-      <div class="flex-1 overflow-y-auto">
-        <div class="px-5 sm:px-8 py-5 space-y-6">
-          <!-- Identity -->
-          <section>
-            <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Identity</h3>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="first_name">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="last_name">
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sex</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="sex">
-              </div>
+      <!-- Body (scrollable) -->
+      <div class="flex-1 overflow-y-auto bg-gray-50">
+        <div class="p-6 space-y-5">
+          
+          <!-- Personal Information Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Personal Information</h3>
             </div>
-          </section>
+            <div class="p-5">
+              <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">First Name</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="first_name">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Middle Name</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="middle_name">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Last Name</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="last_name">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Suffix</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="suffix">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Sex</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="sex">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date of Birth</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="dob">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Age</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="age">—</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
 
-          <!-- Demographics -->
-          <section>
-            <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Demographics</h3>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="dob">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="age">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Civil Status</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="civil_status">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Educational Attainment</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="educ_attainment">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Religion</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="religion">
-              </div>
+          <!-- Contact Information Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Contact Information</h3>
             </div>
-          </section>
+            <div class="p-5">
+              <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    Phone Number
+                  </dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="phone_number">—</dd>
+                </div>
+                <div class="flex flex-col md:col-span-1">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Email
+                  </dt>
+                  <dd class="text-base font-medium text-gray-900 break-all" data-field="email">—</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
 
-          <!-- Residency -->
-          <section>
-            <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Residency</h3>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Resident Status</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="resident_status">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Household Number</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="household_number">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Family Code</label>
-                <input type="text" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="family_code">
-              </div>
+          <!-- Demographics Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Demographics</h3>
             </div>
+            <div class="p-5">
+              <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Civil Status</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="civil_status">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Educational Attainment</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="educational_attainment">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Religion</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="religion">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Nationality</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="nationality">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Occupation</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="occupation">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Employment Status</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="employment_status">—</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
 
-            <div class="mt-3">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Full Address</label>
-              <textarea rows="2" class="w-full rounded-md border border-gray-300 px-3 py-2 bg-white" readonly data-field="full_address"></textarea>
+          <!-- Residency Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Residency Information</h3>
             </div>
-          </section>
+            <div class="p-5">
+              <dl class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Resident Status</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="resident_status">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Household Number</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="household_number">—</dd>
+                </div>
+                <div class="flex flex-col">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Family Code</dt>
+                  <dd class="text-base font-medium text-gray-900" data-field="family_code">—</dd>
+                </div>
+                <div class="flex flex-col md:col-span-3">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Full Address
+                  </dt>
+                  <dd class="text-base font-medium text-gray-900 leading-relaxed" data-field="full_address">—</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <footer class="px-5 py-3 border-t border-gray-100 sticky bottom-0 bg-white">
-        <div class="flex items-center justify-end">
-          <button type="button"
-                  class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-white text-sm font-medium shadow hover:bg-red-700"
-                  data-modal-close>
-            Back
+      <!-- Footer -->
+      <footer class="px-6 py-4 border-t border-gray-200 bg-white sticky bottom-0">
+        <div class="flex items-center justify-between">
+          <button type="button" id="printResidentBtn" 
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white text-sm font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Details
+          </button>
+          <button type="button" data-close-modal 
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-6 py-2.5 text-white text-sm font-semibold shadow-lg hover:from-red-700 hover:to-rose-700 transition-all">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Close
           </button>
         </div>
       </footer>
@@ -289,172 +396,189 @@
   </div>
 </div>
 
-<!-- Modal Script -->
+<style>
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-width:84px; padding:.5rem .875rem; border-radius:.75rem; font-weight:600; font-size:.875rem; line-height:1; border:1px solid transparent; transition:all .15s ease; }
+  .btn svg{ width:1rem; height:1rem; }
+  .btn-outline{ background:#fff; color:#374151; border-color:#d1d5db; }
+  .btn-outline:hover{ background:#f9fafb; border-color:#cbd5e1; }
+
+  .status-chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid; }
+  .chip-blue{ background:#eff6ff; color:#1e3a8a; border-color:#bfdbfe; }
+  .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+  .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+  
+  details[open] > summary { background:#f9fafb; }
+  details > summary::-webkit-details-marker { display:none; }
+</style>
+
 <script>
-(function () {
-  const openers = document.querySelectorAll('[data-modal-target]');
+// View Resident Modal - Event delegation for view buttons
+let currentResidentId = null;
 
-  function qs(root, sel){ return root.querySelector(sel); }
-  function qsa(root, sel){ return Array.from(root.querySelectorAll(sel)); }
-
-  function formatDOB(iso){
-    if(!iso) return '';
-    const [y,m,d] = (iso || '').split('-');
-    if(y && m && d){ return [m,d,y].join('/'); }
-    return iso || '';
-  }
-
-  function calcAge(iso){
-    if(!iso) return '';
-    const [y,m,d] = (iso || '').split('-').map(Number);
-    if(!y||!m||!d) return '';
-    const today = new Date();
-    let age = today.getFullYear() - y;
-    const mNow = today.getMonth()+1, dNow = today.getDate();
-    if (mNow < m || (mNow === m && dNow < d)) age--;
-    return String(age);
-  }
-
-  function safeParse(jsonStr) {
-    if (!jsonStr) return {};
-    try { return JSON.parse(jsonStr); }
-    catch (e1) {
-      try {
-        const de = jsonStr
-          .replace(/&quot;/g, '"')
-          .replace(/&#x27;/g, "'")
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>');
-        return JSON.parse(de);
-      } catch (e2) { return {}; }
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.view-resident-btn');
+    if (btn) {
+      const residentId = btn.getAttribute('data-resident-id');
+      if (residentId) viewResident(residentId);
     }
-  }
-
-  // derive first/last names if only full_name is provided
-  function deriveNameParts(full) {
-    const s = (full || '').trim().replace(/\s+/g,' ');
-    if (!s) return { first_name: '', last_name: '' };
-    const parts = s.split(' ');
-    if (parts.length === 1) return { first_name: parts[0], last_name: '' };
-    const last = parts.pop();
-    const first = parts.join(' ');
-    return { first_name: first, last_name: last };
-  }
-
-  function setFieldAll(modal, field, value){
-    qsa(modal, `[data-field="${field}"]`).forEach(node => {
-      if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') node.value = value ?? '';
-      else node.textContent = value ?? '';
+  });
+  
+  // Print resident details button
+  const printBtn = document.getElementById('printResidentBtn');
+  if (printBtn) {
+    printBtn.addEventListener('click', () => {
+      if (currentResidentId) {
+        window.open(`/secretary_module/resident/${currentResidentId}/pdf/`, '_blank');
+      }
     });
   }
+});
 
-  function fillFields(modal, data){
-    // ensure first/last derived if needed
-    if (!data.first_name || !data.last_name) {
-      const guess = deriveNameParts(data.full_name || '');
-      data.first_name = data.first_name || guess.first_name;
-      data.last_name  = data.last_name  || guess.last_name;
-    }
+function viewResident(residentId) {
+  const modal = document.getElementById('residentViewModal');
+  if (!modal) return;
+  
+  // Store current resident ID for printing
+  currentResidentId = residentId;
 
-    const map = {
-      resident_id: data.resident_id,
-      resident_code: data.resident_code,
-      full_name: data.full_name,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      sex: data.sex,
-      dob: formatDOB(data.dob),
-      age: (data.age ?? calcAge(data.dob || '')).toString(),
-      civil_status: data.civil_status,
-      educ_attainment: data.educ_attainment,
-      religion: data.religion, 
-      resident_status: data.resident_status,
-      household_number: data.household_number,
-      family_code: data.family_code,
-      full_address: data.full_address,
-    };
-
-    Object.entries(map).forEach(([k,v]) => setFieldAll(modal, k, v));
-
-    const chip = qs(modal, '[data-chip-status]');
-    if (chip){
-      const label = (data.resident_status || '—').toString();
-      chip.textContent = label;
-      chip.className = 'rounded-full text-[10px] px-2 py-0.5 border ' + (label.toLowerCase().includes('permanent')
-        ? 'bg-green-50 text-green-700 border-green-200'
-        : 'bg-amber-50 text-amber-700 border-amber-200');
-    }
-  }
-
-  function animateOpen(root){
-    root.classList.remove('hidden');
-    const overlay = qs(root, '[data-overlay]');
-    const panel = qs(root, 'section[role="dialog"]');
-    requestAnimationFrame(() => {
-      overlay.classList.replace('opacity-0', 'opacity-100');
-      panel.classList.replace('opacity-0', 'opacity-100');
-      panel.classList.replace('translate-y-4', 'translate-y-0');
+  // Fetch resident details
+  fetch(`/secretary_module/resident/${residentId}/detail/`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.message || `HTTP ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Resident data received:', data);
+      if (data.ok && data.resident) {
+        const r = data.resident;
+        
+        // Build display name for header
+        let displayName = '';
+        if (r.first_name || r.last_name) {
+          const parts = [];
+          if (r.first_name) parts.push(r.first_name);
+          if (r.middle_name) parts.push(r.middle_name);
+          if (r.last_name) parts.push(r.last_name);
+          if (r.suffix) parts.push(r.suffix);
+          displayName = parts.join(' ');
+        }
+        
+        // Format DOB
+        let dobFormatted = '—';
+        if (r.dob) {
+          const dob = new Date(r.dob);
+          dobFormatted = `${String(dob.getMonth() + 1).padStart(2, '0')}/${String(dob.getDate()).padStart(2, '0')}/${dob.getFullYear()}`;
+        }
+        
+        // Fill modal fields
+        setField(modal, 'display_name', displayName || '—');
+        setField(modal, 'resident_id', r.resident_id || '—');
+        setField(modal, 'resident_code', r.resident_code || '—');
+        setField(modal, 'first_name', r.first_name || '—');
+        setField(modal, 'middle_name', r.middle_name || '—');
+        setField(modal, 'last_name', r.last_name || '—');
+        setField(modal, 'suffix', r.suffix || '—');
+        setField(modal, 'sex', r.sex || '—');
+        setField(modal, 'phone_number', r.phone_number || '—');
+        setField(modal, 'email', r.email || '—');
+        setField(modal, 'dob', dobFormatted);
+        setField(modal, 'age', r.age || '—');
+        setField(modal, 'civil_status', r.civil_status || '—');
+        setField(modal, 'educational_attainment', r.educational_attainment || '—');
+        setField(modal, 'religion', r.religion || '—');
+        setField(modal, 'occupation', r.occupation || '—');
+        setField(modal, 'nationality', r.nationality || '—');
+        setField(modal, 'employment_status', r.employment_status || '—');
+        setField(modal, 'household_number', r.household_number || '—');
+        setField(modal, 'family_code', r.family_code || '—');
+        setField(modal, 'full_address', r.full_address || '—');
+        setField(modal, 'resident_status', r.resident_status || '—');
+        
+        // Update status chip
+        const chip = modal.querySelector('[data-chip-status]');
+        if (chip) {
+          const status = r.resident_status || '—';
+          chip.textContent = status;
+          chip.className = 'rounded-full text-[10px] px-2 py-0.5 border ' + 
+            (status.toLowerCase().includes('permanent') || status.toLowerCase().includes('active')
+              ? 'bg-green-50 text-green-700 border-green-200'
+              : 'bg-amber-50 text-amber-700 border-amber-200');
+        }
+        
+        // Open modal
+        openModal(modal);
+      } else {
+        console.error('Invalid response:', data);
+        alert(data.message || 'Failed to load resident details');
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
+      alert(`Failed to load resident details: ${error.message}`);
     });
-  }
-  function animateClose(root){
-    const overlay = qs(root, '[data-overlay]');
-    const panel = qs(root, 'section[role="dialog"]');
-    overlay.classList.replace('opacity-100', 'opacity-0');
-    panel.classList.replace('opacity-100', 'opacity-0');
-    panel.classList.replace('translate-y-0', 'translate-y-4');
-    setTimeout(() => { root.classList.add('hidden'); }, 200);
-  }
+}
 
-  let lastFocused = null;
+function setField(modal, field, value) {
+  const elements = modal.querySelectorAll(`[data-field="${field}"]`);
+  elements.forEach(el => {
+    el.textContent = value || '—';
+  });
+}
 
-  function openWithPayload(btn){
-    const modalId = btn.getAttribute('data-modal-target');
-    const modal = document.getElementById(modalId);
-    if(!modal) return;
+function openModal(modal) {
+  modal.classList.remove('hidden');
+  const overlay = modal.querySelector('[data-overlay]');
+  const panel = modal.querySelector('section[role="dialog"]');
+  
+  requestAnimationFrame(() => {
+    overlay.classList.add('opacity-100');
+    panel.classList.add('opacity-100', 'translate-y-0');
+    panel.classList.remove('opacity-0', 'translate-y-4');
+  });
+}
 
-    // parse JSON
-    const payloadRaw = btn.getAttribute('data-payload') || '{}';
-    let payload = safeParse(payloadRaw);
+function closeModal(modal) {
+  const overlay = modal.querySelector('[data-overlay]');
+  const panel = modal.querySelector('section[role="dialog"]');
+  
+  overlay.classList.remove('opacity-100');
+  overlay.classList.add('opacity-0');
+  panel.classList.remove('opacity-100', 'translate-y-0');
+  panel.classList.add('opacity-0', 'translate-y-4');
+  
+  setTimeout(() => {
+    modal.classList.add('hidden');
+  }, 200);
+}
 
-    // fill fallbacks from button data-* (covers demographics if JSON missed them)
-    payload.full_name        = payload.full_name        || btn.getAttribute('data-full-name') || '';
-    payload.sex              = payload.sex              || btn.getAttribute('data-sex') || '';
-    payload.resident_status  = payload.resident_status  || btn.getAttribute('data-status') || '';
-    payload.household_number = payload.household_number || btn.getAttribute('data-household-number') || '';
-    payload.family_code      = payload.family_code      || btn.getAttribute('data-family-code') || '';
-    payload.dob              = payload.dob              || btn.getAttribute('data-dob') || '';
-    payload.age              = payload.age              || btn.getAttribute('data-age') || '';
-    payload.civil_status     = payload.civil_status     || btn.getAttribute('data-civil-status') || '';
-    payload.educ_attainment  = payload.educ_attainment  || btn.getAttribute('data-educ-attainment') || '';
-    payload.religion = payload.religion || btn.getAttribute('data-religion') || '';
-    payload.full_address     = payload.full_address     || btn.getAttribute('data-full-address') || '';
-
-    fillFields(modal, payload);
-
-    lastFocused = document.activeElement;
-    animateOpen(modal);
-
-    function keyHandler(e){ if(e.key === 'Escape') { e.preventDefault(); closeModal(modal); } }
-    function clickHandler(e){
-      const overlay = e.target.closest('[data-overlay]');
-      const closeBtn = e.target.closest('[data-modal-close]');
-      if(overlay || closeBtn){ e.preventDefault(); closeModal(modal); }
+// Close modal handlers
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('residentViewModal');
+  if (!modal) return;
+  
+  // Close buttons
+  modal.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(modal));
+  });
+  
+  // Click outside to close
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.hasAttribute('data-overlay')) {
+      closeModal(modal);
     }
-    modal._keyHandler = keyHandler;
-    modal._clickHandler = clickHandler;
-    modal.addEventListener('keydown', keyHandler);
-    modal.addEventListener('click', clickHandler);
-
-    function closeModal(target){
-      animateClose(target);
-      target.removeEventListener('keydown', keyHandler);
-      target.removeEventListener('click', clickHandler);
-      if(lastFocused) lastFocused.focus();
+  });
+  
+  // ESC key to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal(modal);
     }
-  }
-
-  openers.forEach(btn => btn.addEventListener('click', () => openWithPayload(btn)));
-})();
+  });
+});
 </script>
 {% endblock %}
