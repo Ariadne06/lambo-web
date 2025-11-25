@@ -1836,7 +1836,30 @@ def addchild2(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild3(request):
-    return render(request, 'bhw_module/addchild3.html')
+    # Handle POST data from addchild2
+    context = {}
+    if request.method == 'POST':
+        # Pass all POST data to template context
+        context.update({
+            'child_data': {
+                'child_id': request.POST.get('child_id', ''),
+                'child_name': request.POST.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', ''),
+                'father_name': request.POST.get('father_name', ''),
+                'sex': request.POST.get('sex', ''),
+                'dob': request.POST.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', ''),
+                'time_of_birth': request.POST.get('time_of_birth', ''),
+                'birth_weight': request.POST.get('birth_weight', ''),
+                'birth_height': request.POST.get('birth_height', ''),
+                'place_of_delivery': request.POST.get('place_of_delivery', ''),
+            }
+        })
+    
+    return render(request, 'bhw_module/addchild3.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')

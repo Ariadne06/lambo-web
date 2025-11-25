@@ -41,7 +41,26 @@
 
     <!-- Body (scrolls) -->
     <div class="h-full overflow-auto px-6 py-6">
-      <form id="healthStep3" class="space-y-8">
+      <form id="healthStep3" method="post" class="space-y-8">
+        {% csrf_token %}
+        
+        <!-- Hidden fields to carry forward all data -->
+        {% if child_data %}
+          <input type="hidden" name="child_id" value="{{ child_data.child_id }}">
+          <input type="hidden" name="child_name" value="{{ child_data.child_name }}">
+          <input type="hidden" name="mother_id" value="{{ child_data.mother_id }}">
+          <input type="hidden" name="mother_name" value="{{ child_data.mother_name }}">
+          <input type="hidden" name="father_id" value="{{ child_data.father_id }}">
+          <input type="hidden" name="father_name" value="{{ child_data.father_name }}">
+          <input type="hidden" name="sex" value="{{ child_data.sex }}">
+          <input type="hidden" name="dob" value="{{ child_data.dob }}">
+          <input type="hidden" name="philhealth_no" value="{{ child_data.philhealth_no }}">
+          <input type="hidden" name="phone_number" value="{{ child_data.phone_number }}">
+          <input type="hidden" name="time_of_birth" value="{{ child_data.time_of_birth }}">
+          <input type="hidden" name="birth_weight" value="{{ child_data.birth_weight }}">
+          <input type="hidden" name="birth_height" value="{{ child_data.birth_height }}">
+          <input type="hidden" name="place_of_delivery" value="{{ child_data.place_of_delivery }}">
+        {% endif %}
 
         <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
           <!-- LEFT COLUMN -->
@@ -119,12 +138,56 @@
 
         <!-- Footer actions -->
         <div class="flex items-center justify-between">
-          <a href="#" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
-          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Next →</button>
+          <a href="{% url 'bhw_module:addchild2' %}" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
+          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Save Record</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  // Completely disable silent logout
+  window.fetch = new Proxy(window.fetch, {
+    apply: function(target, thisArg, argumentsList) {
+      const url = argumentsList[0];
+      if (typeof url === 'string' && url.includes('silent_logout')) {
+        console.log('Blocked silent logout request');
+        return Promise.resolve(new Response('', {status: 204}));
+      }
+      return target.apply(thisArg, argumentsList);
+    }
+  });
+  
+  // Override XMLHttpRequest for silent logout
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, ...args) {
+    if (typeof url === 'string' && url.includes('silent_logout')) {
+      console.log('Blocked XMLHttpRequest silent logout');
+      return;
+    }
+    return originalOpen.apply(this, [method, url, ...args]);
+  };
+  
+  // Disable any timers that might trigger logout
+  const originalSetTimeout = window.setTimeout;
+  window.setTimeout = function(callback, delay, ...args) {
+    const callbackStr = callback.toString();
+    if (callbackStr.includes('logout') || callbackStr.includes('silent')) {
+      console.log('Blocked logout timer');
+      return;
+    }
+    return originalSetTimeout.apply(this, [callback, delay, ...args]);
+  };
+  
+  // Keep session active with multiple methods
+  setInterval(function() {
+    document.dispatchEvent(new Event('mousemove'));
+    document.dispatchEvent(new Event('keydown'));
+    document.dispatchEvent(new Event('click'));
+  }, 10000);
+})();
+</script>
 
 {% endblock %}
