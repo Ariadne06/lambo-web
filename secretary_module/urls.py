@@ -6,6 +6,7 @@ app_name = 'secretary_module'
 urlpatterns = [
     path('', views.secretary_dashboard, name='secretary_dashboard'),
     path('resident_list/', views.resident_list, name="resident_list"),
+    path('resident/<int:resident_id>/detail/', views.resident_detail_json, name='resident_detail_json'),
     path('household_list/', views.household_list, name="household_list"),
     path('sec_householdView/', views.sec_householdView, name="sec_householdView"),
     path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),
@@ -55,4 +56,11 @@ urlpatterns = [
     path('applications/renewal/', views.create_renewal_business_clearance, name='create_renewal_business_clearance'),
     path('applications/registration/', views.create_registration_business_clearance, name='create_registration_business_clearance'),
     path('applications/closure/', views.create_closure_business_clearance, name='create_closure_business_clearance'),
+    
+    # Reports page
+    path('reports/', views.reports, name='reports'),
+    
+    # PDF Generation endpoints
+    path('resident_list/pdf/', views.generate_resident_list_pdf, name='resident_list_pdf'),
+    path('resident/<int:resident_id>/pdf/', views.generate_resident_detail_pdf, name='resident_detail_pdf'),
 ]
