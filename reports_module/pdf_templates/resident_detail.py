@@ -9,9 +9,36 @@ from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Frame, PageTemplate
 )
+from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from io import BytesIO
 from datetime import datetime
+from .base import draw_barangay_header, get_standard_styles
+
+
+class ResidentDetailCanvas(canvas.Canvas):
+    """Custom canvas that draws the barangay header on each page."""
+    
+    def __init__(self, *args, **kwargs):
+        canvas.Canvas.__init__(self, *args, **kwargs)
+        self._saved_page_states = []
+    
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+    
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations()
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+    
+    def draw_page_decorations(self):
+        """Draw header on each page."""
+        width, height = A4
+        draw_barangay_header(self, width, height, top_margin=0.75*inch)
 
 
 def generate_resident_detail_pdf(resident_data):
@@ -31,14 +58,14 @@ def generate_resident_detail_pdf(resident_data):
         pagesize=A4,
         rightMargin=0.75*inch,
         leftMargin=0.75*inch,
-        topMargin=1*inch,
+        topMargin=2.5*inch,  # Increased to accommodate header
         bottomMargin=1*inch
     )
     
     elements = []
-    styles = getSampleStyleSheet()
+    styles = get_standard_styles()
     
-    # Custom styles
+    # Custom styles using Times-Roman
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -46,7 +73,7 @@ def generate_resident_detail_pdf(resident_data):
         textColor=colors.HexColor('#991B1B'),
         spaceAfter=8,
         alignment=TA_CENTER,
-        fontName='Helvetica-Bold'
+        fontName='Times-Bold'
     )
     
     subtitle_style = ParagraphStyle(
@@ -56,7 +83,7 @@ def generate_resident_detail_pdf(resident_data):
         textColor=colors.HexColor('#4B5563'),
         spaceAfter=6,
         alignment=TA_CENTER,
-        fontName='Helvetica'
+        fontName='Times-Roman'
     )
     
     section_header_style = ParagraphStyle(
@@ -64,10 +91,9 @@ def generate_resident_detail_pdf(resident_data):
         parent=styles['Heading2'],
         fontSize=13,
         textColor=colors.white,
-        spaceAfter=8,
         spaceBefore=12,
         alignment=TA_LEFT,
-        fontName='Helvetica-Bold',
+        fontName='Times-Bold',
         backColor=colors.HexColor('#991B1B'),
         leftIndent=10,
         rightIndent=10,
@@ -79,7 +105,7 @@ def generate_resident_detail_pdf(resident_data):
         parent=styles['Normal'],
         fontSize=9,
         textColor=colors.HexColor('#6B7280'),
-        fontName='Helvetica-Bold',
+        fontName='Times-Bold',
         spaceAfter=2
     )
     
@@ -88,7 +114,7 @@ def generate_resident_detail_pdf(resident_data):
         parent=styles['Normal'],
         fontSize=10,
         textColor=colors.HexColor('#111827'),
-        fontName='Helvetica',
+        fontName='Times-Roman',
         spaceAfter=8
     )
     
@@ -98,7 +124,7 @@ def generate_resident_detail_pdf(resident_data):
         fontSize=8,
         textColor=colors.HexColor('#6B7280'),
         alignment=TA_RIGHT,
-        fontName='Helvetica'
+        fontName='Times-Roman'
     )
     
     # Header
@@ -122,8 +148,8 @@ def generate_resident_detail_pdf(resident_data):
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FEF2F2')),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#991B1B')),
         ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#111827')),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (0, -1), 'Times-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Times-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 11),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -207,7 +233,7 @@ def generate_resident_detail_pdf(resident_data):
         fontSize=8,
         textColor=colors.HexColor('#6B7280'),
         alignment=TA_CENTER,
-        fontName='Helvetica-Oblique'
+        fontName='Times-Italic'
     )
     
     elements.append(Paragraph(
@@ -231,8 +257,9 @@ def generate_resident_detail_pdf(resident_data):
         
         canvas.restoreState()
     
-    # Build PDF
-    doc.build(elements, onFirstPage=add_page_footer, onLaterPages=add_page_footer)
+    # Build PDF with custom canvas
+    doc.build(elements, onFirstPage=add_page_footer, onLaterPages=add_page_footer, 
+              canvasmaker=ResidentDetailCanvas)
     
     buffer.seek(0)
     return buffer
@@ -255,16 +282,16 @@ def _get_data_table_style():
         ('BACKGROUND', (2, 0), (2, -1), colors.HexColor('#F3F4F6')),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#374151')),
         ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#374151')),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (0, -1), 'Times-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Times-Bold'),
         ('FONTSIZE', (0, 0), (0, -1), 9),
         ('FONTSIZE', (2, 0), (2, -1), 9),
         
         # Value cells (column 1 and 3)
         ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#111827')),
         ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor('#111827')),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTNAME', (3, 0), (3, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Times-Roman'),
+        ('FONTNAME', (3, 0), (3, -1), 'Times-Roman'),
         ('FONTSIZE', (1, 0), (1, -1), 10),
         ('FONTSIZE', (3, 0), (3, -1), 10),
         
