@@ -437,12 +437,9 @@ def resident_detail_json(request, resident_id: int):
         else:
             quarter_id = None
         
-        print(f"[DEBUG] Fetching resident_id: {resident_id}, quarter_id: {quarter_id}")
         resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
-        print(f"[DEBUG] Resident data: {resident}")
         
         if not resident:
-            print(f"[DEBUG] Resident {resident_id} not found")
             return JsonResponse({"ok": False, "message": "Resident not found"}, status=404)
         
         # Convert date to string for JSON serialization
@@ -450,7 +447,6 @@ def resident_detail_json(request, resident_id: int):
             from datetime import date
             if isinstance(resident['dob'], date):
                 resident['dob'] = resident['dob'].isoformat()
-                print(f"[DEBUG] Converted DOB to: {resident['dob']}")
         
         # Convert businesses JSONB to list if needed
         if resident.get('businesses') and isinstance(resident['businesses'], str):
@@ -460,7 +456,6 @@ def resident_detail_json(request, resident_id: int):
             except:
                 resident['businesses'] = []
         
-        print(f"[DEBUG] Returning success response")
         return JsonResponse({"ok": True, "resident": resident})
     except Exception as e:
         import traceback
