@@ -187,12 +187,19 @@ def resident_list(request):
     # Support multiple status and sitio filters
     status_id_list = request.GET.getlist("status_id")
     sitio_id_list = request.GET.getlist("sitio_id")
+    quarter_id = request.GET.get("quarter_id") or None
     page = int(request.GET.get("page") or 1)
     page_size = int(request.GET.get("page_size") or 50)
 
     # Convert to integers and filter out invalid values
     status_id_list = [int(s) for s in status_id_list if s and s.isdigit()]
     sitio_id_list = [int(s) for s in sitio_id_list if s and s.isdigit()]
+    
+    # Parse quarter_id
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
     
     # Ensure page is at least 1
     page = max(1, page)
@@ -216,7 +223,8 @@ def resident_list(request):
                     p_sitio_id=sitio_id,
                     p_query=q,
                     p_limit=None,
-                    p_offset=0
+                    p_offset=0,
+                    p_quarter_id=quarter_id
                 )
                 all_residents.extend(residents_batch)
         # If we have multiple sitios but single status
@@ -228,7 +236,8 @@ def resident_list(request):
                     p_sitio_id=sitio_id,
                     p_query=q,
                     p_limit=None,
-                    p_offset=0
+                    p_offset=0,
+                    p_quarter_id=quarter_id
                 )
                 all_residents.extend(residents_batch)
         
@@ -261,7 +270,8 @@ def resident_list(request):
         total = ResidentList.sp_get_all_residents_count(
             p_status_id=status_id,
             p_sitio_id=sitio_id,
-            p_query=q
+            p_query=q,
+            p_quarter_id=quarter_id
         )
 
         # Get paginated residents
@@ -270,7 +280,8 @@ def resident_list(request):
             p_sitio_id=sitio_id,
             p_query=q,
             p_limit=page_size,
-            p_offset=offset
+            p_offset=offset,
+            p_quarter_id=quarter_id
         )
 
         # Calculate pagination info
@@ -283,6 +294,9 @@ def resident_list(request):
         
         cur.execute("SELECT sitio_id, sitio_name FROM Sitio ORDER BY sitio_name;")
         sitio_options = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    # Get quarters for dropdown
+    quarters = ResidentList.sp_get_all_quarters()
 
     # Build URL helper
     def build_url(**overrides):
@@ -291,6 +305,14 @@ def resident_list(request):
             "page": page,
             "page_size": page_size,
         }
+        
+        # Handle quarter_id
+        if "quarter_id" in overrides:
+            qid_override = overrides.pop("quarter_id")
+            if qid_override and qid_override != "":
+                params["quarter_id"] = qid_override
+        elif quarter_id:
+            params["quarter_id"] = quarter_id
         
         # Handle status_id - default to current list unless overridden
         if "status_id" in overrides:
@@ -388,6 +410,8 @@ def resident_list(request):
         "next_url": next_url,
         "page_items": page_items,
         "q": q or "",
+        "quarter_id": quarter_id,
+        "quarters": quarters,
         "status_id": status_id,
         "sitio_id": sitio_id,
         "status_options": status_options,
@@ -407,8 +431,14 @@ def resident_list(request):
 def resident_detail_json(request, resident_id: int):
     """AJAX endpoint to get specific resident details"""
     try:
-        print(f"[DEBUG] Fetching resident_id: {resident_id}")
-        resident = ResidentList.sp_get_specific_resident(resident_id)
+        quarter_id = request.GET.get('quarter_id') or None
+        if quarter_id and quarter_id.isdigit():
+            quarter_id = int(quarter_id)
+        else:
+            quarter_id = None
+        
+        print(f"[DEBUG] Fetching resident_id: {resident_id}, quarter_id: {quarter_id}")
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
         print(f"[DEBUG] Resident data: {resident}")
         
         if not resident:
@@ -421,6 +451,14 @@ def resident_detail_json(request, resident_id: int):
             if isinstance(resident['dob'], date):
                 resident['dob'] = resident['dob'].isoformat()
                 print(f"[DEBUG] Converted DOB to: {resident['dob']}")
+        
+        # Convert businesses JSONB to list if needed
+        if resident.get('businesses') and isinstance(resident['businesses'], str):
+            import json
+            try:
+                resident['businesses'] = json.loads(resident['businesses'])
+            except:
+                resident['businesses'] = []
         
         print(f"[DEBUG] Returning success response")
         return JsonResponse({"ok": True, "resident": resident})
@@ -2961,16 +2999,22 @@ def reports(request):
 @require_GET
 def generate_resident_list_pdf(request):
     """Generate PDF report for resident list with applied filters"""
-    from reports_module.pdf_templates.resident_list_filtered import generate_resident_list_pdf
+    from reports_module.pdf_templates.resident.resident_list_filtered import generate_resident_list_pdf
     
     # Get filters from request
     q = request.GET.get('q', '').strip()
     status_id_list = request.GET.getlist('status_id')
     sitio_id_list = request.GET.getlist('sitio_id')
+    quarter_id = request.GET.get('quarter_id') or None
     
     # Convert to integers
     status_id_list = [int(sid) for sid in status_id_list if sid.isdigit()]
     sitio_id_list = [int(sid) for sid in sitio_id_list if sid.isdigit()]
+    
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
     
     try:
         # If multiple filters selected, fetch and merge results
@@ -2986,7 +3030,8 @@ def generate_resident_list_pdf(request):
                         p_sitio_id=sitio_id,
                         p_query=q or None,
                         p_limit=None,
-                        p_offset=0
+                        p_offset=0,
+                        p_quarter_id=quarter_id
                     )
                     all_residents.extend(residents_batch)
             # If we have multiple sitios but single status
@@ -2998,7 +3043,8 @@ def generate_resident_list_pdf(request):
                         p_sitio_id=sitio_id,
                         p_query=q or None,
                         p_limit=None,
-                        p_offset=0
+                        p_offset=0,
+                        p_quarter_id=quarter_id
                     )
                     all_residents.extend(residents_batch)
             
@@ -3022,18 +3068,30 @@ def generate_resident_list_pdf(request):
                 p_sitio_id=sitio_id,
                 p_query=q or None,
                 p_limit=None,  # Get all
-                p_offset=0
+                p_offset=0,
+                p_quarter_id=quarter_id
             )
             
             # Get total count
             total_count = ResidentList.sp_get_all_residents_count(
                 p_status_id=status_id,
                 p_sitio_id=sitio_id,
-                p_query=q or None
+                p_query=q or None,
+                p_quarter_id=quarter_id
             )
         
         # Build filter description with actual names
         filters_applied = {}
+        if quarter_id:
+            # Get quarter display label (simplified format: Q# YYYY)
+            quarters = ResidentList.sp_get_all_quarters()
+            quarter = next((q for q in quarters if q['quarter_id'] == quarter_id), None)
+            if quarter:
+                filters_applied['quarter'] = f"Q{quarter['quarter_number']} {quarter['year']}"
+            else:
+                filters_applied['quarter'] = f'Quarter ID: {quarter_id}'
+        else:
+            filters_applied['quarter'] = 'Current Quarter'
         if q:
             filters_applied['search_query'] = q
         if status_id_list:
@@ -3075,11 +3133,17 @@ def generate_resident_list_pdf(request):
 @require_GET
 def generate_resident_detail_pdf(request, resident_id: int):
     """Generate PDF report for specific resident details"""
-    from reports_module.pdf_templates.resident_detail import generate_resident_detail_pdf
+    from reports_module.pdf_templates.resident.resident_detail import generate_resident_detail_pdf
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
     
     try:
         # Fetch resident details using the same function as the modal
-        resident = ResidentList.sp_get_specific_resident(resident_id)
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
         
         if not resident:
             return HttpResponse("Resident not found", status=404)

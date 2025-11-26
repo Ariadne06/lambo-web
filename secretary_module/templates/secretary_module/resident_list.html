@@ -17,6 +17,9 @@
         </svg>
       </div>
       {# preserve multi-selected filters as hidden inputs #}
+      {% if quarter_id %}
+        <input type="hidden" name="quarter_id" value="{{ quarter_id }}" />
+      {% endif %}
       {% for s in status_id_list %}
         <input type="hidden" name="status_id" value="{{ s }}" />
       {% endfor %}
@@ -48,6 +51,18 @@
         <form method="get" class="space-y-3">
           <input type="hidden" name="q" value="{{ q }}" />
           <input type="hidden" name="page_size" value="{{ page_size }}" />
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Quarter</label>
+            <select name="quarter_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600">
+              <option value="">Current Quarter (Live Data)</option>
+              {% for q_item in quarters %}
+                <option value="{{ q_item.quarter_id }}" {% if quarter_id == q_item.quarter_id %}selected{% endif %}>
+                  Q{{ q_item.quarter_number }} {{ q_item.year }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
           
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Resident Status</label>
@@ -110,13 +125,36 @@
 
   <!-- Table -->
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <!-- Generate PDF Button -->
+    {% if total > 0 %}
+    <div class="mb-4 flex justify-end">
+      <form method="get" action="{% url 'secretary_module:resident_list_pdf' %}" target="_blank">
+        <input type="hidden" name="q" value="{{ q }}" />
+        {% if quarter_id %}
+          <input type="hidden" name="quarter_id" value="{{ quarter_id }}" />
+        {% endif %}
+        {% for s in status_id_list %}
+          <input type="hidden" name="status_id" value="{{ s }}" />
+        {% endfor %}
+        {% for st in sitio_id_list %}
+          <input type="hidden" name="sitio_id" value="{{ st }}" />
+        {% endfor %}
+        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Generate PDF
+        </button>
+      </form>
+    </div>
+    {% endif %}
+    
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
         <thead>
           <tr class="bg-gray-50 text-gray-700 font-medium">
-            <th class="px-4 py-2 border border-gray-200 text-left">Code</th>
+            <th class="px-4 py-2 border border-gray-200 text-left whitespace-nowrap">Resident Code</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Full Name</th>
-            <th class="px-4 py-2 border border-gray-200 text-left">Date of Birth</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Address</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Phone</th>
             <th class="px-4 py-2 border border-gray-200 text-left">Email</th>
@@ -127,9 +165,8 @@
         <tbody class="divide-y divide-gray-100">
           {% for r in residents %}
           <tr class="hover:bg-gray-50/60">
-            <td class="px-4 py-2 border border-gray-200">{{ r.resident_code|default:'—' }}</td>
+            <td class="px-4 py-2 border border-gray-200 whitespace-nowrap">{{ r.resident_code|default:'—' }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.full_name }}</td>
-            <td class="px-4 py-2 border border-gray-200">{{ r.dob|date:"m/d/Y"|default:'—' }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.full_address|default:'—' }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.phone_number|default:'—' }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.email|default:'—' }}</td>
@@ -150,7 +187,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="px-4 py-8 text-center text-gray-500">No residents found.</td>
+            <td colspan="7" class="px-4 py-8 text-center text-gray-500">No residents found.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -163,42 +200,23 @@
       <div>
         Page {{ page }} of {{ total_pages }} — {{ total }} total
       </div>
-      <div class="flex items-center gap-3">
-        <nav class="flex items-center gap-1">
-          {% if has_prev %}
-            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>
+      <nav class="flex items-center gap-1">
+        {% if has_prev %}
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>
+        {% endif %}
+        {% for it in page_items %}
+          {% if it.ellipsis %}
+            <span class="px-2">…</span>
+          {% elif it.current %}
+            <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.num }}</span>
+          {% else %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.num }}</a>
           {% endif %}
-          {% for it in page_items %}
-            {% if it.ellipsis %}
-              <span class="px-2">…</span>
-            {% elif it.current %}
-              <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.num }}</span>
-            {% else %}
-              <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.num }}</a>
-            {% endif %}
-          {% endfor %}
-          {% if has_next %}
-            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>
-          {% endif %}
-        </nav>
-        
-        <!-- Generate PDF Button -->
-        <form method="get" action="{% url 'secretary_module:resident_list_pdf' %}" target="_blank">
-          <input type="hidden" name="q" value="{{ q }}" />
-          {% for s in status_id_list %}
-            <input type="hidden" name="status_id" value="{{ s }}" />
-          {% endfor %}
-          {% for st in sitio_id_list %}
-            <input type="hidden" name="sitio_id" value="{{ st }}" />
-          {% endfor %}
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Generate PDF
-          </button>
-        </form>
-      </div>
+        {% endfor %}
+        {% if has_next %}
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>
+        {% endif %}
+      </nav>
     </div>
     {% endif %}
   </div>
@@ -225,10 +243,7 @@
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
               </svg>
-              <span class="font-medium">ID:</span>
-              <span data-field="resident_id" class="font-mono">—</span>
-              <span class="text-gray-400">•</span>
-              <span class="font-medium">Code:</span>
+              <span class="font-medium">Resident Code:</span>
               <span data-field="resident_code" class="font-mono">—</span>
             </div>
           </div>
@@ -375,25 +390,46 @@
             </div>
           </div>
 
+          <!-- Business Ownership Card -->
+          <div id="businessCard" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style="display: none;">
+            <div class="px-5 py-3 bg-gradient-to-r from-yellow-50 to-amber-50 border-b border-yellow-100">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Business Ownership</h3>
+            </div>
+            <div class="p-5">
+              <div id="businessList" class="space-y-3">
+                <!-- Business items will be inserted here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100">
+              <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Actions</h3>
+            </div>
+            <div class="p-5">
+              <button type="button" id="printResidentBtn" 
+                      class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-white text-sm font-semibold shadow hover:bg-green-700 transition-all">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Generate PDF</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <!-- Footer -->
       <footer class="px-6 py-4 border-t border-gray-200 bg-white sticky bottom-0">
-        <div class="flex items-center justify-between">
-          <button type="button" id="printResidentBtn" 
-                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white text-sm font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Print Details
-          </button>
+        <div class="flex items-center justify-end gap-3">
           <button type="button" data-close-modal 
-                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-6 py-2.5 text-white text-sm font-semibold shadow-lg hover:from-red-700 hover:to-rose-700 transition-all">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-white text-sm font-semibold shadow hover:bg-red-700 transition-all">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Close
+            <span>Close</span>
           </button>
         </div>
       </footer>
@@ -466,10 +502,10 @@ function viewResident(residentId) {
         let displayName = '';
         if (r.first_name || r.last_name) {
           const parts = [];
-          if (r.first_name) parts.push(r.first_name);
-          if (r.middle_name) parts.push(r.middle_name);
-          if (r.last_name) parts.push(r.last_name);
-          if (r.suffix) parts.push(r.suffix);
+          if (r.first_name && r.first_name !== 'None') parts.push(r.first_name);
+          if (r.middle_name && r.middle_name !== 'None') parts.push(r.middle_name);
+          if (r.last_name && r.last_name !== 'None') parts.push(r.last_name);
+          if (r.suffix && r.suffix !== 'None') parts.push(r.suffix);
           displayName = parts.join(' ');
         }
         
@@ -503,6 +539,49 @@ function viewResident(residentId) {
         setField(modal, 'family_code', r.family_code || '—');
         setField(modal, 'full_address', r.full_address || '—');
         setField(modal, 'resident_status', r.resident_status || '—');
+        
+        // Handle businesses
+        const businessCard = modal.querySelector('#businessCard');
+        const businessList = modal.querySelector('#businessList');
+        if (businessList && r.businesses && r.businesses.length > 0) {
+          businessList.innerHTML = '';
+          r.businesses.forEach((biz, idx) => {
+            const bizItem = document.createElement('div');
+            bizItem.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+            bizItem.innerHTML = `
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <dt class="text-xs font-semibold text-gray-500 uppercase mb-1">Business Name</dt>
+                  <dd class="text-sm font-medium text-gray-900">${biz.business_name || '—'}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs font-semibold text-gray-500 uppercase mb-1">Category</dt>
+                  <dd class="text-sm font-medium text-gray-900">${biz.clearance_category_name || '—'}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs font-semibold text-gray-500 uppercase mb-1">Status</dt>
+                  <dd class="text-sm font-medium text-gray-900">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      (biz.business_status_name || '').toLowerCase().includes('active') 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }">
+                      ${biz.business_status_name || '—'}
+                    </span>
+                  </dd>
+                </div>
+                <div class="md:col-span-2">
+                  <dt class="text-xs font-semibold text-gray-500 uppercase mb-1">Address</dt>
+                  <dd class="text-sm font-medium text-gray-900">${biz.full_address || '—'}</dd>
+                </div>
+              </div>
+            `;
+            businessList.appendChild(bizItem);
+          });
+          businessCard.style.display = 'block';
+        } else {
+          if (businessCard) businessCard.style.display = 'none';
+        }
         
         // Update status chip
         const chip = modal.querySelector('[data-chip-status]');
