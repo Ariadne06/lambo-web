@@ -1826,12 +1826,60 @@ def childList(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild1(request):
-    return render(request, 'bhw_module/addchild1.html')
+    context = {}
+    if request.method == 'POST':
+        # Handle back navigation from addchild2 - pass POST data to template
+        context.update({
+            'child_data': {
+                'child_id': request.POST.get('child_id', ''),
+                'child_name': request.POST.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', ''),
+                'father_name': request.POST.get('father_name', ''),
+                'sex': request.POST.get('sex', ''),
+                'dob': request.POST.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', ''),
+            }
+        })
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild1.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild2(request):
-    return render(request, 'bhw_module/addchild2.html')
+    context = {}
+    if request.method == 'POST':
+        # Handle POST data from addchild1 or back navigation from addchild3
+        context.update({
+            'child_data': {
+                'child_id': request.POST.get('child_id', ''),
+                'child_name': request.POST.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', ''),
+                'father_name': request.POST.get('father_name', ''),
+                'sex': request.POST.get('sex', ''),
+                'dob': request.POST.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', ''),
+                'time_of_birth': request.POST.get('time_of_birth', ''),
+                'birth_weight': request.POST.get('birth_weight', ''),
+                'birth_height': request.POST.get('birth_height', ''),
+                'place_of_delivery': request.POST.get('place_of_delivery', ''),
+            }
+        })
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild2.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -1858,13 +1906,109 @@ def addchild3(request):
                 'place_of_delivery': request.POST.get('place_of_delivery', ''),
             }
         })
+        
+    # Handle final form submission (check for form submit button or required fields)
+    if request.method == 'POST' and (request.POST.get('address_landmark') is not None or 'submit' in request.POST):
+        try:
+            # Get and validate data
+            child_id = int(request.POST.get('child_id', 0))
+            time_of_birth = request.POST.get('time_of_birth', '').strip() or None
+            
+            # Convert numeric fields
+            birth_weight_str = request.POST.get('birth_weight', '').strip()
+            birth_weight = float(birth_weight_str) if birth_weight_str else None
+            
+            birth_height_str = request.POST.get('birth_height', '').strip()
+            birth_height = float(birth_height_str) if birth_height_str else None
+            
+            place_of_delivery = request.POST.get('place_of_delivery', '').strip() or None
+            address_landmark = request.POST.get('address_landmark', '').strip() or None
+            
+            # Convert TT status to integer
+            tt_status_str = request.POST.get('tt_status_mother', '').strip()
+            tt_status_mother = int(tt_status_str) if tt_status_str else None
+            
+            # Convert date fields
+            tt_status_date_str = request.POST.get('tt_status_date', '').strip()
+            tt_status_date = tt_status_date_str if tt_status_date_str else None
+            
+            # Convert boolean field
+            newborn_screening_str = request.POST.get('newborn_screening', '').strip()
+            newborn_screening_status = newborn_screening_str == 'true' if newborn_screening_str else None
+            
+            # Convert screening date
+            screening_date_str = request.POST.get('newborn_screening_date', '').strip()
+            newborn_screening_status_date = screening_date_str if screening_date_str else None
+            
+            # Convert feeding method ID
+            feeding_method_str = request.POST.get('feeding_method_id', '').strip()
+            feeding_method_id = int(feeding_method_str) if feeding_method_str else None
+            
+            pid = int(request.session.get('personnel_id') or 0)
+            
+            # Validate required fields
+            if not child_id:
+                raise ValueError("Child ID is required")
+            if not pid:
+                raise ValueError("Personnel ID is required")
+            if not address_landmark:
+                raise ValueError("Address with Landmark is required")
+            
+            result = Child.sp_insert_child_health_record(
+                child_id=child_id,
+                time_of_birth=time_of_birth,
+                birth_weight=birth_weight,
+                birth_height=birth_height,
+                place_of_delivery=place_of_delivery,
+                address_landmark=address_landmark,
+                tt_status_mother=tt_status_mother,
+                tt_status_date=tt_status_date,
+                newborn_screening_status=newborn_screening_status,
+                newborn_screening_date=newborn_screening_status_date,
+                feeding_method=feeding_method_id,
+                pid=pid,
+            )
+            msg = coerce_message(result, "Child Record successfully added.")
+            set_flash(request, msg, 'success')
+            return redirect('bhw_module:childList')
+        except ValueError as e:
+            set_flash(request, str(e), "error")
+        except Exception as e:
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
     
-    return render(request, 'bhw_module/addchild3.html', context)
+    # Get flash messages
+    flash = get_flash(request)
+    
+    return render(request, 'bhw_module/addchild3.html', {
+        **context,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def childView(request):
-    return render(request, 'bhw_module/childView.html')
+    
+    if request.method == 'POST':
+        child_health_id = request.POST.get('child_health_id') or request.GET.get('child_health_id')
+
+        try:
+            result = Child.sp_view_specific_child_health_record(child_health_id)
+            
+            if not result:
+                set_flash(request, "Child Record not found.", "error")
+                return redirect('bhw_module:childList')
+        except Exception as e:
+            set_flash(request, _clean_db_error(e), "error")
+            return redirect('bhw_module:childList')
+        flash = get_flash(request)
+        
+    return render(request, 'bhw_module/childView.html', {
+        "results": result,
+        "message": flash['message'],
+        "message_level": flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
