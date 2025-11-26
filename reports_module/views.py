@@ -10,10 +10,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime
 
-from .pdf_templates.resident_statistics import ResidentStatisticsReport
-from .pdf_templates.clearance_applications import ClearanceApplicationsReport
-from .pdf_templates.revenue_report import RevenueReport
-from .pdf_templates.resident_list import ResidentListReport
+from .pdf_templates.resident.resident_statistics import ResidentStatisticsReport
+from .pdf_templates.business.clearance_applications import ClearanceApplicationsReport
+from .pdf_templates.financial.revenue_report import RevenueReport
+from .pdf_templates.resident.resident_list import ResidentListReport
 
 
 class ReportTestView(View):
