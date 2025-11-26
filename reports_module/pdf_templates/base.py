@@ -14,6 +14,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from io import BytesIO
 from datetime import datetime
+import math
+import os
 
 
 def get_standard_styles():
@@ -109,9 +111,41 @@ def get_standard_table_style():
     ])
 
 
+def draw_watermark(canvas, width, height, text="OFFICIAL DOCUMENT"):
+    """
+    Draw a diagonal watermark across the page.
+    
+    Args:
+        canvas: ReportLab canvas object
+        width: Page width
+        height: Page height
+        text: Watermark text (default: "OFFICIAL DOCUMENT")
+    """
+    canvas.saveState()
+    
+    # Set transparency (0.1 = very light, 1.0 = fully opaque)
+    canvas.setFillColorRGB(0.9, 0.9, 0.9, alpha=0.3)
+    
+    # Set font
+    canvas.setFont('Times-Bold', 60)
+    
+    # Calculate diagonal angle
+    angle = math.atan2(height, width) * 180 / math.pi
+    
+    # Position watermark in center
+    canvas.translate(width / 2, height / 2)
+    canvas.rotate(angle)
+    
+    # Draw centered text
+    text_width = canvas.stringWidth(text, 'Times-Bold', 60)
+    canvas.drawString(-text_width / 2, 0, text)
+    
+    canvas.restoreState()
+
+
 def draw_barangay_header(canvas, width, height, top_margin=0.75*inch):
     """
-    Draw the standard Barangay Cansaga header on a PDF canvas.
+    Draw the standard Barangay Cansaga header on a PDF canvas with logo.
     
     Args:
         canvas: ReportLab canvas object
@@ -126,6 +160,21 @@ def draw_barangay_header(canvas, width, height, top_margin=0.75*inch):
     
     # Calculate starting Y position
     y_pos = height - top_margin
+    
+    # Draw logo on the left side
+    logo_path = os.path.join('static', 'images', 'brgylogo.jpg')
+    if os.path.exists(logo_path):
+        try:
+            # Position logo on the left side, moved right and enlarged
+            logo_size = 1.0*inch  # Logo size (enlarged from 0.75)
+            logo_x = 1.25*inch  # Moved right from 0.75
+            logo_y = y_pos - logo_size + 0.15*inch  # Align with header text
+            canvas.drawImage(logo_path, logo_x, logo_y, 
+                           width=logo_size, height=logo_size, 
+                           preserveAspectRatio=True, mask='auto')
+        except Exception as e:
+            # If logo fails to load, continue without it
+            pass
     
     # Header text - all centered, font size 12, Times-Roman
     canvas.setFont('Times-Roman', 12)
@@ -152,10 +201,10 @@ def draw_barangay_header(canvas, width, height, top_margin=0.75*inch):
     canvas.drawCentredString(width / 2, y_pos, 'Tel. #344 – 3092')
     y_pos -= 20  # Extra space before the line
     
-    # Horizontal line
+    # Horizontal line from margin to margin (0.5 inch on each side)
     canvas.setStrokeColor(colors.black)
     canvas.setLineWidth(1)
-    canvas.line(0.75*inch, y_pos, width - 0.75*inch, y_pos)
+    canvas.line(0.5*inch, y_pos, width - 0.5*inch, y_pos)
     
     canvas.restoreState()
     

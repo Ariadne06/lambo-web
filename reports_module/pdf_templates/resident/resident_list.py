@@ -9,8 +9,8 @@ from reportlab.platypus import TableStyle
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 from datetime import datetime
-from .base import BasePDFGenerator
-from ..utils.database_helpers import get_resident_list_report
+from ..base import BasePDFGenerator
+from ...utils.database_helpers import get_resident_list_report
 
 
 class ResidentListReport(BasePDFGenerator):
