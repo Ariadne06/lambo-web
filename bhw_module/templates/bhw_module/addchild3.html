@@ -16,9 +16,8 @@
     .pill{height:1.5rem;display:inline-flex;align-items:center;border-radius:9999px;padding:0 .6rem;font-weight:700}
   </style>
 
-  <!-- Card (height capped) -->
-  <div class="relative mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden
-              max-h-[calc(100vh-6rem)]">
+  <!-- Card -->
+  <div class="relative mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
 
     <!-- Accent rail -->
     <div class="absolute left-0 top-0 h-full w-1 bg-red-600 rounded-l-2xl"></div>
@@ -35,13 +34,22 @@
           </div>
           <p class="mt-1 text-sm text-gray-500">Step 3 of 3 • Final health details</p>
         </div>
-
       </div>
+      
+      <!-- Flash message -->
+      {% if message %}
+        <div class="mt-4 px-4 py-3 rounded border
+            {% if message_level == 'success' %}bg-green-100 text-green-700 border-green-400
+            {% elif message_level == 'error' %}bg-red-100 text-red-700 border-red-400
+            {% else %}bg-gray-200 text-gray-800 border-gray-400{% endif %}">
+          {{ message }}
+        </div>
+      {% endif %}
     </div>
 
-    <!-- Body (scrolls) -->
-    <div class="h-full overflow-auto px-6 py-6">
-      <form id="healthStep3" method="post" class="space-y-8">
+    <!-- Body -->
+    <div class="px-6 py-6">
+      <form id="healthStep3" method="post" action="{% url 'bhw_module:addchild3' %}" class="space-y-8">
         {% csrf_token %}
         
         <!-- Hidden fields to carry forward all data -->
@@ -68,35 +76,50 @@
             <p class="mb-4 text-sm font-semibold text-gray-900">Child Health Record</p>
 
             <div class="space-y-4">
+              <!-- Address with Landmark -->
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">Address with Landmark</label>
+                <input type="text" name="address_landmark" id="address_landmark" placeholder="Input Address with Landmark" required
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+
               <!-- TT Status of Mother -->
               <div>
                 <label class="block text-sm text-gray-600 mb-1">TT Status of Mother</label>
-                <input type="text" placeholder="Input Status"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <select name="tt_status_mother" id="tt_status_mother" required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <option value="">Select TT Status</option>
+                  <option value="1">Tetanus Toxoid 1</option>
+                  <option value="2">Tetanus Toxoid 2</option>
+                  <option value="3">Tetanus Toxoid 3</option>
+                  <option value="4">Tetanus Toxoid 4</option>
+                  <option value="5">Tetanus Toxoid 5</option>
+                </select>
               </div>
 
               <!-- Date TT status is assessed -->
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Date TT Status is Assessed</label>
-                <input type="date"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <input type="date" name="tt_status_date" id="tt_status_date" disabled
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400
+                              focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
 
               <!-- Newborn screening -->
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Newborn Screening Status</label>
-                <select id="screenStatus"
+                <select id="screenStatus" name="newborn_screening" required
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
                   <option value="">Select Done/Not Done</option>
-                  <option value="done">Done</option>
-                  <option value="not">Not Done</option>
+                  <option value="true">Done</option>
+                  <option value="false">Not Done</option>
                 </select>
               </div>
 
               <!-- If Done, date -->
               <div>
                 <label for="screenDate" class="block text-sm text-gray-600 mb-1">If Done, input Date</label>
-                <input id="screenDate" type="date" disabled
+                <input id="screenDate" name="newborn_screening_date" type="date" disabled
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400
                               focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
@@ -109,15 +132,15 @@
 
             <fieldset class="space-y-3">
               <label class="flex items-center gap-3 text-sm text-gray-700">
-                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="breast">
+                <input type="radio" name="feeding_method_id" class="h-4 w-4 text-red-600 focus:ring-red-500" value="1" required>
                 Breastfeeding
               </label>
               <label class="flex items-center gap-3 text-sm text-gray-700">
-                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="bottle">
+                <input type="radio" name="feeding_method_id" class="h-4 w-4 text-red-600 focus:ring-red-500" value="2" required>
                 Bottle Feeding
               </label>
               <label class="flex items-center gap-3 text-sm text-gray-700">
-                <input type="radio" name="feed" class="h-4 w-4 text-red-600 focus:ring-red-500" value="mixed">
+                <input type="radio" name="feeding_method_id" class="h-4 w-4 text-red-600 focus:ring-red-500" value="3" required>
                 Mixed
               </label>
             </fieldset>
@@ -135,14 +158,37 @@
             </div>
           </div>
         </div>
-
-        <!-- Footer actions -->
-        <div class="flex items-center justify-between">
-          <a href="{% url 'bhw_module:addchild2' %}" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
-          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Save Record</button>
-        </div>
       </form>
     </div>
+    
+    <!-- Footer actions - outside scrollable area -->
+    <div class="border-t bg-white px-6 py-4">
+      <div class="flex items-center justify-between">
+        <button type="button" onclick="goBack()" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</button>
+        <button type="submit" form="healthStep3" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Save Record</button>
+      </div>
+    </div>
+    
+    <!-- Hidden form for back navigation -->
+    <form id="backForm" method="post" action="{% url 'bhw_module:addchild2' %}" style="display: none;">
+      {% csrf_token %}
+      {% if child_data %}
+        <input type="hidden" name="child_id" value="{{ child_data.child_id }}">
+        <input type="hidden" name="child_name" value="{{ child_data.child_name }}">
+        <input type="hidden" name="mother_id" value="{{ child_data.mother_id }}">
+        <input type="hidden" name="mother_name" value="{{ child_data.mother_name }}">
+        <input type="hidden" name="father_id" value="{{ child_data.father_id }}">
+        <input type="hidden" name="father_name" value="{{ child_data.father_name }}">
+        <input type="hidden" name="sex" value="{{ child_data.sex }}">
+        <input type="hidden" name="dob" value="{{ child_data.dob }}">
+        <input type="hidden" name="philhealth_no" value="{{ child_data.philhealth_no }}">
+        <input type="hidden" name="phone_number" value="{{ child_data.phone_number }}">
+        <input type="hidden" name="time_of_birth" value="{{ child_data.time_of_birth }}">
+        <input type="hidden" name="birth_weight" value="{{ child_data.birth_weight }}">
+        <input type="hidden" name="birth_height" value="{{ child_data.birth_height }}">
+        <input type="hidden" name="place_of_delivery" value="{{ child_data.place_of_delivery }}">
+      {% endif %}
+    </form>
   </div>
 </div>
 
@@ -187,7 +233,38 @@
     document.dispatchEvent(new Event('keydown'));
     document.dispatchEvent(new Event('click'));
   }, 10000);
+  
+  // Enable/disable date input based on screening status
+  document.getElementById('screenStatus').addEventListener('change', function() {
+    const dateInput = document.getElementById('screenDate');
+    if (this.value === 'true') {
+      dateInput.disabled = false;
+      dateInput.required = true;
+    } else {
+      dateInput.disabled = true;
+      dateInput.required = false;
+      dateInput.value = '';
+    }
+  });
+  
+  // Enable/disable TT status date based on TT status selection
+  document.getElementById('tt_status_mother').addEventListener('change', function() {
+    const ttDateInput = document.getElementById('tt_status_date');
+    if (this.value) {
+      ttDateInput.disabled = false;
+      ttDateInput.required = true;
+    } else {
+      ttDateInput.disabled = true;
+      ttDateInput.required = false;
+      ttDateInput.value = '';
+    }
+  });
 })();
+
+// Function to go back with data preservation
+function goBack() {
+  document.getElementById('backForm').submit();
+}
 </script>
 
 {% endblock %}
