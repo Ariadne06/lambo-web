@@ -276,7 +276,7 @@
                         Link Relationship
                       </button>
 
-                      {% if m.has_gh %}
+                      {% comment %} {% if m.has_gh %}
                         <button
                           type="button"
                           class="openGeneralHealthModal ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
@@ -291,7 +291,7 @@
                           class="ml-auto rounded-lg border px-2 py-1 text-xs font-medium text-gray-400 bg-gray-50 cursor-not-allowed">
                           No General Health Info
                         </span>
-                      {% endif %}
+                      {% endif %} {% endcomment %}
                     </div>
                   {% empty %}
                     <p class="text-sm text-gray-500">No members yet.</p>
