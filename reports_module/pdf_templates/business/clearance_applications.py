@@ -4,8 +4,8 @@ Generates PDF report listing clearance applications with filters.
 """
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.units import inch
-from .base import BasePDFGenerator
-from ..utils.database_helpers import (
+from ..base import BasePDFGenerator
+from ...utils.database_helpers import (
     get_clearance_applications_report, 
     format_datetime_for_report,
     format_currency

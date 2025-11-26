@@ -1,32 +1,31 @@
 """
-Revenue Report Generator.
-Generates PDF report showing financial/revenue statistics.
+Resident Statistics Report Generator.
+Generates PDF report showing resident demographics and statistics.
 """
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.lib.units import inch
-from reportlab.lib import colors
-from .base import BasePDFGenerator
-from ..utils.database_helpers import get_revenue_report, format_currency
+from ..base import BasePDFGenerator
+from ...utils.database_helpers import get_resident_statistics, format_datetime_for_report
 
 
-class RevenueReport(BasePDFGenerator):
-    """Generate revenue/financial PDF report."""
+class ResidentStatisticsReport(BasePDFGenerator):
+    """Generate resident statistics PDF report."""
     
     def __init__(self, date_from=None, date_to=None):
         """
-        Initialize revenue report.
+        Initialize resident statistics report.
         
         Args:
             date_from: Start date filter (optional)
             date_to: End date filter (optional)
         """
-        super().__init__(title="Revenue Report")
+        super().__init__(title="Resident Statistics Report")
         self.date_from = date_from
         self.date_to = date_to
     
     def generate(self):
         """
-        Generate the revenue PDF.
+        Generate the resident statistics PDF.
         
         Returns:
             BytesIO buffer containing the PDF
@@ -45,7 +44,7 @@ class RevenueReport(BasePDFGenerator):
         story = []
         
         # Title
-        story.append(Paragraph("REVENUE REPORT", self.styles['CustomTitle']))
+        story.append(Paragraph("RESIDENT STATISTICS REPORT", self.styles['CustomTitle']))
         
         # Date range subtitle
         if self.date_from or self.date_to:
@@ -56,38 +55,33 @@ class RevenueReport(BasePDFGenerator):
         
         # Get data from database
         try:
-            revenue_data = get_revenue_report(
+            stats = get_resident_statistics(
                 date_from=self.date_from,
                 date_to=self.date_to
             )
             
-            if revenue_data and len(revenue_data) > 0:
-                data = revenue_data[0]
+            if stats and len(stats) > 0:
+                data = stats[0]
                 
-                # Revenue summary
-                story.append(Paragraph("Financial Summary", self.styles['CustomHeader']))
+                # Summary section
+                story.append(Paragraph("Summary", self.styles['CustomHeader']))
                 
                 summary_data = [
-                    ['Metric', 'Value'],
-                    ['Total Transactions', str(data.get('total_transactions', 0))],
-                    ['Total Revenue', format_currency(data.get('total_revenue', 0))],
-                    ['Paid Transactions', str(data.get('paid_count', 0))],
-                    ['Pending Transactions', str(data.get('pending_count', 0))],
+                    ['Metric', 'Count'],
+                    ['Total Residents', str(data.get('total_residents', 0))],
+                    ['Male', str(data.get('male_count', 0))],
+                    ['Female', str(data.get('female_count', 0))],
+                    ['Registered Voters', str(data.get('registered_voters', 0))],
                 ]
                 
-                summary_table = self.create_table(summary_data, col_widths=[3*inch, 2.5*inch])
+                summary_table = self.create_table(summary_data, col_widths=[3*inch, 2*inch])
                 story.append(summary_table)
                 story.append(Spacer(1, 0.3*inch))
                 
-                # Highlight total revenue
-                revenue_amount = format_currency(data.get('total_revenue', 0))
-                story.append(Paragraph(
-                    f"<b>Total Revenue Collected: {revenue_amount}</b>",
-                    self.styles['CustomHeader']
-                ))
+                # Additional statistics can be added here
                 
             else:
-                story.append(Paragraph("No revenue data available for the selected period.", 
+                story.append(Paragraph("No data available for the selected period.", 
                                      self.styles['CustomBody']))
         
         except Exception as e:
