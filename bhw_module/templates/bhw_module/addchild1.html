@@ -59,6 +59,15 @@
       </div>
     </div>
 
+        {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
+      </div>
+    {% endif %}
+
     <!-- Body (scrolls inside the card) -->
     <div class="h-full overflow-auto px-6 py-6">
       <form id="familyForm" method="post" action="{% url 'bhw_module:addchild2' %}" class="space-y-6">
@@ -105,7 +114,6 @@
             <input id="mother" name="mother" type="text" readonly
                    placeholder="Will be auto-filled when child is selected"
                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 cursor-not-allowed">
-            <input type="hidden" id="mother_id" name="mother_id">
           </div>
 
           <!-- Father -->
@@ -120,7 +128,6 @@
             <input id="father" name="father" type="text" readonly
                    placeholder="Will be auto-filled when child is selected"
                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 cursor-not-allowed">
-            <input type="hidden" id="father_id" name="father_id">
           </div>
         </div>
 
@@ -178,7 +185,16 @@
   }
 
   function updateNextButton() {
-    const valid = !!childIdInput.value && !!motherIdInput.value && !!fatherIdInput.value;
+    const childId = (childIdInput.value || '').trim();
+    const motherId = (motherIdInput.value || '').trim();
+    const fatherId = (fatherIdInput.value || '').trim();
+    const valid = childId && (motherId || fatherId);
+    console.log('Validation check:', {
+      childId: childId,
+      motherId: motherId, 
+      fatherId: fatherId,
+      valid: valid
+    });
     nextBtn.disabled = !valid;
   }
 
@@ -313,6 +329,45 @@
       this.appendChild(input);
     });
   });
+
+  // Auto-fill form fields from POST data when navigating back
+  {% if child_data %}
+    const childData = {
+      child_name: '{{ child_data.child_name|default:"" }}',
+      child_id: '{{ child_data.child_id|default:"" }}',
+      mother_name: '{{ child_data.mother_name|default:"" }}',
+      mother_id: '{{ child_data.mother_id|default:"" }}',
+      father_name: '{{ child_data.father_name|default:"" }}',
+      father_id: '{{ child_data.father_id|default:"" }}',
+      sex: '{{ child_data.sex|default:"" }}',
+      dob: '{{ child_data.dob|default:"" }}',
+      philhealth_no: '{{ child_data.philhealth_no|default:"" }}',
+      phone_number: '{{ child_data.phone_number|default:"" }}'
+    };
+    
+    if (childData.child_name) {
+      childInput.value = childData.child_name;
+      childIdInput.value = childData.child_id;
+      motherInput.value = childData.mother_name;
+      motherIdInput.value = childData.mother_id;
+      fatherInput.value = childData.father_name;
+      fatherIdInput.value = childData.father_id;
+      
+      // Hidden fields are already updated above
+      
+      // Store additional data
+      childInput.dataset.sex = childData.sex;
+      childInput.dataset.dob = childData.dob;
+      childInput.dataset.philhealth = childData.philhealth_no;
+      childInput.dataset.phone = childData.phone_number;
+      
+      console.log('Auto-filled data:', childData);
+      
+      // Update UI after auto-fill
+      updateSummary();
+      updateNextButton();
+    }
+  {% endif %}
 
   // Initial state
   updateSummary();
