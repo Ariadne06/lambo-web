@@ -179,3 +179,50 @@ class Child(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_insert_child_health_record(
+            child_id,
+            time_of_birth,
+            birth_weight,
+            birth_height,
+            place_of_delivery,
+            address_landmark,
+            tt_status_mother,
+            tt_status_date,
+            newborn_screening_status,
+            newborn_screening_date,
+            feeding_method,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_child_health_record', [
+                    child_id,
+                    time_of_birth,
+                    birth_weight,
+                    birth_height,
+                    place_of_delivery,
+                    address_landmark,
+                    tt_status_mother,
+                    tt_status_date,
+                    newborn_screening_status,
+                    newborn_screening_date,
+                    feeding_method,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_specific_child_health_record(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_health_record', [child_health_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e

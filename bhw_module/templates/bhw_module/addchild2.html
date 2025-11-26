@@ -135,10 +135,25 @@
     <!-- Footer actions (outside scrollable area) -->
     <div class="border-t bg-white px-6 py-4">
       <div class="flex items-center justify-between">
-        <a href="{% url 'bhw_module:addchild1' %}" class="btn-ghost inline-flex h-10 items-center gap-2 px-4 text-sm">← Back</a>
+        <button type="button" onclick="goBackToStep1()" class="btn-ghost inline-flex h-10 items-center gap-2 px-4 text-sm">← Back</button>
         <button type="submit" form="childForm2" class="btn-primary inline-flex h-10 items-center gap-2 px-5 text-sm">Next →</button>
       </div>
     </div>
+    
+    <!-- Hidden form for back navigation -->
+    <form id="backToStep1Form" method="post" action="{% url 'bhw_module:addchild1' %}" style="display: none;">
+      {% csrf_token %}
+      <input type="hidden" name="child_id" id="back_child_id">
+      <input type="hidden" name="child_name" id="back_child_name">
+      <input type="hidden" name="mother_id" id="back_mother_id">
+      <input type="hidden" name="mother_name" id="back_mother_name">
+      <input type="hidden" name="father_id" id="back_father_id">
+      <input type="hidden" name="father_name" id="back_father_name">
+      <input type="hidden" name="sex" id="back_sex">
+      <input type="hidden" name="dob" id="back_dob">
+      <input type="hidden" name="philhealth_no" id="back_philhealth_no">
+      <input type="hidden" name="phone_number" id="back_phone_number">
+    </form>
   </div>
 </div>
 
@@ -169,18 +184,22 @@
   };
   
   // Auto-fill form fields from POST data (server-side rendered values)
-  {% if request.method == 'POST' %}
+  {% if child_data %}
     const postData = {
-      child_name: '{{ request.POST.child_name|default:"" }}',
-      mother_name: '{{ request.POST.mother_name|default:"" }}',
-      father_name: '{{ request.POST.father_name|default:"" }}',
-      child_id: '{{ request.POST.child_id|default:"" }}',
-      mother_id: '{{ request.POST.mother_id|default:"" }}',
-      father_id: '{{ request.POST.father_id|default:"" }}',
-      sex: '{{ request.POST.sex|default:"" }}',
-      dob: '{{ request.POST.dob|default:"" }}',
-      philhealth_no: '{{ request.POST.philhealth_no|default:"" }}',
-      phone_number: '{{ request.POST.phone_number|default:"" }}'
+      child_name: '{{ child_data.child_name|default:"" }}',
+      mother_name: '{{ child_data.mother_name|default:"" }}',
+      father_name: '{{ child_data.father_name|default:"" }}',
+      child_id: '{{ child_data.child_id|default:"" }}',
+      mother_id: '{{ child_data.mother_id|default:"" }}',
+      father_id: '{{ child_data.father_id|default:"" }}',
+      sex: '{{ child_data.sex|default:"" }}',
+      dob: '{{ child_data.dob|default:"" }}',
+      philhealth_no: '{{ child_data.philhealth_no|default:"" }}',
+      phone_number: '{{ child_data.phone_number|default:"" }}',
+      time_of_birth: '{{ child_data.time_of_birth|default:"" }}',
+      birth_weight: '{{ child_data.birth_weight|default:"" }}',
+      birth_height: '{{ child_data.birth_height|default:"" }}',
+      place_of_delivery: '{{ child_data.place_of_delivery|default:"" }}'
     };
     
     if (postData.child_name) document.getElementById('child_name').value = postData.child_name;
@@ -193,6 +212,10 @@
     if (postData.dob) document.getElementById('dob').value = postData.dob;
     if (postData.philhealth_no) document.getElementById('philhealth_no').value = postData.philhealth_no;
     if (postData.phone_number) document.getElementById('phone_number').value = postData.phone_number;
+    if (postData.time_of_birth) document.getElementById('time_of_birth').value = postData.time_of_birth;
+    if (postData.birth_weight) document.getElementById('birth_weight').value = postData.birth_weight;
+    if (postData.birth_height) document.getElementById('birth_height').value = postData.birth_height;
+    if (postData.place_of_delivery) document.getElementById('place_of_delivery').value = postData.place_of_delivery;
   {% endif %}
   
   // Keep session active with multiple methods
@@ -201,5 +224,23 @@
     document.dispatchEvent(new Event('keydown'));
   }, 10000);
 })();
+
+// Function to go back to step 1 with data preservation
+function goBackToStep1() {
+  // Copy current form values to back form
+  document.getElementById('back_child_id').value = document.getElementById('child_id').value;
+  document.getElementById('back_child_name').value = document.getElementById('child_name').value;
+  document.getElementById('back_mother_id').value = document.getElementById('mother_id').value;
+  document.getElementById('back_mother_name').value = document.getElementById('mother_name').value;
+  document.getElementById('back_father_id').value = document.getElementById('father_id').value;
+  document.getElementById('back_father_name').value = document.getElementById('father_name').value;
+  document.getElementById('back_sex').value = document.getElementById('sex').value;
+  document.getElementById('back_dob').value = document.getElementById('dob').value;
+  document.getElementById('back_philhealth_no').value = document.getElementById('philhealth_no').value;
+  document.getElementById('back_phone_number').value = document.getElementById('phone_number').value;
+  
+  // Submit the back form
+  document.getElementById('backToStep1Form').submit();
+}
 </script>
 {% endblock %}
