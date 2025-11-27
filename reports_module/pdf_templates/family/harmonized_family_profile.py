@@ -171,11 +171,11 @@ class HarmonizedFamilyProfilePDF:
         elements.append(Spacer(1, 4))
         
         household_info = [
-            ["Household Number:", household.get('household_number', '—')],
-            ["Household Head:", household.get('household_head', '—')],
-            ["Full Address:", household.get('full_address', '—')],
-            ["House Ownership:", household.get('house_ownership', '—')],
-            ["House Type:", household.get('house_type', '—')],
+            ["Household Number:", household.get('household_number') or '—'],
+            ["Household Head:", household.get('household_head') or '—'],
+            ["Full Address:", household.get('full_address') or '—'],
+            ["House Ownership:", household.get('house_ownership') or '—'],
+            ["House Type:", household.get('house_type') or '—'],
             ["Active Status:", 'Active' if household.get('is_active') else 'Inactive'],
         ]
         
@@ -333,9 +333,15 @@ class HarmonizedFamilyProfilePDF:
                 
                 # Row 3: PhilHealth Information
                 membership_type = 'Member' if member.get('membership_type') == 'M' else 'Dependent' if member.get('membership_type') == 'D' else '—'
+                philhealth_num = member.get('philhealthid_number')
+                # Handle NULL string, None, or empty values
+                if philhealth_num and str(philhealth_num).upper() != 'NULL':
+                    philhealth_display = str(philhealth_num)
+                else:
+                    philhealth_display = '—'
                 member_data.append([
                     Paragraph("<b>PhilHealth #:</b>", label_style),
-                    Paragraph(member.get('philhealthid_number') or '—', value_style),
+                    Paragraph(philhealth_display, value_style),
                     Paragraph("<b>Type:</b>", label_style),
                     Paragraph(membership_type, value_style),
                     Paragraph("<b>Category:</b>", label_style),
@@ -355,7 +361,7 @@ class HarmonizedFamilyProfilePDF:
                     
                     # Row 5: Medical History (spans all columns)
                     med_history = gh.get('medical_history_names', [])
-                    med_history_text = ', '.join(med_history) if med_history else 'None'
+                    med_history_text = ', '.join(med_history) if med_history else '—'
                     member_data.append([
                         Paragraph("<b>Medical History:</b>", label_style),
                         Paragraph(med_history_text, value_style),
@@ -374,7 +380,7 @@ class HarmonizedFamilyProfilePDF:
                         if gh.get('age_of_menarche') is not None:
                             female_row.extend([
                                 Paragraph("<b>Age of Menarche:</b>", label_style),
-                                Paragraph(str(gh.get('age_of_menarche')), value_style),
+                                Paragraph(str(gh.get('age_of_menarche')) or '—', value_style),
                             ])
                             female_info_added = True
                         else:
@@ -472,7 +478,7 @@ class HarmonizedFamilyProfilePDF:
                 visitation_info.append(["Date Visited:", visited_date.strftime('%B %d, %Y') if hasattr(visited_date, 'strftime') else str(visited_date)])
             
             if family.get('visited_by_full_name'):
-                visitation_info.append(["Visited By:", family.get('visited_by_full_name', '—')])
+                visitation_info.append(["Visited By:", family.get('visited_by_full_name') or '—'])
         
         visitation_table_data = []
         for label, value in visitation_info:
