@@ -102,6 +102,72 @@ class ResidentList(models.Model):
         return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
     @staticmethod
+    def sp_get_all_residents(
+        p_status_id: Optional[int] = None,
+        p_sitio_id: Optional[int] = None,
+        p_query: Optional[str] = None,
+        p_limit: Optional[int] = None,
+        p_offset: int = 0,
+        p_quarter_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Calls get_all_residents(p_status_id, p_sitio_id, p_query, p_limit, p_offset, p_quarter_id)
+        Returns list of dicts with keys: resident_id, resident_code, full_name, dob,
+                                         full_address, phone_number, email, resident_status, businesses
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_all_residents(%s, %s, %s, %s, %s, %s)",
+                [p_status_id, p_sitio_id, p_query, p_limit, p_offset, p_quarter_id]
+            )
+            return ResidentList._rows_to_dicts(cur)
+
+    @staticmethod
+    def sp_get_all_residents_count(
+        p_status_id: Optional[int] = None,
+        p_sitio_id: Optional[int] = None,
+        p_query: Optional[str] = None,
+        p_quarter_id: Optional[int] = None
+    ) -> int:
+        """
+        Gets total count of residents matching the filters (for pagination)
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*)::int FROM get_all_residents(%s, %s, %s, NULL, 0, %s)",
+                [p_status_id, p_sitio_id, p_query, p_quarter_id]
+            )
+            result = cur.fetchone()
+            return result[0] if result else 0
+
+    @staticmethod
+    def sp_get_specific_resident(p_resident_id: int, p_quarter_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Calls get_specific_resident(p_resident_id, p_quarter_id)
+        Returns a single dict or None if not found.
+        Keys: resident_id, resident_code, first_name, middle_name, last_name, suffix,
+              sex, dob, age, civil_status, educational_attainment, religion, occupation,
+              nationality, employment_status, household_number, family_code, businesses
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_specific_resident(%s, %s)",
+                [p_resident_id, p_quarter_id]
+            )
+            rows = ResidentList._rows_to_dicts(cur)
+            return rows[0] if rows else None
+
+    @staticmethod
+    def sp_get_all_quarters() -> List[Dict[str, Any]]:
+        """
+        Calls get_all_quarters() to retrieve available quarters for filtering
+        Returns list of dicts with keys: quarter_id, quarter_number, year, start_date, end_date, display_label
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_all_quarters()")
+            return ResidentList._rows_to_dicts(cur)
+
+    @staticmethod
     def search(
         p_query: Optional[str] = None,
         p_sex: Optional[str] = None,          # 'male'/'female'

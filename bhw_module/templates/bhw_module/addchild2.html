@@ -17,7 +17,7 @@
 
   <!-- Height-capped card with comfy outside spacing -->
   <div class="relative mx-auto my-6 max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden
-              max-h-[calc(100vh-6rem)]">
+              max-h-[calc(100vh-6rem)] flex flex-col">
 
     <!-- Accent rail -->
     <div class="absolute left-0 top-0 h-full w-1 bg-red-600 rounded-l-2xl"></div>
@@ -37,8 +37,9 @@
     </div>
 
     <!-- Body (scrolls) -->
-    <div class="h-full overflow-auto px-6 py-6">
-      <form class="space-y-8">
+    <div class="flex-1 overflow-auto px-6 py-6">
+      <form id="childForm2" method="post" action="{% url 'bhw_module:addchild3' %}" class="space-y-8">
+        {% csrf_token %}
 
         <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
           <!-- LEFT: Personal recap fields -->
@@ -99,62 +100,147 @@
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Time of Birth</label>
-                <input type="text" placeholder="Input Time of Birth"
+                <input id="time_of_birth" name="time_of_birth" type="time" required
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Birth Weight (Kg)</label>
-                <input type="text" placeholder="Input Birth Weight"
+                <input id="birth_weight" name="birth_weight" type="number" step="0.01" required placeholder="Input Birth Weight"
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Birth Height (Cm)</label>
-                <input type="text" placeholder="Input Birth Height"
+                <input id="birth_height" name="birth_height" type="number" step="0.1" required placeholder="Input Birth Height"
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
 
               <div>
                 <label class="block text-sm text-gray-600 mb-1">Place of Delivery</label>
-                <input type="text" placeholder="Input Place of Delivery"
+                <input id="place_of_delivery" name="place_of_delivery" type="text" required placeholder="Input Place of Delivery"
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Footer actions -->
-        <div class="flex items-center justify-between">
-          <a href="#" class="btn-ghost inline-flex h-10 items-center px-5 text-sm">← Back</a>
-          <button type="submit" class="btn-primary inline-flex h-10 items-center px-6 text-sm">Next →</button>
-        </div>
+        <!-- Hidden fields for IDs -->
+        <input type="hidden" id="child_id" name="child_id">
+        <input type="hidden" id="mother_id" name="mother_id">
+        <input type="hidden" id="father_id" name="father_id">
       </form>
     </div>
+
+    <!-- Footer actions (outside scrollable area) -->
+    <div class="border-t bg-white px-6 py-4">
+      <div class="flex items-center justify-between">
+        <button type="button" onclick="goBackToStep1()" class="btn-ghost inline-flex h-10 items-center gap-2 px-4 text-sm">← Back</button>
+        <button type="submit" form="childForm2" class="btn-primary inline-flex h-10 items-center gap-2 px-5 text-sm">Next →</button>
+      </div>
+    </div>
+    
+    <!-- Hidden form for back navigation -->
+    <form id="backToStep1Form" method="post" action="{% url 'bhw_module:addchild1' %}" style="display: none;">
+      {% csrf_token %}
+      <input type="hidden" name="child_id" id="back_child_id">
+      <input type="hidden" name="child_name" id="back_child_name">
+      <input type="hidden" name="mother_id" id="back_mother_id">
+      <input type="hidden" name="mother_name" id="back_mother_name">
+      <input type="hidden" name="father_id" id="back_father_id">
+      <input type="hidden" name="father_name" id="back_father_name">
+      <input type="hidden" name="sex" id="back_sex">
+      <input type="hidden" name="dob" id="back_dob">
+      <input type="hidden" name="philhealth_no" id="back_philhealth_no">
+      <input type="hidden" name="phone_number" id="back_phone_number">
+    </form>
   </div>
 </div>
 
 <script>
 (function() {
-  // Get URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
+
   
-  // Auto-fill all form fields from URL parameters
-  const childName = urlParams.get('child_name');
-  const motherName = urlParams.get('mother_name');
-  const fatherName = urlParams.get('father_name');
-  const sex = urlParams.get('sex');
-  const dob = urlParams.get('dob');
-  const philhealth = urlParams.get('philhealth_no');
-  const phone = urlParams.get('phone_number');
+  // Completely disable silent logout
+  window.fetch = new Proxy(window.fetch, {
+    apply: function(target, thisArg, argumentsList) {
+      const url = argumentsList[0];
+      if (typeof url === 'string' && url.includes('silent_logout')) {
+        console.log('Blocked silent logout request');
+        return Promise.resolve(new Response('', {status: 204}));
+      }
+      return target.apply(thisArg, argumentsList);
+    }
+  });
   
-  if (childName) document.getElementById('child_name').value = childName;
-  if (motherName) document.getElementById('mother_name').value = motherName;
-  if (fatherName) document.getElementById('father_name').value = fatherName;
-  if (sex) document.getElementById('sex').value = sex;
-  if (dob) document.getElementById('dob').value = dob;
-  if (philhealth) document.getElementById('philhealth_no').value = philhealth;
-  if (phone) document.getElementById('phone_number').value = phone;
+  // Override XMLHttpRequest for silent logout
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, ...args) {
+    if (typeof url === 'string' && url.includes('silent_logout')) {
+      console.log('Blocked XMLHttpRequest silent logout');
+      return;
+    }
+    return originalOpen.apply(this, [method, url, ...args]);
+  };
+  
+  // Auto-fill form fields from POST data (server-side rendered values)
+  {% if child_data %}
+    const postData = {
+      child_name: '{{ child_data.child_name|default:"" }}',
+      mother_name: '{{ child_data.mother_name|default:"" }}',
+      father_name: '{{ child_data.father_name|default:"" }}',
+      child_id: '{{ child_data.child_id|default:"" }}',
+      mother_id: '{{ child_data.mother_id|default:"" }}',
+      father_id: '{{ child_data.father_id|default:"" }}',
+      sex: '{{ child_data.sex|default:"" }}',
+      dob: '{{ child_data.dob|default:"" }}',
+      philhealth_no: '{{ child_data.philhealth_no|default:"" }}',
+      phone_number: '{{ child_data.phone_number|default:"" }}',
+      time_of_birth: '{{ child_data.time_of_birth|default:"" }}',
+      birth_weight: '{{ child_data.birth_weight|default:"" }}',
+      birth_height: '{{ child_data.birth_height|default:"" }}',
+      place_of_delivery: '{{ child_data.place_of_delivery|default:"" }}'
+    };
+    
+    if (postData.child_name) document.getElementById('child_name').value = postData.child_name;
+    if (postData.mother_name) document.getElementById('mother_name').value = postData.mother_name;
+    if (postData.father_name) document.getElementById('father_name').value = postData.father_name;
+    if (postData.child_id) document.getElementById('child_id').value = postData.child_id;
+    if (postData.mother_id) document.getElementById('mother_id').value = postData.mother_id;
+    if (postData.father_id) document.getElementById('father_id').value = postData.father_id;
+    if (postData.sex) document.getElementById('sex').value = postData.sex;
+    if (postData.dob) document.getElementById('dob').value = postData.dob;
+    if (postData.philhealth_no) document.getElementById('philhealth_no').value = postData.philhealth_no;
+    if (postData.phone_number) document.getElementById('phone_number').value = postData.phone_number;
+    if (postData.time_of_birth) document.getElementById('time_of_birth').value = postData.time_of_birth;
+    if (postData.birth_weight) document.getElementById('birth_weight').value = postData.birth_weight;
+    if (postData.birth_height) document.getElementById('birth_height').value = postData.birth_height;
+    if (postData.place_of_delivery) document.getElementById('place_of_delivery').value = postData.place_of_delivery;
+  {% endif %}
+  
+  // Keep session active with multiple methods
+  setInterval(function() {
+    document.dispatchEvent(new Event('mousemove'));
+    document.dispatchEvent(new Event('keydown'));
+  }, 10000);
 })();
+
+// Function to go back to step 1 with data preservation
+function goBackToStep1() {
+  // Copy current form values to back form
+  document.getElementById('back_child_id').value = document.getElementById('child_id').value;
+  document.getElementById('back_child_name').value = document.getElementById('child_name').value;
+  document.getElementById('back_mother_id').value = document.getElementById('mother_id').value;
+  document.getElementById('back_mother_name').value = document.getElementById('mother_name').value;
+  document.getElementById('back_father_id').value = document.getElementById('father_id').value;
+  document.getElementById('back_father_name').value = document.getElementById('father_name').value;
+  document.getElementById('back_sex').value = document.getElementById('sex').value;
+  document.getElementById('back_dob').value = document.getElementById('dob').value;
+  document.getElementById('back_philhealth_no').value = document.getElementById('philhealth_no').value;
+  document.getElementById('back_phone_number').value = document.getElementById('phone_number').value;
+  
+  // Submit the back form
+  document.getElementById('backToStep1Form').submit();
+}
 </script>
 {% endblock %}

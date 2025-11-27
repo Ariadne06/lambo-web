@@ -184,91 +184,285 @@ def secretary_dashboard(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def resident_list(request):
     q = request.GET.get("q") or None
-    sex = request.GET.get("sex") or None            # 'male'/'female'
-    status_id = request.GET.get("status_id") or None
-    min_age = request.GET.get("min_age") or None
-    max_age = request.GET.get("max_age") or None
+    # Support multiple status and sitio filters
+    status_id_list = request.GET.getlist("status_id")
+    sitio_id_list = request.GET.getlist("sitio_id")
+    quarter_id = request.GET.get("quarter_id") or None
     page = int(request.GET.get("page") or 1)
     page_size = int(request.GET.get("page_size") or 50)
 
-    # Coerce ints
-    try:
-        status_id = int(status_id) if status_id not in (None, "",) else None
-    except ValueError:
+    # Convert to integers and filter out invalid values
+    status_id_list = [int(s) for s in status_id_list if s and s.isdigit()]
+    sitio_id_list = [int(s) for s in sitio_id_list if s and s.isdigit()]
+    
+    # Parse quarter_id
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    # Ensure page is at least 1
+    page = max(1, page)
+    page_size = max(1, min(page_size, 200))  # Cap at 200 to prevent huge queries
+    
+    # Calculate offset
+    offset = (page - 1) * page_size
+
+    # If multiple filters selected, we need to fetch and filter in Python
+    # since the DB function only accepts single values
+    if len(status_id_list) > 1 or len(sitio_id_list) > 1:
+        # Fetch all matching residents (no limit) and filter in Python
+        all_residents = []
+        
+        # If we have multiple statuses, fetch for each
+        if len(status_id_list) > 1:
+            for status_id in status_id_list:
+                sitio_id = sitio_id_list[0] if sitio_id_list else None
+                residents_batch = ResidentList.sp_get_all_residents(
+                    p_status_id=status_id,
+                    p_sitio_id=sitio_id,
+                    p_query=q,
+                    p_limit=None,
+                    p_offset=0,
+                    p_quarter_id=quarter_id
+                )
+                all_residents.extend(residents_batch)
+        # If we have multiple sitios but single status
+        elif len(sitio_id_list) > 1:
+            status_id = status_id_list[0] if status_id_list else None
+            for sitio_id in sitio_id_list:
+                residents_batch = ResidentList.sp_get_all_residents(
+                    p_status_id=status_id,
+                    p_sitio_id=sitio_id,
+                    p_query=q,
+                    p_limit=None,
+                    p_offset=0,
+                    p_quarter_id=quarter_id
+                )
+                all_residents.extend(residents_batch)
+        
+        # Remove duplicates based on resident_id
+        seen_ids = set()
+        unique_residents = []
+        for r in all_residents:
+            if r.get('resident_id') not in seen_ids:
+                seen_ids.add(r.get('resident_id'))
+                unique_residents.append(r)
+        
+        # Calculate totals and pagination
+        total = len(unique_residents)
+        total_pages = max(1, ceil(total / page_size)) if page_size else 1
+        
+        # Apply manual pagination
+        start_idx = offset
+        end_idx = offset + page_size
+        residents = unique_residents[start_idx:end_idx]
+        
+        # Set single values to None for context (not used when multiple filters)
         status_id = None
-    try:
-        min_age = int(min_age) if min_age not in (None, "",) else None
-    except ValueError:
-        min_age = None
-    try:
-        max_age = int(max_age) if max_age not in (None, "",) else None
-    except ValueError:
-        max_age = None
+        sitio_id = None
+    else:
+        # Single or no filters - use DB function directly (more efficient)
+        status_id = status_id_list[0] if status_id_list else None
+        sitio_id = sitio_id_list[0] if sitio_id_list else None
+        
+        # Get total count for pagination
+        total = ResidentList.sp_get_all_residents_count(
+            p_status_id=status_id,
+            p_sitio_id=sitio_id,
+            p_query=q,
+            p_quarter_id=quarter_id
+        )
 
-    result = ResidentList.search(
-        p_query=q,
-        p_sex=sex,
-        p_status_id=status_id,
-        p_min_age=min_age,
-        p_max_age=max_age,
-        page=page,
-        page_size=page_size,
-    )
+        # Get paginated residents
+        residents = ResidentList.sp_get_all_residents(
+            p_status_id=status_id,
+            p_sitio_id=sitio_id,
+            p_query=q,
+            p_limit=page_size,
+            p_offset=offset,
+            p_quarter_id=quarter_id
+        )
 
-    # Use the values returned by the search result
-    page  = result["page"]
-    pages = result["pages"]
-
-    # Base params for pagination
-    from django.utils.http import urlencode
-    base_params = {
-        "q": q or "",
-        "sex": sex or "",
-        "status_id": status_id if status_id is not None else "",
-        "min_age": min_age if min_age is not None else "",
-        "max_age": max_age if max_age is not None else "",
-        "page_size": page_size,
-    }
-    def page_url(p):
-        params = base_params.copy()
-        params["page"] = p
-        return f"?{urlencode(params)}"
-
-    # Precompute URLs so template doesn't call functions
-    prev_url  = page_url(page - 1) if page > 1 else None
-    next_url  = page_url(page + 1) if page < pages else None
-    curr_url  = page_url(page)
-
-    p1_num, p1_url = page, curr_url
-    p2_num, p2_url = (page + 1, page_url(page + 1)) if page < pages else (None, None)
-    p3_num, p3_url = (page + 2, page_url(page + 2)) if page + 1 < pages else (None, None)
-    last_num, last_url = (pages, page_url(pages)) if pages > 1 else (None, None)
-
-    showing_start = (result["offset"] + 1) if result["total"] > 0 else 0
-    showing_end = min(result["offset"] + len(result["rows"]), result["total"])
-
+        # Calculate pagination info
+        total_pages = max(1, ceil(total / page_size)) if page_size else 1
+    
+    # Get filter options
     with connection.cursor() as cur:
         cur.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name;")
-        status_options = cur.fetchall()  # list of tuples [(id, name), ...]
+        status_options = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+        
+        cur.execute("SELECT sitio_id, sitio_name FROM Sitio ORDER BY sitio_name;")
+        sitio_options = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    # Get quarters for dropdown
+    quarters = ResidentList.sp_get_all_quarters()
+
+    # Build URL helper
+    def build_url(**overrides):
+        params = {
+            "q": q or "",
+            "page": page,
+            "page_size": page_size,
+        }
+        
+        # Handle quarter_id
+        if "quarter_id" in overrides:
+            qid_override = overrides.pop("quarter_id")
+            if qid_override and qid_override != "":
+                params["quarter_id"] = qid_override
+        elif quarter_id:
+            params["quarter_id"] = quarter_id
+        
+        # Handle status_id - default to current list unless overridden
+        if "status_id" in overrides:
+            status_override = overrides.pop("status_id")
+            if status_override and status_override != "":
+                if isinstance(status_override, list):
+                    for s in status_override:
+                        params[f"status_id"] = s  # Will be handled by urlencode with doseq
+                else:
+                    params["status_id"] = status_override
+        else:
+            # Use current status_id_list
+            if status_id_list:
+                params["status_id"] = status_id_list
+        
+        # Handle sitio_id - default to current list unless overridden  
+        if "sitio_id" in overrides:
+            sitio_override = overrides.pop("sitio_id")
+            if sitio_override and sitio_override != "":
+                if isinstance(sitio_override, list):
+                    for s in sitio_override:
+                        params[f"sitio_id"] = s
+                else:
+                    params["sitio_id"] = sitio_override
+        else:
+            # Use current sitio_id_list
+            if sitio_id_list:
+                params["sitio_id"] = sitio_id_list
+        
+        params.update(overrides)
+        # Remove empty params
+        params = {k: v for k, v in params.items() if v not in (None, "", [])}
+        return f"?{urlencode(params, doseq=True)}"
+
+    # Pagination URLs
+    prev_url = build_url(page=page - 1) if page > 1 else None
+    next_url = build_url(page=page + 1) if page < total_pages else None
+    
+    # Page items for pagination display (show current, +/- 1, and last)
+    page_items = []
+    for p in range(max(1, page - 1), min(total_pages + 1, page + 2)):
+        page_items.append({
+            "num": p,
+            "url": build_url(page=p),
+            "current": p == page
+        })
+    
+    # Add ellipsis and last page if needed
+    if page + 2 < total_pages:
+        page_items.append({"ellipsis": True})
+        page_items.append({
+            "num": total_pages,
+            "url": build_url(page=total_pages),
+            "current": False
+        })
+
+    # Active filter chips
+    status_chips = []
+    sitio_chips = []
+    
+    # Build chips for each selected status
+    for sid in status_id_list:
+        status_name = next((s["name"] for s in status_options if s["id"] == sid), f"Status {sid}")
+        # Build URL that removes this specific status
+        other_statuses = [s for s in status_id_list if s != sid]
+        status_chips.append({
+            "label": status_name,
+            "url": build_url(status_id=other_statuses, page=1) if other_statuses else build_url(status_id="", page=1)
+        })
+    
+    # Build chips for each selected sitio
+    for sit in sitio_id_list:
+        sitio_name = next((s["name"] for s in sitio_options if s["id"] == sit), f"Sitio {sit}")
+        # Build URL that removes this specific sitio
+        other_sitios = [s for s in sitio_id_list if s != sit]
+        sitio_chips.append({
+            "label": f"Sitio {sitio_name}",
+            "url": build_url(sitio_id=other_sitios, page=1) if other_sitios else build_url(sitio_id="", page=1)
+        })
+
+    clear_all_url = build_url(q=q, status_id="", sitio_id="", page=1)
+    
+    # Calculate total filter count
+    filter_count = len(status_chips) + len(sitio_chips)
 
     context = {
-        "residents": result["rows"],
-        "total": result["total"],
+        "residents": residents,
+        "total": total,
         "page": page,
-        "pages": pages,
-        "page_size": result["limit"],
-        "showing_start": showing_start,
-        "showing_end": showing_end,
-        # pagination links/numbers
+        "total_pages": total_pages,
+        "page_size": page_size,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
         "prev_url": prev_url,
         "next_url": next_url,
-        "p1_num": p1_num, "p1_url": p1_url,
-        "p2_num": p2_num, "p2_url": p2_url,
-        "p3_num": p3_num, "p3_url": p3_url,
-        "last_num": last_num, "last_url": last_url,
+        "page_items": page_items,
+        "q": q or "",
+        "quarter_id": quarter_id,
+        "quarters": quarters,
+        "status_id": status_id,
+        "sitio_id": sitio_id,
         "status_options": status_options,
+        "sitio_options": sitio_options,
+        "status_id_list": status_id_list,
+        "sitio_id_list": sitio_id_list,
+        "status_chips": status_chips,
+        "sitio_chips": sitio_chips,
+        "filter_count": filter_count,
+        "clear_all_url": clear_all_url,
     }
     return render(request, 'secretary_module/resident_list.html', context)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def resident_detail_json(request, resident_id: int):
+    """AJAX endpoint to get specific resident details"""
+    try:
+        quarter_id = request.GET.get('quarter_id') or None
+        if quarter_id and quarter_id.isdigit():
+            quarter_id = int(quarter_id)
+        else:
+            quarter_id = None
+        
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
+        
+        if not resident:
+            return JsonResponse({"ok": False, "message": "Resident not found"}, status=404)
+        
+        # Convert date to string for JSON serialization
+        if resident.get('dob'):
+            from datetime import date
+            if isinstance(resident['dob'], date):
+                resident['dob'] = resident['dob'].isoformat()
+        
+        # Convert businesses JSONB to list if needed
+        if resident.get('businesses') and isinstance(resident['businesses'], str):
+            import json
+            try:
+                resident['businesses'] = json.loads(resident['businesses'])
+            except:
+                resident['businesses'] = []
+        
+        return JsonResponse({"ok": True, "resident": resident})
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] Exception in resident_detail_json:")
+        print(error_detail)
+        return JsonResponse({"ok": False, "message": f"Database error: {str(e)}"}, status=500)
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -353,6 +547,40 @@ def household_list(request):
     sitio = Household.sp_get_sitio()
     quarter = Household.sp_get_quarter()
     
+    # Calculate filter count and chips
+    filter_count = 0
+    status_chip = None
+    sitio_chip = None
+    
+    # Count active filters (excluding query and quarter)
+    if status and status != 'all':
+        filter_count += 1
+        # Create status chip with removal URL
+        status_label = status.capitalize()
+        remove_status_params = {k: v for k, v in base_params.items() if k != 'status'}
+        remove_status_params['status'] = 'all'
+        status_chip = {
+            'label': status_label,
+            'url': '?' + urlencode(remove_status_params)
+        }
+    
+    if sitio_id is not None:
+        filter_count += 1
+        # Find sitio name
+        sitio_name = next((s['sitio_name'] for s in sitio if s['sitio_id'] == sitio_id), f'Sitio {sitio_id}')
+        # Create sitio chip with removal URL
+        remove_sitio_params = {k: v for k, v in base_params.items() if k != 'sitio_id'}
+        sitio_chip = {
+            'label': f'Sitio {sitio_name}',
+            'url': '?' + urlencode(remove_sitio_params)
+        }
+    
+    # Clear all URL
+    clear_all_params = {'query': query}
+    if quarter_id is not None:
+        clear_all_params['quarter_id'] = quarter_id
+    clear_all_url = '?' + urlencode(clear_all_params)
+    
     flash = get_flash(request)
     return render(request, 'secretary_module/household_list.html',{
         "results": final_result,
@@ -373,6 +601,11 @@ def household_list(request):
         # ✅ expose these to the template
         'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
         'is_current_quarter': is_current_quarter,
+        # Filter badges and chips
+        'filter_count': filter_count,
+        'status_chip': status_chip,
+        'sitio_chip': sitio_chip,
+        'clear_all_url': clear_all_url,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -2786,4 +3019,246 @@ def submit_barangay_clearance_application(request):
             return JsonResponse({'ok': False, 'message': f'Error creating application: {coerce_message(e)}'}, status=400)
         messages.error(request, f'Error creating application: {e}')
     return redirect('secretary_module:create_application')
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def reports(request):
+    """Reports page - shows available reports"""
+    return render(request, 'secretary_module/Reports.html')
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_resident_list_pdf(request):
+    """Generate PDF report for resident list with applied filters"""
+    from reports_module.pdf_templates.resident.resident_list_filtered import generate_resident_list_pdf
+    
+    # Get filters from request
+    q = request.GET.get('q', '').strip()
+    status_id_list = request.GET.getlist('status_id')
+    sitio_id_list = request.GET.getlist('sitio_id')
+    quarter_id = request.GET.get('quarter_id') or None
+    
+    # Convert to integers
+    status_id_list = [int(sid) for sid in status_id_list if sid.isdigit()]
+    sitio_id_list = [int(sid) for sid in sitio_id_list if sid.isdigit()]
+    
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # If multiple filters selected, fetch and merge results
+        if len(status_id_list) > 1 or len(sitio_id_list) > 1:
+            all_residents = []
+            
+            # If we have multiple statuses, fetch for each
+            if len(status_id_list) > 1:
+                for status_id in status_id_list:
+                    sitio_id = sitio_id_list[0] if sitio_id_list else None
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            # If we have multiple sitios but single status
+            elif len(sitio_id_list) > 1:
+                status_id = status_id_list[0] if status_id_list else None
+                for sitio_id in sitio_id_list:
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            
+            # Remove duplicates
+            seen_ids = set()
+            residents = []
+            for r in all_residents:
+                if r.get('resident_id') not in seen_ids:
+                    seen_ids.add(r.get('resident_id'))
+                    residents.append(r)
+            
+            total_count = len(residents)
+        else:
+            # Single or no filters
+            status_id = status_id_list[0] if status_id_list else None
+            sitio_id = sitio_id_list[0] if sitio_id_list else None
+            
+            # Fetch all residents (without pagination for complete report)
+            residents = ResidentList.sp_get_all_residents(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_limit=None,  # Get all
+                p_offset=0,
+                p_quarter_id=quarter_id
+            )
+            
+            # Get total count
+            total_count = ResidentList.sp_get_all_residents_count(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_quarter_id=quarter_id
+            )
+        
+        # Build filter description with actual names
+        filters_applied = {}
+        if quarter_id:
+            # Get quarter display label (simplified format: Q# YYYY)
+            quarters = ResidentList.sp_get_all_quarters()
+            quarter = next((q for q in quarters if q['quarter_id'] == quarter_id), None)
+            if quarter:
+                filters_applied['quarter'] = f"Q{quarter['quarter_number']} {quarter['year']}"
+            else:
+                filters_applied['quarter'] = f'Quarter ID: {quarter_id}'
+        else:
+            filters_applied['quarter'] = 'Current Quarter'
+        if q:
+            filters_applied['search_query'] = q
+        if status_id_list:
+            # Get status names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT status_name FROM Resident_Status WHERE status_id = ANY(%s) ORDER BY status_name",
+                    [status_id_list]
+                )
+                status_names = [row[0] for row in cur.fetchall()]
+                filters_applied['status'] = status_names
+        if sitio_id_list:
+            # Get sitio names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT sitio_name FROM Sitio WHERE sitio_id = ANY(%s) ORDER BY sitio_name",
+                    [sitio_id_list]
+                )
+                sitio_names = [row[0] for row in cur.fetchall()]
+                filters_applied['sitio'] = sitio_names
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_list_pdf(residents, filters_applied, total_count)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Resident_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate resident list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_resident_detail_pdf(request, resident_id: int):
+    """Generate PDF report for specific resident details"""
+    from reports_module.pdf_templates.resident.resident_detail import generate_resident_detail_pdf
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Fetch resident details using the same function as the modal
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
+        
+        if not resident:
+            return HttpResponse("Resident not found", status=404)
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_detail_pdf(resident)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        resident_name = resident.get('full_name', f'Resident_{resident_id}').replace(' ', '_')
+        filename = f"{resident_name}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate resident detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_list_pdf(request):
+    """Generate PDF report for household list with applied filters"""
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    
+    # Get filters from request
+    query = request.GET.get('query', '').strip() or None
+    status = request.GET.get('status', 'all').strip()
+    sitio_id = request.GET.get('sitio_id', '').strip() or None
+    quarter_id = request.GET.get('quarter_id', '').strip() or None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    """Generate PDF report for specific household details"""
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdDetailPDF(household_id=household_id, quarter_id=quarter_id)
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_{household_id}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
 

@@ -199,11 +199,22 @@ ACCORDION.forEach((item) => {
 
   // --- Manual logout suppression ---
   let suppressClosePing = false;
+  let formSubmitting = false;
   try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  
   document.getElementById('logout-link')?.addEventListener('click', () => {
     suppressClosePing = true;
-    // Don't call markNavigation() - let server handle logout time recording
-    try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
+  
+  // Detect form submissions to prevent logout during form operations
+  document.addEventListener('submit', () => {
+    formSubmitting = true;
+    clearTimeout(timer); // Clear idle timer during form submission
+    setTimeout(() => {
+      formSubmitting = false;
+      last = Date.now(); // Reset idle timer
+      arm(); // Restart idle detection
+    }, 10000); // Reset after 10 seconds
   });
 
   async function pingSilentLogout(token) {
@@ -222,41 +233,42 @@ ACCORDION.forEach((item) => {
     } catch (_) { /* ignore */ }
   }
 
-  // First load in this tab? Clean foreign leftover token (but not our own)
-  if (!sessionStorage.getItem(TAB_FLAG)) {
-    sessionStorage.setItem(TAB_FLAG, '1');
-    const closedToken = localStorage.getItem(CLOSED_KEY);
-    if (closedToken && closedToken !== SESSION_TOKEN) {
-      // Only clean up an older/different tab's token
-      pingSilentLogout(closedToken);
-    }
-    try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
-  }
-
-  // Browser close detection using pagehide event
-  addEventListener('pagehide', (e) => {
-    // e.persisted = true means page is going into cache (navigation)
-    // e.persisted = false means page is being unloaded (browser close)
-    if (!e.persisted && !suppressClosePing && sessionStorage.getItem('skipSilent') !== '1') {
-      const formData = new FormData();
-      formData.append('session_token', SESSION_TOKEN);
-      navigator.sendBeacon(TAB_CLOSE_URL, formData);
-    }
-  });
+  // Browser close logout time recording is not possible due to technical limitations
+  // Only manual logout and idle timeout will record logout times
 
   // Idle detection -> call silent logout then redirect
   let last = Date.now(), timer;
+  console.log('Idle detection initialized with', IDLE_LIMIT_MS / 1000, 'second timeout');
   function arm() {
-    clearTimeout(timer);
+    console.log('arm() called, formSubmitting:', formSubmitting, 'timer ID:', timer);
+    if (timer) {
+      clearTimeout(timer);
+      console.log('Cleared existing timer:', timer);
+    }
+    timer = null;
+    if (formSubmitting) {
+      console.log('Skipping timer setup - form submitting');
+      return; // Don't set timer during form submission
+    }
+    console.log('Setting idle timer for', IDLE_LIMIT_MS + 100, 'ms');
     timer = setTimeout(() => {
-      if (Date.now() - last >= IDLE_LIMIT_MS) {
+      console.log('Timer fired! Timer ID:', timer, 'Time since last activity:', Date.now() - last, 'ms');
+      if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
+        console.log('Triggering logout due to idle timeout');
         // Record logout time via silent_logout before redirecting
         pingSilentLogout(SESSION_TOKEN);
         window.location.replace(LOGOUT_URL + '?force=1');
+      } else {
+        console.log('Logout cancelled - recent activity or form submitting');
       }
     }, IDLE_LIMIT_MS + 100);
+    console.log('New timer set with ID:', timer);
   }
-  function bump(){ last = Date.now(); arm(); }
+  function bump(){ 
+    console.log('Activity detected at:', new Date().toLocaleTimeString());
+    last = Date.now(); 
+    arm(); // Always restart timer on any activity
+  }
   ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
     addEventListener(evt, bump, { passive: true })
   );
