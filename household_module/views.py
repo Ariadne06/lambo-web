@@ -1,21 +1,24 @@
 from rest_framework import viewsets, status, serializers
 from rest_framework.views import APIView
-from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
-from .models import HouseType, Household, PhilhealthCategory
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import connection
-from .models import HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType, RelationshipToHouseholdHead, NutritionStatus, MedicalHistoryType, Class, FPMethod, FPStatus, Relationship, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements
+from .models import (
+    HouseType, PhilhealthCategory, HouseOwnershipType, HouseholdType, WaterSourceType, ToiletFacilityType, WasteManagementType,
+    RelationshipToHouseholdHead, NutritionStatus, MedicalHistoryType, Class, FPMethod, FPStatus,
+    Relationship, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements,
+    DiseaseType, Trimester, TestType, SupplementType, DewormingType, OutcomeType, DeliveryType, PlaceDeliveryType, OwnershipType, BirthAttendant, RecordStatus)
 from .serializers import (
     FamilyMemberCreateSerializer, HouseOwnershipTypeSerializer, HouseTypeSerializer, HouseholdTypeSerializer, NutritionStatusSerializer, WaterSourceTypeSerializer,
     ToiletFacilityTypeSerializer, WasteManagementTypeSerializer,
     HouseholdInsertSerializer, FamilyCreateSerializer, RelationshipToHouseholdHeadSerializer, PhilhealthCategorySerializer, MedicalHistoryTypeSerializer, ClassSerializer, 
     FPMethodSerializer, FPStatusSerializer, GeneralHealthCreateSerializer, GeneralHealthUpdateSerializer, QuarterSerializer, RelationshipSerializer, HouseholdUpdateSerializer, FeedingMethodSerializer, MonthSerializer, TTStatusSerializer,
     VaccineTypeSerializer, DoseTypeSerializer, SupplementsSerializer,
-    ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer, ChildGrowthMonitoringCreateSerializer, ChildImmunizationCreateSerializer, ChildMedicalConditionCreateSerializer, ChildSurgicalHistoryCreateSerializer, ChildSupplementCreateSerializer, ExclusiveBreastfeedCreateSerializer
+    ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer, ChildGrowthMonitoringCreateSerializer, ChildImmunizationCreateSerializer, ChildMedicalConditionCreateSerializer, ChildSurgicalHistoryCreateSerializer, ChildSupplementCreateSerializer, ExclusiveBreastfeedCreateSerializer, DiseaseTypeSerializer, TrimesterSerializer, TestTypeSerializer, SupplementTypeSerializer, DewormingTypeSerializer, OutcomeTypeSerializer, DeliveryTypeSerializer, PlaceDeliveryTypeSerializer, OwnershipTypeSerializer, BirthAttendantSerializer, RecordStatusSerializer, MaternalSupplementCreateSerializer, DewormingCreateSerializer, DeliveryOutcomeCreateSerializer, PostpartumVisitCreateSerializer,
+    MaternalHealthCreateSerializer, ObstetricalHistoryCreateSerializer, MaternalMedicalConditionCreateSerializer, MaternalSurgicalHistoryCreateSerializer, MaternalImmunizationCreateSerializer, DiseaseScreenCreateSerializer, LabScreeningCreateSerializer, CheckupRecordCreateSerializer,
 )
 from .utils.database_helpers import (
-    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months
+    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -114,6 +117,64 @@ class DoseTypeViewSet(viewsets.ReadOnlyModelViewSet):
 class SupplementsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Supplements.objects.filter(is_active=True)
     serializer_class = SupplementsSerializer
+
+# ========================================
+# MATERNAL HEALTH - LOOKUP ENDPOINTS
+# ========================================
+
+class DiseaseTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DiseaseType.objects.filter(is_active=True)
+    serializer_class = DiseaseTypeSerializer
+
+
+class TrimesterViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Trimester.objects.all().order_by('min_weeks')
+    serializer_class = TrimesterSerializer
+
+
+class TestTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = TestType.objects.all()
+    serializer_class = TestTypeSerializer
+
+
+class SupplementTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SupplementType.objects.all()
+    serializer_class = SupplementTypeSerializer
+
+
+class DewormingTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DewormingType.objects.all()
+    serializer_class = DewormingTypeSerializer
+
+
+class OutcomeTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OutcomeType.objects.all()
+    serializer_class = OutcomeTypeSerializer
+
+
+class DeliveryTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DeliveryType.objects.all()
+    serializer_class = DeliveryTypeSerializer
+
+
+class PlaceDeliveryTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PlaceDeliveryType.objects.all()
+    serializer_class = PlaceDeliveryTypeSerializer
+
+
+class OwnershipTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OwnershipType.objects.all()
+    serializer_class = OwnershipTypeSerializer
+
+
+class BirthAttendantViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BirthAttendant.objects.all()
+    serializer_class = BirthAttendantSerializer
+
+
+class RecordStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = RecordStatus.objects.all()
+    serializer_class = RecordStatusSerializer
 
 
 
@@ -2523,4 +2584,787 @@ class GeneralHealthDetailView(APIView):
                 'success': False,
                 'error': error_msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ========================================
+# MATERNAL HEALTH - SEARCH & LIST
+# ========================================
+
+class SearchMotherView(APIView):
+    """Search for mothers (residents who can have maternal records)"""
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
         
+        if len(query) < 2:
+            return Response({
+                'success': False,
+                'error': 'Search query must be at least 2 characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import search_mother
+            results = search_mother(query)
+            
+            return Response({
+                'success': True,
+                'count': len(results),
+                'data': results
+            })
+        except Exception as e:
+            print(f"❌ Search mother error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalHealthRecordListView(APIView):
+    """List all maternal health records with filtering"""
+    def get(self, request):
+        try:
+            # Get filter parameters
+            name_query = request.query_params.get('name_query')
+            family_code = request.query_params.get('family_code')
+            record_status = request.query_params.get('record_status')
+            date_from = request.query_params.get('date_from')
+            date_to = request.query_params.get('date_to')
+            limit = int(request.query_params.get('limit', 50))
+            
+            from .utils.database_helpers import view_all_maternal_record
+            results = view_all_maternal_record(
+                name_query=name_query,
+                family_code=family_code,
+                record_status=record_status,
+                date_from=date_from,
+                date_to=date_to
+            )
+            
+            # Apply limit
+            results = results[:limit]
+            
+            return Response({
+                'success': True,
+                'count': len(results),
+                'data': results
+            })
+        except Exception as e:
+            print(f"❌ List maternal records error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# MATERNAL HEALTH - RECORD CRUD
+# ========================================
+
+class MaternalHealthRecordCreateView(APIView):
+    """Create new maternal health record"""
+    
+    def post(self, request):
+        try:
+            serializer = MaternalHealthCreateSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create maternal record using serializer
+            result = serializer.save()
+            
+            return Response({
+                'success': True,
+                'maternal_health_id': result,
+                'message': 'Maternal health record created successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"❌ Maternal record creation error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalHealthRecordDetailView(APIView):
+    """Get detailed maternal health record"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_specific_maternal_health_record
+            
+            record = view_specific_maternal_health_record(maternal_health_id)
+            
+            if not record:
+                return Response({
+                    'success': False,
+                    'error': 'Maternal health record not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            return Response({
+                'success': True,
+                'data': record
+            })
+        except Exception as e:
+            print(f"❌ Get maternal record error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# OBSTETRICAL HISTORY
+# ========================================
+
+class MaternalObstetricalHistoryListView(APIView):
+    """Get obstetrical history for maternal health record"""
+    
+    def get(self, request, maternal_health_id):
+        try:
+            print(f"📋 Fetching obstetrical history for maternal_health_id={maternal_health_id}")
+            
+            # Get obstetrical history
+            history = view_obstetrical_history(maternal_health_id)
+            
+            # Get maternal name for context
+            maternal_data = view_specific_maternal_health_record(maternal_health_id)
+            maternal_name = maternal_data.get('full_name', 'Mother') if maternal_data else 'Mother'
+            
+            return Response({
+                'success': True,
+                'maternal_name': maternal_name,
+                'data': history,
+                'count': len(history)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f"❌ Obstetrical history list error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalObstetricalHistoryCreateView(APIView):
+    """Add obstetrical history"""
+    parser_classes = (JSONParser,)
+    
+    def post(self, request, maternal_health_id):
+        try:
+            print(f"📤 Adding obstetrical history for maternal_health_id={maternal_health_id}")
+            print(f"📦 Request data: {request.data}")
+            
+            serializer = ObstetricalHistoryCreateSerializer(
+                data=request.data,
+                context={'maternal_health_id': maternal_health_id}
+            )
+            
+            if not serializer.is_valid():
+                print(f"❌ Validation failed: {serializer.errors}")
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            obs_id = serializer.save()
+            
+            print(f"✅ Obstetrical history added successfully: obs_id={obs_id}")
+            
+            return Response({
+                'success': True,
+                'obs_id': obs_id,
+                'message': 'Obstetrical history added successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Obstetrical history creation error: {error_msg}")
+            
+            # Handle specific error codes
+            if 'P4B01' in error_msg:
+                user_message = 'Maternal health record not found'
+            elif 'duplicate' in error_msg.lower():
+                user_message = 'Obstetrical history already exists for this record'
+            else:
+                user_message = error_msg
+            
+            return Response({
+                'success': False,
+                'error': user_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# MEDICAL/SURGICAL HISTORY
+# ========================================
+
+class MaternalMedicalConditionCreateView(APIView):
+    """Add maternal medical condition"""
+    def post(self, request, maternal_health_id):
+        serializer = MaternalMedicalConditionCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_maternal_medical_condition
+            
+            mmh_id = add_maternal_medical_condition(
+                maternal_health_id=maternal_health_id,
+                condition_name=serializer.validated_data['m_medical_history_name'],
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'mmh_id': mmh_id,
+                'message': 'Medical condition added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_409_CONFLICT if 'Duplicate' in str(e) else status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalMedicalConditionListView(APIView):
+    """List all medical conditions for a maternal record"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_medical_conditions
+            
+            conditions = view_maternal_all_medical_conditions(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(conditions),
+                'data': conditions
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalSurgicalHistoryCreateView(APIView):
+    """Add maternal surgical history"""
+    def post(self, request, maternal_health_id):
+        serializer = MaternalSurgicalHistoryCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_maternal_surgical_history
+            
+            msh_id = add_maternal_surgical_history(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'msh_id': msh_id,
+                'message': 'Surgical history added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_409_CONFLICT if 'Duplicate' in str(e) else status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalSurgicalHistoryListView(APIView):
+    """List all surgical history for a maternal record"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_surgical_history
+            
+            history = view_maternal_all_surgical_history(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(history),
+                'data': history
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# IMMUNIZATION (TT)
+# ========================================
+
+class MaternalImmunizationCreateView(APIView):
+    """Add TT immunization dose"""
+    def post(self, request, maternal_health_id):
+        serializer = MaternalImmunizationCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_maternal_immunization
+            
+            track_id = add_maternal_immunization(
+                maternal_health_id=maternal_health_id,
+                dose_number=serializer.validated_data['dose_number'],
+                date_given=serializer.validated_data['date_given'],
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'track_id': track_id,
+                'message': f"TT Dose {serializer.validated_data['dose_number']} recorded successfully"
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_409_CONFLICT if 'already recorded' in str(e) else status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalImmunizationTrackView(APIView):
+    """View TT immunization tracking"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_immunization_track
+            
+            track = view_maternal_immunization_track(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'data': track or {}
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ========================================
+# DISEASE SURVEILLANCE
+# ========================================
+
+class DiseaseScreenCreateView(APIView):
+    """Add disease screening record"""
+    def post(self, request, maternal_health_id):
+        serializer = DiseaseScreenCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_disease_screen_record
+            
+            ids_id = add_disease_screen_record(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'ids_id': ids_id,
+                'message': 'Disease screening added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DiseaseScreenListView(APIView):
+    """List disease surveillance records"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_disease_surveillance
+            
+            records = view_maternal_all_disease_surveillance(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(records),
+                'data': records
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# LABORATORY SCREENING
+# ========================================
+
+class LabScreeningCreateView(APIView):
+    """Add laboratory screening"""
+    def post(self, request, maternal_health_id):
+        serializer = LabScreeningCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_lab_screening_record
+            
+            lab_id = add_lab_screening_record(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'lab_id': lab_id,
+                'message': 'Laboratory screening added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LabScreeningListView(APIView):
+    """List laboratory screenings"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_lab_screening
+            
+            records = view_maternal_all_lab_screening(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(records),
+                'data': records
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# CHECKUP RECORDS
+# ========================================
+
+class CheckupRecordCreateView(APIView):
+    """Add trimester checkup"""
+    def post(self, request, maternal_health_id):
+        serializer = CheckupRecordCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_checkup_record
+            
+            checkup_id = add_checkup_record(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'checkup_id': checkup_id,
+                'message': 'Checkup record added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CheckupRecordListView(APIView):
+    """List all checkups"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_checkups
+            
+            checkups = view_maternal_all_checkups(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(checkups),
+                'data': checkups
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CheckupRecordTrackView(APIView):
+    """View checkup tracking summary"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_checkup_record_track
+            
+            track = view_checkup_record_track(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'data': track
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ========================================
+# SUPPLEMENTS
+# ========================================
+
+class MaternalSupplementCreateView(APIView):
+    """Add micronutrient supplement record"""
+    def post(self, request, maternal_health_id):
+        serializer = MaternalSupplementCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_maternal_supplement_record
+            
+            supplement_id = add_maternal_supplement_record(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'supplement_id': supplement_id,
+                'message': 'Supplement record added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MaternalSupplementListView(APIView):
+    """List all supplement records"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_supplements
+            
+            supplements = view_maternal_all_supplements(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(supplements),
+                'data': supplements
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# DEWORMING
+# ========================================
+
+class DewormingCreateView(APIView):
+    """Add deworming record"""
+    def post(self, request, maternal_health_id):
+        serializer = DewormingCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_deworming_record
+            
+            deworm_id = add_deworming_record(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'deworm_id': deworm_id,
+                'message': 'Deworming record added successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DewormingListView(APIView):
+    """List all deworming records"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_deworming
+            
+            records = view_maternal_all_deworming(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(records),
+                'data': records
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# PREGNANCY OUTCOME
+# ========================================
+
+class DeliveryOutcomeCreateView(APIView):
+    """Add delivery outcome (marks record as Completed)"""
+    def post(self, request, maternal_health_id):
+        serializer = DeliveryOutcomeCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_delivery_outcome
+            
+            outcome_id = add_delivery_outcome(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'outcome_id': outcome_id,
+                'message': 'Delivery outcome recorded successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DeliveryOutcomeView(APIView):
+    """View delivery outcome"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_delivery_outcome
+            
+            outcome = view_maternal_delivery_outcome(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'data': outcome
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# POSTPARTUM
+# ========================================
+
+class PostpartumVisitCreateView(APIView):
+    """Add postpartum visit"""
+    def post(self, request, maternal_health_id):
+        serializer = PostpartumVisitCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .utils.database_helpers import add_postpartum_visit
+            
+            postpartum_id = add_postpartum_visit(
+                maternal_health_id=maternal_health_id,
+                data=serializer.validated_data,
+                personnel_id=serializer.validated_data['personnel_id']
+            )
+            
+            return Response({
+                'success': True,
+                'postpartum_id': postpartum_id,
+                'message': 'Postpartum visit recorded successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PostpartumVisitListView(APIView):
+    """List all postpartum visits"""
+    def get(self, request, maternal_health_id):
+        try:
+            from .utils.database_helpers import view_maternal_all_postpartum_visits
+            
+            visits = view_maternal_all_postpartum_visits(maternal_health_id)
+            
+            return Response({
+                'success': True,
+                'count': len(visits),
+                'data': visits
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
