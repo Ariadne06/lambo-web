@@ -103,6 +103,7 @@
 
       <input type="hidden" name="page" id="pageField" value="{{ page }}">
     </form>
+  </div>
 
     {% if message %}
       <div id="messages" class="mb-4 px-4 py-3 rounded border
@@ -112,7 +113,6 @@
         {{ message }}
       </div>
     {% endif %}
-  </div>
 
   <!-- Table -->
   <div class="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200">
@@ -157,16 +157,17 @@
               <td class="px-4 py-3">
                 <div class="flex items-center justify-center gap-2">
                   <!-- View button -->
-                  <button type="button"
-                          onclick="location.href='{% url 'bhw_module:childView' %}'"
-                          class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
-                          data-family-member-id="{{ person.family_member_id }}"
-                          data-name="{{ person.full_name|default:'' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
-                    </svg>
-                    View
-                  </button>
+                  <form method="post" action="{% url 'bhw_module:childView' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="child_health_id" value="{{ person.child_health_id }}">
+                    <button type="submit"
+                            class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                      </svg>
+                      View
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>

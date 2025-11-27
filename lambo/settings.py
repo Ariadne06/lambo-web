@@ -14,7 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # --- Sessions ---
-SESSION_COOKIE_AGE = 300
+SESSION_COOKIE_AGE = 1800  # 30 minutes (1800 seconds)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'bhw_module',
     'household_module',
     'certificate_issuance_module',
+    'reports_module', # Reports Module
 
     'django_browser_reload', # Browser Reload
 
