@@ -345,6 +345,129 @@ class ChildGrowthMonitoring(models.Model):
         managed = False
         db_table = 'child_growth_monitoring'
 
+# ========================================
+# MATERNAL HEALTH LOOKUP TABLES
+# ========================================
+
+class DiseaseType(models.Model):
+    disease_type_id = models.AutoField(primary_key=True)
+    disease_name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'Disease_Type'
+        managed = False
+
+
+class Trimester(models.Model):
+    trimester_id = models.AutoField(primary_key=True)
+    trimester_name = models.CharField(max_length=50, unique=True)
+    min_weeks = models.IntegerField(null=True, blank=True)
+    max_weeks = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'Trimester'
+        managed = False
+
+
+class TestType(models.Model):
+    test_type_id = models.AutoField(primary_key=True)
+    test_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Test_Type'
+        managed = False
+
+
+class SupplementType(models.Model):
+    supplement_type_id = models.AutoField(primary_key=True)
+    supplement_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Supplement_Type'
+        managed = False
+
+
+class DewormingType(models.Model):
+    deworming_type_id = models.AutoField(primary_key=True)
+    deworming_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Deworming_Type'
+        managed = False
+
+
+class OutcomeType(models.Model):
+    outcome_type_id = models.AutoField(primary_key=True)
+    outcome_type_description = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Outcome_Type'
+        managed = False
+
+
+class DeliveryType(models.Model):
+    delivery_type_id = models.AutoField(primary_key=True)
+    delivery_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Delivery_Type'
+        managed = False
+
+
+class PlaceDeliveryType(models.Model):
+    place_delivery_type_id = models.AutoField(primary_key=True)
+    place_delivery_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Place_Delivery_Type'
+        managed = False
+
+
+class OwnershipType(models.Model):
+    ownership_type_id = models.AutoField(primary_key=True)
+    ownership_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Ownership_Type'
+        managed = False
+
+
+class BirthAttendant(models.Model):
+    birth_attendant_id = models.AutoField(primary_key=True)
+    birth_attendant_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'Birth_Attendant'
+        managed = False
+
+
+class RecordStatus(models.Model):
+    record_status_id = models.AutoField(primary_key=True)
+    record_name = models.CharField(max_length=50, unique=True)
+    
+    class Meta:
+        db_table = 'Record_Status'
+        managed = False
+
+
+# ========================================
+# MATERNAL HEALTH CORE TABLES
+# ========================================
+
+class MaternalHealthRecord(models.Model):
+    maternal_health_id = models.AutoField(primary_key=True)
+    maternal_id = models.IntegerField()  # FK to Resident
+    address_landmark = models.CharField(max_length=200, null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    record_status_id = models.IntegerField()
+    created_by = models.IntegerField()
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'Maternal_Health_Record'
+        managed = False
+
 # Main tables 
 class Household(models.Model):
     household_id = models.AutoField(primary_key=True)
