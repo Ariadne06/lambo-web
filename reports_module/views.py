@@ -14,6 +14,7 @@ from .pdf_templates.resident.resident_statistics import ResidentStatisticsReport
 from .pdf_templates.business.clearance_applications import ClearanceApplicationsReport
 from .pdf_templates.financial.revenue_report import RevenueReport
 from .pdf_templates.resident.resident_list import ResidentListReport
+from .pdf_templates.family.harmonized_family_profile import HarmonizedFamilyProfilePDF
 
 
 class ReportTestView(View):
@@ -210,3 +211,40 @@ def generate_resident_list_view(request):
     """Django template view wrapper for resident list report."""
     view = GenerateResidentListReport.as_view()
     return view(request._request if hasattr(request, '_request') else request)
+
+
+def generate_harmonized_family_profile_view(request, family_id, quarter_id=None):
+    """
+    Generate Harmonized Family/Household Profile PDF.
+    
+    Args:
+        family_id: Family ID to generate profile for
+        quarter_id: Optional quarter ID for historical data
+    
+    Query parameters:
+        - download: Set to '1' or 'true' to force download (optional)
+    """
+    try:
+        force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+        
+        # Generate report
+        report = HarmonizedFamilyProfilePDF(family_id=family_id, quarter_id=quarter_id)
+        pdf_buffer = report.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        filename = f'harmonized_family_profile_{family_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        if force_download:
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        else:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(
+            f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+            status=500
+        )
+

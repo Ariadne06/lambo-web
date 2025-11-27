@@ -437,12 +437,9 @@ def resident_detail_json(request, resident_id: int):
         else:
             quarter_id = None
         
-        print(f"[DEBUG] Fetching resident_id: {resident_id}, quarter_id: {quarter_id}")
         resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
-        print(f"[DEBUG] Resident data: {resident}")
         
         if not resident:
-            print(f"[DEBUG] Resident {resident_id} not found")
             return JsonResponse({"ok": False, "message": "Resident not found"}, status=404)
         
         # Convert date to string for JSON serialization
@@ -450,7 +447,6 @@ def resident_detail_json(request, resident_id: int):
             from datetime import date
             if isinstance(resident['dob'], date):
                 resident['dob'] = resident['dob'].isoformat()
-                print(f"[DEBUG] Converted DOB to: {resident['dob']}")
         
         # Convert businesses JSONB to list if needed
         if resident.get('businesses') and isinstance(resident['businesses'], str):
@@ -460,7 +456,6 @@ def resident_detail_json(request, resident_id: int):
             except:
                 resident['businesses'] = []
         
-        print(f"[DEBUG] Returning success response")
         return JsonResponse({"ok": True, "resident": resident})
     except Exception as e:
         import traceback
@@ -552,6 +547,40 @@ def household_list(request):
     sitio = Household.sp_get_sitio()
     quarter = Household.sp_get_quarter()
     
+    # Calculate filter count and chips
+    filter_count = 0
+    status_chip = None
+    sitio_chip = None
+    
+    # Count active filters (excluding query and quarter)
+    if status and status != 'all':
+        filter_count += 1
+        # Create status chip with removal URL
+        status_label = status.capitalize()
+        remove_status_params = {k: v for k, v in base_params.items() if k != 'status'}
+        remove_status_params['status'] = 'all'
+        status_chip = {
+            'label': status_label,
+            'url': '?' + urlencode(remove_status_params)
+        }
+    
+    if sitio_id is not None:
+        filter_count += 1
+        # Find sitio name
+        sitio_name = next((s['sitio_name'] for s in sitio if s['sitio_id'] == sitio_id), f'Sitio {sitio_id}')
+        # Create sitio chip with removal URL
+        remove_sitio_params = {k: v for k, v in base_params.items() if k != 'sitio_id'}
+        sitio_chip = {
+            'label': f'Sitio {sitio_name}',
+            'url': '?' + urlencode(remove_sitio_params)
+        }
+    
+    # Clear all URL
+    clear_all_params = {'query': query}
+    if quarter_id is not None:
+        clear_all_params['quarter_id'] = quarter_id
+    clear_all_url = '?' + urlencode(clear_all_params)
+    
     flash = get_flash(request)
     return render(request, 'secretary_module/household_list.html',{
         "results": final_result,
@@ -572,6 +601,11 @@ def household_list(request):
         # ✅ expose these to the template
         'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
         'is_current_quarter': is_current_quarter,
+        # Filter badges and chips
+        'filter_count': filter_count,
+        'status_chip': status_chip,
+        'sitio_chip': sitio_chip,
+        'clear_all_url': clear_all_url,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -3162,3 +3196,69 @@ def generate_resident_detail_pdf(request, resident_id: int):
         import traceback
         print(f"[ERROR] Failed to generate resident detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_list_pdf(request):
+    """Generate PDF report for household list with applied filters"""
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    
+    # Get filters from request
+    query = request.GET.get('query', '').strip() or None
+    status = request.GET.get('status', 'all').strip()
+    sitio_id = request.GET.get('sitio_id', '').strip() or None
+    quarter_id = request.GET.get('quarter_id', '').strip() or None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    """Generate PDF report for specific household details"""
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdDetailPDF(household_id=household_id, quarter_id=quarter_id)
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_{household_id}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
