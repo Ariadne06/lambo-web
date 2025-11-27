@@ -43,4 +43,13 @@ urlpatterns = [
     path('resident-list/', 
          views.generate_resident_list_view, 
          name='resident_list'),
+    
+    # Harmonized Family Profile PDF
+    path('family-profile/<int:family_id>/', 
+         views.generate_harmonized_family_profile_view, 
+         name='family_profile'),
+    
+    path('family-profile/<int:family_id>/<int:quarter_id>/', 
+         views.generate_harmonized_family_profile_view, 
+         name='family_profile_quarter'),
 ]

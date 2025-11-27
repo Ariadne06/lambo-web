@@ -60,7 +60,11 @@ urlpatterns = [
     # Reports page
     path('reports/', views.reports, name='reports'),
     
-    # PDF Generation endpoints
-    path('resident_list/pdf/', views.generate_resident_list_pdf, name='resident_list_pdf'),
-    path('resident/<int:resident_id>/pdf/', views.generate_resident_detail_pdf, name='resident_detail_pdf'),
+    # PDF Generation endpoints - Residents
+    path('resident_list/pdf/', views.generate_resident_list_pdf, name='generate_resident_list_pdf'),
+    path('resident/<int:resident_id>/pdf/', views.generate_resident_detail_pdf, name='generate_resident_detail_pdf'),
+    
+    # PDF Generation endpoints - Households
+    path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
+    path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
 ]

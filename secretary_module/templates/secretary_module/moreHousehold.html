@@ -226,6 +226,21 @@
                     </svg>
                   </button>
 
+                  <!-- GENERATE FAMILY PROFILE PDF -->
+                  <a
+                    href="{% url 'reports_module:family_profile_quarter' f.family_id results.quarter_id %}"
+                    target="_blank"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-red-600 px-3 text-xs font-medium text-white shadow ring-1 ring-red-600/20 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                    title="Generate Harmonized Family Profile PDF"
+                    aria-label="Generate Harmonized Family Profile PDF"
+                  >
+                    <!-- document icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h4.586A2 2 0 0 1 12 2.586L15.414 6A2 2 0 0 1 16 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm2 6a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H7a1 1 0 0 1-1-1Zm1 3a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7Z" clip-rule="evenodd"/>
+                    </svg>
+                    Generate Profile
+                  </a>
+
                   <!-- existing chevron -->
                   <svg class="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180"
                       xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -305,6 +320,20 @@
         {% endif %}
 
       </section>
+    </div>
+    
+    <!-- Generate PDF Button - Bottom Right -->
+    <div class="mt-8 flex justify-end">
+      <form method="GET" action="{% url 'secretary_module:generate_household_detail_pdf' hid %}" target="_blank">
+        <input type="hidden" name="quarter_id" value="{{ results.quarter_id|default:'' }}">
+        <button type="submit" 
+                class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Generate PDF
+        </button>
+      </form>
     </div>
   </main>
 </div>
