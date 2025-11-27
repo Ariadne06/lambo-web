@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Relationship, MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements, ChildHealthRecord
+from .models import Relationship, MedicalHistoryType, Class, FPMethod, FPStatus, HouseOwnershipType, HouseType, HouseholdType, NutritionStatus, PhilhealthCategory, RelationshipToHouseholdHead, WaterSourceType, ToiletFacilityType, WasteManagementType, Household, Family, FeedingMethod, Month, TTStatus, VaccineType, DoseType, Supplements, ChildHealthRecord, DiseaseType, Trimester, TestType, SupplementType, DewormingType, OutcomeType, DeliveryType, PlaceDeliveryType, OwnershipType, BirthAttendant, RecordStatus 
 from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
 from .utils.database_helpers import insert_family_member, save_general_health_for_member, insert_child_health_record, update_child_health_record, add_child_immunization, add_child_supplement, add_child_medical_condition, add_child_surgical_history, add_child_growth_monitoring, add_exclusive_breastfeed_backfill
@@ -124,6 +124,71 @@ class SupplementsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplements
         fields = ['supplement_id', 'supplement_name', 'is_active']
+
+class DiseaseTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiseaseType
+        fields = '__all__'
+
+
+class TrimesterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trimester
+        fields = '__all__'
+
+
+class TestTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestType
+        fields = '__all__'
+
+
+class SupplementTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplementType
+        fields = '__all__'
+
+
+class DewormingTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DewormingType
+        fields = '__all__'
+
+
+class OutcomeTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OutcomeType
+        fields = '__all__'
+
+
+class DeliveryTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryType
+        fields = '__all__'
+
+
+class PlaceDeliveryTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlaceDeliveryType
+        fields = '__all__'
+
+
+class OwnershipTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OwnershipType
+        fields = '__all__'
+
+
+class BirthAttendantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BirthAttendant
+        fields = '__all__'
+
+
+class RecordStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecordStatus
+        fields = '__all__'
 
 
 
@@ -900,3 +965,177 @@ class ExclusiveBreastfeedCreateSerializer(serializers.Serializer):
         )
         
         return results
+    
+# ========================================
+#  MATERNAL ACTION SERIALIZERS (for creating records)
+# ========================================
+
+class MaternalHealthCreateSerializer(serializers.Serializer):
+    maternal_id = serializers.IntegerField(required=True)
+    address_landmark = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    personnel_id = serializers.IntegerField(required=True)
+    
+    def create(self, validated_data):
+        from .utils.database_helpers import insert_maternal
+        
+        maternal_id = validated_data['maternal_id']
+        address_landmark = validated_data.get('address_landmark')
+        personnel_id = validated_data['personnel_id']
+        
+        result = insert_maternal(maternal_id, address_landmark, personnel_id)
+        return result
+
+
+class ObstetricalHistoryCreateSerializer(serializers.Serializer):
+    gravida = serializers.IntegerField(required=True)
+    para = serializers.IntegerField(required=True)
+    term = serializers.IntegerField(required=False, allow_null=True)
+    preterm = serializers.IntegerField(required=False, allow_null=True)
+    abortion = serializers.IntegerField(required=False, allow_null=True)
+    living = serializers.IntegerField(required=False, allow_null=True)
+    lmp = serializers.DateField(required=False, allow_null=True)
+    edc = serializers.DateField(required=False, allow_null=True)
+    aog = serializers.IntegerField(required=False, allow_null=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class MaternalMedicalConditionCreateSerializer(serializers.Serializer):
+    m_medical_history_name = serializers.CharField(required=True, max_length=255)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class MaternalSurgicalHistoryCreateSerializer(serializers.Serializer):
+    m_surgical_history_name = serializers.CharField(required=True, max_length=255)
+    date_of_surgery = serializers.DateField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class MaternalImmunizationCreateSerializer(serializers.Serializer):
+    dose_number = serializers.IntegerField(required=True, min_value=1, max_value=5)
+    date_given = serializers.DateField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class DiseaseScreenCreateSerializer(serializers.Serializer):
+    disease_type_id = serializers.IntegerField(required=True)
+    screening_date = serializers.DateField(required=True)
+    result = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class LabScreeningCreateSerializer(serializers.Serializer):
+    test_type_id = serializers.IntegerField(required=True)
+    test_date = serializers.DateField(required=True)
+    result = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    iron_tablet_given_date = serializers.DateField(required=False, allow_null=True)
+    iron_tablet_quantity = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class CheckupRecordCreateSerializer(serializers.Serializer):
+    aog_weeks = serializers.IntegerField(required=True, min_value=0)
+    weight_kg = serializers.DecimalField(required=True, max_digits=5, decimal_places=2, min_value=0)
+    height_cm = serializers.DecimalField(required=True, max_digits=5, decimal_places=2, min_value=0)
+    bmi = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    blood_pressure = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    fetal_heart_rate = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    laboratory_results = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class MaternalSupplementCreateSerializer(serializers.Serializer):
+    supplement_type_id = serializers.IntegerField(required=True)
+    date_given = serializers.DateField(required=True)
+    number_of_tablets = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class DewormingCreateSerializer(serializers.Serializer):
+    deworming_type_id = serializers.IntegerField(required=True)
+    number_of_tablets = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    date_given = serializers.DateField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class DeliveryOutcomeCreateSerializer(serializers.Serializer):
+    outcome_type_id = serializers.IntegerField(required=True)
+    delivery_type_id = serializers.IntegerField(required=True)
+    place_delivery_type_id = serializers.IntegerField(required=True)
+    ownership_type_id = serializers.IntegerField(required=False, allow_null=True)
+    others_description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    birth_attendant_id = serializers.IntegerField(required=True)
+    other_attendant = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    time_of_delivery = serializers.TimeField(required=False, allow_null=True)
+    date_terminated = serializers.DateField(required=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+class PostpartumVisitCreateSerializer(serializers.Serializer):
+    date_of_visit = serializers.DateField(required=False, allow_null=True)
+    weight_kg = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    height_cm = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    blood_pressure = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    laboratory_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    personnel_id = serializers.IntegerField(required=True)
+
+
+# Child Vaccine Management
+class VaccineTypeCreateSerializer(serializers.Serializer):
+    vaccine_name = serializers.CharField(max_length=200, required=True)
+    at_birth = serializers.BooleanField(default=False)
+    first_dose = serializers.BooleanField(default=False)
+    second_dose = serializers.BooleanField(default=False)
+    third_dose = serializers.BooleanField(default=False)
+    interval_between_doses = serializers.CharField(
+        required=False, 
+        allow_null=True,
+        help_text="e.g., '4 weeks', '1 month'"
+    )
+    
+    def validate(self, data):
+        # At least one dose must be enabled
+        if not any([
+            data.get('at_birth'),
+            data.get('first_dose'),
+            data.get('second_dose'),
+            data.get('third_dose')
+        ]):
+            raise serializers.ValidationError(
+                "At least one dose type must be enabled"
+            )
+        
+        # If multiple doses, interval is recommended
+        dose_count = sum([
+            data.get('first_dose', False),
+            data.get('second_dose', False),
+            data.get('third_dose', False)
+        ])
+        
+        if dose_count >= 1 and not data.get('interval_between_doses'):
+            raise serializers.ValidationError(
+                "Interval between doses is recommended when multiple doses are enabled"
+            )
+        
+        return data
+    
+    def save(self, personnel_id):
+        from .utils.database_helpers import insert_vaccine
+        return insert_vaccine(self.validated_data, personnel_id)
+
+
+class VaccineTypeUpdateSerializer(serializers.Serializer):
+    vaccine_name = serializers.CharField(max_length=200, required=False)
+    at_birth = serializers.BooleanField(required=False)
+    first_dose = serializers.BooleanField(required=False)
+    second_dose = serializers.BooleanField(required=False)
+    third_dose = serializers.BooleanField(required=False)
+    interval_between_doses = serializers.CharField(
+        required=False,
+        allow_null=True
+    )
+    
+    def save(self, vaccine_type_id, personnel_id):
+        from .utils.database_helpers import update_vaccine
+        return update_vaccine(vaccine_type_id, self.validated_data, personnel_id)
