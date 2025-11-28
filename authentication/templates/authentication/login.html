@@ -116,12 +116,7 @@
               </svg>
             </button>
           </div>
-          <div class="mt-2 flex items-center justify-between text-sm">
-            <label class="inline-flex items-center gap-2 text-gray-700 select-none">
-              <input id="remember" name="remember" type="checkbox"
-                     class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-600"/>
-              <span>Keep me signed in</span>
-            </label>
+          <div class="mt-2 flex justify-end text-sm">
             <a href="{% url 'authentication:req_pwd_change' %}" class="text-gray-600 hover:text-red-700 hover:underline">
               Forgot password?
             </a>
