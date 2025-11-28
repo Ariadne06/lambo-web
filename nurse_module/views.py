@@ -16,6 +16,7 @@ import json
 import math
 from django.db import DatabaseError
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -174,7 +175,171 @@ def nurse_dashboard(request):
     }
     return render(request, "nurse_module/nurse_dashboard.html", ctx)
 
+@custom_login_required
+@role_required('Midwife')
+@require_http_methods(["GET", "POST"])
+def vaccine_list(request):
+    """
+    GET  -> show table of all vaccines + add-new form
+    POST -> create new vaccine via insert_vaccine()
+    """
+    personnel_id = request.session.get("personnel_id")
 
+    if request.method == "POST":
+        if not personnel_id:
+            messages.error(request, "Missing personnel id in session.")
+            return redirect("nurse_module:vaccine_list")
+
+        name = request.POST.get("vaccine_name", "").strip()
+        at_birth = bool(request.POST.get("at_birth"))
+        first_dose = bool(request.POST.get("first_dose"))
+        second_dose = bool(request.POST.get("second_dose"))
+        third_dose = bool(request.POST.get("third_dose"))
+        interval_str = request.POST.get("interval_between_doses") or None
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT insert_vaccine(%s, %s, %s, %s, %s, %s, %s);",
+                    [
+                        name,
+                        at_birth,
+                        first_dose,
+                        second_dose,
+                        third_dose,
+                        interval_str,     # e.g. "4 weeks" or NULL
+                        personnel_id,
+                    ],
+                )
+                new_id = cursor.fetchone()[0]
+
+            messages.success(request, f"Vaccine “{name}” added (ID {new_id}).")
+            return redirect("nurse_module:vaccine_list")
+
+        except Exception as e:
+            # You can parse e.__cause__ / e.args[0] for custom P45xx codes if you like
+            messages.error(request, f"Unable to add vaccine: {e}")
+
+    vaccines = _fetch_all_vaccines()
+    context = {
+        "vaccines": vaccines,
+    }
+    return render(request, "nurse_module/addVaccine.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def vaccine_edit(request, vaccine_type_id: int):
+    """
+    GET  -> show edit form pre-filled using view_specific_vaccine()
+    POST -> update via update_vaccine()
+    """
+    personnel_id = request.session.get("personnel_id")
+
+    vaccine = _fetch_vaccine(vaccine_type_id)
+    if not vaccine:
+        messages.error(request, "Vaccine not found.")
+        return redirect("nurse_module:vaccine_list")
+
+    if request.method == "POST":
+        if not personnel_id:
+            messages.error(request, "Missing personnel id in session.")
+            return redirect("nurse_module:vaccine_list")
+
+        name = request.POST.get("vaccine_name", "").strip() or None
+        at_birth = request.POST.get("at_birth")
+        first_dose = request.POST.get("first_dose")
+        second_dose = request.POST.get("second_dose")
+        third_dose = request.POST.get("third_dose")
+        interval_str = request.POST.get("interval_between_doses") or None
+
+        # Convert checkbox values: if checkbox is not present, we pass None (keep current)
+        def cb_to_bool(value):
+            if value is None:
+                return None   # don’t change
+            return value == "on"
+
+        at_birth_bool = cb_to_bool(at_birth)
+        first_bool = cb_to_bool(first_dose)
+        second_bool = cb_to_bool(second_dose)
+        third_bool = cb_to_bool(third_dose)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT update_vaccine(
+                      %s, %s, %s, %s, %s, %s, %s, %s
+                    );
+                    """,
+                    [
+                        vaccine_type_id,
+                        name,            # NULL => keep old name
+                        at_birth_bool,   # NULL => keep old flag
+                        first_bool,
+                        second_bool,
+                        third_bool,
+                        interval_str,    # NULL => keep old interval
+                        personnel_id,
+                    ],
+                )
+                updated_id = cursor.fetchone()[0]
+
+            messages.success(request, "Vaccine updated successfully.")
+            return redirect("nurse_module:vaccine_list")
+
+        except Exception as e:
+            messages.error(request, f"Unable to update vaccine: {e}")
+
+    context = {
+        "vaccine": vaccine,
+    }
+    return render(request, "nurse_module/vaccine_edit.html", context)
+
+
+def _fetch_all_vaccines():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM view_all_vaccine();")
+        columns = [col[0] for col in cursor.description]
+        rows = cursor.fetchall()
+
+    vaccines = []
+    for row in rows:
+        data = dict(zip(columns, row))
+        # nice label for interval
+        interval = data.get("interval_between_doses")
+        if interval:
+            days = interval.days
+            weeks = days // 7
+            if weeks >= 1:
+                data["interval_label"] = f"Every {weeks} week(s)"
+            else:
+                data["interval_label"] = f"{days} day(s)"
+        else:
+            data["interval_label"] = "—"
+        vaccines.append(data)
+    return vaccines
+
+
+# Helper to fetch a specific vaccine via view_specific_vaccine()
+def _fetch_vaccine(vaccine_type_id: int):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM view_specific_vaccine(%s);", [vaccine_type_id])
+        columns = [col[0] for col in cursor.description]
+        row = cursor.fetchone()
+    if not row:
+        return None
+    data = dict(zip(columns, row))
+    interval = data.get("interval_between_doses")
+    if interval:
+        days = interval.days
+        weeks = days // 7
+        if weeks >= 1:
+            data["interval_label"] = f"Every {weeks} week(s)"
+        else:
+            data["interval_label"] = f"{days} day(s)"
+    else:
+        data["interval_label"] = ""
+    return data
 
 @custom_login_required
 @role_required('Midwife')
