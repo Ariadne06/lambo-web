@@ -1,0 +1,13 @@
+{
+  "files.associations": {
+    "**/templates/**": "django-html"
+  },
+  "emmet.includeLanguages": {
+    "django-html": "html"
+  },
+  "[django-html]": {
+    "css.validate": false,
+    "less.validate": false,
+    "scss.validate": false
+  }
+}
