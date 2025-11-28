@@ -30,8 +30,14 @@
   /* Generic disabled state: keep original color, just tweak cursor/opacity */
   .btn-action[disabled]{
     cursor:not-allowed;
-    opacity:0.9; /* keep color, just a tiny hint it’s disabled */
+    opacity:0.9; /* keep color, just a tiny hint it's disabled */
   }
+
+  .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+  .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+  
+  details[open] > summary { background:#f9fafb; }
+  details > summary::-webkit-details-marker { display:none; }
 </style>
 
 <div class="px-6 py-6">
@@ -92,23 +98,42 @@
           
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Household Status</label>
-            <select name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600">
-              <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
-              <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
-              <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
-            </select>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="all" {% if status == 'all' or not status %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="text-sm text-gray-700">All Status</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="active" {% if status == 'active' %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="chip chip-rose text-sm">Active</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="inactive" {% if status == 'inactive' %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="chip chip-rose text-sm">Inactive</span>
+              </label>
+            </div>
           </div>
 
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Sitio</label>
-            <select name="sitio_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600">
-              <option value="">All Sitios</option>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="sitio_id" value="" {% if not sitio_id %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="text-sm text-gray-700">All Sitios</span>
+              </label>
               {% for s in sitio %}
-                <option value="{{ s.sitio_id }}" {% if s.sitio_id|stringformat:"s" == sitio_id|stringformat:"s" %}selected{% endif %}>
-                  {{ s.sitio_name }}
-                </option>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sitio_id" value="{{ s.sitio_id }}" 
+                         {% if s.sitio_id|stringformat:"s" == sitio_id|stringformat:"s" %}checked{% endif %}
+                         class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-sm text-gray-700">{{ s.sitio_name }}</span>
+                </label>
               {% endfor %}
-            </select>
+            </div>
           </div>
 
           <div>

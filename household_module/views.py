@@ -3368,3 +3368,80 @@ class PostpartumVisitListView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# BHW DASHBOARD ENDPOINT
+# ========================================
+
+class BHWDashboardView(APIView):
+    """
+    Get BHW dashboard statistics
+    
+    Query Parameters:
+        - personnel_id (required): The personnel ID of the BHW
+        - quarter_id (optional): Specific quarter ID. Defaults to current quarter.
+    
+    Returns comprehensive dashboard data including:
+        - Total households and families
+        - Maternal health statistics
+        - Child immunization upcoming
+        - Today's visitations by BHW
+        - Demographics (gender and age groups)
+        - Household and family visitation progress
+        - Households per purok/sitio breakdown
+    """
+    
+    def get(self, request):
+        try:
+            from .utils.database_helpers import get_bhw_dashboard
+            
+            # Get parameters
+            personnel_id = request.query_params.get('personnel_id')
+            quarter_id = request.query_params.get('quarter_id')
+            
+            # Validate personnel_id
+            if not personnel_id:
+                return Response({
+                    'success': False,
+                    'error': 'personnel_id is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                personnel_id = int(personnel_id)
+            except (ValueError, TypeError):
+                return Response({
+                    'success': False,
+                    'error': 'personnel_id must be a valid integer'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate quarter_id if provided
+            if quarter_id:
+                try:
+                    quarter_id = int(quarter_id)
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'quarter_id must be a valid integer'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get dashboard data
+            dashboard_data = get_bhw_dashboard(personnel_id, quarter_id)
+            
+            if not dashboard_data:
+                return Response({
+                    'success': False,
+                    'error': 'Failed to retrieve dashboard data'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            return Response({
+                'success': True,
+                'data': dashboard_data
+            })
+            
+        except Exception as e:
+            print(f"❌ BHW Dashboard Error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

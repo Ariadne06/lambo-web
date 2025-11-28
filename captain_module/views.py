@@ -970,3 +970,73 @@ def personnelRequest(request):
         'message_level': flash['message_level'],
         'role_labels': ROLE_LABELS,
     })
+
+# ========================================
+# PDF GENERATION VIEWS
+# ========================================
+
+@custom_login_required
+@role_required('Barangay Captain')
+@require_GET
+def generate_household_list_pdf(request):
+    """Generate PDF report for household list with applied filters"""
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    from django.http import HttpResponse
+    
+    # Get filters from request
+    query = request.GET.get('query', '').strip() or None
+    status = request.GET.get('status', 'all').strip()
+    sitio_id = request.GET.get('sitio_id', '').strip() or None
+    quarter_id = request.GET.get('quarter_id', '').strip() or None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Captain')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    """Generate PDF report for specific household details"""
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    from django.http import HttpResponse
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdDetailPDF(household_id=household_id, quarter_id=quarter_id)
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_{household_id}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
