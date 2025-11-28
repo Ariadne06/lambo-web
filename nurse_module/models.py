@@ -1224,3 +1224,23 @@ class TestTypeRow(models.Model):
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
         except ProgrammingError:
             return []
+
+
+class VaccineType(models.Model):
+    vaccine_type_id = models.AutoField(primary_key=True)
+    vaccine_name = models.CharField(max_length=100, unique=True)
+    at_birth = models.BooleanField(default=False)
+    first_dose = models.BooleanField(default=False)
+    second_dose = models.BooleanField(default=False)
+    third_dose = models.BooleanField(default=False)
+    interval_between_doses = models.DurationField(null=True, blank=True)
+    date_added = models.DateTimeField()
+    updated_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        managed = False       # Table + functions are created via SQL
+        db_table = 'vaccine_type'
+
+    def __str__(self):
+        return self.vaccine_name

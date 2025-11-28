@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Remix Icon CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
   <title>{% block title %}Admin{% endblock %}</title>
   {% tailwind_css %}
 </head>
@@ -19,129 +21,123 @@
 
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
-            <!-- Dashboard -->
-          <a href="{% url 'admin_module:admin_dashboard' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'admin_dashboard' %}
+
+      <!-- Dashboard -->
+      <a href="{% url 'admin_module:admin_dashboard' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'admin_dashboard' %}ri-dashboard-fill{% else %}ri-dashboard-line{% endif %} text-lg"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <!-- Manage submenu -->
+      <button id="submenu-toggle"
+              class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+                     {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
+                         bg-white text-red-700 font-semibold shadow-sm
+                     {% else %}
+                         hover:bg-red-800/80
+                     {% endif %}">
+        <i class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}ri-team-fill{% else %}ri-team-line{% endif %} text-lg"></i>
+        <span>Manage</span>
+        <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg"
+             class="h-5 w-5 ml-auto transition-transform duration-300
+                    {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} rotate-180 {% endif %}"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+        <a href="{% url 'admin_module:admin_Addpersonnel' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
                       bg-white text-red-700 font-semibold shadow-sm
                   {% else %}
-                      hover:bg-red-800/80
+                      hover:bg-red-800/60
                   {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'admin_dashboard' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Dashboard</span>
+          Add Personnel
         </a>
+        <a href="{% url 'admin_module:password_request' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'password_request' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Request Change
+        </a>
+        <a href="{% url 'admin_module:personnel_list' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'personnel_list' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          View Personnels
+        </a>
+      </div>
 
-<!-- Manage submenu -->
-<button id="submenu-toggle"
-        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
-                   bg-white text-red-700 font-semibold shadow-sm
-               {% else %}
-                   hover:bg-red-800/80
-               {% endif %}">
-  <img src="{% static 'images/manage.svg' %}" alt="Manage Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} invert {% endif %}">
-  <span>Manage</span>
-  <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg"
-       class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} rotate-180 {% endif %}"
-       fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-  </svg>
-</button>
-<div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'admin_module:admin_Addpersonnel' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Add Personnel
-  </a>
-  <a href="{% url 'admin_module:password_request' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'password_request' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Request Change
-  </a>
-  <a href="{% url 'admin_module:personnel_list' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'personnel_list' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    View Personnels
-  </a>
-</div>
+      <!-- Logs submenu -->
+      <button id="logs-toggle"
+              class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
+                     {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %}
+                         bg-white text-red-700 font-semibold shadow-sm
+                     {% else %}
+                         hover:bg-red-800/80
+                     {% endif %}">
+        <i class="{% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %}ri-history-fill{% else %}ri-history-line{% endif %} text-lg"></i>
+        <span>Logs</span>
+        <svg id="logs-arrow" xmlns="http://www.w3.org/2000/svg"
+             class="h-5 w-5 ml-auto transition-transform duration-300
+                    {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} rotate-180 {% endif %}"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-<!-- Logs submenu -->
-<button id="logs-toggle"
-        class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-               {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %}
-                   bg-white text-red-700 font-semibold shadow-sm
-               {% else %}
-                   hover:bg-red-800/80
-               {% endif %}">
-  <img src="{% static 'images/logs.svg' %}" alt="Logs Icon"
-       class="h-5 w-5 {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} invert {% endif %}">
-  <span>Logs</span>
-  <svg id="logs-arrow" xmlns="http://www.w3.org/2000/svg"
-       class="h-5 w-5 ml-auto transition-transform duration-300
-              {% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} rotate-180 {% endif %}"
-       fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-  </svg>
-</button>
-<div id="logs-submenu" class="{% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
-  <a href="{% url 'admin_module:activityLogs' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'activityLogs' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Activity Logs
-  </a>
-    <a href="{% url 'admin_module:authenticationlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'authenticationlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Authentication Logs
-  </a>
-  <a href="{% url 'admin_module:residentlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'residentlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Resident Update Logs
-  </a>
-
-  <a href="{% url 'admin_module:documentlog' %}"
-     class="block px-3 py-2 rounded-md transition
-            {% if request.resolver_match.url_name == 'documentlog' %}
-                bg-white text-red-700 font-semibold shadow-sm
-            {% else %}
-                hover:bg-red-800/60
-            {% endif %}">
-    Document Logs
-  </a>
-</div>
+      <div id="logs-submenu" class="{% if request.resolver_match.url_name in 'activityLogs authenticationlog residentlog documentlog' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+        <a href="{% url 'admin_module:activityLogs' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'activityLogs' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Activity Logs
+        </a>
+        <a href="{% url 'admin_module:authenticationlog' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'authenticationlog' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Authentication Logs
+        </a>
+        <a href="{% url 'admin_module:residentlog' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'residentlog' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Resident Update Logs
+        </a>
+        <a href="{% url 'admin_module:documentlog' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'documentlog' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Document Logs
+        </a>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -156,7 +152,7 @@
          <button type="submit" id="logout-link"
                  class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
                          hover:bg-red-800 ring-1 ring-white/20 transition">
-           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
+           <i class="ri-logout-box-r-line text-sm"></i>
            <span class="text-xs">Logout</span>
          </button>
         </form>
@@ -171,7 +167,7 @@
     </div>
   </div>
 
-   {% comment %} <script>
+  <script>
   // Simple accordion wiring (unchanged)
   const ACCORDION = [
     { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
@@ -206,25 +202,35 @@
     });
   });
 
-  // Idle + tab close + safe manual logout
+  // Idle + tab close + safe manual logout (Option A: no ping on unload)
   (function () {
     const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
     const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}";
+    const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}"; // still used for cross-tab cleanup
 
-    const TAB_FLAG    = 'tabAuth';
-    const CLOSED_KEY  = 'closed_session_token';
-    const SESSION_TOKEN = "{{ request.session.session_token|default:'' }}";
+    const TAB_FLAG       = 'tabAuth';
+    const CLOSED_KEY     = 'closed_session_token';
+    const SESSION_TOKEN  = "{{ request.session.session_token|default:'' }}";
     if (!SESSION_TOKEN) return;
 
     // --- Manual logout suppression ---
     let suppressClosePing = false;
-    // Clear any stale skip flag from a previous page
+    let formSubmitting = false;
     try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
-    // Mark suppression when the visible Logout is clicked
+    
     document.getElementById('logout-link')?.addEventListener('click', () => {
       suppressClosePing = true;
-      try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+    });
+    
+    // Detect form submissions to prevent logout during form operations
+    document.addEventListener('submit', () => {
+      formSubmitting = true;
+      clearTimeout(timer); // Clear idle timer during form submission
+      setTimeout(() => {
+        formSubmitting = false;
+        last = Date.now(); // Reset idle timer
+        arm(); // Restart idle detection
+      }, 10000); // Reset after 10 seconds
     });
 
     async function pingSilentLogout(token) {
@@ -243,170 +249,45 @@
       } catch (_) { /* ignore */ }
     }
 
-    // First load in this tab? Clean foreign leftover token (but not our own)
-    if (!sessionStorage.getItem(TAB_FLAG)) {
-      sessionStorage.setItem(TAB_FLAG, '1');
-      const closedToken = localStorage.getItem(CLOSED_KEY);
-      if (closedToken && closedToken !== SESSION_TOKEN) {
-        pingSilentLogout(closedToken);
-      }
-      try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
-    }
-
-    // On tab/browser close or reload
-    function handleClose() {
-      // Skip silent ping if this unload is due to manual logout
-      if (suppressClosePing || sessionStorage.getItem('skipSilent') === '1') return;
-      try { localStorage.setItem(CLOSED_KEY, SESSION_TOKEN); } catch(_) {}
-      pingSilentLogout(SESSION_TOKEN);
-    }
-    addEventListener('pagehide', handleClose);
-    addEventListener('beforeunload', handleClose);
-
-    // Idle detection -> go to real logout
+    // Idle detection -> call silent logout then redirect
     let last = Date.now(), timer;
+    console.log('Idle detection initialized with', IDLE_LIMIT_MS / 1000, 'second timeout');
     function arm() {
-      clearTimeout(timer);
-      if (document.visibilityState !== 'visible') return;
+      console.log('arm() called, formSubmitting:', formSubmitting, 'timer ID:', timer);
+      if (timer) {
+        clearTimeout(timer);
+        console.log('Cleared existing timer:', timer);
+      }
+      timer = null;
+      if (formSubmitting) {
+        console.log('Skipping timer setup - form submitting');
+        return; // Don't set timer during form submission
+      }
+      console.log('Setting idle timer for', IDLE_LIMIT_MS + 100, 'ms');
       timer = setTimeout(() => {
-        if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
-          window.location.replace(LOGOUT_URL);
+        console.log('Timer fired! Timer ID:', timer, 'Time since last activity:', Date.now() - last, 'ms');
+        if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
+          console.log('Triggering logout due to idle timeout');
+          // Record logout time via silent_logout before redirecting
+          pingSilentLogout(SESSION_TOKEN);
+          window.location.replace(LOGOUT_URL + '?force=1');
+        } else {
+          console.log('Logout cancelled - recent activity or form submitting');
         }
       }, IDLE_LIMIT_MS + 100);
+      console.log('New timer set with ID:', timer);
     }
-    function bump(){ last = Date.now(); arm(); }
+    function bump(){ 
+      console.log('Activity detected at:', new Date().toLocaleTimeString());
+      last = Date.now(); 
+      arm(); // Always restart timer on any activity
+    }
     ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
       addEventListener(evt, bump, { passive: true })
     );
     addEventListener('visibilitychange', arm, { capture: true });
     arm();
   })();
-  </script> {% endcomment %}
-
-  <script>
-// Simple accordion wiring (unchanged)
-const ACCORDION = [
-  { btn: 'submenu-toggle', panel: 'submenu', arrow: 'submenu-arrow' },
-  { btn: 'logs-toggle',    panel: 'logs-submenu', arrow: 'logs-arrow' },
-];
-function getEl(id){ return document.getElementById(id); }
-function closeItem(item){
-  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
-  if (!panel) return;
-  panel.classList.add('hidden');
-  arrow?.classList.remove('rotate-180');
-  btn?.setAttribute('aria-expanded', 'false');
-}
-function openItem(item){
-  const panel = getEl(item.panel), arrow = getEl(item.arrow), btn = getEl(item.btn);
-  if (!panel) return;
-  panel.classList.remove('hidden');
-  arrow?.classList.add('rotate-180');
-  btn?.setAttribute('aria-expanded', 'true');
-}
-ACCORDION.forEach((item) => {
-  const btn = getEl(item.btn), panel = getEl(item.panel);
-  if (btn && panel) {
-    const isOpen = !panel.classList.contains('hidden');
-    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    btn.setAttribute('aria-controls', item.panel);
-  }
-  btn?.addEventListener('click', () => {
-    const open = !getEl(item.panel).classList.contains('hidden');
-    if (open) { closeItem(item); }
-    else { ACCORDION.forEach(other => { if (other !== item) closeItem(other); }); openItem(item); }
-  });
-});
-
-// Idle + tab close + safe manual logout (Option A: no ping on unload)
-(function () {
-  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
-  const LOGOUT_URL    = "{% url 'authentication:logout' %}";
-  const TAB_CLOSE_URL = "{% url 'authentication:silent_logout' %}"; // still used for cross-tab cleanup
-
-  const TAB_FLAG       = 'tabAuth';
-  const CLOSED_KEY     = 'closed_session_token';
-  const SESSION_TOKEN  = "{{ request.session.session_token|default:'' }}";
-  if (!SESSION_TOKEN) return;
-
-  // --- Manual logout suppression ---
-  let suppressClosePing = false;
-  let formSubmitting = false;
-  try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
-  
-  document.getElementById('logout-link')?.addEventListener('click', () => {
-    suppressClosePing = true;
-  });
-  
-  // Detect form submissions to prevent logout during form operations
-  document.addEventListener('submit', () => {
-    formSubmitting = true;
-    clearTimeout(timer); // Clear idle timer during form submission
-    setTimeout(() => {
-      formSubmitting = false;
-      last = Date.now(); // Reset idle timer
-      arm(); // Restart idle detection
-    }, 10000); // Reset after 10 seconds
-  });
-
-  async function pingSilentLogout(token) {
-    if (!token) return;
-    const body = new URLSearchParams();
-    body.set('session_token', token);
-    try {
-      await fetch(TAB_CLOSE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-        credentials: 'omit',   // NO COOKIES
-        keepalive: true,
-        cache: 'no-store'
-      });
-    } catch (_) { /* ignore */ }
-  }
-
-  // Browser close logout time recording is not possible due to technical limitations
-  // Only manual logout and idle timeout will record logout times
-
-  // Idle detection -> call silent logout then redirect
-  let last = Date.now(), timer;
-  console.log('Idle detection initialized with', IDLE_LIMIT_MS / 1000, 'second timeout');
-  function arm() {
-    console.log('arm() called, formSubmitting:', formSubmitting, 'timer ID:', timer);
-    if (timer) {
-      clearTimeout(timer);
-      console.log('Cleared existing timer:', timer);
-    }
-    timer = null;
-    if (formSubmitting) {
-      console.log('Skipping timer setup - form submitting');
-      return; // Don't set timer during form submission
-    }
-    console.log('Setting idle timer for', IDLE_LIMIT_MS + 100, 'ms');
-    timer = setTimeout(() => {
-      console.log('Timer fired! Timer ID:', timer, 'Time since last activity:', Date.now() - last, 'ms');
-      if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
-        console.log('Triggering logout due to idle timeout');
-        // Record logout time via silent_logout before redirecting
-        pingSilentLogout(SESSION_TOKEN);
-        window.location.replace(LOGOUT_URL + '?force=1');
-      } else {
-        console.log('Logout cancelled - recent activity or form submitting');
-      }
-    }, IDLE_LIMIT_MS + 100);
-    console.log('New timer set with ID:', timer);
-  }
-  function bump(){ 
-    console.log('Activity detected at:', new Date().toLocaleTimeString());
-    last = Date.now(); 
-    arm(); // Always restart timer on any activity
-  }
-  ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
-    addEventListener(evt, bump, { passive: true })
-  );
-  addEventListener('visibilitychange', arm, { capture: true });
-  arm();
-})();
-</script>
+  </script>
 </body>
 </html>
