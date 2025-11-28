@@ -49,40 +49,64 @@ MAX_PAGE_SIZE = 200
 @custom_login_required
 @role_required('Midwife')
 def nurse_dashboard(request):
-    # ---- KPIs ----
-    try:
-        totals = Dashboard.sp_dashboard_totals(barangay=None, city=None)
-    except Exception as e:
-        messages.error(request, f"Failed loading totals: {e}")
-        totals = {
-            "total_resident": 0, "total_non_resident": 0, "total_pending": 0,
-            "total_male": 0, "total_female": 0
-        }
+    # ---- Core BHW/Nurse dashboard metrics ----
+    # Fallback to 0 if personnel_id is not set; this still returns barangay-wide totals.
+    personnel_id = getattr(request.user, "personnel_id", 0) or 0
 
-    # ---- Bar (per sitio) ----
-    try:
-        per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
-        per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
-        per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
-    except Exception as e:
-        messages.error(request, f"Failed loading per-sitio data: {e}")
-        per_sitio_labels, per_sitio_data = [], []
+    # Safe defaults for all expected keys
+    default_dash = {
+        "total_households": 0,
+        "total_families": 0,
+        "total_active_maternal": 0,
+        "total_active_maternal_by_bhw": 0,
+        "total_children_upcoming_immun_5d": 0,
+        "households_visited_today_by_bhw": 0,
+        "total_male": 0,
+        "total_female": 0,
+        "age_group_0_5": 0,
+        "age_group_6_12": 0,
+        "age_group_13_17": 0,
+        "age_group_18_59": 0,
+        "age_group_60_plus": 0,
+        "hh_visited_count": 0,
+        "hh_not_visited_count": 0,
+        "hh_visited_percent": 0,
+        "fam_visited_count": 0,
+        "fam_not_visited_count": 0,
+        "fam_visited_percent": 0,
+        "households_per_purok": [],
+        "quarter_id": None,
+    }
 
-    # ---- Pie (age) ----
     try:
-        age_rows = Dashboard.sp_age_bracket_distribution()
-        cleaned = []
-        for item in age_rows or []:
-            cleaned.append(item.get("jsonb_build_object", item))
-        age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
-        age_data   = [int(r.get("count") or 0) for r in cleaned]
-        total = sum(age_data) or 1
-        age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
+        raw_dash = Dashboard.bhw_dashboard(personnel_id=personnel_id, quarter_id=None)
     except Exception as e:
-        messages.error(request, f"Failed loading age distribution: {e}")
-        age_labels, age_data, age_labels_pct = [], [], []
+        messages.error(request, f"Failed loading dashboard metrics: {e}")
+        raw_dash = {}
 
-    # === Recent announcements (use list_all so we surely have 'audience') ===
+    dash = {**default_dash, **(raw_dash or {})}
+
+    # ---- Households per Purok (bar chart) ----
+    hh_per_purok = dash.get("households_per_purok") or []
+    per_sitio_labels = [str(r.get("sitio_name") or "Unassigned") for r in hh_per_purok]
+    per_sitio_data = [int(r.get("total_households") or 0) for r in hh_per_purok]
+
+    # ---- Age distribution (pie chart) ----
+    age_labels = ["0–5 yrs", "6–12 yrs", "13–17 yrs", "18–59 yrs", "60+ yrs"]
+    age_data = [
+        int(dash.get("age_group_0_5") or 0),
+        int(dash.get("age_group_6_12") or 0),
+        int(dash.get("age_group_13_17") or 0),
+        int(dash.get("age_group_18_59") or 0),
+        int(dash.get("age_group_60_plus") or 0),
+    ]
+    total_age = sum(age_data) or 1
+    age_labels_pct = [
+        f"{lbl} ({round((cnt / total_age) * 100)}%)"
+        for lbl, cnt in zip(age_labels, age_data)
+    ]
+
+    # === Recent announcements (unchanged) ===
     try:
         raw_latest = AnnouncementRepo.list_all(sort='date_desc', limit=20, audience=None)
         latest_announcements = []
@@ -90,7 +114,7 @@ def nurse_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):     # BHW sees Personnel + Everyone
+            if aud in ("personnel", "both"):     # Midwife sees Personnel + Everyone
                 latest_announcements.append(a)
             if len(latest_announcements) >= 3:
                 break
@@ -125,14 +149,14 @@ def nurse_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):   # enforce BHW scope
+            if aud in ("personnel", "both"):   # enforce personnel scope
                 announcements_all.append(a)
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
 
     ctx = {
-        "totals": totals,
+        "dash": dash,
         "per_sitio_labels": per_sitio_labels,
         "per_sitio_data": per_sitio_data,
         "age_labels": age_labels,
@@ -149,6 +173,7 @@ def nurse_dashboard(request):
         "ann_open": request.GET.get('ann_open') == '1',
     }
     return render(request, "nurse_module/nurse_dashboard.html", ctx)
+
 
 
 @custom_login_required

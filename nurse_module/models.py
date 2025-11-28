@@ -87,6 +87,42 @@ class Dashboard(models.Model):
             return json.loads(val)
         return []
     
+    @staticmethod
+    def bhw_dashboard(personnel_id: int, quarter_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Wrapper for:
+
+            SELECT * FROM bhw_dashboard(%s, %s);
+
+        See BHW_DASHBOARD.sql for the full list of returned columns.
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM bhw_dashboard(%s, %s);", [personnel_id, quarter_id])
+            row = cur.fetchone()
+            if not row:
+                return {}
+
+            cols = [c[0] for c in cur.description]
+            result = dict(zip(cols, row))
+
+        # Normalize households_per_purok JSONB -> Python list[dict]
+        val = result.get("households_per_purok")
+        if val is None:
+            result["households_per_purok"] = []
+        elif isinstance(val, list):
+            # already decoded
+            pass
+        elif isinstance(val, (bytes, bytearray)):
+            result["households_per_purok"] = json.loads(val.decode("utf-8"))
+        elif hasattr(val, "tobytes"):
+            result["households_per_purok"] = json.loads(val.tobytes().decode("utf-8"))
+        elif isinstance(val, str):
+            result["households_per_purok"] = json.loads(val)
+        else:
+            result["households_per_purok"] = []
+
+        return result
+
 class AnnouncementRepo(models.Model):
     """
     SQL wrappers for announcements with audience support.
@@ -165,6 +201,7 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+    
     
 
 class ResidentList(models.Model):
