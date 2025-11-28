@@ -254,4 +254,11 @@ urlpatterns = [
      path('maternal-health-records/<int:maternal_health_id>/postpartum/add/', 
           views.PostpartumVisitCreateView.as_view(), 
           name='maternal-postpartum-add'),
+     
+     # ========================================
+     # BHW DASHBOARD
+     # ========================================
+     path('bhw/dashboard/', 
+          views.BHWDashboardView.as_view(), 
+          name='bhw-dashboard'),
 ]
