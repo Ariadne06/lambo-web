@@ -1,5 +1,5 @@
 {% extends 'base_bhw.html' %}
-{% block title %}Demographic Dashboard{% endblock %}
+{% block title %}Nurse Dashboard{% endblock %}
 
 {% block content %}
 {% now "M d, Y" as today_str %}
@@ -11,103 +11,233 @@
 
     <!-- Header -->
     <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-      <button onclick="window.print()"
-        class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-md hover:opacity-95 transition"
-        style="background-image: linear-gradient(90deg,#ef4444 0%,#dc2626 100%);">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 9V2h12v7m0 4h1.5A1.5 1.5 0 0121 12.5v7a1.5 1.5 0 01-1.5 1.5H18M6 13H4.5A1.5 1.5 0 003 14.5v7A1.5 1.5 0 004.5 23H6m0-10h12v10H6V13z"/>
-        </svg>
-        Demographic Report
-      </button>
+      <div>
+        <h1 class="text-lg font-semibold text-gray-900">Community Health Dashboard</h1>
+        <p class="text-sm text-gray-500">
+          Updated {{ today_str }}
+          {% if dash.quarter_id %}
+            · Quarter ID: {{ dash.quarter_id }}
+          {% endif %}
+        </p>
+      </div>
     </header>
 
-    <!-- KPIs -->
+    <!-- KPIs: household, maternal, child health, daily visits -->
     <section>
-      <dl class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      <dl class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
 
-        <!-- Non-Resident -->
+        <!-- Households -->
         <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
           <div class="flex items-center gap-3">
             <div class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 18a4 4 0 00-8 0m-6 0a6 6 0 0112 0m0 0a6 6 0 0112 0m-9-9a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10.5l9-7.5 9 7.5M4.5 9v10.5A1.5 1.5 0 0012 22h0a1.5 1.5 0 001.5-1.5V9"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Non-Resident</dt>
+              <dt class="text-[12px] font-medium text-gray-500">Households</dt>
               <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_non_resident }}">{{ totals.total_non_resident }}</dd>
+                  data-kpi data-value="{{ dash.total_households }}">{{ dash.total_households }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">Across all sitios</p>
             </div>
           </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-rose-400/70 via-red-400/70 to-rose-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-slate-400/70 to-slate-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
         </div>
 
-        <!-- Male -->
+        <!-- Families -->
         <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
           <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-700" aria-hidden="true">♂️</div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Male</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_male }}">{{ totals.total_male }}</dd>
-            </div>
-          </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-sky-400/70 to-blue-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
-        </div>
-
-        <!-- Female -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-pink-50 text-pink-600" aria-hidden="true">♀️</div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Female</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_female }}">{{ totals.total_female }}</dd>
-            </div>
-          </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-fuchsia-400/70 to-pink-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
-        </div>
-
-        <!-- Resident -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-700" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10.5l9-7.5 9 7.5M4.5 9v10.5a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5V9"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.5 21a3.5 3.5 0 017 0M11 8a3 3 0 11-6 0 3 3 0 016 0zm8 6.5a3.5 3.5 0 00-7 0m3.5-9.5a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Resident</dt>
+              <dt class="text-[12px] font-medium text-gray-500">Families</dt>
               <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_resident }}">{{ totals.total_resident }}</dd>
+                  data-kpi data-value="{{ dash.total_families }}">{{ dash.total_families }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">Registered family units</p>
             </div>
           </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-400/70 to-green-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-indigo-400/70 to-indigo-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
         </div>
 
-        <!-- Pending -->
+        <!-- Active Maternal (Barangay) -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-rose-50 text-rose-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9a3 3 0 11-6 0 3 3 0 016 0zM6.5 20.5c.7-3.3 3.2-5.5 5.5-5.5s4.8 2.2 5.5 5.5"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Active Maternal Cases</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ dash.total_active_maternal }}">{{ dash.total_active_maternal }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">All ongoing records</p>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-rose-400/70 to-red-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Active Maternal (You) -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-red-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8a3 3 0 110 6 3 3 0 010-6zm0 7c-3 0-5.5 2-6.2 5"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Maternal Cases (You)</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ dash.total_active_maternal_by_bhw }}">{{ dash.total_active_maternal_by_bhw }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">Ongoing cases under your care</p>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-red-400/70 to-rose-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
+        <!-- Upcoming Child Immunization (5 days) -->
         <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
           <div class="flex items-center gap-3">
             <div class="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 3h8m-4 0v10m-7 4h14"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Pending</dt>
+              <dt class="text-[12px] font-medium text-gray-500">Child Immunization (5 days)</dt>
               <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_pending }}">{{ totals.total_pending }}</dd>
+                  data-kpi data-value="{{ dash.total_children_upcoming_immun_5d }}">{{ dash.total_children_upcoming_immun_5d }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">Children with upcoming vaccines</p>
             </div>
           </div>
           <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-amber-400/70 to-yellow-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
         </div>
 
+        <!-- Households visited today (You) -->
+        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h3m4 0h7M6 8l2-5h8l2 5M6 16l2 5h8l2-5"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[12px] font-medium text-gray-500">Households Visited Today</dt>
+              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
+                  data-kpi data-value="{{ dash.households_visited_today_by_bhw }}">{{ dash.households_visited_today_by_bhw }}</dd>
+              <p class="mt-1 text-[11px] text-gray-500">Visits recorded under your name</p>
+            </div>
+          </div>
+          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-400/70 to-green-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        </div>
+
       </dl>
     </section>
 
-    <!-- Content grid -->
+    <!-- Main content grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left: Recent announcements -->
+
+      <!-- Left: Progress + Charts -->
+      <section class="lg:col-span-2 space-y-6">
+
+        <!-- Visitation Progress -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800">Visitation Progress (Quarter-aware)</h3>
+            <span class="text-[11px] text-gray-400">Households & families</span>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Households -->
+            <div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div>
+                  <p class="text-xs font-medium text-gray-500">Households</p>
+                  <p class="text-sm text-gray-700">
+                    <span class="font-semibold">{{ dash.hh_visited_count }}</span> visited
+                    of <span class="font-semibold">{{ dash.total_households }}</span>
+                  </p>
+                </div>
+                <p class="text-xs font-semibold text-emerald-600">
+                  {{ dash.hh_visited_percent|floatformat:1 }}%
+                </p>
+              </div>
+              <div class="mt-2 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <div class="h-full rounded-full bg-emerald-500 transition-all"
+                     style="width: {{ dash.hh_visited_percent }}%;"></div>
+              </div>
+              <p class="mt-1 text-[11px] text-gray-400">
+                Not yet visited: {{ dash.hh_not_visited_count }}
+              </p>
+            </div>
+
+            <!-- Families -->
+            <div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div>
+                  <p class="text-xs font-medium text-gray-500">Families</p>
+                  <p class="text-sm text-gray-700">
+                    <span class="font-semibold">{{ dash.fam_visited_count }}</span> visited
+                    of <span class="font-semibold">{{ dash.total_families }}</span>
+                  </p>
+                </div>
+                <p class="text-xs font-semibold text-sky-600">
+                  {{ dash.fam_visited_percent|floatformat:1 }}%
+                </p>
+              </div>
+              <div class="mt-2 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <div class="h-full rounded-full bg-sky-500 transition-all"
+                     style="width: {{ dash.fam_visited_percent }}%;"></div>
+              </div>
+              <p class="mt-1 text-[11px] text-gray-400">
+                Not yet visited: {{ dash.fam_not_visited_count }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Households per Purok -->
+          <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold text-gray-800">Households per Purok</h3>
+              <span class="text-[11px] text-gray-400">Updated {{ today_str }}</span>
+            </div>
+            <div class="h-64">
+              <canvas id="perPurokBar"></canvas>
+            </div>
+          </div>
+
+          <!-- Age Distribution -->
+          <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-800">Age Distribution (Residents)</h3>
+                <p class="text-[11px] text-gray-500">Based on registered residents only</p>
+              </div>
+              <div class="text-right text-[11px] text-gray-500 space-y-0.5">
+                <p>
+                  <span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
+                  Male: <span class="font-semibold">{{ dash.total_male }}</span>
+                </p>
+                <p>
+                  <span class="inline-block w-2 h-2 rounded-full bg-pink-500 mr-1"></span>
+                  Female: <span class="font-semibold">{{ dash.total_female }}</span>
+                </p>
+              </div>
+            </div>
+            <div class="h-64">
+              <canvas id="agePie"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Recent announcements -->
       <section class="lg:col-span-1 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-semibold text-gray-800">Recent Announcements</h3>
@@ -127,7 +257,6 @@
                 <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
               </div>
 
-              {# ---- AUDIENCE BADGE (recent) ---- #}
               {% with aud=a.audience|default:"both"|lower %}
                 <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
                   {% if aud == 'personnel' %} bg-blue-100 text-blue-700
@@ -148,29 +277,7 @@
         </div>
       </section>
 
-      <!-- Right: Charts -->
-      <section class="lg:col-span-2 space-y-6">
-        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800">Distribution of Residents per Purok</h3>
-            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
-          </div>
-          <div class="h-64 sm:h-72 lg:h-80">
-            <canvas id="perPurokBar"></canvas>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800">Resident Age Distribution</h3>
-            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
-          </div>
-          <div class="h-64 sm:h-72 lg:h-80">
-            <canvas id="agePie"></canvas>
-          </div>
-        </div>
-      </section>
-    </div>
+    </div><!-- /main grid -->
 
   </div>
 </div>
@@ -241,7 +348,6 @@
                 <p class="text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
               </div>
 
-              {# ---- AUDIENCE BADGE (modal row) ---- #}
               {% with aud=a.audience|default:"both"|lower %}
                 <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
                   {% if aud == 'personnel' %} bg-blue-100 text-blue-700
@@ -311,40 +417,78 @@
   const ageLabels   = JSON.parse(document.getElementById('age-labels').textContent || '[]');
   const ageData     = JSON.parse(document.getElementById('age-data').textContent   || '[]');
 
-  // Bar
+  // Bar: households per purok
   const barCtx = document.getElementById('perPurokBar');
   if (barCtx && purokLabels.length && purokData.length) {
     new Chart(barCtx, {
       type: 'bar',
-      data: { labels: purokLabels, datasets: [{ label: 'Residents', data: purokData,
-        backgroundColor: greenFill, borderColor: greenLine, borderWidth: 2, borderRadius: 8, maxBarThickness: 48 }] },
+      data: {
+        labels: purokLabels,
+        datasets: [{
+          label: 'Households',
+          data: purokData,
+          backgroundColor: greenFill,
+          borderColor: greenLine,
+          borderWidth: 2,
+          borderRadius: 8,
+          maxBarThickness: 48
+        }]
+      },
       options: {
-        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 4 } },
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 4 } },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false }, ticks: { color: '#6b7280' } },
-          y: { beginAtZero: true, grid: { color: gridGray }, ticks: { precision: 0, color: '#6b7280',
-               callback: v => Number(v).toLocaleString() }, suggestedMax: Math.max(...purokData) * 1.2 || 10 }
+          y: {
+            beginAtZero: true,
+            grid: { color: gridGray },
+            ticks: {
+              precision: 0,
+              color: '#6b7280',
+              callback: v => Number(v).toLocaleString()
+            },
+            suggestedMax: Math.max(...purokData) * 1.2 || 10
+          }
         }
       }
     });
   }
 
-  // Pie
+  // Pie: age distribution
   const pieCtx = document.getElementById('agePie');
   if (pieCtx && ageLabels.length && ageData.length) {
     new Chart(pieCtx, {
       type: 'pie',
-      data: { labels: ageLabels, datasets: [{ data: ageData,
-        backgroundColor: ['#60a5fa','#86efac','#fde68a','#fdba74'], borderColor: '#fff', borderWidth: 4, hoverOffset: 6 }] },
+      data: {
+        labels: ageLabels,
+        datasets: [{
+          data: ageData,
+          backgroundColor: ['#60a5fa','#86efac','#fde68a','#fdba74'],
+          borderColor: '#fff',
+          borderWidth: 4,
+          hoverOffset: 6
+        }]
+      },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 } },
-          tooltip: { callbacks: { label: (ctx) => {
-            const value = ctx.parsed || 0; const total = (ctx.dataset.data || []).reduce((a,b)=>a+b,0) || 1;
-            const pct = Math.round((value / total) * 100); return `${ctx.label}: ${value} (${pct}%)`;
-          }}}
+          legend: {
+            position: 'bottom',
+            labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const value = ctx.parsed || 0;
+                const total = (ctx.dataset.data || []).reduce((a,b)=>a+b,0) || 1;
+                const pct = Math.round((value / total) * 100);
+                return `${ctx.label}: ${value} (${pct}%)`;
+              }
+            }
+          }
         }
       }
     });
@@ -357,14 +501,20 @@
     requestAnimationFrame(() => {
       el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
       const panel = el.querySelector('[data-panel]');
-      if(panel){ panel.classList.remove('scale-95','opacity-0'); panel.classList.add('scale-100','opacity-100'); }
+      if(panel){
+        panel.classList.remove('scale-95','opacity-0');
+        panel.classList.add('scale-100','opacity-100');
+      }
     });
   }
   function closeModal(id){
     const el = document.getElementById(id); if(!el) return;
     el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
     const panel = el.querySelector('[data-panel]');
-    if(panel){ panel.classList.add('scale-95','opacity-0'); panel.classList.remove('scale-100','opacity-100'); }
+    if(panel){
+      panel.classList.add('scale-95','opacity-0');
+      panel.classList.remove('scale-100','opacity-100');
+    }
     setTimeout(() => el.classList.add('hidden'), 180);
   }
   document.addEventListener('keydown', (e) => {
