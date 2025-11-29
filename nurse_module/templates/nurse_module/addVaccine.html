@@ -1,0 +1,174 @@
+{# nurse_module/templates/nurse_module/addVaccine.html #}
+{% extends "base_nurse.html" %}
+
+{% block title %}Vaccines{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center">
+        <i class="ri-capsule-line text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-base md:text-lg font-semibold text-gray-900">Vaccine Types</h1>
+        <p class="text-xs text-gray-500">Manage vaccines available for child immunization.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+        {% with tag=message.tags %}
+        <div class="rounded-lg px-3 py-2 text-sm
+             {% if 'success' in tag %} bg-emerald-50 text-emerald-800 border border-emerald-200
+             {% elif 'error' in tag %} bg-rose-50 text-rose-800 border border-rose-200
+             {% else %} bg-gray-50 text-gray-800 border border-gray-200 {% endif %}">
+          {{ message }}
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- TABLE: all vaccines -->
+  <section class="bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="h-7 w-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center">
+          <i class="ri-list-check-2 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-gray-900">Existing Vaccines</h2>
+          <p class="text-[11px] text-gray-500">From <code>view_all_vaccine()</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-3">
+      <div class="overflow-x-auto rounded-lg border border-gray-100 max-h-[420px] overflow-y-auto">
+        <table class="w-full text-left text-[13px]">
+          <thead class="sticky top-0 bg-gray-50 z-10">
+            <tr class="text-gray-600 border-b">
+              <th class="py-2 px-3 font-semibold">Vaccine</th>
+              <th class="py-2 px-3 font-semibold text-center">At Birth</th>
+              <th class="py-2 px-3 font-semibold text-center">1st Dose</th>
+              <th class="py-2 px-3 font-semibold text-center">2nd Dose</th>
+              <th class="py-2 px-3 font-semibold text-center">3rd Dose</th>
+              <th class="py-2 px-3 font-semibold">Interval</th>
+              <th class="py-2 px-3 font-semibold whitespace-nowrap">Added</th>
+              <th class="py-2 px-3 font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+          {% for v in vaccines %}
+            <tr class="hover:bg-gray-50">
+              <td class="py-2 px-3">
+                <div class="font-medium text-gray-900">{{ v.vaccine_name }}</div>
+              </td>
+              <td class="py-2 px-3 text-center">
+                {% if v.at_birth %}<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Yes</span>{% else %}<span class="text-xs text-gray-400">No</span>{% endif %}
+              </td>
+              <td class="py-2 px-3 text-center">
+                {% if v.first_dose %}<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Yes</span>{% else %}<span class="text-xs text-gray-400">No</span>{% endif %}
+              </td>
+              <td class="py-2 px-3 text-center">
+                {% if v.second_dose %}<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Yes</span>{% else %}<span class="text-xs text-gray-400">No</span>{% endif %}
+              </td>
+              <td class="py-2 px-3 text-center">
+                {% if v.third_dose %}<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Yes</span>{% else %}<span class="text-xs text-gray-400">No</span>{% endif %}
+              </td>
+              <td class="py-2 px-3 text-sm text-gray-700">
+                {{ v.interval_label }}
+              </td>
+              <td class="py-2 px-3 text-xs text-gray-500 whitespace-nowrap">
+                {{ v.date_added|date:"M j, Y" }}
+              </td>
+              <td class="py-2 px-3 text-right">
+                <a href="{% url 'nurse_module:vaccine_edit' v.vaccine_type_id %}"
+                   class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100">
+                  <i class="ri-edit-line text-xs"></i>
+                  Edit
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="py-6 text-center text-sm text-gray-500">
+                No vaccines defined yet.
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADD NEW VACCINE FORM -->
+  <section class="bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div class="px-4 py-3 border-b flex items-center gap-2">
+      <div class="h-7 w-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+        <i class="ri-add-line text-sm"></i>
+      </div>
+      <div>
+        <h2 class="text-sm font-semibold text-gray-900">Add New Vaccine</h2>
+        <p class="text-[11px] text-gray-500">This will call the <code>insert_vaccine()</code> function.</p>
+      </div>
+    </div>
+
+    <form method="POST" class="p-4 space-y-4">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Vaccine Name <span class="text-red-500">*</span></label>
+          <input type="text" name="vaccine_name" required
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Interval Between Doses</label>
+          <input type="text" name="interval_between_doses"
+                 placeholder="e.g. 4 weeks (optional for At-Birth only)"
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500">
+          <p class="mt-1 text-[11px] text-gray-500">
+            Required if at least one of 1st/2nd/3rd dose is enabled.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+          <input type="checkbox" name="at_birth" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+          <span>At Birth</span>
+        </label>
+        <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+          <input type="checkbox" name="first_dose" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+          <span>1st Dose</span>
+        </label>
+        <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+          <input type="checkbox" name="second_dose" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+          <span>2nd Dose</span>
+        </label>
+        <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+          <input type="checkbox" name="third_dose" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+          <span>3rd Dose</span>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">
+          <i class="ri-save-2-line text-sm"></i>
+          Save Vaccine
+        </button>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

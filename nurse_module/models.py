@@ -87,6 +87,42 @@ class Dashboard(models.Model):
             return json.loads(val)
         return []
     
+    @staticmethod
+    def bhw_dashboard(personnel_id: int, quarter_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Wrapper for:
+
+            SELECT * FROM bhw_dashboard(%s, %s);
+
+        See BHW_DASHBOARD.sql for the full list of returned columns.
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM bhw_dashboard(%s, %s);", [personnel_id, quarter_id])
+            row = cur.fetchone()
+            if not row:
+                return {}
+
+            cols = [c[0] for c in cur.description]
+            result = dict(zip(cols, row))
+
+        # Normalize households_per_purok JSONB -> Python list[dict]
+        val = result.get("households_per_purok")
+        if val is None:
+            result["households_per_purok"] = []
+        elif isinstance(val, list):
+            # already decoded
+            pass
+        elif isinstance(val, (bytes, bytearray)):
+            result["households_per_purok"] = json.loads(val.decode("utf-8"))
+        elif hasattr(val, "tobytes"):
+            result["households_per_purok"] = json.loads(val.tobytes().decode("utf-8"))
+        elif isinstance(val, str):
+            result["households_per_purok"] = json.loads(val)
+        else:
+            result["households_per_purok"] = []
+
+        return result
+
 class AnnouncementRepo(models.Model):
     """
     SQL wrappers for announcements with audience support.
@@ -165,6 +201,7 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+    
     
 
 class ResidentList(models.Model):
@@ -1187,3 +1224,23 @@ class TestTypeRow(models.Model):
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
         except ProgrammingError:
             return []
+
+
+class VaccineType(models.Model):
+    vaccine_type_id = models.AutoField(primary_key=True)
+    vaccine_name = models.CharField(max_length=100, unique=True)
+    at_birth = models.BooleanField(default=False)
+    first_dose = models.BooleanField(default=False)
+    second_dose = models.BooleanField(default=False)
+    third_dose = models.BooleanField(default=False)
+    interval_between_doses = models.DurationField(null=True, blank=True)
+    date_added = models.DateTimeField()
+    updated_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        managed = False       # Table + functions are created via SQL
+        db_table = 'vaccine_type'
+
+    def __str__(self):
+        return self.vaccine_name
