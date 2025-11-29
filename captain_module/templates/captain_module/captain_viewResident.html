@@ -128,7 +128,7 @@
     <!-- Generate PDF Button -->
     {% if total > 0 %}
     <div class="mb-4 flex justify-end">
-      <form method="get" action="{% url 'secretary_module:resident_list_pdf' %}" target="_blank">
+      <form method="get" action="{% url 'captain_module:generate_resident_list_pdf' %}" target="_blank">
         <input type="hidden" name="q" value="{{ q }}" />
         {% if quarter_id %}
           <input type="hidden" name="quarter_id" value="{{ quarter_id }}" />
@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (printBtn) {
     printBtn.addEventListener('click', () => {
       if (currentResidentId) {
-        window.open(`/secretary_module/resident/${currentResidentId}/pdf/`, '_blank');
+        window.open(`/captain_module/resident/${currentResidentId}/pdf/`, '_blank');
       }
     });
   }
