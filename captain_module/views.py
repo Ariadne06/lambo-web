@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 from household_module.models import Household, Family
 from django.views.decorators.http import require_GET
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import connection
 from math import ceil
 
@@ -1039,4 +1039,177 @@ def generate_household_detail_pdf(request, household_id: int):
     except Exception as e:
         import traceback
         print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+# ========================================
+# RESIDENT PDF GENERATION VIEWS
+# ========================================
+
+@custom_login_required
+@role_required('Barangay Captain')
+@require_GET
+def generate_resident_list_pdf(request):
+    '''Generate PDF report for resident list with applied filters'''
+    from reports_module.pdf_templates.resident.resident_list_filtered import generate_resident_list_pdf
+    
+    # Get filters from request
+    q = request.GET.get('q', '').strip()
+    status_id_list = request.GET.getlist('status_id')
+    sitio_id_list = request.GET.getlist('sitio_id')
+    quarter_id = request.GET.get('quarter_id') or None
+    
+    # Convert to integers
+    status_id_list = [int(sid) for sid in status_id_list if sid.isdigit()]
+    sitio_id_list = [int(sid) for sid in sitio_id_list if sid.isdigit()]
+    
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # If multiple filters selected, fetch and merge results
+        if len(status_id_list) > 1 or len(sitio_id_list) > 1:
+            all_residents = []
+            
+            # If we have multiple statuses, fetch for each
+            if len(status_id_list) > 1:
+                for status_id in status_id_list:
+                    sitio_id = sitio_id_list[0] if sitio_id_list else None
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            # If we have multiple sitios but single status
+            elif len(sitio_id_list) > 1:
+                status_id = status_id_list[0] if status_id_list else None
+                for sitio_id in sitio_id_list:
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            
+            # Remove duplicates
+            seen_ids = set()
+            residents = []
+            for r in all_residents:
+                if r.get('resident_id') not in seen_ids:
+                    seen_ids.add(r.get('resident_id'))
+                    residents.append(r)
+            
+            total_count = len(residents)
+        else:
+            # Single or no filters
+            status_id = status_id_list[0] if status_id_list else None
+            sitio_id = sitio_id_list[0] if sitio_id_list else None
+            
+            # Fetch all residents (without pagination for complete report)
+            residents = ResidentList.sp_get_all_residents(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_limit=None,  # Get all
+                p_offset=0,
+                p_quarter_id=quarter_id
+            )
+            
+            # Get total count
+            total_count = ResidentList.sp_get_all_residents_count(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_quarter_id=quarter_id
+            )
+        
+        # Build filter description with actual names
+        filters_applied = {}
+        if quarter_id:
+            # Get quarter display label (simplified format: Q# YYYY)
+            quarters = ResidentList.sp_get_all_quarters()
+            quarter = next((q for q in quarters if q['quarter_id'] == quarter_id), None)
+            if quarter:
+                filters_applied['quarter'] = f"Q{quarter['quarter_number']} {quarter['year']}"
+            else:
+                filters_applied['quarter'] = f'Quarter ID: {quarter_id}'
+        else:
+            filters_applied['quarter'] = 'Current Quarter'
+        if q:
+            filters_applied['search_query'] = q
+        if status_id_list:
+            # Get status names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT status_name FROM Resident_Status WHERE status_id = ANY(%s) ORDER BY status_name",
+                    [status_id_list]
+                )
+                status_names = [row[0] for row in cur.fetchall()]
+                filters_applied['status'] = status_names
+        if sitio_id_list:
+            # Get sitio names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT sitio_name FROM Sitio WHERE sitio_id = ANY(%s) ORDER BY sitio_name",
+                    [sitio_id_list]
+                )
+                sitio_names = [row[0] for row in cur.fetchall()]
+                filters_applied['sitio'] = sitio_names
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_list_pdf(residents, filters_applied, total_count)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Resident_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate resident list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Captain')
+@require_GET
+def generate_resident_detail_pdf(request, resident_id: int):
+    '''Generate PDF report for specific resident details'''
+    from reports_module.pdf_templates.resident.resident_detail import generate_resident_detail_pdf
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Fetch resident details using the same function as the modal
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
+        
+        if not resident:
+            return HttpResponse("Resident not found", status=404)
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_detail_pdf(resident)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        resident_name = resident.get('full_name', f'Resident_{resident_id}').replace(' ', '_')
+        filename = f"{resident_name}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate resident detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
