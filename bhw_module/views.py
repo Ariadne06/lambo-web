@@ -2777,7 +2777,7 @@ def generate_household_list_pdf(request):
             quarter_id=quarter_id
         )
         
-        pdf_buffer = pdf_generator.generate_pdf()
+        pdf_buffer = pdf_generator.generate()
         
         # Create HTTP response with PDF
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
@@ -2813,7 +2813,7 @@ def generate_household_detail_pdf(request, household_id: int):
             quarter_id=quarter_id
         )
         
-        pdf_buffer = pdf_generator.generate_pdf()
+        pdf_buffer = pdf_generator.generate()
         
         # Create HTTP response with PDF
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
