@@ -70,4 +70,14 @@ urlpatterns = [
     path('api/demographic-dashboard/', 
          views.GenerateDemographicDashboardReport.as_view(), 
          name='api_demographic_dashboard'),
+    
+    # Child Health List Report
+    path('api/child-health-list/', 
+         views.GenerateChildHealthListReport.as_view(), 
+         name='api_child_health_list'),
+    
+    # Child Health Detail Report
+    path('api/child-health-detail/<int:child_health_id>/', 
+         views.GenerateChildHealthDetailReport.as_view(), 
+         name='api_child_health_detail'),
 ]

@@ -128,6 +128,18 @@
         </div>
       </div>
     </form>
+
+    <!-- Generate PDF Button - Lower Right -->
+    <div class="flex justify-end mt-6 pt-6 border-t border-gray-200">
+      <a href="{% url 'reports_module:api_child_health_detail' child_health_id=results.child_health_id %}"
+         target="_blank"
+         class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Generate PDF
+      </a>
+    </div>
   </div>
 
   <!-- Buttons -->

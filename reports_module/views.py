@@ -17,6 +17,7 @@ from .pdf_templates.financial.revenue_report import RevenueReport
 from .pdf_templates.resident.resident_list import ResidentListReport
 from .pdf_templates.family.harmonized_family_profile import HarmonizedFamilyProfilePDF
 from .pdf_templates.demographic import DemographicDashboardPDF
+from .pdf_templates.child_health import ChildHealthListFilteredPDF, ChildHealthDetailPDF
 
 
 class ReportTestView(View):
@@ -420,3 +421,91 @@ class GenerateDemographicDashboardReport(APIView):
             )
 
 
+class GenerateChildHealthListReport(APIView):
+    """API view to generate Child Health List PDF report."""
+    
+    def get(self, request):
+        """
+        Generate and display/download child health list report.
+        
+        Query parameters:
+        - q: Search query (optional)
+        - sitio_id: Filter by sitio (optional)
+        - sex: Filter by sex (optional)
+        - download: Set to '1' or 'true' to force download (optional)
+        """
+        try:
+            # Get query parameters - convert empty strings to None
+            query = request.GET.get('q', None)
+            query = query.strip() if query and query.strip() else None
+            
+            sitio_id = request.GET.get('sitio_id', None)
+            sitio_id = sitio_id.strip() if sitio_id and sitio_id.strip() else None
+            
+            sex = request.GET.get('sex', None)
+            sex = sex.strip() if sex and sex.strip() else None
+            
+            force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+            
+            # Generate report
+            report = ChildHealthListFilteredPDF(
+                query=query,
+                sitio_id=sitio_id,
+                sex=sex
+            )
+            pdf_buffer = report.generate()
+            
+            # Create response
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            filename = f'child_health_list_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+            
+            if force_download:
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            else:
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return HttpResponse(
+                f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+                status=500
+            )
+
+
+class GenerateChildHealthDetailReport(APIView):
+    """API view to generate Child Health Detail PDF report."""
+    
+    def get(self, request, child_health_id):
+        """
+        Generate and display/download child health detail report.
+        
+        Path parameters:
+        - child_health_id: ID of the child health record
+        
+        Query parameters:
+        - download: Set to '1' or 'true' to force download (optional)
+        """
+        try:
+            force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+            
+            # Generate report
+            report = ChildHealthDetailPDF(child_health_id=child_health_id)
+            pdf_buffer = report.generate()
+            
+            # Create response
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            filename = f'child_health_detail_{child_health_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+            
+            if force_download:
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            else:
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return HttpResponse(
+                f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+                status=500
+            )
