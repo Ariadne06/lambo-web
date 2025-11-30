@@ -52,4 +52,22 @@ urlpatterns = [
     path('family-profile/<int:family_id>/<int:quarter_id>/', 
          views.generate_harmonized_family_profile_view, 
          name='family_profile_quarter'),
+    
+    # Business PDF Reports
+    path('business-list/', 
+         views.generate_business_list_view, 
+         name='business_list'),
+    
+    path('business-detail/<int:business_id>/', 
+         views.generate_business_detail_view, 
+         name='business_detail'),
+    
+    path('business-payment-history/<int:business_id>/', 
+         views.generate_business_payment_history_view, 
+         name='business_payment_history'),
+    
+    # Demographic Dashboard Report
+    path('api/demographic-dashboard/', 
+         views.GenerateDemographicDashboardReport.as_view(), 
+         name='api_demographic_dashboard'),
 ]

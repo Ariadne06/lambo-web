@@ -12,9 +12,11 @@ from datetime import datetime
 
 from .pdf_templates.resident.resident_statistics import ResidentStatisticsReport
 from .pdf_templates.business.clearance_applications import ClearanceApplicationsReport
+from .pdf_templates.business import BusinessListFilteredPDF, BusinessDetailPDF, BusinessPaymentHistoryPDF
 from .pdf_templates.financial.revenue_report import RevenueReport
 from .pdf_templates.resident.resident_list import ResidentListReport
 from .pdf_templates.family.harmonized_family_profile import HarmonizedFamilyProfilePDF
+from .pdf_templates.demographic import DemographicDashboardPDF
 
 
 class ReportTestView(View):
@@ -247,4 +249,174 @@ def generate_harmonized_family_profile_view(request, family_id, quarter_id=None)
             f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
             status=500
         )
+
+
+def generate_business_list_view(request):
+    """
+    Generate filtered business list PDF.
+    
+    Query parameters:
+        - q: Search query (optional)
+        - business_type_id: Business type filter (optional)
+        - clearance_category_id: Clearance category filter (optional)
+        - ownership_id: Ownership filter (optional)
+        - business_status_id: Business status filter (optional)
+        - download: Set to '1' or 'true' to force download (optional)
+    """
+    try:
+        # Get query parameters
+        query = request.GET.get('q', None)
+        business_type_id = request.GET.get('business_type_id', None)
+        clearance_category_id = request.GET.get('clearance_category_id', None)
+        ownership_id = request.GET.get('ownership_id', None)
+        business_status_id = request.GET.get('business_status_id', None)
+        force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+        
+        # Generate report
+        report = BusinessListFilteredPDF(
+            query=query,
+            business_type_id=business_type_id,
+            clearance_category_id=clearance_category_id,
+            ownership_id=ownership_id,
+            business_status_id=business_status_id
+        )
+        pdf_buffer = report.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        filename = f'business_list_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        if force_download:
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        else:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(
+            f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+            status=500
+        )
+
+
+def generate_business_detail_view(request, business_id):
+    """
+    Generate business detail PDF.
+    
+    Args:
+        business_id: Business ID to generate profile for
+    
+    Query parameters:
+        - download: Set to '1' or 'true' to force download (optional)
+    """
+    try:
+        force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+        
+        # Generate report
+        report = BusinessDetailPDF(business_id=business_id)
+        pdf_buffer = report.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        filename = f'business_detail_{business_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        if force_download:
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        else:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(
+            f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+            status=500
+        )
+
+
+def generate_business_payment_history_view(request, business_id):
+    """
+    Generate business payment history PDF with filter support.
+    
+    Args:
+        business_id: Business ID to generate payment history for
+    
+    Query parameters:
+        - q: Search query (optional)
+        - status: Payment status filter (optional)
+        - date_from: Start date filter (optional)
+        - date_to: End date filter (optional)
+        - download: Set to '1' or 'true' to force download (optional)
+    """
+    try:
+        # Get filter parameters
+        query = request.GET.get('q', None)
+        payment_status = request.GET.get('status', None)
+        date_from = request.GET.get('date_from', None)
+        date_to = request.GET.get('date_to', None)
+        force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+        
+        # Generate report
+        report = BusinessPaymentHistoryPDF(
+            business_id=business_id,
+            query=query,
+            payment_status=payment_status,
+            date_from=date_from,
+            date_to=date_to
+        )
+        pdf_buffer = report.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        filename = f'business_payment_history_{business_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        if force_download:
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        else:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(
+            f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+            status=500
+        )
+
+
+class GenerateDemographicDashboardReport(APIView):
+    """API view to generate Demographic Dashboard PDF report."""
+    
+    def get(self, request):
+        """
+        Generate and display/download demographic dashboard report.
+        
+        Query parameters:
+        - download: Set to '1' or 'true' to force download (optional)
+        """
+        try:
+            force_download = request.GET.get('download', '0').lower() in ['1', 'true', 'yes']
+            
+            # Generate report
+            report = DemographicDashboardPDF()
+            pdf_buffer = report.generate()
+            
+            # Create response
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            filename = f'demographic_dashboard_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+            
+            if force_download:
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            else:
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return HttpResponse(
+                f'<h1>Error generating PDF</h1><p>{str(e)}</p>',
+                status=500
+            )
+
 
