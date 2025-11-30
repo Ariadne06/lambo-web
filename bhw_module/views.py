@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, Child
+from .models import Dashboard, AnnouncementRepo, Child, Maternal
 from household_module.models import Household, Family
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
@@ -1335,7 +1335,7 @@ def general_health_get_api(request):
         row = Family.sp_get_specific_family_member_genhealth(fm_id)
     except Exception as e:
         # Log if you have logging; return a safe message to client
-        return JsonResponse({"error": "database_error", "detail": str(e)}, status=500)
+        return JsonResponse({"error": "database_error", "detail": _clean_db_error(e)}, status=500)
 
     if not row:
         return JsonResponse({"record": None, "exists": False}, status=200)
@@ -1434,7 +1434,7 @@ def update_general_health(request):
             set_flash(request, "No General Health record for this member in the current quarter.", "error")
             return _redirect_back(hid, household_number)
     except Exception as e:
-        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else _clean_db_error(e), "error")
         return _redirect_back(hid, household_number)
 
     # Normalize current values
@@ -1552,7 +1552,7 @@ def update_general_health(request):
         )
         set_flash(request, f"General Health updated. Changed: {', '.join(changed)}.", "success")
     except Exception as e:
-        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else _clean_db_error(e), "error")
 
     return _redirect_back(hid, household_number)
 
@@ -1798,7 +1798,7 @@ def childList(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -2138,7 +2138,7 @@ def addchild4(request):
                     del request.session['child_step4_data']
                 return redirect('bhw_module:childList')
             except ValueError as e:
-                set_flash(request, str(e), "error")
+                set_flash(request, _clean_db_error(e), "error")
             except Exception as e:
                 msg = _clean_db_error(e)
                 set_flash(request, msg, "error")
@@ -2570,17 +2570,384 @@ def genInfo(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalList(request):
-    return render(request, 'bhw_module/maternalList.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Maternal.sp_view_all_maternal_record(
+            name_query=query,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/maternalList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalAdd(request):
-    return render(request, 'bhw_module/maternalAdd.html')
+    context = {}
+    if request.method == 'POST':
+        try:
+            maternal_id = int(request.POST.get('maternal_id', 0))
+            address_landmark = request.POST.get('address_landmark', '').strip()
+            pid = int(request.session.get('personnel_id') or 0)
+            
+            if not maternal_id:
+                raise ValueError("Maternal ID is required")
+            if not pid:
+                raise ValueError("Personnel ID is required")
+            if not address_landmark:
+                raise ValueError("Address with Landmark is required")
+            
+            result = Maternal.sp_insert_maternal(
+                maternal_id=maternal_id,
+                address_landmark=address_landmark,
+                created_by=pid,
+            )
+            msg = coerce_message(result, "Maternal Record successfully added.")
+            set_flash(request, msg, 'success')
+            return redirect('bhw_module:maternalList')
+        except ValueError as e:
+            set_flash(request, _clean_db_error(e), "error")
+        except Exception as e:
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
+    
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/maternalAdd.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalView(request):
-    return render(request, 'bhw_module/maternalView.html')
+    maternal_health_id = request.POST.get('maternal_health_id') or request.GET.get('maternal_health_id')
+    result = None
+    
+    try:
+        result = Maternal.sp_view_specific_maternal_health_record(maternal_health_id)
+        obstetrical_data = Maternal.sp_view_obstetrical_history(maternal_health_id)
+        medical_conditions = Maternal.sp_view_specific_maternal_all_medical_condition(maternal_health_id)
+        surgical_history = Maternal.sp_view_specific_maternal_all_surgical_history(maternal_health_id)
+        immunization_data = Maternal.sp_view_specific_maternal_immunization_status_track(maternal_health_id)
+        
+        # Get last gravida and abortion for validation
+        last_gravida = 0
+        last_abortion = 0
+        if result and result.get('maternal_id'):
+            last_gravida = Maternal.sp_get_last_completed_gravida(result.get('maternal_id'))
+            last_abortion = Maternal.sp_get_last_completed_abortion(result.get('maternal_id'))
+        
+        if not result:
+            set_flash(request, "Maternal Record not found.", "error")
+            return redirect('bhw_module:maternalList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('bhw_module:maternalList')
+    
+    flash = get_flash(request)
+    
+    # Get disease surveillance data
+    disease_surveillance_data = []
+    try:
+        disease_surveillance_data = Maternal.sp_view_specific_maternal_all_disease_surveillance(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without disease surveillance data if there's an error
+    
+    # Get disease types for dropdown
+    disease_types = []
+    try:
+        disease_types = Maternal.sp_get_disease_types()
+    except Exception as e:
+        pass  # Continue without disease types if there's an error
+    
+    return render(request, 'bhw_module/maternalView.html', {
+        "results": result,
+        "obstetrical_data": obstetrical_data,
+        "medical_conditions": medical_conditions or [],
+        "surgical_history": surgical_history or [],
+        "immunization_data": immunization_data,
+        "disease_surveillance_data": disease_surveillance_data,
+        "disease_types": disease_types,
+        "last_gravida": last_gravida,
+        "last_abortion": last_abortion,
+        "message": flash['message'],
+        "message_level": flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def add_obstetrical_history(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if request.method == 'POST':
+        try:
+            maternal_health_id = int(request.POST.get('maternal_health_id', 0))
+            gravida = int(request.POST.get('gravida', 0))
+            para = int(request.POST.get('para', 0))
+            abortion = int(request.POST.get('abortion', 0))
+            last_menstrual_period = request.POST.get('last_menstrual_period')
+            expected_date_of_delivery = request.POST.get('expected_date_of_delivery')
+            
+            if not maternal_health_id:
+                raise ValueError("Maternal Health ID is required")
+            if not pid:
+                raise ValueError("Personnel ID is required")
+            
+            # Get maternal record to find maternal_id
+            maternal_record = Maternal.sp_view_specific_maternal_health_record(maternal_health_id)
+            if not maternal_record:
+                raise ValueError("Maternal record not found")
+            
+            maternal_id = maternal_record.get('maternal_id')
+            if not maternal_id:
+                raise ValueError("Maternal ID not found in record")
+            
+            # Check gravida restriction - new record must have higher gravida
+            last_gravida = Maternal.sp_get_last_completed_gravida(maternal_id)
+            if gravida <= last_gravida:
+                raise ValueError(f"Gravida must be greater than {last_gravida} (based on previous record)")
+            
+            # Check abortion restriction - new record must have >= abortion count
+            last_abortion = Maternal.sp_get_last_completed_abortion(maternal_id)
+            if abortion < last_abortion:
+                raise ValueError(f"Abortion count must be greater than or equal to {last_abortion} (based on previous record)")
+            
+            result = Maternal.sp_add_obstetrical_history(
+                maternal_health_id=maternal_health_id,
+                gravida=gravida,
+                para=para,
+                aborption=abortion,
+                last_menstrual_period=last_menstrual_period,
+                expected_date_of_delivery=expected_date_of_delivery,
+                pid=pid
+            )
+            
+            msg = coerce_message(result, "Obstetrical history successfully added.")
+            set_flash(request, msg, 'success')
+            
+        except ValueError as e:
+            set_flash(request, str(e), "error")
+        except Exception as e:
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_medical_condition(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    medical_condition_name = request.POST.get('medical_condition_name', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not medical_condition_name:
+        set_flash(request, "Medical condition name is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_medical_condition(
+            maternal_health_id=maternal_health_id,
+            medical_condition_name=medical_condition_name,
+            pid=pid
+        )
+        set_flash(request, "Medical condition added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_surgical_history(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    surgical_history_name = request.POST.get('surgical_history_name', '').strip()
+    date_of_surgery = request.POST.get('date_of_surgery', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not surgical_history_name:
+        set_flash(request, "Surgical history name is required.", "error")
+        return redirect_to_view()
+    
+    if not date_of_surgery:
+        set_flash(request, "Date of surgery is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_surgical_history(
+            maternal_health_id=maternal_health_id,
+            surgical_history_name=surgical_history_name,
+            date_of_surgery=date_of_surgery,
+            pid=pid
+        )
+        set_flash(request, "Surgical history added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_immunization(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    dose_number = request.POST.get('dose_number')
+    date_given = request.POST.get('date_given', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not dose_number:
+        set_flash(request, "Dose number is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_immunization(
+            maternal_health_id=maternal_health_id,
+            dose_number=int(dose_number),
+            date_given=date_given,
+            pid=pid
+        )
+        set_flash(request, f"Dose {dose_number} immunization added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_disease_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    disease_type_id = request.POST.get('disease_type_id')
+    screening_date = request.POST.get('screening_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not disease_type_id:
+        set_flash(request, "Disease type is required.", "error")
+        return redirect_to_view()
+    
+    if not screening_date:
+        set_flash(request, "Screening date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_disease_screen_record(
+            maternal_health_id=maternal_health_id,
+            disease_type_id=int(disease_type_id),
+            screening_date=screening_date,
+            result=result or None,
+            pid=pid
+        )
+        set_flash(request, "Disease screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2666,7 +3033,7 @@ def resident_search_api(request):
             })
         return JsonResponse({'results': normalized})
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
     
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2679,7 +3046,7 @@ def child_search_api(request):
     try:
         # Call your search_child() SQL function
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM search_child(%s)", [q])
+            cursor.callproc("search_child", [q])
             cols = [col[0] for col in cursor.description]
             raw_rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
@@ -2710,7 +3077,7 @@ def child_search_api(request):
         return JsonResponse({'results': normalized})
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2746,3 +3113,34 @@ def add_exclusive_breastfeed(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def mother_search_api(request):
+    q = (request.GET.get('q') or '').strip()
+    if not q:
+        return JsonResponse({'results': []})
+    
+    try:
+        # Call Search_mother() SQL function
+        with connection.cursor() as cursor:
+            cursor.callproc("search_mother", [q])
+            cols = [col[0] for col in cursor.description]
+            raw_rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
+        
+        normalized = []
+        for r in raw_rows:
+            normalized.append({
+                'maternal_id': r.get('maternal_id'),
+                'full_name': r.get('full_name') or '',
+                'dob': r.get('dob').isoformat() if r.get('dob') else '',
+                'age_years': r.get('age_years') or 0,
+                'family_code': r.get('family_code') or '',
+                'nhts_status': r.get('nhts_status'),
+                'complete_address': r.get('complete_address') or '',
+                'phone_number': r.get('phone_number') or '',
+            })
+        return JsonResponse({'results': normalized})
+    except Exception as e:
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
