@@ -3,8 +3,10 @@
 
 {% block content %}
 
-<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white"> <!-- Title chip --> <div class="mb-6 flex items-center justify-between"> <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <span class="inline-block h-2 w-2 rounded-full bg-white"></span> Maternal Profile </div>
-<a href="#"
+<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+
+<!-- Title chip --> <div class="mb-6 flex items-center justify-between"> <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <span class="inline-block h-2 w-2 rounded-full bg-white"></span> Maternal Profile </div>
+<a href="{% url 'bhw_module:maternalList' %}"
    class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
   <!-- back -->
   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -12,7 +14,16 @@
   </svg>
   Back
 </a>
+
 </div> <!-- Card --> <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <form class="p-6 space-y-8">
+      {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
+      </div>
+    {% endif %}
      <!-- 2-column details -->
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <!-- Left -->
@@ -23,56 +34,61 @@
           <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
           </span>
-          <input type="date" value="2025-01-01"
-                 class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <input type="date" value="{{ results.registration_date|date:'Y-m-d' }}" readonly
+                 class="w-full rounded-lg border border-gray-300 bg-gray-50 pl-9 pr-3 py-2 text-sm">
         </div>
       </div>
 
       <div>
         <label class="text-[11px] font-semibold text-gray-500">Maternal Full Name</label>
-        <input type="text" value="Jereza Rodrigo"
-               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+        <input type="text" value="{{ results.full_name }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Date of Birth</label>
+        <input type="date" value="{{ results.dob|date:'Y-m-d' }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Age</label>
+        <input type="number" value="{{ results.age_years }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       </div>
 
       <div>
         <label class="text-[11px] font-semibold text-gray-500">NHTS Status</label>
-        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-          <option>NHTS</option>
-          <option>Non‑NHTS</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="text-[11px] font-semibold text-gray-500">Address</label>
-        <input type="text" value="Purok 7 Cansaga"
-               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-      </div>
-
-      <div>
-        <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
-        <input type="tel" value="09672687206"
-               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+        <input type="text" value="{% if results.nhts_status %}NHTS{% else %}Non-NHTS{% endif %}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       </div>
     </div>
 
     <!-- Right -->
     <div class="space-y-4">
       <div>
-        <label class="text-[11px] font-semibold text-gray-500">Status</label>
-        <select class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-          <option>Active</option>
-          <option>Inactive</option>
-        </select>
+        <label class="text-[11px] font-semibold text-gray-500">Family Code</label>
+        <input type="text" value="{{ results.family_code }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       </div>
 
       <div>
-        <label class="text-[11px] font-semibold text-gray-500">Recorded By</label>
-        <input type="text" value="Cristel Mandave"
-               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" readonly>
+        <label class="text-[11px] font-semibold text-gray-500">Address</label>
+        <input type="text" value="{{ results.full_address }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       </div>
 
-      <!-- Spacer for visual balance -->
-      <div class="hidden md:block h-40"></div>
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Address Landmark</label>
+        <input type="text" value="{{ results.address_landmark }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
+        <input type="tel" value="{{ results.phone_number }}" readonly
+               class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      </div>
     </div>
   </div>
 
@@ -105,7 +121,7 @@
 
     <button type="button" class="btn-red" onclick="openModal('modalScreenings')">
       <svg viewBox="0 0 24 24" class="h-4 w-4"><path fill="currentColor" d="M6 2h2v6a4 4 0 1 0 8 0V2h2v6a6 6 0 0 1-5 5.92V18a2 2 0 0 0 4 0h2a4 4 0 1 1-8 0v-4.08A6 6 0 0 1 6 8V2Z"/></svg>
-      Screenings
+      Infectious Disease 
     </button>
 
     <!-- Lab Screening + Iron (trigger) -->
@@ -133,9 +149,212 @@
       Postpartum Visit
     </button>
 
+
+
   </div>
 </div>
 </form>
+
+<!-- Add Medical Condition - Form Modal -->
+<div id="medicalFormModal" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="medicalFormModal_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('medicalFormModal'); document.getElementById('modalMedSurg').classList.remove('hidden')"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-10 w-[95%] max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="relative">
+        <div class="absolute inset-0 bg-gradient-to-r from-red-600 via-rose-600 to-red-500"></div>
+        <div class="relative px-5 py-4 text-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <!-- Back arrow -->
+            <button type="button"
+                    class="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-white/15 hover:bg-white/20 ring-1 ring-white/25"
+                    onclick="closeModal('medicalFormModal'); openModal('modalMedSurg')" aria-label="Back">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 11H7.8l5.6-5.6L12 4 4 12l8 8 1.4-1.4L7.8 13H20z"/>
+              </svg>
+            </button>
+            <div>
+              <h2 id="medicalFormModal_title" class="text-base font-semibold tracking-wide">Add Medical Condition</h2>
+              <p class="text-white/85 text-xs">Record a condition and any relevant notes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <form method="post" action="{% url 'bhw_module:addMaternalMedicalCondition' %}" class="p-5 space-y-5">
+        {% csrf_token %}
+        <!-- Hidden maternal health ID -->
+        <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
+        
+        <!-- Condition Name -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Medical Condition Name</label>
+          <div class="relative">
+            <input type="text" name="medical_condition_name" placeholder="e.g., Hypertension, Diabetes, Anemia"
+                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                   required>
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <!-- medical icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 8h-2v3h-3v2h3v3h2v-3h3v-2h-3V8zM4 6h5v2H4v1h5v2H4v1h5v2H4V6z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
+            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
+          </svg>
+          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" class="btn-secondary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('medicalFormModal'); openModal('modalMedSurg')">
+            <!-- back/cancel icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10.828 12 15.9 6.929 14.485 5.515 8 12l6.485 6.485 1.414-1.414z"/>
+            </svg>
+            Cancel
+          </button>
+
+          <button type="submit" class="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <!-- save icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </form>
+
+      <!-- Scoped styles -->
+      <style>
+        .btn-primary{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
+        .btn-primary:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
+        .btn-secondary{background:#f3f4f6;color:#111827!important}
+        .btn-secondary:hover{background:#e5e7eb}
+      </style>
+    </div>
+  </div>
+</div>
+
+<!-- Add Surgical History - Form Modal -->
+<div id="surgicalFormModal" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="surgicalFormModal_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('surgicalFormModal'); document.getElementById('modalMedSurg').classList.remove('hidden')"></div>
+
+  <!-- Modal container -->
+  <div class="relative mx-auto my-10 w-[95%] max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="relative">
+        <div class="absolute inset-0 bg-gradient-to-r from-red-600 via-rose-600 to-red-500"></div>
+        <div class="relative px-5 py-4 text-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <!-- Back arrow -->
+            <button type="button"
+                    class="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-white/15 hover:bg-white/20 ring-1 ring-white/25"
+                    onclick="closeModal('surgicalFormModal'); openModal('modalMedSurg')" aria-label="Back">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 11H7.8l5.6-5.6L12 4 4 12l8 8 1.4-1.4L7.8 13H20z"/>
+              </svg>
+            </button>
+            <div>
+              <h2 id="surgicalFormModal_title" class="text-base font-semibold tracking-wide">Add Surgical History</h2>
+              <p class="text-white/85 text-xs">Record a procedure and date.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <form method="post" action="{% url 'bhw_module:addMaternalSurgicalHistory' %}" class="p-5 space-y-5">
+        {% csrf_token %}
+        <!-- Hidden maternal health ID -->
+        <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
+        
+        <!-- Surgical History Name -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Surgical History</label>
+          <div class="relative">
+            <input type="text" name="surgical_history_name" placeholder="e.g., Appendectomy, Cesarean Section"
+                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" required>
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <!-- surgical icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5" opacity=".35"/><path d="M2 12l10 5 10-5" opacity=".35"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Date of Surgery -->
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Date of Surgery</label>
+          <div class="relative">
+            <input type="date" name="date_of_surgery"
+                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" required>
+            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+              <!-- calendar icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v2H2V6a2 2 0 0 1 2-2h3V2Zm15 7v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9h20ZM6 13h5v5H6v-5Z"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
+            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
+          </svg>
+          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" class="btn-secondary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('surgicalFormModal'); openModal('modalMedSurg')">
+            <!-- back/cancel icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10.828 12 15.9 6.929 14.485 5.515 8 12l6.485 6.485 1.414-1.414z"/>
+            </svg>
+            Cancel
+          </button>
+
+          <button type="submit" class="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
+            <!-- save icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </form>
+
+      <!-- Scoped styles -->
+      <style>
+        .btn-primary{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
+        .btn-primary:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
+        .btn-secondary{background:#f3f4f6;color:#111827!important}
+        .btn-secondary:hover{background:#e5e7eb}
+      </style>
+    </div>
+  </div>
+</div>
+
 <!-- Medical / Surgical (VIEW) Modal -->
 <div id="modalMedSurg" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalMedSurg_title">
   <!-- Backdrop -->
@@ -158,36 +377,34 @@
 
         <!-- ========== Medical Conditions ========== -->
         <div class="rounded-2xl border border-gray-200 bg-white p-6">
-          <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-[22px] font-bold text-red-700">Medical Conditions</h3>
-            <button type="button"
-                    class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                    onclick="openModal('modalMedical')">
-              <!-- medical icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 2a1 1 0 0 1 2 0v3h3a1 1 0 1 1 0 2h-3v3a1 1 0 1 1-2 0V7H8a1 1 0 1 1 0-2h3V2Z"/>
-              </svg>
-              Add Medical Condition
+          <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-semibold text-red-700">Medical Conditions</h2>
+            <button type="button" onclick="closeModal('modalMedSurg'); openModal('medicalFormModal')"
+                    class="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition">
+            <i class="fas fa-notes-medical mr-2"></i>➕ Add Medical Condition
             </button>
           </div>
-
-          <div class="overflow-hidden rounded-xl border border-gray-200">
-            <table class="min-w-full text-sm">
+          <div class="overflow-x-auto">
+            <table class="table-auto w-full border rounded-lg">
               <thead class="bg-gray-100 text-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left font-semibold">Condition</th>
-                  <th class="px-4 py-3 text-left font-semibold">Notes</th>
+                  <th class="px-4 py-2 text-left w-2/3">Medical History</th>
+                  <th class="px-4 py-2 text-left w-1/3">Date Added</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100 text-gray-800">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3">Asthma</td>
-                  <td class="px-4 py-3">Diagnosed 2019</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3">Allergy</td>
-                  <td class="px-4 py-3">Penicillin</td>
-                </tr>
+              <tbody>
+                {% for medical in medical_conditions %}
+                  <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-2">{{ medical.m_medical_history_name }}</td>
+                    <td class="px-4 py-2">{{ medical.date_added|date:"M d, Y" }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="2" class="px-4 py-8 text-center text-gray-500 italic">
+                      No medical history records found
+                    </td>
+                  </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
@@ -195,52 +412,50 @@
 
         <!-- ========== Surgical History ========== -->
         <div class="rounded-2xl border border-gray-200 bg-white p-6">
-          <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-[22px] font-bold text-red-700">Surgical History</h3>
-            <button type="button"
-                    class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                    onclick="openModal('modalSurgical')">
-              <!-- scalpel icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.07 4.93 7 17l-4 1 1-4L14.93 3.93l4.14 1Z"/><path d="M7 19h10v2H7z"/>
-              </svg>
-              Add Surgical History
+          <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-semibold text-red-700">Surgical History</h2>
+            <button type="button" onclick="closeModal('modalMedSurg'); openModal('surgicalFormModal')"
+                    class="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition">
+            <i class="fas fa-user-md mr-2"></i>➕ Add Surgical History
             </button>
           </div>
-
-          <div class="overflow-hidden rounded-xl border border-gray-200">
-            <table class="min-w-full text-sm">
+          <div class="overflow-x-auto">
+            <table class="table-auto w-full border rounded-lg">
               <thead class="bg-gray-100 text-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left font-semibold">Procedure</th>
-                  <th class="px-4 py-3 text-left font-semibold">Notes</th>
+                  <th class="px-4 py-2 text-left w-2/3">Surgical History</th>
+                  <th class="px-4 py-2 text-left w-1/3">Date of Surgery</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100 text-gray-800">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3">Appendectomy</td>
-                  <td class="px-4 py-3">Done in 2018</td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3">&nbsp;</td>
-                  <td class="px-4 py-3">&nbsp;</td>
-                </tr>
+              <tbody>
+                {% for surgical in surgical_history %}
+                  <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-2">{{ surgical.m_surgical_history_name }}</td>
+                    <td class="px-4 py-2">{{ surgical.date_of_surgery|date:"M d, Y" }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="2" class="px-4 py-8 text-center text-gray-500 italic">
+                      No surgical history records found
+                    </td>
+                  </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="flex items-center justify-start">
-          <button type="button"
-                  class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="closeModal('modalMedSurg')">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="m11 6-6 6 6 6 1.41-1.41L8.83 13H20v-2H8.83l3.58-3.59L11 6Z"/>
-            </svg>
-            Back
+        <!-- Back Button -->
+        <div class="mt-6">
+          <button onclick="closeModal('modalMedSurg')" class="flex items-center px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 shadow transition">
+            <i class="fas fa-arrow-left mr-2"></i> Back
           </button>
         </div>
+
+      </div>
+    </div>
+  </div>
+</div>
       </div>
     </div>
   </div>
@@ -393,7 +608,7 @@
 
 
 
-<!-- Obstetrical Edit Modal (with header action button) -->
+<!-- Obstetrical History Modal -->
 <div id="modalObstetrical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalObstetrical_title">
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalObstetrical')"></div>
@@ -404,20 +619,20 @@
 
       <!-- Header -->
       <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
-        <h2 id="modalObstetrical_title" class="text-lg font-semibold">Edit Obstetrical History</h2>
+        <h2 id="modalObstetrical_title" class="text-lg font-semibold">Obstetrical History</h2>
 
         <div class="flex items-center gap-2">
-          <!-- NEW: Header Update button -->
+          <!-- Add button - only show if no obstetrical history -->
+          {% if not obstetrical_data %}
           <button type="button"
-                  class="rounded-full bg-blue-100 p-2 text-blue-700 hover:bg-blue-200"
-                  title="Edit Obstetrical History"
-                  onclick="openModal('modalObstetricalEdit')">
-            <!-- pencil icon -->
+                  class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalObstetrical'); openModal('modalAddObstetrical')">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11ZM20.7 7.04c.39-.39.39-1.02 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84Z"/>
+              <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
             </svg>
+            Add Obstetrical History
           </button>
-
+          {% endif %}
 
           <!-- Close -->
           <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
@@ -426,72 +641,48 @@
       </div>
 
       <!-- Body -->
-      <form id="formObstetrical" class="px-6 py-6 space-y-6">
-        <!-- Row: G P A -->
+      <div class="px-6 py-6 space-y-6">
+        {% if obstetrical_data %}
+        <!-- Display existing obstetrical history -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <!-- Gravida -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Gravida (Pregnancies)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3 2 6 6 10 4-4 6-7 6-10a6 6 0 0 0-6-6Zm0 8a2 2 0 1 1 .001-3.999A2 2 0 0 1 12 10Z"/></svg>
-              </span>
-              <input type="number" min="0" value="1"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" value="{{ obstetrical_data.gravida }}" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           </div>
-          <!-- Para -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Para (Live Births)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm-1-7h2v5h-2v-5Zm1-6a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 8Z"/></svg>
-              </span>
-              <input type="number" min="0" value="0"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" value="{{ obstetrical_data.para }}" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           </div>
-          <!-- Abortion -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Abortion (Miscarriages)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C7 18 4 14 4 10a8 8 0 0 1 16 0c0 4-3 8-8 12Zm0-10a2 2 0 1 0-2-2 2 2 0 0 0 2 2Z"/></svg>
-              </span>
-              <input type="number" min="0" value="0"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" value="{{ obstetrical_data.abortion }}" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           </div>
         </div>
 
-        <!-- Row: LMP & EDD -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <!-- LMP -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
-              </span>
-              <input type="date" value="2020-01-01"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="date" value="{{ obstetrical_data.last_menstrual_period|date:'Y-m-d' }}" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           </div>
-          <!-- EDD -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Expected Delivery Date</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5v2h14V3Zm1 4H4v14h16V7ZM8 12h3v3H8v-3Z"/></svg>
-              </span>
-              <input type="date" value="2020-10-01"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="date" value="{{ obstetrical_data.expected_date_of_delivery|date:'Y-m-d' }}" readonly
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           </div>
         </div>
+        {% else %}
+        <!-- No obstetrical history message -->
+        <div class="text-center py-8">
+          <div class="text-gray-500 text-sm">No obstetrical history recorded yet.</div>
+        </div>
+        {% endif %}
 
-        <!-- Footer: Back + Update (kept) -->
-        <div class="flex items-center justify-between pt-2">
+        <!-- Footer -->
+        <div class="flex items-center justify-start pt-2">
           <button type="button"
                   class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
                   onclick="closeModal('modalObstetrical')">
@@ -499,25 +690,17 @@
             Back
           </button>
         </div>
-      </form>
-
-      <!-- Local styles -->
-      <style>
-        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
-        .btn-red:hover{filter:brightness(.97)}
-        .btn-gray{background:#f3f4f6!important;color:#111827!important}
-        .btn-gray:hover{background:#e5e7eb!important}
-      </style>
+      </div>
     </div>
   </div>
 </div>
 
 
 
-<!-- Edit Obstetrical History Modal -->
-<div id="modalObstetricalEdit" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalObstetricalEdit_title">
+<!-- Add Obstetrical History Modal -->
+<div id="modalAddObstetrical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalAddObstetrical_title">
   <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalObstetricalEdit')"></div>
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddObstetrical')"></div>
 
   <!-- Modal -->
   <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
@@ -525,49 +708,39 @@
 
       <!-- Header -->
       <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
-        <h2 id="modalObstetricalEdit_title" class="text-lg font-semibold">Edit Obstetrical History</h2>
+        <h2 id="modalAddObstetrical_title" class="text-lg font-semibold">Add Obstetrical History</h2>
         <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
-                onclick="closeModal('modalObstetricalEdit')" aria-label="Close modal">&times;</button>
+                onclick="closeModal('modalAddObstetrical')" aria-label="Close modal">&times;</button>
       </div>
 
       <!-- Body -->
-      <form class="px-6 py-6 space-y-6" onsubmit="event.preventDefault(); /* submit via JS/AJAX here */ closeModal('modalObstetricalEdit')">
+      <form method="post" action="{% url 'bhw_module:addObstetricalHistory' %}" class="px-6 py-6 space-y-6" onsubmit="event.preventDefault(); document.getElementById('modalAddObstetrical').classList.add('hidden'); openModal('modalConfirmObstetrical')">
+        {% csrf_token %}
+        <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
         <!-- GPA Row -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <!-- Gravida -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Gravida (Pregnancies)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3 2 6 6 10 4-4 6-7 6-10a6 6 0 0 0-6-6Zm0 8a2 2 0 1 1 .001-3.999A2 2 0 0 1 12 10Z"/></svg>
-              </span>
-              <input type="number" min="0" value="0"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" name="gravida" min="{{ last_gravida }}" required
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                   data-last-gravida="{{ last_gravida }}">
+            {% if last_gravida > 0 %}
+            <p class="text-xs text-gray-500 mt-1">Must be greater than: {{ last_gravida }} (based on previous record)</p>
+            {% endif %}
           </div>
-
-          <!-- Para -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Para (Live Births)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm-1-7h2v5h-2v-5Zm1-6a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 8Z"/></svg>
-              </span>
-              <input type="number" min="0" value="0"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" name="para" min="0" required
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
           </div>
-
-          <!-- Abortion -->
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Abortion (Miscarriages)</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C7 18 4 14 4 10a8 8 0 0 1 16 0c0 4-3 8-8 12Zm0-10a2 2 0 1 0-2-2 2 2 0 0 0 2 2Z"/></svg>
-              </span>
-              <input type="number" min="0" value="0"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="number" name="abortion" min="{{ last_abortion }}" required
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                   data-last-abortion="{{ last_abortion }}">
+            {% if last_abortion > 0 %}
+            <p class="text-xs text-gray-500 mt-1">Must be greater than or equal to: {{ last_abortion }} (based on previous record)</p>
+            {% endif %}
           </div>
         </div>
 
@@ -575,40 +748,21 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Last Menstrual Period</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm12 6H5v12h14V8Z"/></svg>
-              </span>
-              <input type="date" value="2020-01-01"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="date" name="last_menstrual_period" required
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
           </div>
-
           <div>
             <label class="text-[11px] font-semibold text-gray-500">Expected Delivery Date</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5v2h14V3Zm1 4H4v14h16V7ZM8 12h3v3H8v-3Z"/></svg>
-              </span>
-              <input type="date" value="2020-10-01"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
+            <input type="date" name="expected_date_of_delivery" required
+                   class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
           </div>
-        </div>
-
-        <!-- Note -->
-        <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
-          <span class="mr-1 inline-block align-middle">
-            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>
-          </span>
-          Please review the information before saving. Make sure all fields are complete and accurate.
         </div>
 
         <!-- Actions -->
         <div class="flex items-center justify-end gap-2">
           <button type="button"
                   class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
-                  onclick="closeModal('modalObstetricalEdit')">
+                  onclick="closeModal('modalAddObstetrical'); openModal('modalObstetrical')">
             Cancel
           </button>
           <button type="submit"
@@ -618,14 +772,37 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
 
-      <!-- Scoped styles -->
-      <style>
-        .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
-        .btn-red:hover{filter:brightness(.97)}
-        .btn-gray{background:#f3f4f6!important;color:#111827!important}
-        .btn-gray:hover{background:#e5e7eb!important}
-      </style>
+<!-- Confirmation Modal -->
+<div id="modalConfirmObstetrical" class="hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby="modalConfirmObstetrical_title">
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('modalConfirmObstetrical')"></div>
+  <div class="relative mx-auto my-8 w-[95%] max-w-md">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 flex items-center justify-between">
+        <h3 id="modalConfirmObstetrical_title" class="text-lg font-semibold">Confirm Submission</h3>
+        <button class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalConfirmObstetrical')">&times;</button>
+      </div>
+      <div class="p-6">
+        <div class="flex items-start gap-3 mb-4">
+          <svg class="h-6 w-6 text-amber-500 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/>
+          </svg>
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-2">Important Notice</h4>
+            <p class="text-sm text-gray-600">Once submitted, obstetrical history cannot be edited or modified. Please ensure all information is accurate before proceeding.</p>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalConfirmObstetrical'); openModal('modalAddObstetrical')">Cancel</button>
+          <button type="button" class="btn-red rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="document.querySelector('#modalAddObstetrical form').submit(); closeModal('modalConfirmObstetrical'); closeModal('modalAddObstetrical')">Confirm & Submit</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -904,15 +1081,51 @@
             <tbody>
               <tr class="bg-white hover:bg-rose-50">
                 <td class="px-4 py-3 text-gray-700">TT (Tetanus Toxoid)</td>
-                <td class="px-4 py-3 text-gray-600">—</td>
-                <td class="px-4 py-3 text-gray-600">—</td>
-                <td class="px-4 py-3 text-gray-600">—</td>
-                <td class="px-4 py-3 text-gray-600">—</td>
-                <td class="px-4 py-3 text-gray-600">—</td>
+                <td class="px-4 py-3 text-gray-600">
+                  {% if immunization_data.first_dose %}
+                    <span class="text-green-600">✓</span> {{ immunization_data.first_dose_date|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-600">
+                  {% if immunization_data.second_dose %}
+                    <span class="text-green-600">✓</span> {{ immunization_data.second_dose_date|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-600">
+                  {% if immunization_data.third_dose %}
+                    <span class="text-green-600">✓</span> {{ immunization_data.third_dose_date|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-600">
+                  {% if immunization_data.fourth_dose %}
+                    <span class="text-green-600">✓</span> {{ immunization_data.fourth_dose_date|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-600">
+                  {% if immunization_data.fifth_dose %}
+                    <span class="text-green-600">✓</span> {{ immunization_data.fifth_dose_date|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                    Pending
-                  </span>
+                  {% if immunization_data.fim_status %}
+                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                      Complete
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      Pending
+                    </span>
+                  {% endif %}
                 </td>
               </tr>
             </tbody>
@@ -962,31 +1175,15 @@
       </div>
 
       <!-- Body -->
-      <form class="p-6 space-y-6" onsubmit="event.preventDefault(); /* submit via JS/AJAX here */ closeModal('modalImmunizationAdd')">
-        <!-- Vaccine Type -->
+      <form method="post" action="{% url 'bhw_module:addMaternalImmunization' %}" class="p-6 space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
+        
+        <!-- Date Given -->
         <div>
-          <label class="text-[12px] font-semibold text-gray-600">Vaccine Type</label>
+          <label class="text-[12px] font-semibold text-gray-600">Date Given</label>
           <div class="relative mt-1">
-            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-              <option value="" selected disabled>Select a Vaccine</option>
-              <option>TT (Tetanus Toxoid)</option>
-              <option>Hepatitis B</option>
-              <option>Influenza</option>
-              <option>COVID-19</option>
-            </select>
-            <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <!-- Date of Visit -->
-        <div>
-          <label class="text-[12px] font-semibold text-gray-600">Date of Visit</label>
-          <div class="relative mt-1">
-            <input type="date"
+            <input type="date" name="date_given" required
                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
             <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -1000,13 +1197,13 @@
         <div>
           <label class="text-[12px] font-semibold text-gray-600">Dose Number</label>
           <div class="relative mt-1">
-            <select class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <select name="dose_number" required class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
               <option value="" selected disabled>Select Dose</option>
-              <option>1st Dose</option>
-              <option>2nd Dose</option>
-              <option>3rd Dose</option>
-              <option>4th Dose</option>
-              <option>5th Dose</option>
+              <option value="1">1st Dose</option>
+              <option value="2">2nd Dose</option>
+              <option value="3">3rd Dose</option>
+              <option value="4">4th Dose</option>
+              <option value="5">5th Dose</option>
             </select>
             <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -1019,7 +1216,7 @@
         <!-- Note -->
         <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
           <span class="mr-1">⚠️</span>
-          Please review the information before saving. Make sure all fields are complete and accurate.
+          Please review the information before saving. Doses must be given sequentially and dates must be chronological.
         </div>
 
         <!-- Actions -->
@@ -1059,16 +1256,16 @@
 
       <!-- Header -->
       <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
-        <h2 id="modalScreenings_title" class="text-lg font-semibold tracking-wide">Infectious Disease Screening</h2>
+        <h2 id="modalScreenings_title" class="text-lg font-semibold tracking-wide">Infectious Disease Surveillance</h2>
         <div class="flex items-center gap-2">
           <!-- Add Screening opens nested modal -->
           <button type="button"
                   class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="openModal('modalAddScreening')">
+                  onclick="closeModal('modalScreenings'); openModal('modalAddScreening')">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
             </svg>
-            Add Screening Record
+            Add Infectious Disease
           </button>
 
           <!-- Close -->
@@ -1090,6 +1287,13 @@
                 </tr>
               </thead>
               <tbody class="text-gray-700">
+                {% for screening in disease_surveillance_data %}
+                <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
+                  <td class="px-6 py-3 font-medium">{{ screening.disease_name }}</td>
+                  <td class="px-6 py-3">{{ screening.screening_date|date:"M d, Y" }}</td>
+                  <td class="px-6 py-3">{{ screening.result|default:"—" }}</td>
+                </tr>
+                {% empty %}
                 <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
                   <td class="px-6 py-3 font-medium">Syphilis</td>
                   <td class="px-6 py-3">—</td>
@@ -1105,6 +1309,7 @@
                   <td class="px-6 py-3">—</td>
                   <td class="px-6 py-3">—</td>
                 </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
@@ -1137,43 +1342,41 @@
 
 <!-- (Optional) Nested: Add Screening Record Modal -->
 <div id="modalAddScreening" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="modalAddScreening_title">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddScreening')"></div>
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('modalAddScreening'); openModal('modalScreenings')"></div>
   <div class="relative mx-auto my-8 w-[95%] max-w-md">
     <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-5 py-3 flex items-center justify-between">
         <h3 id="modalAddScreening_title" class="text-sm font-semibold">Add Screening Record</h3>
         <button class="text-white/90 hover:text-white text-xl leading-none font-bold"
-                onclick="closeModal('modalAddScreening')">&times;</button>
+                onclick="closeModal('modalAddScreening'); openModal('modalScreenings')">&times;</button>
       </div>
 
-      <form class="p-5 space-y-4">
+      <form method="post" action="{% url 'bhw_module:addDiseaseScreening' %}" class="p-5 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
+        
         <div>
           <label class="block text-sm text-gray-700 mb-1">Disease Type</label>
-          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500">
-            <option>Syphilis</option>
-            <option>Hepatitis B</option>
-            <option>HIV Screening</option>
-            <option>Others…</option>
+          <select name="disease_type_id" required class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <option value="" selected disabled>Select Disease Type</option>
+            {% for disease_type in disease_types %}
+            <option value="{{ disease_type.disease_type_id }}">{{ disease_type.disease_name }}</option>
+            {% endfor %}
           </select>
         </div>
         <div>
           <label class="block text-sm text-gray-700 mb-1">Date Screened</label>
-          <input type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <input type="date" name="screening_date" required class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
         </div>
         <div>
           <label class="block text-sm text-gray-700 mb-1">Result</label>
-          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500">
-            <option>Pending</option>
-            <option>Negative</option>
-            <option>Positive</option>
-          </select>
+          <input type="text" name="result" placeholder="Enter result (optional for HIV)" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
         </div>
 
         <div class="pt-2 flex items-center justify-end gap-2">
           <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="closeModal('modalAddScreening')">Cancel</button>
-          <button type="submit" class="btn-red rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="event.preventDefault(); closeModal('modalAddScreening')">Save</button>
+                  onclick="closeModal('modalAddScreening'); openModal('modalScreenings')">Cancel</button>
+          <button type="submit" class="btn-red rounded-lg px-4 py-2 text-sm font-semibold shadow">Save</button>
         </div>
       </form>
     </div>
@@ -1595,7 +1798,7 @@
 
 <!-- ========= Add Supplement Record Modal ========= -->
 <div id="modalAddSupplement" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="modalAddSupplement_title">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddSupplement')"></div>
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('modalAddSupplement')"></div>
 
   <div class="relative mx-auto my-8 w-[95%] max-w-xl">
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
@@ -1959,7 +2162,7 @@
 
 <!-- ===================== Add Postpartum Visit SUB-modal ===================== -->
 <div id="modalAddPostpartum" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="add_ppv_title">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddPostpartum')"></div>
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('modalAddPostpartum')"></div>
 
   <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
@@ -2078,10 +2281,20 @@
 
 
 
+
+
 <script>
+  let modalStack = [];
+  
   function openModal(id){
     const el=document.getElementById(id);
     if(!el) return;
+    
+    // Add to modal stack
+    if(!modalStack.includes(id)) {
+      modalStack.push(id);
+    }
+    
     el.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
     setTimeout(()=>{
@@ -2089,18 +2302,82 @@
       if(first) first.focus();
     },0);
   }
+  
   function closeModal(id){
     const el=document.getElementById(id);
     if(!el) return;
+    
     el.classList.add('hidden');
+    
+    // Remove from modal stack
+    const index = modalStack.indexOf(id);
+    if(index > -1) {
+      modalStack.splice(index, 1);
+    }
+    
+    // Only remove overflow-hidden if no modals are open
+    if(modalStack.length === 0) {
+      document.body.classList.remove('overflow-hidden');
+    }
+  }
+  
+  function closeAllModals() {
+    modalStack.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.classList.add('hidden');
+    });
+    modalStack = [];
     document.body.classList.remove('overflow-hidden');
   }
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){
-      ['modalObstetrical','modalObstetricalEdit', 'modalImmunization','modalImmunizationAdd', 'modalCheckups','modalAddCheckUp', 'modalScreenings', 'modalAddScreening','modalLabIron', 'modalAddGDM', 'modalLabResults', 'modalAddLabResult', 'modalSupplements', 'modalAddSupplement', 'modalDeliveryOutcome', 'modalAddPostpartum', 'modalPostpartum', 'ppvView_1000', 'modalMedical', 'modalSurgical', 'modalMedSurg'].forEach(id=>{
-        const el=document.getElementById(id);
-        if(el && !el.classList.contains('hidden')) closeModal(id);
+      // Close the topmost modal only
+      if(modalStack.length > 0) {
+        const topModal = modalStack[modalStack.length - 1];
+        closeModal(topModal);
+      }
+    }
+  });
+  
+  // Gravida and Abortion validation
+  document.addEventListener('DOMContentLoaded', function() {
+    const gravidaInput = document.querySelector('input[name="gravida"]');
+    if (gravidaInput) {
+      const lastGravida = parseInt(gravidaInput.dataset.lastGravida) || 0;
+      gravidaInput.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        if (value <= lastGravida) {
+          this.setCustomValidity(`Gravida must be greater than ${lastGravida} (based on previous record)`);
+        } else {
+          this.setCustomValidity('');
+        }
       });
+    }
+    
+    const abortionInput = document.querySelector('input[name="abortion"]');
+    if (abortionInput) {
+      const lastAbortion = parseInt(abortionInput.dataset.lastAbortion) || 0;
+      abortionInput.addEventListener('input', function() {
+        const value = parseInt(this.value) || 0;
+        if (value < lastAbortion) {
+          this.setCustomValidity(`Abortion count must be greater than or equal to ${lastAbortion} (based on previous record)`);
+        } else {
+          this.setCustomValidity('');
+        }
+      });
+      
+      // Also validate on form submission
+      const form = abortionInput.closest('form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          const value = parseInt(abortionInput.value) || 0;
+          if (value < lastAbortion) {
+            e.preventDefault();
+            abortionInput.setCustomValidity(`Abortion count must be greater than or equal to ${lastAbortion} (based on previous record)`);
+            abortionInput.reportValidity();
+          }
+        });
+      }
     }
   });
 </script>
