@@ -947,15 +947,77 @@ def Addbusiness(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def business_list(request):
     q = (request.GET.get("q") or "").strip() or None
-    status = request.GET.get("status") or None
     page = max(int(request.GET.get("page", 1)), 1)
     per_page = max(min(int(request.GET.get("per_page", 10)), 100), 1)
     offset = (page - 1) * per_page
 
-    # ✅ Always use the business list SP so we have business_id in the rows.
-    rows  = Business.sp_get_all_businesses(q, status, None, None, None, per_page, offset)
-    total = _count_get_all_businesses(q, status)
+    # Parse multiple filter values
+    business_type_ids = _to_list(request.GET.getlist("business_type_id"))
+    clearance_category_ids = _to_list(request.GET.getlist("clearance_category_id"))
+    ownership_ids = _to_list(request.GET.getlist("ownership_id"))
+    business_status_ids = _to_list(request.GET.getlist("business_status_id"))
 
+    # Fetch filter options for dropdowns
+    with connection.cursor() as cur:
+        cur.execute("SELECT business_type_id, type_name FROM business_type ORDER BY type_name")
+        business_types = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+
+    with connection.cursor() as cur:
+        cur.execute("SELECT ownership_id, ownership_name FROM ownership ORDER BY ownership_name")
+        ownerships = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    with connection.cursor() as cur:
+        cur.execute("SELECT business_status_id, status_name FROM business_status ORDER BY status_name")
+        business_statuses = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+
+    try:
+        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
+    except Exception:
+        clearance_categories = []
+
+    # Create lookup maps for filtering (ID -> Name)
+    business_type_map = {str(t['id']): t['name'] for t in business_types}
+    ownership_map = {str(o['id']): o['name'] for o in ownerships}
+    business_status_map = {str(s['id']): s['name'] for s in business_statuses}
+    clearance_category_map = {str(c.get('clearance_category_id')): c.get('category_name') for c in clearance_categories if c.get('clearance_category_id')}
+
+    # Get all businesses matching search query
+    # Since SQL function takes single filter values, we'll fetch all and filter in Python for multi-select
+    try:
+        rows = Business.sp_get_all_businesses(
+            query=q,
+            business_type_id=None,
+            business_clearance_cat_id=None,
+            ownership_id=None,
+            business_status_id=None,
+            limit=1000,  # Get all for filtering
+            offset=0
+        )
+    except Exception as e:
+        print(f"ERROR calling sp_get_all_businesses: {e}")
+        import traceback
+        traceback.print_exc()
+        rows = []
+    
+    # Apply filters in Python - match by name since the DB returns text fields
+    if business_type_ids:
+        selected_names = [business_type_map.get(id) for id in business_type_ids if id in business_type_map]
+        rows = [r for r in rows if r.get('business_type_name') in selected_names]
+    if clearance_category_ids:
+        selected_names = [clearance_category_map.get(id) for id in clearance_category_ids if id in clearance_category_map]
+        rows = [r for r in rows if r.get('clearance_category_name') in selected_names]
+    if ownership_ids:
+        selected_names = [ownership_map.get(id) for id in ownership_ids if id in ownership_map]
+        rows = [r for r in rows if r.get('ownership_name') in selected_names]
+    if business_status_ids:
+        selected_names = [business_status_map.get(id) for id in business_status_ids if id in business_status_map]
+        rows = [r for r in rows if r.get('business_status_name') in selected_names]
+    
+    total = len(rows)
+    
+    # Paginate
+    rows = rows[offset:offset + per_page]
+    
     total_pages = max(ceil(total / per_page), 1)
 
     def page_window(curr, last, radius=1):
@@ -970,40 +1032,106 @@ def business_list(request):
 
     page_numbers = page_window(page, total_pages)
 
+    # Build filter chips (like resident list)
+    def build_remove_url(param_name, value_to_remove):
+        params = request.GET.copy()
+        vals = params.getlist(param_name)
+        vals = [v for v in vals if str(v) != str(value_to_remove)]
+        if vals:
+            params.setlist(param_name, vals)
+        else:
+            params.pop(param_name, None)
+        params['page'] = '1'
+        return f"?{params.urlencode()}"
+
+    business_type_chips = []
+    clearance_category_chips = []
+    ownership_chips = []
+    business_status_chips = []
+    
+    for type_id in business_type_ids:
+        type_name = next((t['name'] for t in business_types if str(t['id']) == str(type_id)), f"Type {type_id}")
+        business_type_chips.append({
+            'label': type_name,
+            'url': build_remove_url('business_type_id', type_id)
+        })
+    
+    for cat_id in clearance_category_ids:
+        cat_name = next((c.get('category_name', f"Category {cat_id}") for c in clearance_categories 
+                        if str(c.get('clearance_category_id')) == str(cat_id)), f"Category {cat_id}")
+        clearance_category_chips.append({
+            'label': cat_name,
+            'url': build_remove_url('clearance_category_id', cat_id)
+        })
+    
+    for own_id in ownership_ids:
+        own_name = next((o['name'] for o in ownerships if str(o['id']) == str(own_id)), f"Ownership {own_id}")
+        ownership_chips.append({
+            'label': own_name,
+            'url': build_remove_url('ownership_id', own_id)
+        })
+    
+    for status_id in business_status_ids:
+        status_name = next((s['name'] for s in business_statuses if str(s['id']) == str(status_id)), f"Status {status_id}")
+        business_status_chips.append({
+            'label': status_name,
+            'url': build_remove_url('business_status_id', status_id)
+        })
+
+    # Clear all filters URL
+    clear_all_params = {'q': q} if q else {}
+    clear_all_url = f"?{urlencode(clear_all_params)}" if clear_all_params else "?"
+
+    # Count active filters
+    filter_count = (len(business_type_ids) + len(clearance_category_ids) + 
+                   len(ownership_ids) + len(business_status_ids))
+
+    # Build prev/next URLs preserving filters
+    def build_page_url(p):
+        params = request.GET.copy()
+        params['page'] = str(p)
+        return f"?{params.urlencode()}"
+
+    prev_url = build_page_url(page - 1) if page > 1 else None
+    next_url = build_page_url(page + 1) if page < total_pages else None
+
+    # Build page items for pagination
+    page_items = []
+    for p in page_numbers:
+        page_items.append({
+            'page': p,
+            'url': build_page_url(p),
+            'is_current': p == page
+        })
+
     ctx = {
         "rows": rows,
         "q": q or "",
-        "status": status or "",
         "page": page,
         "per_page": per_page,
         "total": total,
         "total_pages": total_pages,
         "page_numbers": page_numbers,
+        "page_items": page_items,
         "has_prev": page > 1,
         "has_next": page < total_pages,
-        "prev_page": page - 1,
-        "next_page": page + 1,
-    }
-
-    with connection.cursor() as cur:
-        cur.execute("SELECT business_type_id, type_name FROM business_type ORDER BY type_name")
-        business_types = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
-
-    with connection.cursor() as cur:
-        cur.execute("SELECT ownership_id, ownership_name FROM ownership ORDER BY ownership_name")
-        ownerships = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
-    
-    # NEW: clearance categories (includes supported_units from SQL)
-    try:
-        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
-    except Exception:
-        clearance_categories = []
-
-    ctx.update({
+        "prev_url": prev_url,
+        "next_url": next_url,
         "business_types": business_types,
         "ownerships": ownerships,
+        "business_statuses": business_statuses,
         "clearance_categories": clearance_categories,
-    })
+        "business_type_id_list": business_type_ids,
+        "clearance_category_id_list": clearance_category_ids,
+        "ownership_id_list": ownership_ids,
+        "business_status_id_list": business_status_ids,
+        "business_type_chips": business_type_chips,
+        "clearance_category_chips": clearance_category_chips,
+        "ownership_chips": ownership_chips,
+        "business_status_chips": business_status_chips,
+        "clear_all_url": clear_all_url,
+        "filter_count": filter_count,
+    }
     return render(request, "secretary_module/manageBusiness.html", ctx)
 
 def business_detail_json(request, business_id: int):

@@ -49,5 +49,9 @@ urlpatterns = [
      path('maternalView/', views.maternalView),
      path('HouseholdAdd/', views.HouseholdAdd, name='HouseholdAdd'),
      path('residents/search/', views.resident_search_api, name='resident_search_api'),
+     
+     # PDF Generation endpoints
+     path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
+     path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
 ]
 
