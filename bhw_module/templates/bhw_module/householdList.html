@@ -54,7 +54,7 @@
       <input type="hidden" name="sitio_id" value="{{ sitio_id }}" />
       <input type="hidden" name="limit" value="{{ limit }}" />
       <input type="hidden" name="page" id="pageField" value="{{ page }}">
-      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2">
+      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2 flex-shrink-0">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/>
         </svg>
@@ -63,7 +63,7 @@
     </form>
 
     <!-- Filters dropdown -->
-    <details class="relative">
+    <details class="relative flex-shrink-0">
       <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/>
@@ -148,13 +148,13 @@
       </div>
     </details>
 
-    <button onclick="location.href='{% url 'bhw_module:HouseholdAdd' %}'"
-            class="rounded-xl bg-red-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-red-700 inline-flex items-center gap-2">
+    <a href="{% url 'bhw_module:HouseholdAdd' %}"
+       class="rounded-xl bg-red-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-red-700 inline-flex items-center gap-2">
       <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M12 5v14m7-7H5"/>
       </svg>
       + Add Household
-    </button>
+    </a>
   </div>
 
   <!-- Active filter chips -->

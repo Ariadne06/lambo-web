@@ -297,22 +297,6 @@
                     <p class="text-sm text-gray-500">No members yet.</p>
                   {% endfor %}
                 </div>
-
-                <!-- GENERATE FAMILY PROFILE PDF - Bottom Right -->
-                <div class="mt-4 flex justify-end">
-                  <a
-                    href="{% url 'reports_module:family_profile_quarter' f.family_id results.quarter_id %}"
-                    target="_blank"
-                    class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow ring-1 ring-red-600/20 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 transition-colors"
-                    title="Generate Harmonized Family Profile PDF"
-                    aria-label="Generate Harmonized Family Profile PDF"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h4.586A2 2 0 0 1 12 2.586L15.414 6A2 2 0 0 1 16 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm2 6a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H7a1 1 0 0 1-1-1Zm1 3a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7Z" clip-rule="evenodd"/>
-                    </svg>
-                    Generate Profile
-                  </a>
-                </div>
               </div>
             </details>
           {% endfor %}
