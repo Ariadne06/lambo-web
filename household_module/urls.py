@@ -75,12 +75,16 @@ urlpatterns = [
     path('child-health-records/<int:child_health_id>/update/', views.ChildHealthRecordUpdateView.as_view(), name='update-child-health-record'),
 
     # CHILD HEALTH - IMMUNIZATION
-    path('child-health-records/<int:child_health_id>/immunizations/', 
-         views.ChildImmunizationListView.as_view(), 
-         name='child-immunizations-list'),
-    path('child-health-records/<int:child_health_id>/immunizations/add/', 
-         views.ChildImmunizationCreateView.as_view(), 
-         name='child-immunizations-add'),
+    path(
+    'child-health-records/<int:child_health_id>/immunizations/',
+    views.ChildImmunizationListView.as_view(),
+    name='child-immunizations-list',
+),
+path(
+    'child-health-records/<int:child_health_id>/immunizations/add/',
+    views.ChildImmunizationCreateView.as_view(),
+    name='child-immunizations-add',
+),
     
     # CHILD HEALTH - SUPPLEMENTS
     path('child-health-records/<int:child_health_id>/supplements/', 
@@ -254,4 +258,11 @@ urlpatterns = [
      path('maternal-health-records/<int:maternal_health_id>/postpartum/add/', 
           views.PostpartumVisitCreateView.as_view(), 
           name='maternal-postpartum-add'),
+     
+     # ========================================
+     # BHW DASHBOARD
+     # ========================================
+     path('bhw/dashboard/', 
+          views.BHWDashboardView.as_view(), 
+          name='bhw-dashboard'),
 ]

@@ -287,9 +287,9 @@ class ChildImmunizationRecord(models.Model):
     vaccine_type_id = models.IntegerField()
     dose_type_id = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
-        managed = False
+        managed = False  # uses existing DB table
         db_table = 'child_immunization_record'
 
 
