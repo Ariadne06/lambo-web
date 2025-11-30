@@ -2746,3 +2746,84 @@ def add_exclusive_breastfeed(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+# ===========================================================================================
+# HOUSEHOLD PDF GENERATION VIEWS FOR BHW MODULE
+# ===========================================================================================
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def generate_household_list_pdf(request):
+    '''
+    Generate PDF report for household list with applied filters
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    
+    try:
+        # Get filter parameters from query string
+        query = request.GET.get('query', '').strip() or None
+        status = request.GET.get('status', 'all').strip()
+        sitio_id = request.GET.get('sitio_id', '').strip() or None
+        quarter_id = request.GET.get('quarter_id', '').strip() or None
+        
+        # Generate PDF using the report utility
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="household_list_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating household list PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    '''
+    Generate PDF report for specific household details
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    
+    try:
+        quarter_id = request.GET.get('quarter_id', '').strip() or None
+        
+        # Generate PDF using the report utility
+        pdf_generator = HouseholdDetailPDF(
+            household_id=household_id,
+            quarter_id=quarter_id
+        )
+        
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="household_{household_id}_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating household detail PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
