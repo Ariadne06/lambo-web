@@ -30,85 +30,151 @@
   /* Generic disabled state: keep original color, just tweak cursor/opacity */
   .btn-action[disabled]{
     cursor:not-allowed;
-    opacity:0.9; /* keep color, just a tiny hint it’s disabled */
+    opacity:0.9; /* keep color, just a tiny hint it's disabled */
   }
+
+  .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+  .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+  
+  details[open] > summary { background:#f9fafb; }
+  details > summary::-webkit-details-marker { display:none; }
 </style>
 
-<div class="p-6 bg-gray-50 min-h-screen">
-  <h1 class="text-xl font-bold text-red-600 mb-4">Household List</h1>
+<div class="px-6 py-6">
+  <h2 class="text-lg font-semibold text-red-700 mb-4">Household List</h2>
 
-  <!-- Top Controls -->
-  <div class="flex justify-end items-center mb-4">
-    <form id="controlsForm" method="GET" class="flex items-center gap-3">
-      <div class="flex items-center gap-3">
-        <input type="text" placeholder="Search Household" name="query" id="queryInput"
-               value="{{ query|default:'' }}"
-               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
+  <!-- Search + Filters -->
+  <div class="mb-5 flex items-center gap-2">
+    <form id="searchForm" method="GET" class="flex items-center gap-2 grow">
+      <div class="relative w-full sm:w-[420px]">
+        <input type="text" name="query" id="queryInput" value="{{ query|default:'' }}" 
+               placeholder="Search Household" 
+               class="w-full rounded-xl border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600" />
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z"/>
+        </svg>
       </div>
+      <input type="hidden" name="quarter_id" value="{{ quarter_id }}" />
+      <input type="hidden" name="status" value="{{ status }}" />
+      <input type="hidden" name="sitio_id" value="{{ sitio_id }}" />
+      <input type="hidden" name="limit" value="{{ limit }}" />
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/>
+        </svg>
+        Search
+      </button>
+    </form>
 
-      <label class="text-gray-600">Quarter: </label>
-      <select
-        name="quarter_id"
-        class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-        onchange="if(this.value) this.form.submit();"
-      >
-        <option value="" selected disabled>— Select Quarter —</option>
-        {% for q in quarter %}
-          <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
-            {{ q.quarter_name }}
-          </option>
-        {% endfor %}
-      </select>
-
-      <div class="flex items-center gap-2 text-sm">
-        <label for="limit" class="text-gray-600">Rows per page:</label>
-        <div class="relative inline-block">
-          <select id="limit" name="limit"
-                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
-            {% for n in limit_options %}
-              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="relative">
-        <button type="button"
-                onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
-                class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          Filters
-        </button>
-
-        <div id="filtersMenu"
-             class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+    <!-- Filters dropdown -->
+    <details class="relative">
+      <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/>
+        </svg>
+        Filters
+        {% if filter_count %}
+          <span class="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-rose-600 text-white px-1.5">
+            {{ filter_count }}
+          </span>
+        {% endif %}
+      </summary>
+      <div class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4">
+        <form id="controlsForm" method="GET" class="space-y-3">
+          <input type="hidden" name="query" value="{{ query }}" />
+          
           <div>
-            <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
-            <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
-              <option value="">— Select Sitio —</option>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Quarter</label>
+            <select name="quarter_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600">
+              <option value="">Current Quarter (Live Data)</option>
+              {% for q in quarter %}
+                <option value="{{ q.quarter_id }}" {% if q.quarter_id|stringformat:"s" == quarter_id|stringformat:"s" %}selected{% endif %}>
+                  Q{{ q.quarter_number }} {{ q.year }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Household Status</label>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="all" {% if status == 'all' or not status %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="text-sm text-gray-700">All Status</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="active" {% if status == 'active' %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="chip chip-rose text-sm">Active</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="status" value="inactive" {% if status == 'inactive' %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="chip chip-rose text-sm">Inactive</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Sitio</label>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="sitio_id" value="" {% if not sitio_id %}checked{% endif %}
+                       class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                <span class="text-sm text-gray-700">All Sitios</span>
+              </label>
               {% for s in sitio %}
-                <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sitio_id" value="{{ s.sitio_id }}" 
+                         {% if s.sitio_id|stringformat:"s" == sitio_id|stringformat:"s" %}checked{% endif %}
+                         class="w-4 h-4 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-sm text-gray-700">{{ s.sitio_name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Items per page</label>
+            <select name="limit" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600">
+              {% for n in limit_options %}
+                <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }} per page</option>
               {% endfor %}
             </select>
           </div>
 
-          <div>
-            <label for="status" class="block text-gray-600 mb-1">Status</label>
-            <select id="status" name="status" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
-              <option value="all">— Select Status —</option>
-              <option value="active"  {% if status == "active" %}selected{% endif %}>Active</option>
-              <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
-            </select>
+          <div class="flex items-center justify-between pt-1">
+            <a href="?query={{ query }}" class="text-sm text-gray-600 hover:text-rose-700">Clear</a>
+            <button type="submit" class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-rose-700">Apply Filters</button>
           </div>
-        </div>
+        </form>
       </div>
-
-      <input type="hidden" name="page" id="pageField" value="{{ page }}">
-    </form>
+    </details>
   </div>
+
+  <!-- Active filter chips -->
+  {% if status_chip or sitio_chip %}
+    <div class="mb-3 flex items-center gap-2 text-sm">
+      <span class="text-gray-600">Active:</span>
+      {% if status_chip %}
+        <a href="{{ status_chip.url }}" class="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 px-3 py-1 text-xs font-semibold hover:bg-rose-200 transition-colors">
+          {{ status_chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endif %}
+      {% if sitio_chip %}
+        <a href="{{ sitio_chip.url }}" class="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 px-3 py-1 text-xs font-semibold hover:bg-rose-200 transition-colors">
+          {{ sitio_chip.label }}
+          <span class="ml-1 text-xs">✕</span>
+        </a>
+      {% endif %}
+      <a href="{{ clear_all_url }}" class="ml-2 inline-flex items-center gap-1 text-gray-700 hover:text-rose-700">
+        <span class="text-xs">✕</span> Clear all
+      </a>
+    </div>
+  {% endif %}
 
   {% if message %}
     <div id="messages" class="mb-4 px-4 py-3 rounded border
@@ -120,7 +186,25 @@
   {% endif %}
 
   <!-- Table -->
-  <div class="bg-white shadow-md rounded-xl overflow-hidden">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <!-- Generate PDF Button -->
+    {% if results|length > 0 and not results.0.household_id == 0 %}
+    <div class="mb-4 flex justify-end">
+      <form method="GET" action="{% url 'captain_module:generate_household_list_pdf' %}" target="_blank">
+        <input type="hidden" name="query" value="{{ query|default:'' }}">
+        <input type="hidden" name="status" value="{{ status|default:'all' }}">
+        <input type="hidden" name="sitio_id" value="{{ sitio_id|default:'' }}">
+        <input type="hidden" name="quarter_id" value="{{ quarter_id|default:'' }}">
+        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Generate PDF
+        </button>
+      </form>
+    </div>
+    {% endif %}
+    
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="bg-gray-100 text-gray-700">
@@ -351,27 +435,18 @@
   // Debounce
   function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
-  const form = document.getElementById('controlsForm');
+  const searchForm = document.getElementById('searchForm');
   const pageField = document.getElementById('pageField');
-
-  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
-    el.addEventListener('change', () => { pageField.value = 1; form.requestSubmit(); });
-  });
-
   const queryInput = document.getElementById('queryInput');
-  if (queryInput){
-    const SEARCH_DEBOUNCE_MS = 1000;
-    queryInput.addEventListener('input', debounce(() => { pageField.value = 1; form.requestSubmit(); }, SEARCH_DEBOUNCE_MS));
-  }
 
-  document.addEventListener('click', function (e) {
-    const menu = document.getElementById('filtersMenu');
-    if (!menu) return;
-    const clickedInsideMenu = e.target.closest('#filtersMenu');
-    const toggleBtn = e.target.closest('button');
-    const clickedToggleBtn = toggleBtn && toggleBtn.textContent.trim() === 'Filters';
-    if (!clickedInsideMenu && !clickedToggleBtn) menu.classList.add('hidden');
-  });
+  // Search input debounce
+  if (queryInput && searchForm){
+    const SEARCH_DEBOUNCE_MS = 1000;
+    queryInput.addEventListener('input', debounce(() => { 
+      pageField.value = 1; 
+      searchForm.requestSubmit(); 
+    }, SEARCH_DEBOUNCE_MS));
+  }
 
   (function(){
     const modal        = document.getElementById('visitModal');
