@@ -1281,3 +1281,48 @@ class Family(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
+
+
+class BHWDashboard(models.Model):
+    # Basic totals
+    total_households = models.IntegerField()
+    total_families = models.IntegerField()
+
+    # Maternal
+    total_active_maternal = models.IntegerField()
+    total_active_maternal_by_bhw = models.IntegerField()
+
+    # Child immunization (upcoming)
+    total_children_upcoming_immun_5d = models.IntegerField()
+
+    # Visitations (BHW-specific)
+    households_visited_today_by_bhw = models.IntegerField()
+
+    # Demographics
+    total_male = models.IntegerField()
+    total_female = models.IntegerField()
+    age_group_0_5 = models.IntegerField()
+    age_group_6_12 = models.IntegerField()
+    age_group_13_17 = models.IntegerField()
+    age_group_18_59 = models.IntegerField()
+    age_group_60_plus = models.IntegerField()
+
+    # Household visitation progress
+    hh_visited_count = models.IntegerField()
+    hh_not_visited_count = models.IntegerField()
+    hh_visited_percent = models.DecimalField(max_digits=5, decimal_places=2)
+
+    # Family visitation progress
+    fam_visited_count = models.IntegerField()
+    fam_not_visited_count = models.IntegerField()
+    fam_visited_percent = models.DecimalField(max_digits=5, decimal_places=2)
+
+    # Households per Purok (JSONB)
+    households_per_purok = models.JSONField()
+
+    # Quarter
+    quarter_id = models.IntegerField()
+
+    class Meta:
+        managed = False  # This is NOT a real table, it comes from a DB function
+        # optional: db_table = "bhw_dashboard"
