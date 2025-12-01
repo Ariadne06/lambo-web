@@ -608,20 +608,10 @@
                         {% endif %}
                       </td>
                       <td class="px-4 py-3">
-                        {% if immunization.is_delayed %}
-                          {% if immunization.next_recommended_date %}
-                            <span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-[12px] text-red-700">{{ immunization.next_recommended_date|date:"M d, Y" }}</span>
-                          {% else %}
-                            <span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-[12px] text-red-700">Delayed</span>
-                          {% endif %}
-                        {% elif immunization.next_recommended_date %}
-                          <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-[12px] text-amber-700">{{ immunization.next_recommended_date|date:"M d, Y" }}</span>
+                        {% if immunization.status == 'Completed' %}
+                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">Completed</span>
                         {% else %}
-                          {% if immunization.last_administered %}
-                            <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">{{ immunization.last_administered|date:"M d, Y" }}</span>
-                          {% else %}
-                            <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-[12px] text-gray-700">Not Started</span>
-                          {% endif %}
+                          <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-[12px] text-amber-700">Ongoing</span>
                         {% endif %}
                       </td>
                     </tr>
@@ -636,12 +626,12 @@
               </table>
             </div>
 
-            <!-- Legend -->
+            {% comment %} <!-- Legend -->
             <div class="flex flex-wrap items-center gap-3 px-5 py-4 text-xs text-gray-500">
               <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Complete</span>
-              <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-400"></span>Due Soon</span>
+              <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-400"></span>On going</span>
               <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-500"></span>Overdue</span>
-            </div>
+            </div> {% endcomment %}
           </div>
 
           <!-- Footer actions -->
