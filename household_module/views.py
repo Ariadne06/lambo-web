@@ -3669,7 +3669,6 @@ class PostpartumVisitListView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-<<<<<<< HEAD
 
 @require_GET
 def bhw_dashboard_view(request):
@@ -3702,7 +3701,6 @@ def bhw_dashboard_view(request):
             data[key] = float(data[key])
 
     return JsonResponse(data)
-=======
 # ========================================
 # BHW DASHBOARD ENDPOINT
 # ========================================
@@ -3778,4 +3776,3 @@ class BHWDashboardView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
->>>>>>> 13d9b797b6f9ba7a12c753e3cc2159d345be7f8c
