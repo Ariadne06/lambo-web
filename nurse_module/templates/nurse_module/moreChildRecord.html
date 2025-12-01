@@ -2,166 +2,268 @@
 {% block title %}Child Health Record{% endblock %}
 
 {% block content %}
-<div class="px-6 py-6">
-  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
+<div class="px-6 py-6 bg-gray-50 min-h-screen">
+  <div class="mx-auto max-w-6xl space-y-4">
 
     <!-- Header -->
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
         <h2 class="text-xl font-semibold text-gray-900">Child Health Record</h2>
         <p class="text-sm text-gray-600">Review demographics, delivery details, and statuses.</p>
-        <p class="mt-1 text-xs text-gray-500">
-          Child ID: {{ record.child_id }}{% if record.family_code %} • Family: {{ record.family_code }}{% endif %}
-          {% if record.complete_address %} • Address: {{ record.complete_address }}{% endif %}
+        <p class="mt-1 text-xs text-gray-500 space-x-2">
+          <span><span class="font-semibold text-gray-700">Child ID:</span> {{ record.child_id }}</span>
+          {% if record.family_code %}
+            <span>• <span class="font-semibold text-gray-700">Family:</span> {{ record.family_code }}</span>
+          {% endif %}
+          {% if record.complete_address %}
+            <span>• <span class="font-semibold text-gray-700">Address:</span> {{ record.complete_address }}</span>
+          {% endif %}
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <a href="{% url 'nurse_module:childrecordList' %}"
-           class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm hover:bg-gray-50">
-          ← Back to List
+           class="inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 11H7.8l5.6-5.6L12 4 4 12l8 8 1.4-1.4L7.8 13H20z"/>
+          </svg>
+          Back to List
         </a>
       </div>
     </div>
 
-    <!-- Form (read-only view) -->
-    <form class="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-5">
-      <!-- Column 1 -->
-      <div class="space-y-4">
+    <!-- Main card -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8">
+      <!-- Tiny summary row -->
+      <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Child Full Name</label>
-          <input type="text" value="{{ record.child_full_name }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase mb-1">
+            Child
+          </p>
+          <p class="text-base md:text-lg font-semibold text-gray-900">
+            {{ record.child_full_name }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500">
+            {% if record.dob %}
+              Born on <span class="font-medium text-gray-700">{{ record.dob|date:'F j, Y' }}</span>
+            {% else %}
+              Date of birth not recorded.
+            {% endif %}
+          </p>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Mother's Full Name</label>
-          <input type="text" value="{{ record.mother_full_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Father's Full Name</label>
-          <input type="text" value="{{ record.father_full_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">PhilHealth ID Number</label>
-          <input type="text" value="{{ record.philhealth_no|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input type="text"
-                 value="{% firstof record.mother_phone_number record.father_phone_number '—' %}"
-                 class="w-full rounded-md border border-gray-300 px-3 py-2"
-                 readonly>
+
+        <div class="grid grid-cols-2 gap-3 text-xs md:text-sm">
+          <div class="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-0.5">Sex</p>
+            <p class="text-gray-900">{{ record.sex|default:"—" }}</p>
+          </div>
+          <div class="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-0.5">PhilHealth ID</p>
+            <p class="text-gray-900 break-all">{{ record.philhealth_no|default:"—" }}</p>
+          </div>
+          <div class="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-0.5">Primary Contact</p>
+            <p class="text-gray-900">
+              {% firstof record.mother_phone_number record.father_phone_number "—" %}
+            </p>
+          </div>
+          <div class="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-0.5">Record Created</p>
+            <p class="text-gray-900">
+              {% if record.created_at %}{{ record.created_at|date:'m/d/Y' }}{% else %}—{% endif %}
+            </p>
+          </div>
         </div>
       </div>
 
-      <!-- Column 2 -->
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Sex</label>
-          <input type="text" value="{{ record.sex|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-          <input type="text" value="{% if record.dob %}{{ record.dob|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Time of Birth</label>
-          <input type="text" value="{{ record.time_of_birth|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+      <!-- Details grid (3 columns) -->
+      <form class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+        <!-- Column 1: Parents & Contact -->
+        <div class="space-y-4">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Parents &amp; Contact</p>
+
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Birth Weight (Kg)</label>
-            <input type="text" value="{{ record.birth_weight_kg|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Child Full Name</label>
+            <input type="text" value="{{ record.child_full_name }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
           </div>
+
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Birth Height (Cm)</label>
-            <input type="text" value="{{ record.birth_length_cm|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Mother's Full Name</label>
+            <input type="text" value="{{ record.mother_full_name|default:'—' }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Father's Full Name</label>
+            <input type="text" value="{{ record.father_full_name|default:'—' }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Phone Number</label>
+            <input type="text"
+                   value="{% firstof record.mother_phone_number record.father_phone_number '—' %}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
           </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Place of Delivery</label>
-          <input type="text" value="{{ record.place_of_delivery|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-      </div>
 
-      <!-- Column 3 -->
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">TT Status of Mother</label>
-          <input type="text" value="{{ record.tt_status_name|default:'—' }}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Date TT Status is Assessed</label>
-          <input type="text" value="{% if record.tt_status_date %}{{ record.tt_status_date|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Newborn Screening Status</label>
-          <input type="text" value="{% if record.newborn_screening_status %}Done{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Record Created</label>
-          <input type="text" value="{% if record.created_at %}{{ record.created_at|date:'m/d/Y' }}{% else %}—{% endif %}" class="w-full rounded-md border border-gray-300 px-3 py-2" readonly>
-        </div>
+        <!-- Column 2: Birth Details -->
+        <div class="space-y-4">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Birth Details</p>
 
-        <!-- Feeding Method -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Feeding Method</label>
-          <div class="mt-1 space-y-1">
-            <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Breastfeeding' %}checked{% endif %} disabled> Breastfeeding
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Bottle feeding' %}checked{% endif %} disabled> Bottle feeding
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400" {% if record.feeding_method_name == 'Mixed' %}checked{% endif %} disabled> Mixed
-            </label>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Sex</label>
+            <input type="text" value="{{ record.sex|default:'—' }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Date of Birth</label>
+              <input type="text"
+                     value="{% if record.dob %}{{ record.dob|date:'m/d/Y' }}{% else %}—{% endif %}"
+                     class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                     readonly>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Time of Birth</label>
+              <input type="text" value="{{ record.time_of_birth|default:'—' }}"
+                     class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                     readonly>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Birth Weight (Kg)</label>
+              <input type="text" value="{{ record.birth_weight_kg|default:'—' }}"
+                     class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                     readonly>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Birth Height (Cm)</label>
+              <input type="text" value="{{ record.birth_length_cm|default:'—' }}"
+                     class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                     readonly>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Place of Delivery</label>
+            <input type="text" value="{{ record.place_of_delivery|default:'—' }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
           </div>
         </div>
+
+        <!-- Column 3: Maternal & Status -->
+        <div class="space-y-4">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Maternal &amp; Status</p>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">TT Status of Mother</label>
+            <input type="text" value="{{ record.tt_status_name|default:'—' }}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Date TT Status is Assessed</label>
+            <input type="text"
+                   value="{% if record.tt_status_date %}{{ record.tt_status_date|date:'m/d/Y' }}{% else %}—{% endif %}"
+                   class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                   readonly>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Newborn Screening Status</label>
+            <div class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 inline-flex items-center text-xs">
+              {% if record.newborn_screening_status %}
+                <span class="mr-1 inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                <span class="font-medium text-gray-800">Done</span>
+              {% else %}
+                <span class="mr-1 inline-block h-2 w-2 rounded-full bg-gray-400"></span>
+                <span class="font-medium text-gray-700">Not recorded</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Feeding Method -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Feeding Method</label>
+            <div class="mt-1 space-y-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+              <label class="flex items-center gap-2 text-sm text-gray-800">
+                <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400"
+                       {% if record.feeding_method_name == 'Breastfeeding' %}checked{% endif %} disabled>
+                <span>Breastfeeding</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-800">
+                <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400"
+                       {% if record.feeding_method_name == 'Bottle feeding' %}checked{% endif %} disabled>
+                <span>Bottle feeding</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-800">
+                <input type="radio" name="feeding" class="h-3 w-3 rounded-full border-gray-400"
+                       {% if record.feeding_method_name == 'Mixed' %}checked{% endif %} disabled>
+                <span>Mixed</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Buttons Section -->
+      <div class="mt-10 flex flex-col md:flex-row items-center justify-between gap-4">
+        <a href="{% url 'nurse_module:childrecordList' %}"
+           class="inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 11H7.8l5.6-5.6L12 4 4 12l8 8 1.4-1.4L7.8 13H20z"/>
+          </svg>
+          Back to List
+        </a>
+
+        <div class="flex flex-wrap justify-center gap-3">
+          <button type="button" id="openMedicalModal"
+                  class="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11 7V5h2v2h2v2h-2v2h-2V9H9V7h2Zm-4 4V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6Z"/>
+            </svg>
+            Medical/Surgical
+          </button>
+
+          <button type="button" id="openImmunizationModal"
+                  class="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m21 6-3-3-7.5 7.5-1-1L3 9l5.5 6.5 1-1L21 6Z"/>
+            </svg>
+            Immunization
+          </button>
+
+          <button type="button" id="openGrowthModal"
+                  class="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3h2v18H5V3Zm12 0h2v18h-2V3ZM9 13h2v8H9v-8Zm6-6h2v14h-2V7Z"/>
+            </svg>
+            Growth Monitoring
+          </button>
+
+          <button type="button" id="openSupplementsModal"
+                  class="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 3h10v6H7V3Zm-2 8h14v10H5V11Zm7-6h4v2h-4V5Z"/>
+            </svg>
+            Supplements
+          </button>
+        </div>
       </div>
-    </form>
 
-    <!-- Buttons Section -->
-    <div class="mt-10 flex flex-col md:flex-row items-center justify-between gap-4">
-      <a href="{% url 'nurse_module:childrecordList' %}"
-         class="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-6 py-2 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
-        Back to List
-      </a>
-
-      <div class="flex flex-wrap justify-center gap-3">
-        <button type="button" id="openMedicalModal"
-                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11 7V5h2v2h2v2h-2v2h-2V9H9V7h2Zm-4 4V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6Z"/>
-          </svg>
-          Medical/Surgical
-        </button>
-
-        <button type="button" id="openImmunizationModal"
-                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="m21 6-3-3-7.5 7.5-1-1L3 9l5.5 6.5 1-1L21 6Z"/>
-          </svg>
-          Immunization
-        </button>
-
-        <button type="button" id="openGrowthModal"
-                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5 3h2v18H5V3Zm12 0h2v18h-2V3ZM9 13h2v8H9v-8Zm6-6h2v14h-2V7Z"/>
-          </svg>
-          Growth Monitoring
-        </button>
-
-        <button type="button" id="openSupplementsModal"
-                class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-500 px-5 py-2.5 text-white text-sm font-medium shadow-md hover:from-red-500 hover:to-red-400 transform transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 3h10v6H7V3Zm-2 8h14v10H5V11Zm7-6h4v2h-4V5Z"/>
-          </svg>
-          Supplements
-        </button>
-      </div>
     </div>
-
   </div>
 </div>
 
@@ -172,23 +274,23 @@
   <div id="medicalBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-      <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div class="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
         <div>
-          <h3 class="text-lg font-semibold text-gray-900">Medical & Surgical History</h3>
+          <h3 class="text-sm font-semibold text-gray-900">Medical &amp; Surgical History</h3>
           <p class="text-xs text-gray-500">Past medical conditions and procedures.</p>
         </div>
-        <button id="closeMedicalModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <button id="closeMedicalModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
 
-      <div class="overflow-auto max-h-[70vh]">
-        <div class="px-6 py-8 space-y-12">
+      <div class="overflow-auto max-h-[70vh] bg-white">
+        <div class="px-6 py-6 space-y-6">
           <!-- Medical Conditions -->
-          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-xl font-semibold text-red-700 mb-6">Medical Conditions</h2>
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-3">Medical Conditions</h2>
             <div class="max-w-3xl mx-auto overflow-x-auto">
               <table class="min-w-full text-sm text-left text-gray-700">
                 <thead class="bg-gray-50 text-gray-800 border-b">
@@ -205,8 +307,8 @@
           </section>
 
           <!-- Surgical History -->
-          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-xl font-semibold text-red-700 mb-6">Surgical History</h2>
+          <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-3">Surgical History</h2>
             <div class="max-w-3xl mx-auto overflow-x-auto">
               <table class="min-w-full text-sm text-left text-gray-700">
                 <thead class="bg-gray-50 text-gray-800 border-b">
@@ -224,9 +326,9 @@
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t">
+      <div class="flex items-center justify-end gap-2 px-6 py-3 border-t bg-gray-50">
         <button id="closeMedicalModal2"
-                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+                class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm hover:bg-gray-100">
           Close
         </button>
       </div>
@@ -239,37 +341,36 @@
   <div id="immunizationBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-      <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div class="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
         <div>
-          <h3 class="text-lg font-semibold text-gray-900">Child Immunization Record</h3>
+          <h3 class="text-sm font-semibold text-gray-900">Child Immunization Record</h3>
           <p class="text-xs text-gray-500">Vaccine doses and schedule overview.</p>
         </div>
-        <button id="closeImmunizationModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
-          </svg>
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="openAddImmunizationModal"
+            class="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 5v14m7-7H5"/>
+            </svg>
+            Add Immunization
+          </button>
+
+          <button id="closeImmunizationModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-200" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Add Immunization button inside Immunization modal -->
-      <div class="flex items-center justify-end px-6 pt-3">
-        <button
-          type="button"
-          id="openAddImmunizationModal"
-          class="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 5v14m7-7H5"/>
-          </svg>
-          Add Immunization
-        </button>
-      </div>
-
-      <div class="overflow-auto max-h-[70vh]">
+      <div class="overflow-auto max-h-[70vh] bg-white">
         <div class="px-6 py-4">
           <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
             <table class="min-w-full text-sm text-left text-gray-700">
-              <thead class="bg-gray-100 text-gray-800 border-b">
+              <thead class="bg-gray-50 text-gray-800 border-b">
                 <tr>
                   <th class="px-6 py-3 font-semibold">Vaccine</th>
                   <th class="px-6 py-3 font-semibold">At Birth</th>
@@ -289,9 +390,9 @@
             </table>
           </div>
 
-          <div class="mt-6 flex justify-end">
+          <div class="mt-4 flex justify-end">
             <button id="closeImmunizationModal2"
-                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+                    class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm hover:bg-gray-100">
               Close
             </button>
           </div>
@@ -307,13 +408,13 @@
   <div id="addImmunizationBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-xl">
-      <div class="flex items-center justify-between px-5 py-4 border-b">
+      <div class="flex items-center justify-between px-5 py-3 border-b bg-gray-50">
         <div>
-          <h3 class="text-base font-semibold text-gray-900">Add Immunization</h3>
+          <h3 class="text-sm font-semibold text-gray-900">Add Immunization</h3>
           <p class="text-xs text-gray-500">Record a new vaccine dose for this child.</p>
         </div>
-        <button id="closeAddImmunizationModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <button id="closeAddImmunizationModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
           </svg>
         </button>
@@ -323,7 +424,7 @@
         {% csrf_token %}
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Vaccine</label>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Vaccine</label>
           <select
             name="vaccine_type_id"
             id="immu-vaccine"
@@ -341,7 +442,7 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Dose</label>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Dose</label>
           <select
             name="dose_type_id"
             id="immu-dose"
@@ -358,17 +459,17 @@
         <p id="immu-error" class="text-xs text-red-600 hidden"></p>
         <p id="immu-success" class="text-xs text-green-600 hidden"></p>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-2">
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 mt-2">
           <button
             type="button"
             id="cancelAddImmunization"
-            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium hover:bg-gray-50"
+            class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-xs font-medium hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             type="submit"
-            class="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+            class="rounded-full bg-red-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
           >
             Save
           </button>
@@ -383,23 +484,23 @@
   <div id="growthBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-6xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-      <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div class="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
         <div>
-          <h3 class="text-lg font-semibold text-gray-900">Child Growth Monitoring</h3>
+          <h3 class="text-sm font-semibold text-gray-900">Child Growth Monitoring</h3>
           <p class="text-xs text-gray-500">Track age, vitals, and notes over time.</p>
         </div>
-        <button id="closeGrowthModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <button id="closeGrowthModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
 
-      <div class="overflow-auto max-h-[70vh]">
+      <div class="overflow-auto max-h-[70vh] bg-white">
         <div class="px-6 py-4">
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
             <table class="min-w-full text-sm text-left text-gray-700">
-              <thead class="bg-gray-100 text-gray-800 border-b">
+              <thead class="bg-gray-50 text-gray-800 border-b">
                 <tr>
                   <th class="px-6 py-3 font-semibold">Age (y/m)</th>
                   <th class="px-6 py-3 font-semibold">Date</th>
@@ -419,16 +520,15 @@
             </table>
           </div>
 
-          <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm"></div>
+          <div class="flex items-center justify-end mt-4">
+            <button id="closeGrowthModal2"
+                    class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm hover:bg-gray-100">
+              Close
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t">
-        <button id="closeGrowthModal2"
-                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
-          Close
-        </button>
-      </div>
     </div>
   </div>
 </div>
@@ -438,19 +538,19 @@
   <div id="supplementsBackdrop" class="absolute inset-0 bg-black/40"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-      <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div class="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
         <div>
-          <h3 class="text-lg font-semibold text-gray-900">Child Supplements Record</h3>
+          <h3 class="text-sm font-semibold text-gray-900">Child Supplements Record</h3>
           <p class="text-xs text-gray-500">Listing of supplements given over time.</p>
         </div>
-        <button id="closeSupplementsModal" class="h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <button id="closeSupplementsModal" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
 
-      <div class="overflow-auto max-h-[70vh]">
+      <div class="overflow-auto max-h-[70vh] bg-white">
         <div class="px-6 py-4">
           <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div class="overflow-x-auto">
@@ -470,13 +570,11 @@
                 </tbody>
               </table>
             </div>
-
-            <div class="flex items-center justify-center gap-1 px-4 py-4 text-sm"></div>
           </div>
 
-          <div class="mt-2 flex justify-end">
+          <div class="mt-3 flex justify-end">
             <button id="closeSupplementsModal2"
-                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50">
+                    class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm hover:bg-gray-100">
               Close
             </button>
           </div>
