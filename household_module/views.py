@@ -29,6 +29,10 @@ from resident_profiling_module.models import Quarter
 import re
 import json
 
+from decimal import Decimal
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 
 # ViewSets for lookup data - following your exact pattern
 class HouseOwnershipTypeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -3665,6 +3669,38 @@ class PostpartumVisitListView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+@require_GET
+def bhw_dashboard_view(request):
+    """
+    TEMP DEV VERSION:
+    - Hardcode personnel_id for testing
+    - Optional quarter_id from query param
+    """
+
+    # TODO: change this to your real personnel_id or derive from auth
+    personnel_id = 1  # <--- just for testing
+
+    quarter_id_param = request.GET.get("quarter_id")
+    try:
+        quarter_id = int(quarter_id_param) if quarter_id_param is not None else None
+    except ValueError:
+        return JsonResponse({"detail": "quarter_id must be an integer."}, status=400)
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM bhw_dashboard(%s, %s)", [personnel_id, quarter_id])
+        row = cursor.fetchone()
+        if row is None:
+            return JsonResponse({"detail": "No dashboard data returned."}, status=404)
+
+        columns = [col[0] for col in cursor.description]
+        data = dict(zip(columns, row))
+
+    for key in ["hh_visited_percent", "fam_visited_percent"]:
+        if isinstance(data.get(key), Decimal):
+            data[key] = float(data[key])
+
+    return JsonResponse(data)
 # ========================================
 # BHW DASHBOARD ENDPOINT
 # ========================================
