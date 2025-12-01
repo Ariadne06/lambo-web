@@ -73,6 +73,42 @@ class Dashboard(models.Model):
             return json.loads(val)
         return []
     
+    @staticmethod
+    def bhw_dashboard(personnel_id: int, quarter_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Wrapper for:
+
+            SELECT * FROM bhw_dashboard(%s, %s);
+
+        See BHW_DASHBOARD.sql for the full list of returned columns.
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM bhw_dashboard(%s, %s);", [personnel_id, quarter_id])
+            row = cur.fetchone()
+            if not row:
+                return {}
+
+            cols = [c[0] for c in cur.description]
+            result = dict(zip(cols, row))
+
+        # Normalize households_per_purok JSONB -> Python list[dict]
+        val = result.get("households_per_purok")
+        if val is None:
+            result["households_per_purok"] = []
+        elif isinstance(val, list):
+            # already decoded
+            pass
+        elif isinstance(val, (bytes, bytearray)):
+            result["households_per_purok"] = json.loads(val.decode("utf-8"))
+        elif hasattr(val, "tobytes"):
+            result["households_per_purok"] = json.loads(val.tobytes().decode("utf-8"))
+        elif isinstance(val, str):
+            result["households_per_purok"] = json.loads(val)
+        else:
+            result["households_per_purok"] = []
+
+        return result
+    
 class AnnouncementRepo(models.Model):
     """
     SQL wrappers for announcements with audience support.
@@ -226,3 +262,482 @@ class Child(models.Model):
                 return dict(zip(cols, row)) if row else None
         except Exception as e:
             raise e
+        
+    @staticmethod
+    def sp_view_specific_child_all_medical_condition(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_all_medical_condition', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_specific_child_all_surgical_history(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_all_surgical_history', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_add_child_medical_condition(
+            child_health_id,
+            medical_condition,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_child_medical_condition', [
+                    child_health_id,
+                    medical_condition,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_add_child_surgical_history(
+            child_health_id,
+            surgical_history_name,
+            date_of_surgery,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_child_surgical_history', [
+                    child_health_id,
+                    surgical_history_name,
+                    date_of_surgery,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_update_child_health_record(
+            child_health_id,
+            place_of_delivery,
+            address_landmark,
+            tt_status_of_mother,
+            tt_status_date,
+            newborn_screening_status,
+            newborn_screening_status_date,
+            feeding_method_id,
+            updated_by
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('update_child_health_record', [
+                    child_health_id,
+                    place_of_delivery,
+                    address_landmark,
+                    tt_status_of_mother,
+                    tt_status_date,
+                    newborn_screening_status,
+                    newborn_screening_status_date,
+                    feeding_method_id,
+                    updated_by
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_specific_child_immunization_record(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_immunization_record', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_all_child_supplements(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_all_child_supplements', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_child_supplement(
+            child_health_id,
+            supplement_id,
+            age_in_months,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_child_supplement', [
+                    child_health_id,
+                    supplement_id,
+                    age_in_months,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_supplements():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT supplement_id, supplement_name FROM Supplements")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_child_all_growth_monitoring(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_all_growth_monitoring', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_child_growth_monitoring(
+            child_health_id,
+            weight_kg,
+            height_cm,
+            temp_c,
+            resp_rate,
+            pulse_rate,
+            notes,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_child_growth_monitoring', [
+                    child_health_id,
+                    weight_kg,
+                    height_cm,
+                    temp_c,
+                    resp_rate,
+                    pulse_rate,
+                    notes,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_child_exclusive_breastfeed_track(child_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_child_exclusive_breastfeed_track', [
+                    child_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_exclusive_breastfeed_backfill(
+            child_health_id,
+            month_id,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_exclusive_breastfeed_backfill', [
+                    child_health_id,
+                    month_id,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+
+class Maternal:
+    
+    class Meta:
+        managed = False
+        
+    @staticmethod
+    def sp_view_all_maternal_record(
+            name_query=None,
+            family_code=None,
+            record_status=None,
+            date_from=None,
+            date_to=None,
+            limit=25,
+            offset=0
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM View_all_maternal_record(%s, %s, %s, %s, %s) LIMIT %s OFFSET %s",
+                    [name_query, family_code, record_status, date_from, date_to, limit, offset]
+                )
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_specific_maternal_health_record(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_health_record', [maternal_health_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_insert_maternal(
+            maternal_id,
+            address_landmark,
+            created_by
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_maternal', [
+                    maternal_id,
+                    address_landmark,
+                    created_by
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_obstetrical_history(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_obstetrical_history', [maternal_health_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_add_obstetrical_history(
+            maternal_health_id,
+            gravida,
+            para,
+            aborption,
+            last_menstrual_period,
+            expected_date_of_delivery,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_obstetrical_history', [
+                    maternal_health_id,
+                    gravida,
+                    para,
+                    aborption,
+                    last_menstrual_period,
+                    expected_date_of_delivery,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_medical_condition(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_medical_condition', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_medical_condition(
+            maternal_health_id,
+            medical_condition_name,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_medical_condition', [
+                    maternal_health_id,
+                    medical_condition_name,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_surgical_history(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_surgical_history', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_surgical_history(
+            maternal_health_id,
+            surgical_history_name,
+            date_of_surgery,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_surgical_history', [
+                    maternal_health_id,
+                    surgical_history_name,
+                    date_of_surgery,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_last_completed_gravida(maternal_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT get_last_completed_gravida(%s)', [maternal_id])
+                result = cursor.fetchone()
+                return result[0] if result else 0
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_disease_surveillance(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_disease_surveillance', [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_disease_screen_record(
+            maternal_health_id,
+            disease_type_id,
+            screening_date,
+            result,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_disease_screen_record', [
+                    maternal_health_id,
+                    disease_type_id,
+                    screening_date,
+                    result,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_last_completed_abortion(maternal_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT get_last_completed_abortion(%s)', [maternal_id])
+                result = cursor.fetchone()
+                return result[0] if result else 0
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_immunization_status_track(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_immunization_status_track', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_immunization(
+            maternal_health_id,
+            dose_number,
+            date_given,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_immunization', [
+                    maternal_health_id,
+                    dose_number,
+                    date_given,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_disease_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT disease_type_id, disease_name FROM Disease_Type ORDER BY disease_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+

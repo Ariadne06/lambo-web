@@ -1649,3 +1649,76 @@ def get_next_allowed_dose(child_health_id, vaccine_type_id):
     except Exception as e:
         print(f"❌ Failed to get next dose: {str(e)}")
         raise Exception(f"Database operation failed: {str(e)}")
+
+
+# ========================================
+# BHW DASHBOARD HELPER
+# ========================================
+
+def get_bhw_dashboard(personnel_id, quarter_id=None):
+    """
+    Get BHW dashboard statistics
+    
+    Args:
+        personnel_id (int): The personnel ID of the BHW
+        quarter_id (int, optional): The quarter ID. Defaults to current quarter.
+    
+    Returns:
+        dict: Dashboard statistics including:
+            - total_households
+            - total_families
+            - total_active_maternal
+            - total_active_maternal_by_bhw
+            - total_children_upcoming_immun_5d
+            - households_visited_today_by_bhw
+            - total_male
+            - total_female
+            - age_group_0_5
+            - age_group_6_12
+            - age_group_13_17
+            - age_group_18_59
+            - age_group_60_plus
+            - hh_visited_count
+            - hh_not_visited_count
+            - hh_visited_percent
+            - fam_visited_count
+            - fam_not_visited_count
+            - fam_visited_percent
+            - households_per_purok (JSONB array)
+            - quarter_id
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM bhw_dashboard(%s, %s)
+            """, [personnel_id, quarter_id])
+            
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'total_households': result[0],
+                    'total_families': result[1],
+                    'total_active_maternal': result[2],
+                    'total_active_maternal_by_bhw': result[3],
+                    'total_children_upcoming_immun_5d': result[4],
+                    'households_visited_today_by_bhw': result[5],
+                    'total_male': result[6],
+                    'total_female': result[7],
+                    'age_group_0_5': result[8],
+                    'age_group_6_12': result[9],
+                    'age_group_13_17': result[10],
+                    'age_group_18_59': result[11],
+                    'age_group_60_plus': result[12],
+                    'hh_visited_count': result[13],
+                    'hh_not_visited_count': result[14],
+                    'hh_visited_percent': float(result[15]) if result[15] is not None else 0.0,
+                    'fam_visited_count': result[16],
+                    'fam_not_visited_count': result[17],
+                    'fam_visited_percent': float(result[18]) if result[18] is not None else 0.0,
+                    'households_per_purok': result[19],
+                    'quarter_id': result[20]
+                }
+            return None
+    except Exception as e:
+        print(f"Failed to get BHW dashboard: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")

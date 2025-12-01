@@ -14,4 +14,10 @@ urlpatterns = [
      path('personnelRequest/', views.personnelRequest, name='personnelRequest'),
      path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),
      path('api/resident-links', views.resident_links_list_api, name='captain_residentLinksListApi'),
+     
+    # PDF Generation endpoints
+    path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
+    path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
+    path('resident_list/pdf/', views.generate_resident_list_pdf, name='generate_resident_list_pdf'),
+    path('resident/<int:resident_id>/pdf/', views.generate_resident_detail_pdf, name='generate_resident_detail_pdf'),
 ]

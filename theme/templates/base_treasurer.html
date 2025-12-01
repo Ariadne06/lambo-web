@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Remix Icon CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
   <title>{% block title %}Treasurer{% endblock %}</title>
   {% tailwind_css %}
 </head>
@@ -19,57 +21,41 @@
 
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
-            <!-- Dashboard -->
-          <a href="{% url 'treasurer_module:treasurer_dashboard' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
+      <!-- Dashboard -->
+      <a href="{% url 'treasurer_module:treasurer_dashboard' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'treasurer_dashboard' %}ri-dashboard-fill{% else %}ri-dashboard-line{% endif %} text-lg"></i>
+        <span>Dashboard</span>
+      </a>
 
-          <span>Dashboard</span>
-        </a>
+      <!-- Transactions -->
+      <a href="{% url 'treasurer_module:payments' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'payments' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'payments' %}ri-bill-fill{% else %}ri-bill-line{% endif %} text-lg"></i>
+        <span>Transactions</span>
+      </a>
 
-        <a href="{% url 'treasurer_module:payments' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'payments' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'payments' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Transactions</span>
-        </a>
-
-        <a href="{% url 'treasurer_module:summary' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'summary' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'summary' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Reports</span>
-        </a>
+      <!-- Reports -->
+      <a href="{% url 'treasurer_module:summary' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'summary' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'summary' %}ri-bar-chart-2-fill{% else %}ri-bar-chart-2-line{% endif %} text-lg"></i>
+        <span>Reports</span>
+      </a>
 
     </div>
 
@@ -81,13 +67,13 @@
           <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
         </div>
         <form method="POST" action="{% url 'authentication:logout' %}" class="inline">
-         {% csrf_token %}
-         <button type="submit" id="logout-link"
-                 class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
+          {% csrf_token %}
+          <button type="submit" id="logout-link"
+                  class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
                          hover:bg-red-800 ring-1 ring-white/20 transition">
-           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
-           <span class="text-xs">Logout</span>
-         </button>
+            <i class="ri-logout-box-r-line text-sm"></i>
+            <span class="text-xs">Logout</span>
+          </button>
         </form>
       </div>
     </div>
@@ -196,9 +182,6 @@ ACCORDION.forEach((item) => {
       });
     } catch (_) { /* ignore */ }
   }
-
-  // Browser close logout time recording is not possible due to technical limitations
-  // Only manual logout and idle timeout will record logout times
 
   // Idle detection -> call silent logout then redirect
   let last = Date.now(), timer;

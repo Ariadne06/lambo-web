@@ -10,7 +10,18 @@
   <div class="px-6 py-8 space-y-8">
 
     <!-- Header -->
-    <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Demographic Dashboard</h1>
+        <p class="mt-1 text-sm text-gray-500">
+          Updated {{ today_str }} ·
+          Total population:
+          <span class="font-semibold text-gray-800">
+            {{ totals.total_resident|add:totals.total_non_resident }}
+          </span>
+        </p>
+      </div>
+
       <button onclick="window.print()"
         class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-md hover:opacity-95 transition"
         style="background-image: linear-gradient(90deg,#ef4444 0%,#dc2626 100%);">
@@ -21,156 +32,184 @@
       </button>
     </header>
 
-    <!-- KPIs -->
-    <section>
-      <dl class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-
-        <!-- Non-Resident -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 18a4 4 0 00-8 0m-6 0a6 6 0 0112 0m0 0a6 6 0 0112 0m-9-9a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Non-Resident</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_non_resident }}">{{ totals.total_non_resident }}</dd>
-            </div>
+    <!-- SUMMARY CARDS -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Population Overview -->
+      <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Population Overview</h2>
+            <p class="mt-1 text-xs text-gray-500">Registered residents and linked non-residents</p>
           </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-rose-400/70 via-red-400/70 to-rose-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+          <div class="text-right">
+            <p class="text-[11px] uppercase tracking-wide text-gray-400">Total</p>
+            <p class="mt-0.5 text-2xl font-extrabold text-gray-900 tabular-nums"
+               data-kpi
+               data-value="{{ totals.total_resident|add:totals.total_non_resident }}">
+              {{ totals.total_resident|add:totals.total_non_resident }}
+            </p>
+          </div>
         </div>
 
-        <!-- Male -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-700" aria-hidden="true">♂️</div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Male</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_male }}">{{ totals.total_male }}</dd>
-            </div>
+        <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+            <dt class="text-[11px] font-medium text-emerald-700 uppercase tracking-wide">Residents</dt>
+            <dd class="mt-1 text-lg font-semibold text-emerald-900 tabular-nums"
+                data-kpi data-value="{{ totals.total_resident }}">
+              {{ totals.total_resident }}
+            </dd>
+            <p class="mt-1 text-[11px] text-emerald-700/80">Within barangay</p>
           </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-sky-400/70 to-blue-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+            <dt class="text-[11px] font-medium text-slate-700 uppercase tracking-wide">Non-residents</dt>
+            <dd class="mt-1 text-lg font-semibold text-slate-900 tabular-nums"
+                data-kpi data-value="{{ totals.total_non_resident }}">
+              {{ totals.total_non_resident }}
+            </dd>
+            <p class="mt-1 text-[11px] text-slate-600/90">Linked but outside</p>
+          </div>
+
+          <div class="rounded-xl bg-amber-50 border border-amber-200 p-3">
+            <dt class="text-[11px] font-medium text-amber-700 uppercase tracking-wide">Pending</dt>
+            <dd class="mt-1 text-lg font-semibold text-amber-900 tabular-nums"
+                data-kpi data-value="{{ totals.total_pending }}">
+              {{ totals.total_pending }}
+            </dd>
+            <p class="mt-1 text-[11px] text-amber-700/80">For review</p>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Gender Breakdown -->
+      <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Gender Breakdown</h2>
+            <p class="mt-1 text-xs text-gray-500">Based on registered residents</p>
+          </div>
         </div>
 
-        <!-- Female -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-pink-50 text-pink-600" aria-hidden="true">♀️</div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Female</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_female }}">{{ totals.total_female }}</dd>
-            </div>
+        <div class="mt-4 grid grid-cols-2 gap-4">
+          <div class="flex flex-col">
+            <p class="text-[11px] font-medium text-blue-600 uppercase tracking-wide">Male</p>
+            <p class="mt-1 text-2xl font-extrabold text-gray-900 tabular-nums"
+               data-kpi data-value="{{ totals.total_male }}">
+              {{ totals.total_male }}
+            </p>
+            <p class="mt-1 text-[11px] text-gray-500">Male residents</p>
           </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-fuchsia-400/70 to-pink-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+
+          <div class="flex flex-col">
+            <p class="text-[11px] font-medium text-pink-600 uppercase tracking-wide">Female</p>
+            <p class="mt-1 text-2xl font-extrabold text-gray-900 tabular-nums"
+               data-kpi data-value="{{ totals.total_female }}">
+              {{ totals.total_female }}
+            </p>
+            <p class="mt-1 text-[11px] text-gray-500">Female residents</p>
+          </div>
         </div>
 
-        <!-- Resident -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10.5l9-7.5 9 7.5M4.5 9v10.5a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5V9"/>
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Resident</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_resident }}">{{ totals.total_resident }}</dd>
-            </div>
-          </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-400/70 to-green-500/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
+        <div class="mt-4 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+          {% with total_gender=totals.total_male|add:totals.total_female %}
+            {% if total_gender > 0 %}
+              {% widthratio totals.total_male total_gender 100 as male_pct %}
+              {% widthratio totals.total_female total_gender 100 as female_pct %}
+              <div class="flex h-full">
+                <div class="h-full bg-blue-400" style="width: {{ male_pct }}%"></div>
+                <div class="h-full bg-pink-400" style="width: {{ female_pct }}%"></div>
+              </div>
+            {% else %}
+              <div class="h-full bg-gray-200"></div>
+            {% endif %}
+          {% endwith %}
         </div>
 
-        <!-- Pending -->
-        <div class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition">
-          <div class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <dt class="text-[12px] font-medium text-gray-500">Pending</dt>
-              <dd class="mt-1 text-2xl font-extrabold text-gray-900 leading-none tabular-nums"
-                  data-kpi data-value="{{ totals.total_pending }}">{{ totals.total_pending }}</dd>
-            </div>
-          </div>
-          <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-amber-400/70 to-yellow-400/70 opacity-0 transition-opacity group-hover:opacity-100"></span>
-        </div>
-
-      </dl>
+        <p class="mt-2 text-[11px] text-gray-500">
+          Male: <span class="font-semibold text-blue-700">{{ totals.total_male }}</span> ·
+          Female: <span class="font-semibold text-pink-700">{{ totals.total_female }}</span>
+        </p>
+      </div>
     </section>
 
-    <!-- Content grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left: Recent announcements -->
-      <section class="lg:col-span-1 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-800">Recent Announcements</h3>
-          <button type="button"
-                  onclick="openModal('modalAllAnnouncements')"
-                  class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">
-            View all
-          </button>
-        </div>
+    <!-- LOWER CONTENT: REARRANGED (Age + Announcements on top, Purok below) -->
+    <section class="space-y-6">
 
-        <div class="space-y-3">
-          {% for a in latest_announcements %}
-          <article class="rounded-xl border border-gray-200 p-4 hover:shadow-sm transition">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <h4 class="font-semibold text-gray-900 line-clamp-2">{{ a.header_title }}</h4>
-                <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
-              </div>
-
-              {# ---- AUDIENCE BADGE (recent) ---- #}
-              {% with aud=a.audience|default:"both"|lower %}
-                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
-                  {% if aud == 'personnel' %} bg-blue-100 text-blue-700
-                  {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
-                  {% else %} bg-gray-100 text-gray-700 {% endif %}">
-                  {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
-                </span>
-              {% endwith %}
+      <!-- Row 1: Age Distribution + Recent Announcements -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Age Distribution -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-800">Resident Age Distribution</h3>
+              <p class="text-[11px] text-gray-500">Based on registered residents only</p>
             </div>
-
-            {% if a.details %}
-              <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ a.details }}</p>
-            {% endif %}
-          </article>
-          {% empty %}
-            <p class="text-sm text-gray-500">No announcements yet.</p>
-          {% endfor %}
-        </div>
-      </section>
-
-      <!-- Right: Charts -->
-      <section class="lg:col-span-2 space-y-6">
-        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800">Distribution of Residents per Purok</h3>
-            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
+            <span class="text-[11px] text-gray-400">Updated {{ today_str }}</span>
           </div>
-          <div class="h-64 sm:h-72 lg:h-80">
-            <canvas id="perPurokBar"></canvas>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800">Resident Age Distribution</h3>
-            <span class="text-[11px] text-gray-400">updated {{ today_str }}</span>
-          </div>
-          <div class="h-64 sm:h-72 lg:h-80">
+          <div class="h-64 sm:h-72">
             <canvas id="agePie"></canvas>
           </div>
         </div>
-      </section>
-    </div>
+
+        <!-- Recent Announcements -->
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-800">Recent Announcements</h3>
+              <p class="text-[11px] text-gray-500">Latest barangay notices</p>
+            </div>
+            <button type="button"
+                    onclick="openModal('modalAllAnnouncements')"
+                    class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">
+              View all
+            </button>
+          </div>
+
+          <div class="space-y-3 flex-1 overflow-y-auto">
+            {% for a in latest_announcements %}
+            <article class="rounded-xl border border-gray-200 p-4 hover:shadow-sm transition">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <h4 class="font-semibold text-gray-900 line-clamp-2">{{ a.header_title }}</h4>
+                  <p class="mt-1 text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
+                </div>
+
+                {% with aud=a.audience|default:"both"|lower %}
+                  <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
+                    {% if aud == 'personnel' %} bg-blue-100 text-blue-700
+                    {% elif aud == 'resident' %} bg-emerald-100 text-emerald-700
+                    {% else %} bg-gray-100 text-gray-700 {% endif %}">
+                    {% if aud == 'personnel' %}Personnel{% elif aud == 'resident' %}Residents{% else %}Everyone{% endif %}
+                  </span>
+                {% endwith %}
+              </div>
+
+              {% if a.details %}
+                <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ a.details }}</p>
+              {% endif %}
+            </article>
+            {% empty %}
+              <p class="text-sm text-gray-500">No announcements yet.</p>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <!-- Row 2: Residents per Purok full width -->
+      <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-800">Residents per Purok</h3>
+            <p class="text-[11px] text-gray-500">Distribution across sitios</p>
+          </div>
+          <span class="text-[11px] text-gray-400">Updated {{ today_str }}</span>
+        </div>
+        <div class="h-64 sm:h-72 lg:h-80">
+          <canvas id="perPurokBar"></canvas>
+        </div>
+      </div>
+
+    </section>
 
   </div>
 </div>
@@ -241,7 +280,6 @@
                 <p class="text-xs text-gray-500">Date: {{ a.announcement_date|date:"M d, Y" }}</p>
               </div>
 
-              {# ---- AUDIENCE BADGE (modal row) ---- #}
               {% with aud=a.audience|default:"both"|lower %}
                 <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
                   {% if aud == 'personnel' %} bg-blue-100 text-blue-700
@@ -316,15 +354,35 @@
   if (barCtx && purokLabels.length && purokData.length) {
     new Chart(barCtx, {
       type: 'bar',
-      data: { labels: purokLabels, datasets: [{ label: 'Residents', data: purokData,
-        backgroundColor: greenFill, borderColor: greenLine, borderWidth: 2, borderRadius: 8, maxBarThickness: 48 }] },
+      data: { 
+        labels: purokLabels, 
+        datasets: [{
+          label: 'Residents',
+          data: purokData,
+          backgroundColor: greenFill,
+          borderColor: greenLine,
+          borderWidth: 2,
+          borderRadius: 8,
+          maxBarThickness: 48
+        }] 
+      },
       options: {
-        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 4 } },
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 4 } },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false }, ticks: { color: '#6b7280' } },
-          y: { beginAtZero: true, grid: { color: gridGray }, ticks: { precision: 0, color: '#6b7280',
-               callback: v => Number(v).toLocaleString() }, suggestedMax: Math.max(...purokData) * 1.2 || 10 }
+          y: { 
+            beginAtZero: true,
+            grid: { color: gridGray },
+            ticks: { 
+              precision: 0, 
+              color: '#6b7280',
+              callback: v => Number(v).toLocaleString()
+            },
+            suggestedMax: Math.max(...purokData) * 1.2 || 10 
+          }
         }
       }
     });
@@ -335,16 +393,34 @@
   if (pieCtx && ageLabels.length && ageData.length) {
     new Chart(pieCtx, {
       type: 'pie',
-      data: { labels: ageLabels, datasets: [{ data: ageData,
-        backgroundColor: ['#60a5fa','#86efac','#fde68a','#fdba74'], borderColor: '#fff', borderWidth: 4, hoverOffset: 6 }] },
+      data: { 
+        labels: ageLabels, 
+        datasets: [{
+          data: ageData,
+          backgroundColor: ['#60a5fa','#86efac','#fde68a','#fdba74'],
+          borderColor: '#fff',
+          borderWidth: 4,
+          hoverOffset: 6
+        }] 
+      },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 } },
-          tooltip: { callbacks: { label: (ctx) => {
-            const value = ctx.parsed || 0; const total = (ctx.dataset.data || []).reduce((a,b)=>a+b,0) || 1;
-            const pct = Math.round((value / total) * 100); return `${ctx.label}: ${value} (${pct}%)`;
-          }}}
+          legend: { 
+            position: 'bottom', 
+            labels: { usePointStyle: true, pointStyle: 'circle', padding: 10 } 
+          },
+          tooltip: { 
+            callbacks: { 
+              label: (ctx) => {
+                const value = ctx.parsed || 0;
+                const total = (ctx.dataset.data || []).reduce((a,b)=>a+b,0) || 1;
+                const pct = Math.round((value / total) * 100);
+                return `${ctx.label}: ${value} (${pct}%)`;
+              }
+            }
+          }
         }
       }
     });
@@ -357,14 +433,20 @@
     requestAnimationFrame(() => {
       el.querySelector('[data-backdrop]')?.classList.add('opacity-100');
       const panel = el.querySelector('[data-panel]');
-      if(panel){ panel.classList.remove('scale-95','opacity-0'); panel.classList.add('scale-100','opacity-100'); }
+      if(panel){
+        panel.classList.remove('scale-95','opacity-0');
+        panel.classList.add('scale-100','opacity-100');
+      }
     });
   }
   function closeModal(id){
     const el = document.getElementById(id); if(!el) return;
     el.querySelector('[data-backdrop]')?.classList.remove('opacity-100');
     const panel = el.querySelector('[data-panel]');
-    if(panel){ panel.classList.add('scale-95','opacity-0'); panel.classList.remove('scale-100','opacity-100'); }
+    if(panel){
+      panel.classList.add('scale-95','opacity-0');
+      panel.classList.remove('scale-100','opacity-100');
+    }
     setTimeout(() => el.classList.add('hidden'), 180);
   }
   document.addEventListener('keydown', (e) => {

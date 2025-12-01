@@ -3,7 +3,7 @@ from .models import Relationship, MedicalHistoryType, Class, FPMethod, FPStatus,
 from resident_profiling_module.models import Resident, Address, Quarter
 from .services.household_service import HouseholdService
 from .utils.database_helpers import insert_family_member, save_general_health_for_member, insert_child_health_record, update_child_health_record, add_child_immunization, add_child_supplement, add_child_medical_condition, add_child_surgical_history, add_child_growth_monitoring, add_exclusive_breastfeed_backfill, add_obstetrical_history, add_maternal_medical_condition, add_maternal_surgical_history
-
+from django.db import connection
 
 class HouseOwnershipTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -772,43 +772,37 @@ class ChildGrowthMonitoringCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Failed to add growth record: {str(e)}")
         
 class ChildImmunizationCreateSerializer(serializers.Serializer):
-    """Serializer for creating child immunization records"""
-    
+    """
+    Serializer for creating child immunization records.
+    We DON'T ask for date_given (DB uses date_added).
+    """
+
     vaccine_type_id = serializers.IntegerField(required=True)
     dose_type_id = serializers.IntegerField(required=True)
-    date_given = serializers.DateField(required=True)
-    batch_number = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
-    remarks = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
-    
-    def validate_date_given(self, value):
-        """Validate date is not in the future"""
-        from datetime import date
-        if value > date.today():
-            raise serializers.ValidationError("Date cannot be in the future")
-        return value
-    
+
     def create(self, validated_data):
-        try:
-            child_health_id = self.context.get('child_health_id')
-            personnel_id = self.context.get('personnel_id')
-            
-            if not child_health_id or not personnel_id:
-                raise serializers.ValidationError("Missing child_health_id or personnel_id")
-            
-            immunization_id = add_child_immunization(
-                child_health_id=child_health_id,
-                vaccine_type_id=validated_data['vaccine_type_id'],
-                dose_type_id=validated_data['dose_type_id'],
-                date_given=validated_data['date_given'],
-                batch_number=validated_data.get('batch_number'),
-                remarks=validated_data.get('remarks'),
-                personnel_id=personnel_id
+        child_health_id = self.context.get("child_health_id")
+        personnel_id = self.context.get("personnel_id")
+
+        if not child_health_id or not personnel_id:
+            raise serializers.ValidationError(
+                "Missing child_health_id or personnel_id"
             )
-            
-            return {'immunization_id': immunization_id}
-            
-        except Exception as e:
-            raise serializers.ValidationError(f"Failed to add immunization: {str(e)}")
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT add_immunization(%s, %s, %s, %s);",
+                [
+                    child_health_id,
+                    validated_data["vaccine_type_id"],
+                    validated_data["dose_type_id"],
+                    personnel_id,
+                ],
+            )
+            row = cursor.fetchone()
+
+        immunization_id = row[0] if row else None
+        return immunization_id
 
 
 class ChildSupplementCreateSerializer(serializers.Serializer):
