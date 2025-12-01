@@ -277,10 +277,33 @@ class Business(models.Model):
             raise e
 
     @staticmethod
-    def sp_get_all_businesses(query=None, status=None, type_id=None, ownership_id=None, owner_id=None, limit=10, offset=0):
+    def sp_get_all_businesses(query=None, business_type_id=None, 
+                             business_clearance_cat_id=None, ownership_id=None, 
+                             business_status_id=None, limit=50, offset=0):
+        """
+        Calls get_all_businesses with filter parameters matching the SQL function signature.
+        
+        Parameters:
+        - query: TEXT - fuzzy search over business name, owner name, reg number
+        - business_type_id: INT - exact match on Business.business_type_id
+        - business_clearance_cat_id: INT - exact match on Business.clearance_category_id
+        - ownership_id: INT - exact match on Business.ownership_id
+        - business_status_id: INT - exact match on Business.business_status_id
+        - limit: INT - max rows to return (default 50)
+        - offset: INT - pagination offset (default 0)
+        
+        Returns list of dicts with keys:
+        - business_id, business_name, owner_id, owner_name, business_type_name,
+          ownership_name, business_status_name, clearance_category_name, 
+          total_gross_income, reg_number, clearance_date_issued, address_id, 
+          address, updated_at
+        """
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_all_businesses', [query, status, type_id, ownership_id, owner_id, limit, offset])
+                cursor.callproc('get_all_businesses', [
+                    query, business_type_id, business_clearance_cat_id, 
+                    ownership_id, business_status_id, limit, offset
+                ])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]
