@@ -2712,6 +2712,27 @@ def maternalView(request):
     except Exception as e:
         pass  # Continue without disease types if there's an error
     
+    # Get laboratory screening data
+    laboratory_screening_data = []
+    try:
+        laboratory_screening_data = Maternal.sp_view_specific_maternal_all_laboratory_screening(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without lab screening data if there's an error
+    
+    # Get test types for dropdown
+    test_types = []
+    try:
+        test_types = Maternal.sp_get_test_types()
+    except Exception as e:
+        pass  # Continue without test types if there's an error
+    
+    # Get checkup records
+    checkup_records = []
+    try:
+        checkup_records = Maternal.sp_view_specific_maternal_all_checkup_records(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without checkup records if there's an error
+    
     return render(request, 'bhw_module/maternalView.html', {
         "results": result,
         "obstetrical_data": obstetrical_data,
@@ -2720,6 +2741,9 @@ def maternalView(request):
         "immunization_data": immunization_data,
         "disease_surveillance_data": disease_surveillance_data,
         "disease_types": disease_types,
+        "laboratory_screening_data": laboratory_screening_data,
+        "test_types": test_types,
+        "checkup_records": checkup_records,
         "last_gravida": last_gravida,
         "last_abortion": last_abortion,
         "message": flash['message'],
@@ -2944,6 +2968,53 @@ def add_disease_screening(request):
             pid=pid
         )
         set_flash(request, "Disease screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_lab_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    test_type_id = request.POST.get('test_type_id')
+    test_date = request.POST.get('test_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    iron_tablet_given_date = request.POST.get('iron_tablet_given_date', '').strip()
+    iron_tablet_quantity = request.POST.get('iron_tablet_quantity', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not test_type_id:
+        set_flash(request, "Test type is required.", "error")
+        return redirect_to_view()
+    
+    if not test_date:
+        set_flash(request, "Test date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_lab_screening_record(
+            maternal_health_id=maternal_health_id,
+            test_type_id=int(test_type_id),
+            test_date=test_date,
+            result=result or None,
+            iron_tablet_given_date=iron_tablet_given_date or None,
+            iron_tablet_quantity=int(iron_tablet_quantity) if iron_tablet_quantity else None,
+            pid=pid
+        )
+        set_flash(request, "Lab screening record added successfully.", "success")
     except Exception as e:
         set_flash(request, _clean_db_error(e), "error")
     
@@ -3225,3 +3296,65 @@ def generate_household_detail_pdf(request, household_id: int):
         print(f"Error generating household detail PDF: {str(e)}")
         print(traceback.format_exc())
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_checkup_record(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    try:
+        maternal_health_id = int(request.POST.get('maternal_health_id', 0))
+        aog_weeks = int(request.POST.get('aog_weeks', 0))
+        weight_kg = float(request.POST.get('weight_kg', 0))
+        height_cm = float(request.POST.get('height_cm', 0))
+        bmi = request.POST.get('bmi') or None
+        blood_pressure = request.POST.get('blood_pressure', '').strip()
+        fetal_heart_rate = request.POST.get('fetal_heart_rate') or None
+        laboratory_results = request.POST.get('laboratory_results', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        if not maternal_health_id:
+            raise ValueError("Maternal Health ID is required")
+        if not aog_weeks:
+            raise ValueError("AOG (weeks) is required")
+        if not weight_kg:
+            raise ValueError("Weight is required")
+        if not height_cm:
+            raise ValueError("Height is required")
+        if not pid:
+            raise ValueError("Personnel ID is required")
+        
+        # Convert optional fields
+        if bmi:
+            bmi = float(bmi)
+        if fetal_heart_rate:
+            fetal_heart_rate = int(fetal_heart_rate)
+        
+        result = Maternal.sp_add_checkup_record(
+            maternal_health_id=maternal_health_id,
+            aog_weeks=aog_weeks,
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            bmi=bmi,
+            blood_pressure=blood_pressure,
+            fetal_heart_rate=fetal_heart_rate,
+            laboratory_results=laboratory_results,
+            notes=notes,
+            personnel_id=pid
+        )
+        
+        msg = coerce_message(result, "Checkup record successfully added.")
+        set_flash(request, msg, 'success')
+        
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    return redirect_to_view()
