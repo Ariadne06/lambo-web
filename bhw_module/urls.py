@@ -45,9 +45,18 @@ urlpatterns = [
      path('child/update/', views.update_child_health_record, name='updateChildHealthRecord'),
      path('genInfo/', views.genInfo, name='genInfo'),
      path('maternalList/', views.maternalList, name='maternalList'),
-     path('maternalAdd/', views.maternalAdd),
-     path('maternalView/', views.maternalView),
+     path('maternalAdd/', views.maternalAdd, name='maternalAdd'),
+     path('maternalView/', views.maternalView, name='maternalView'),
+     path('maternal/add-obstetrical-history/', views.add_obstetrical_history, name='addObstetricalHistory'),
+     path('maternal/add-medical-condition/', views.add_maternal_medical_condition, name='addMaternalMedicalCondition'),
+     path('maternal/add-surgical-history/', views.add_maternal_surgical_history, name='addMaternalSurgicalHistory'),
+     path('maternal/add-immunization/', views.add_maternal_immunization, name='addMaternalImmunization'),
      path('HouseholdAdd/', views.HouseholdAdd, name='HouseholdAdd'),
      path('residents/search/', views.resident_search_api, name='resident_search_api'),
+     path('api/mother/search/', views.mother_search_api, name='mother_search_api'),
+     path('maternal/add-disease-screening/', views.add_disease_screening, name='addDiseaseScreening'),
+     # PDF Generation endpoints
+     path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
+     path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
 ]
 
