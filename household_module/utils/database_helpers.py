@@ -952,29 +952,72 @@ def insert_maternal(maternal_id, address_landmark, personnel_id):
         print(f"Failed to create maternal record: {str(e)}")
         raise Exception(f"Failed to create maternal record: {str(e)}")
 
+def update_maternal_record(maternal_health_id, address_landmark, personnel_id):
+    """Update maternal health record (only address_landmark)"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('update_maternal_health_record', [
+                maternal_health_id,
+                address_landmark,
+                personnel_id
+            ])
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
+    except Exception as e:
+        print(f"❌ Failed to update maternal record: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
+
+
+def update_maternal_record_status(maternal_health_id, record_status_id, personnel_id):
+    """Update maternal health record status to Completed"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('update_maternal_health_record_status', [
+                maternal_health_id,
+                record_status_id,
+                personnel_id
+            ])
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
+    except Exception as e:
+        print(f"❌ Failed to update maternal record status: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
+
 
 # Obstetrical History
 def add_obstetrical_history(maternal_health_id, data):
-    """Add or update obstetrical history"""
+    """Add obstetrical history"""
     try:
         with connection.cursor() as cursor:
-            cursor.callproc('add_obstetrical_history', [
+            cursor.execute("""
+                SELECT add_obstetrical_history(
+                    p_maternal_health_id        := %s,
+                    p_gravida                   := %s,
+                    p_para                      := %s,
+                    p_abortion                  := %s,
+                    p_last_menstrual_period     := %s,
+                    p_expected_date_of_delivery := %s,
+                    p_personnel_id              := %s
+                )
+            """, [
                 maternal_health_id,
                 data.get('gravida'),
                 data.get('para'),
-                data.get('term'),
-                data.get('preterm'),
                 data.get('abortion'),
-                data.get('living'),
-                data.get('lmp'),
-                data.get('edc'),
-                data.get('aog'),
+                data.get('last_menstrual_period'),
+                data.get('expected_date_of_delivery'),
                 data.get('personnel_id')
             ])
+            
             result = cursor.fetchone()
             return result[0] if result else None
+            
     except Exception as e:
-        print(f"Error adding obstetrical history: {str(e)}")
+        print(f"❌ Failed to add obstetrical history: {str(e)}")
         raise Exception(f"Database operation failed: {str(e)}")
 
 
@@ -1010,67 +1053,87 @@ def view_obstetrical_history(maternal_health_id):
         raise Exception(f"Database operation failed: {str(e)}")
 
 # Medical/Surgical History
+# Medical/Surgical History
 def add_maternal_medical_condition(maternal_health_id, condition_name, personnel_id):
     """Add maternal medical condition"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT add_maternal_medical_condition(%s, %s, %s)",
-                [maternal_health_id, condition_name, personnel_id]
-            )
-            return cursor.fetchone()[0]
+            cursor.execute("""
+                SELECT add_maternal_medical_condition(
+                    p_maternal_health_id := %s,
+                    p_m_medical_history_name := %s,
+                    p_personnel_id := %s
+                )
+            """, [maternal_health_id, condition_name, personnel_id])
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
     except Exception as e:
-        print(f"Failed to add medical condition: {str(e)}")
-        raise Exception(f"Failed to add medical condition: {str(e)}")
+        print(f"❌ Failed to add maternal medical condition: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 def view_maternal_all_medical_conditions(maternal_health_id):
     """View all medical conditions"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_all_medical_condition(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_all_medical_condition(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            
+            return [dict(zip(columns, row)) for row in results]
+            
     except Exception as e:
-        print(f"Failed to view medical conditions: {str(e)}")
-        raise Exception(f"Failed to view medical conditions: {str(e)}")
+        print(f"❌ Failed to view maternal medical conditions: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 def add_maternal_surgical_history(maternal_health_id, data, personnel_id):
     """Add surgical history"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT add_maternal_surgical_history(%s, %s, %s, %s)",
-                [
-                    maternal_health_id,
-                    data['m_surgical_history_name'],
-                    data['date_of_surgery'],
-                    personnel_id
-                ]
-            )
-            return cursor.fetchone()[0]
+            cursor.execute("""
+                SELECT add_maternal_surgical_history(
+                    p_maternal_health_id := %s,
+                    p_m_surgical_history_name := %s,
+                    p_date_of_surgery := %s,
+                    p_personnel_id := %s
+                )
+            """, [
+                maternal_health_id,
+                data.get('surgical_history_name'),
+                data.get('date_of_surgery'),
+                personnel_id
+            ])
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
     except Exception as e:
-        print(f"Failed to add surgical history: {str(e)}")
-        raise Exception(f"Failed to add surgical history: {str(e)}")
+        print(f"❌ Failed to add maternal surgical history: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 def view_maternal_all_surgical_history(maternal_health_id):
     """View all surgical history"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_all_surgical_history(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_all_surgical_history(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            
+            return [dict(zip(columns, row)) for row in results]
+            
     except Exception as e:
-        print(f"Failed to view surgical history: {str(e)}")
-        raise Exception(f"Failed to view surgical history: {str(e)}")
+        print(f"❌ Failed to view maternal surgical history: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 # Immunization
@@ -1078,30 +1141,49 @@ def add_maternal_immunization(maternal_health_id, dose_number, date_given, perso
     """Add TT immunization dose"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT add_maternal_immunization(%s, %s, %s, %s)",
-                [maternal_health_id, dose_number, date_given, personnel_id]
-            )
-            return cursor.fetchone()[0]
+            cursor.execute("""
+                SELECT add_maternal_immunization(%s, %s, %s, %s)
+            """, [maternal_health_id, dose_number, date_given, personnel_id])
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
     except Exception as e:
-        print(f"Failed to add immunization: {str(e)}")
-        raise Exception(f"Failed to add immunization: {str(e)}")
+        print(f"❌ Failed to add immunization: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 def view_maternal_immunization_track(maternal_health_id):
-    """View immunization tracking"""
+    """View TT immunization tracking"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_immunization_status_track(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_immunization_status_track(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
             result = cursor.fetchone()
-            return dict(zip(columns, result)) if result else None
+            
+            if not result:
+                return None
+            
+            record = dict(zip(columns, result))
+            
+            # Convert dates to ISO format for JSON
+            date_fields = [
+                'first_dose_date', 'second_dose_date', 'third_dose_date',
+                'fourth_dose_date', 'fifth_dose_date', 'updated_at'
+            ]
+            
+            for field in date_fields:
+                if field in record and record[field]:
+                    record[field] = record[field].isoformat()
+            
+            return record
+            
     except Exception as e:
-        print(f"Failed to view immunization track: {str(e)}")
-        raise Exception(f"Failed to view immunization track: {str(e)}")
+        print(f"❌ Failed to view immunization track: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 # Disease Surveillance
@@ -1129,15 +1211,30 @@ def view_maternal_all_disease_surveillance(maternal_health_id):
     """View all disease surveillance records"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_all_disease_surveillance(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_all_disease_surveillance(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            
+            records = []
+            for row in results:
+                record = dict(zip(columns, row))
+                
+                # Convert dates to ISO format
+                if 'screening_date' in record and record['screening_date']:
+                    record['screening_date'] = record['screening_date'].isoformat()
+                if 'created_at' in record and record['created_at']:
+                    record['created_at'] = record['created_at'].isoformat()
+                
+                records.append(record)
+            
+            return records
+            
     except Exception as e:
-        print(f"Failed to view disease surveillance: {str(e)}")
-        raise Exception(f"Failed to view disease surveillance: {str(e)}")
+        print(f"❌ Failed to view disease surveillance: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 # Laboratory Screening
@@ -1167,15 +1264,32 @@ def view_maternal_all_lab_screening(maternal_health_id):
     """View all lab screening records"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_all_laboratory_screening(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_all_laboratory_screening(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            
+            records = []
+            for row in results:
+                record = dict(zip(columns, row))
+                
+                # Convert dates to ISO format
+                if 'test_date' in record and record['test_date']:
+                    record['test_date'] = record['test_date'].isoformat()
+                if 'iron_tablet_given_date' in record and record['iron_tablet_given_date']:
+                    record['iron_tablet_given_date'] = record['iron_tablet_given_date'].isoformat()
+                if 'created_at' in record and record['created_at']:
+                    record['created_at'] = record['created_at'].isoformat()
+                
+                records.append(record)
+            
+            return records
+            
     except Exception as e:
-        print(f"Failed to view lab screening: {str(e)}")
-        raise Exception(f"Failed to view lab screening: {str(e)}")
+        print(f"❌ Failed to view lab screening: {str(e)}")
+        raise Exception(f"Database operation failed: {str(e)}")
 
 
 # Checkup Records
@@ -1213,7 +1327,21 @@ def view_maternal_all_checkups(maternal_health_id):
                 [maternal_health_id]
             )
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                
+                # Convert dates to ISO format
+                if 'date_of_checkup' in record and record['date_of_checkup']:
+                    record['date_of_checkup'] = record['date_of_checkup'].isoformat()
+                if 'date_of_visit' in record and record['date_of_visit']:
+                    record['date_of_visit'] = record['date_of_visit'].isoformat()
+                
+                results.append(record)
+            
+            return results
     except Exception as e:
         print(f"Failed to view checkups: {str(e)}")
         raise Exception(f"Failed to view checkups: {str(e)}")

@@ -147,6 +147,15 @@ path(
      path('maternal-health-records/create/', views.MaternalHealthRecordCreateView.as_view(), name='maternal-health-records-create'),
      path('maternal-health-records/<int:maternal_health_id>/', views.MaternalHealthRecordDetailView.as_view(), name='maternal-health-record-detail'),
      
+     path('maternal-health-records/<int:maternal_health_id>/update/', 
+     views.MaternalHealthRecordUpdateView.as_view(), 
+     name='maternal-health-record-update'),
+
+
+     path('maternal-health-records/<int:maternal_health_id>/update-status/', 
+     views.MaternalHealthRecordStatusUpdateView.as_view(), 
+     name='maternal-health-record-status-update'),
+
      # MATERNAL HEALTH - OBSTETRICAL HISTORY
      path(
           'maternal-health-records/<int:maternal_health_id>/obstetrical-history/',
@@ -154,10 +163,10 @@ path(
           name='maternal-obstetrical-history-list'
      ),
      path(
-          'maternal-health-records/<int:maternal_health_id>/obstetrical-history/add/',
-          views.MaternalObstetricalHistoryCreateView.as_view(),
-          name='maternal-obstetrical-history-create'
-     ),
+        'maternal-health-records/<int:maternal_health_id>/obstetrical-history/create/',
+        views.ObstetricalHistoryCreateView.as_view(),
+        name='obstetrical-history-create'
+    ),
      
      # ========================================
      # MEDICAL/SURGICAL HISTORY
@@ -179,12 +188,15 @@ path(
      # ========================================
      # IMMUNIZATION
      # ========================================
-     path('maternal-health-records/<int:maternal_health_id>/immunization/track/', 
-          views.MaternalImmunizationTrackView.as_view(), 
-          name='maternal-immunization-track'),
-     path('maternal-health-records/<int:maternal_health_id>/immunization/add/', 
-          views.MaternalImmunizationCreateView.as_view(), 
-          name='maternal-immunization-add'),
+     path(
+        'maternal-health-records/<int:maternal_health_id>/immunization/track/',
+        views.MaternalImmunizationTrackView.as_view(),
+        name='maternal-immunization-track'),
+     path(
+        'maternal-health-records/<int:maternal_health_id>/immunization/add/',
+        views.MaternalImmunizationCreateView.as_view(),
+        name='maternal-immunization-create'
+     ),
      
      # ========================================
      # DISEASE SURVEILLANCE
@@ -199,9 +211,9 @@ path(
      # ========================================
      # LABORATORY SCREENING
      # ========================================
-     path('maternal-health-records/<int:maternal_health_id>/lab-screening/', 
-          views.LabScreeningListView.as_view(), 
-          name='lab-screening-list'),
+     path('maternal-health-records/<int:maternal_health_id>/laboratory-screening/', 
+         views.LabScreeningListView.as_view(), 
+         name='maternal-lab-screening-list'),
      path('maternal-health-records/<int:maternal_health_id>/lab-screening/add/', 
           views.LabScreeningCreateView.as_view(), 
           name='lab-screening-add'),
@@ -209,15 +221,21 @@ path(
      # ========================================
      # CHECKUP RECORDS
      # ========================================
-     path('maternal-health-records/<int:maternal_health_id>/checkups/', 
-          views.CheckupRecordListView.as_view(), 
-          name='checkups-list'),
-     path('maternal-health-records/<int:maternal_health_id>/checkups/add/', 
+      path(
+        'maternal-health-records/<int:maternal_health_id>/checkups/', 
+        views.CheckupRecordListView.as_view(), 
+        name='checkups-list'
+     ),
+     path(
+          'maternal-health-records/<int:maternal_health_id>/checkups/add/', 
           views.CheckupRecordCreateView.as_view(), 
-          name='checkups-add'),
-     path('maternal-health-records/<int:maternal_health_id>/checkups/track/', 
+          name='checkups-add'
+     ),
+     path(
+          'maternal-health-records/<int:maternal_health_id>/checkups/track/', 
           views.CheckupRecordTrackView.as_view(), 
-          name='checkups-track'),
+          name='checkups-track'
+     ),
 
      # ========================================
      # SUPPLEMENTS
