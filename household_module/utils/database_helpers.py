@@ -464,7 +464,20 @@ def view_specific_child_immunization_record(child_health_id):
     """View child's immunization records"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM view_specific_child_immunization_record(%s)", [child_health_id])
+            cursor.execute("""
+                SELECT 
+                    vaccine_type_id,
+                    vaccine_name,
+                    at_birth_given,
+                    first_dose_given,
+                    second_dose_given,
+                    third_dose_given,
+                    last_administered,
+                    next_recommended_date,
+                    is_delayed
+                FROM view_specific_child_immunization_record(%s)
+            """, [child_health_id])
+            
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
             return [dict(zip(columns, row)) for row in rows]
@@ -1459,25 +1472,26 @@ def add_delivery_outcome(maternal_health_id, data, personnel_id):
     """Add delivery outcome (marks record as Completed)"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT add_delivery_outcome(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                [
-                    maternal_health_id,
-                    data['outcome_type_id'],
-                    data['delivery_type_id'],
-                    data['place_delivery_type_id'],
-                    data.get('ownership_type_id'),
-                    data.get('others_description'),
-                    data['birth_attendant_id'],
-                    data.get('other_attendant'),
-                    data.get('time_of_delivery'),
-                    data['date_terminated'],
-                    personnel_id
-                ]
-            )
+            cursor.execute("""
+                SELECT add_delivery_outcome(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, [
+                maternal_health_id,
+                data['outcome_type_id'],
+                data['delivery_type_id'],
+                data['place_delivery_type_id'],
+                data.get('ownership_type_id'),
+                data.get('others_description'),
+                data['birth_attendant_id'],
+                data.get('other_attendant'),
+                data.get('time_of_delivery'),
+                data['date_terminated'],
+                personnel_id
+            ])
             return cursor.fetchone()[0]
     except Exception as e:
-        print(f"Failed to add delivery outcome: {str(e)}")
+        print(f"❌ Failed to add delivery outcome: {str(e)}")
         raise Exception(f"Failed to add delivery outcome: {str(e)}")
 
 
@@ -1485,54 +1499,63 @@ def view_maternal_delivery_outcome(maternal_health_id):
     """View delivery outcome"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_delivery_outcome(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_delivery_outcome(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            result = cursor.fetchone()
-            return dict(zip(columns, result)) if result else None
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(zip(columns, row))
+            return None
+            
     except Exception as e:
-        print(f"Failed to view delivery outcome: {str(e)}")
+        print(f"❌ Failed to view delivery outcome: {str(e)}")
         raise Exception(f"Failed to view delivery outcome: {str(e)}")
 
 
 # Postpartum
 def add_postpartum_visit(maternal_health_id, data, personnel_id):
-    """Add postpartum visit"""
+    """Add postpartum visit (must be after delivery outcome)"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT add_postpartum_visit(%s, %s, %s, %s, %s, %s, %s, %s)",
-                [
-                    maternal_health_id,
-                    data.get('date_of_visit'),
-                    data.get('weight_kg'),
-                    data.get('height_cm'),
-                    data.get('blood_pressure'),
-                    data.get('notes'),
-                    data.get('laboratory_notes'),
-                    personnel_id
-                ]
-            )
+            cursor.execute("""
+                SELECT add_postpartum_visit(
+                    %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, [
+                maternal_health_id,
+                data.get('date_of_visit'),
+                data.get('weight_kg'),
+                data.get('height_cm'),
+                data.get('blood_pressure'),
+                data.get('notes'),
+                data.get('laboratory_notes'),
+                personnel_id
+            ])
             return cursor.fetchone()[0]
     except Exception as e:
-        print(f"Failed to add postpartum visit: {str(e)}")
+        print(f"❌ Failed to add postpartum visit: {str(e)}")
         raise Exception(f"Failed to add postpartum visit: {str(e)}")
 
 
+
 def view_maternal_all_postpartum_visits(maternal_health_id):
-    """View all postpartum visits"""
+    """View all postpartum visits for a maternal health record"""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM view_specific_maternal_all_postpartum_visit(%s)",
-                [maternal_health_id]
-            )
+            cursor.execute("""
+                SELECT * FROM view_specific_maternal_all_postpartum_visit(%s)
+            """, [maternal_health_id])
+            
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            
+            return [dict(zip(columns, row)) for row in rows]
+            
     except Exception as e:
-        print(f"Failed to view postpartum visits: {str(e)}")
+        print(f"❌ Failed to view postpartum visits: {str(e)}")
         raise Exception(f"Failed to view postpartum visits: {str(e)}")
 
 # ========================================

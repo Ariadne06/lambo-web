@@ -355,7 +355,7 @@ class DiseaseType(models.Model):
     is_active = models.BooleanField(default=True)
     
     class Meta:
-        db_table = 'Disease_Type'
+        db_table = 'disease_type'
         managed = False
 
 
@@ -366,7 +366,7 @@ class Trimester(models.Model):
     max_weeks = models.IntegerField(null=True, blank=True)
     
     class Meta:
-        db_table = 'Trimester'
+        db_table = 'trimester'
         managed = False
 
 
@@ -384,7 +384,7 @@ class SupplementType(models.Model):
     supplement_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Supplement_Type'
+        db_table = 'supplement_type'
         managed = False
 
 
@@ -393,7 +393,7 @@ class DewormingType(models.Model):
     deworming_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Deworming_Type'
+        db_table = 'deworming_type'
         managed = False
 
 
@@ -402,7 +402,7 @@ class OutcomeType(models.Model):
     outcome_type_description = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Outcome_Type'
+        db_table = 'outcome_type'
         managed = False
 
 
@@ -411,7 +411,7 @@ class DeliveryType(models.Model):
     delivery_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Delivery_Type'
+        db_table = 'delivery_type'
         managed = False
 
 
@@ -420,7 +420,7 @@ class PlaceDeliveryType(models.Model):
     place_delivery_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Place_Delivery_Type'
+        db_table = 'place_delivery_type'
         managed = False
 
 
@@ -429,7 +429,7 @@ class OwnershipType(models.Model):
     ownership_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Ownership_Type'
+        db_table = 'ownership_type'
         managed = False
 
 
@@ -438,7 +438,7 @@ class BirthAttendant(models.Model):
     birth_attendant_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Birth_Attendant'
+        db_table = 'birth_attendant'
         managed = False
 
 
@@ -447,7 +447,7 @@ class RecordStatus(models.Model):
     record_name = models.CharField(max_length=50, unique=True)
     
     class Meta:
-        db_table = 'Record_Status'
+        db_table = 'record_status'
         managed = False
 
 
