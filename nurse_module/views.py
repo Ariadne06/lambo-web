@@ -872,83 +872,54 @@ def moreChildRecord(request, child_health_id: int):
 @role_required('Midwife')
 @require_POST
 def child_immunization_add_api(request, child_health_id: int):
-    """
-    POST (JSON or form):
-      - vaccine_type_id
-      - dose_type_id
 
-    Calls: add_immunization(p_child_health_id, p_vaccine_type_id, p_dose_type_id, p_personnel_id)
-    Returns JSON:
-      { "ok": true, "immunization_id": <int>, "message": "..." }
-      or
-      { "ok": false, "error": "..." }
-    """
-    # 1) Parse input (support JSON or regular POST)
+    # Parse JSON or form
     if request.headers.get('Content-Type', '').startswith('application/json'):
         try:
             payload = json.loads(request.body or '{}')
         except json.JSONDecodeError:
-            return JsonResponse(
-                {"ok": False, "error": "Invalid JSON payload."},
-                status=400,
-            )
+            return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
         vaccine_type_id = payload.get('vaccine_type_id')
         dose_type_id = payload.get('dose_type_id')
+        date_given = payload.get('date_given')
     else:
         vaccine_type_id = request.POST.get('vaccine_type_id')
         dose_type_id = request.POST.get('dose_type_id')
+        date_given = request.POST.get('date_given')
 
-    # 2) Basic validation and casting
+    # Validate inputs
+    if not vaccine_type_id or not dose_type_id or not date_given:
+        return JsonResponse({"ok": False, "error": "Vaccine, dose, and date are required."}, status=400)
+
     try:
         vaccine_type_id = int(vaccine_type_id)
         dose_type_id = int(dose_type_id)
-    except (TypeError, ValueError):
-        return JsonResponse(
-            {"ok": False, "error": "Vaccine and dose are required."},
-            status=400,
-        )
+    except:
+        return JsonResponse({"ok": False, "error": "Invalid vaccine or dose."}, status=400)
 
-    # 3) Resolve current personnel_id from logged-in user / session
+    # Resolve personnel
     personnel_id = _resolve_personnel_id(request)
     if personnel_id is None:
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "Unable to resolve current personnel_id from your session. Please log out and log in again, or contact the system administrator.",
-            },
-            status=400,
-        )
+        return JsonResponse({"ok": False, "error": "Invalid personnel session."}, status=400)
 
-    # 4) Call the PostgreSQL function add_immunization(...)
+    # SQL call (updated with date)
     try:
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT add_immunization(%s, %s, %s, %s)",
-                [child_health_id, vaccine_type_id, dose_type_id, personnel_id],
+                "SELECT add_immunization(%s, %s, %s, %s, %s)",
+                [child_health_id, vaccine_type_id, dose_type_id, date_given, personnel_id],
             )
             row = cur.fetchone()
             new_id = row[0] if row else None
 
-        return JsonResponse(
-            {
-                "ok": True,
-                "immunization_id": new_id,
-                "message": "Immunization successfully recorded.",
-            }
-        )
+        return JsonResponse({"ok": True, "immunization_id": new_id, "message": "Immunization recorded."})
 
     except DatabaseError as e:
-        # 🔴 This will capture your custom P4603–P4606 errors
         friendly = _pg_error_message(e)
-        return JsonResponse(
-            {"ok": False, "error": friendly},
-            status=400,
-        )
+        return JsonResponse({"ok": False, "error": friendly}, status=400)
+
     except Exception as e:
-        return JsonResponse(
-            {"ok": False, "error": str(e)},
-            status=500,
-        )
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
 
 
 def _resolve_personnel_id(request):
