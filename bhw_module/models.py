@@ -740,4 +740,85 @@ class Maternal:
         except Exception as e:
             raise e
     
+    @staticmethod
+    def sp_view_specific_maternal_all_laboratory_screening(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_laboratory_screening', [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_lab_screening_record(
+            maternal_health_id,
+            test_type_id,
+            test_date,
+            result,
+            iron_tablet_given_date,
+            iron_tablet_quantity,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_lab_screening_record', [
+                    maternal_health_id,
+                    test_type_id,
+                    test_date,
+                    result,
+                    iron_tablet_given_date,
+                    iron_tablet_quantity,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_test_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT test_type_id, test_name FROM Test_Type ORDER BY test_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_checkup_records(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM view_specific_maternal_all_checkup_record(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_checkup_record(
+            maternal_health_id,
+            aog_weeks,
+            weight_kg,
+            height_cm,
+            bmi,
+            blood_pressure,
+            fetal_heart_rate,
+            laboratory_results,
+            notes,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT add_checkup_record(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
+                             [maternal_health_id, aog_weeks, weight_kg, height_cm, bmi, blood_pressure, fetal_heart_rate, laboratory_results, notes, personnel_id])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+    
 
