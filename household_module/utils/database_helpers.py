@@ -903,24 +903,43 @@ def search_mother(query):
 
 
 def view_all_maternal_record(
-    name_query=None,
-    family_code=None,
-    record_status=None,
-    date_from=None,
-    date_to=None
+    p_query=None,
+    p_record_status_id=None,
+    p_limit=50,
+    p_offset=0
 ):
-    """View all maternal health records with filters"""
+    """
+    Fetch maternal health records with search, status filter, and pagination.
+    Matches SQL function:
+        View_all_maternal_record(
+            p_query TEXT,
+            p_record_status_id INT,
+            p_limit INT,
+            p_offset INT
+        )
+    Returns: list of dicts
+    """
+
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM View_all_maternal_record(%s, %s, %s, %s, %s)",
-                [name_query, family_code, record_status, date_from, date_to]
-            )
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            cursor.callproc("view_all_maternal_record", [
+                p_query,
+                p_record_status_id,
+                p_limit,
+                p_offset
+            ])
+
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+
+            results = [dict(zip(cols, row)) for row in rows]
+
+        return results
+
     except Exception as e:
-        print(f"Failed to view maternal records: {str(e)}")
-        raise Exception(f"Failed to view maternal records: {str(e)}")
+        print(f"❌ DATABASE ERROR (view_all_maternal_record): {e}")
+        raise e
+
 
 
 def view_specific_maternal_health_record(maternal_health_id):

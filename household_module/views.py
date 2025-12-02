@@ -2637,40 +2637,50 @@ class SearchMotherView(APIView):
 
 
 class MaternalHealthRecordListView(APIView):
-    """List all maternal health records with filtering"""
+    """List maternal health records with search, status filter, and pagination"""
+
     def get(self, request):
         try:
-            # Get filter parameters
-            name_query = request.query_params.get('name_query')
-            family_code = request.query_params.get('family_code')
-            record_status = request.query_params.get('record_status')
-            date_from = request.query_params.get('date_from')
-            date_to = request.query_params.get('date_to')
-            limit = int(request.query_params.get('limit', 50))
-            
-            from .utils.database_helpers import view_all_maternal_record
-            results = view_all_maternal_record(
-                name_query=name_query,
-                family_code=family_code,
-                record_status=record_status,
-                date_from=date_from,
-                date_to=date_to
-            )
-            
-            # Apply limit
-            results = results[:limit]
-            
+            # NEW correct parameters (matching SQL function)
+            p_query = request.query_params.get("p_query", "").strip() or None
+            p_record_status_id = request.query_params.get("p_record_status_id", None)
+            p_limit = int(request.query_params.get("limit", 50))
+            p_offset = int(request.query_params.get("offset", 0))
+
+            # Convert record_status_id to int when provided
+            if p_record_status_id is not None:
+                try:
+                    p_record_status_id = int(p_record_status_id)
+                except ValueError:
+                    return Response({
+                        "success": False,
+                        "error": "Invalid p_record_status_id"
+                    }, status=400)
+
+            with connection.cursor() as cursor:
+                cursor.callproc("view_all_maternal_record", [
+                    p_query,
+                    p_record_status_id,
+                    p_limit,
+                    p_offset
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                results = [dict(zip(cols, row)) for row in rows]
+
             return Response({
-                'success': True,
-                'count': len(results),
-                'data': results
-            })
+                "success": True,
+                "count": len(results),
+                "data": results   # data includes household_number + family_code
+            }, status=200)
+
         except Exception as e:
-            print(f"❌ List maternal records error: {str(e)}")
+            print(f"❌ Error in View_all_maternal_record: {e}")
             return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
 
 
 # ========================================
@@ -3277,6 +3287,22 @@ class DiseaseScreenListView(APIView):
 # ========================================
 # LABORATORY SCREENING
 # ========================================
+class TestTypeListView(APIView):
+    def get(self, request):
+        try:
+            test_types = TestType.objects.all().values(
+                "test_type_id", "test_name"
+            )
+            return Response({
+                "success": True,
+                "data": list(test_types)
+            })
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
 
 class LabScreeningCreateView(APIView):
     """Add laboratory screening"""
