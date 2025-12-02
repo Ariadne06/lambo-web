@@ -1939,7 +1939,7 @@ class ChildHealthRecordUpdateView(APIView):
 class ChildImmunizationListView(APIView):
     """
     GET /child-health-records/<child_health_id>/immunizations/
-    Returns FULL immunization schedule with dose DATES
+    Returns FULL immunization schedule with REAL DATE VALUES
     """
     def get(self, request, child_health_id):
         try:
@@ -1983,25 +1983,40 @@ class ChildImmunizationListView(APIView):
                 immunizations = []
                 for row in rows:
                     record = dict(zip(columns, row))
-                    
-                    # ✅ Convert DATE columns to BOOLEAN for frontend
+
                     immunizations.append({
-                        'vaccine_type_id': record['vaccine_type_id'],
-                        'vaccine_name': record['vaccine_name'],
-                        'at_birth_given': record['at_birth_date'] is not None,
-                        'first_dose_given': record['first_dose_date'] is not None,
-                        'second_dose_given': record['second_dose_date'] is not None,
-                        'third_dose_given': record['third_dose_date'] is not None,
-                        'last_administered': (
-                            record['last_administered'].isoformat()
-                            if record['last_administered'] else None
+                        "vaccine_type_id": record["vaccine_type_id"],
+                        "vaccine_name": record["vaccine_name"],
+
+                        # RETURN REAL DATE VALUES
+                        "at_birth_date": (
+                            record["at_birth_date"].isoformat()
+                            if record["at_birth_date"] else None
                         ),
-                        'next_recommended_date': (
-                            record['next_recommended_date'].isoformat()
-                            if record['next_recommended_date'] else None
+                        "first_dose_date": (
+                            record["first_dose_date"].isoformat()
+                            if record["first_dose_date"] else None
+                        ),
+                        "second_dose_date": (
+                            record["second_dose_date"].isoformat()
+                            if record["second_dose_date"] else None
+                        ),
+                        "third_dose_date": (
+                            record["third_dose_date"].isoformat()
+                            if record["third_dose_date"] else None
                         ),
 
-                        'is_delayed': record['is_delayed'],
+                        "last_administered": (
+                            record["last_administered"].isoformat()
+                            if record["last_administered"] else None
+                        ),
+                        "next_recommended_date": (
+                            record["next_recommended_date"].isoformat()
+                            if record["next_recommended_date"] else None
+                        ),
+
+                        "status": record["status"],
+                        "is_delayed": record["is_delayed"],
                     })
 
             return Response({
