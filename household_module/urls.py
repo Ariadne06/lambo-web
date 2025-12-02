@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 import django.contrib.admin as admin
+from .views import TestTypeListView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -220,6 +221,10 @@ path(
      path('maternal-health-records/<int:maternal_health_id>/lab-screening/add/', 
           views.LabScreeningCreateView.as_view(), 
           name='lab-screening-add'),
+
+    path("test-types/", TestTypeListView.as_view()),
+
+
      
      # ========================================
      # CHECKUP RECORDS
