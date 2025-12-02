@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 import django.contrib.admin as admin
+from .views import TestTypeListView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -220,6 +221,10 @@ path(
      path('maternal-health-records/<int:maternal_health_id>/lab-screening/add/', 
           views.LabScreeningCreateView.as_view(), 
           name='lab-screening-add'),
+
+    path("test-types/", TestTypeListView.as_view()),
+
+
      
      # ========================================
      # CHECKUP RECORDS
@@ -264,21 +269,21 @@ path(
      # PREGNANCY OUTCOME
      # ========================================
      path('maternal-health-records/<int:maternal_health_id>/delivery-outcome/', 
-          views.DeliveryOutcomeView.as_view(), 
-          name='maternal-delivery-outcome-view'),
+         views.DeliveryOutcomeView.as_view(), 
+         name='delivery-outcome'),
      path('maternal-health-records/<int:maternal_health_id>/delivery-outcome/add/', 
-          views.DeliveryOutcomeCreateView.as_view(), 
-          name='maternal-delivery-outcome-add'),
+         views.DeliveryOutcomeCreateView.as_view(), 
+         name='delivery-outcome-add'),
      
      # ========================================
      # POSTPARTUM
      # ========================================
      path('maternal-health-records/<int:maternal_health_id>/postpartum/', 
-          views.PostpartumVisitListView.as_view(), 
-          name='maternal-postpartum-list'),
+         views.PostpartumVisitListView.as_view(), 
+         name='postpartum-list'),
      path('maternal-health-records/<int:maternal_health_id>/postpartum/add/', 
-          views.PostpartumVisitCreateView.as_view(), 
-          name='maternal-postpartum-add'),
+         views.PostpartumVisitCreateView.as_view(), 
+         name='postpartum-add'),
      
      # ========================================
      # BHW DASHBOARD
