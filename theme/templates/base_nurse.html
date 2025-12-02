@@ -82,17 +82,7 @@
         <span>View Maternal Record</span>
       </a>
 
-      <!-- Vaccine -->
-      <a href="{% url 'nurse_module:vaccine_list' %}"
-   class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-          {% if request.resolver_match.url_name == 'vaccine_list' %}
-            bg-white text-red-700 font-semibold shadow-sm
-          {% else %}
-            hover:bg-red-800/80
-          {% endif %}">
-  <i class="ri-capsule-line text-lg"></i>
-  <span>Vaccine</span>
-</a>
+      
       <!-- General Health Info -->
       <!-- <a href="{% url 'nurse_module:nurse_general_health' %}"
          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
