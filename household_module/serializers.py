@@ -772,37 +772,29 @@ class ChildGrowthMonitoringCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Failed to add growth record: {str(e)}")
         
 class ChildImmunizationCreateSerializer(serializers.Serializer):
-    """
-    Serializer for creating child immunization records.
-    We DON'T ask for date_given (DB uses date_added).
-    """
-
     vaccine_type_id = serializers.IntegerField(required=True)
     dose_type_id = serializers.IntegerField(required=True)
+    date_given = serializers.DateField(required=True)   # <-- ADD THIS
 
     def create(self, validated_data):
         child_health_id = self.context.get("child_health_id")
         personnel_id = self.context.get("personnel_id")
 
-        if not child_health_id or not personnel_id:
-            raise serializers.ValidationError(
-                "Missing child_health_id or personnel_id"
-            )
-
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT add_immunization(%s, %s, %s, %s);",
+                "SELECT add_immunization(%s, %s, %s, %s, %s);",
                 [
                     child_health_id,
                     validated_data["vaccine_type_id"],
                     validated_data["dose_type_id"],
+                    validated_data["date_given"],
                     personnel_id,
                 ],
             )
             row = cursor.fetchone()
 
-        immunization_id = row[0] if row else None
-        return immunization_id
+        return row[0] if row else None
+
 
 
 class ChildSupplementCreateSerializer(serializers.Serializer):

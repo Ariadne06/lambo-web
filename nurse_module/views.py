@@ -1031,71 +1031,64 @@ def childSupplements(request, child_health_id: int):
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
-    # ---- Filters from GET ----
-    q = request.GET.get("q") or None  # name / resident_id search
-    family_code = request.GET.get("family_code") or None
-    record_status = request.GET.get("record_status") or None
 
-    date_from_str = request.GET.get("date_from") or ""
-    date_to_str = request.GET.get("date_to") or ""
+    # ---- Filters ----
+    q = request.GET.get("q") or None
+    record_status_text = request.GET.get("record_status") or None
 
-    date_from = _parse_date(date_from_str)
-    date_to = _parse_date(date_to_str)
+    # Map text → record_status_id
+    status_map = {
+        "Ongoing": 1,
+        "Completed": 2,
+        "Incomplete": 3,
+    }
+    record_status_id = status_map.get(record_status_text)
 
     # ---- Pagination ----
     try:
         page = int(request.GET.get("page", "1"))
     except ValueError:
         page = 1
-    if page < 1:
-        page = 1
 
     per_page = 10
     offset = (page - 1) * per_page
 
+    # ---- Fetch data ----
     total_count = MaternalHealthListRow.count(
-        name_query=q,
-        family_code=family_code,
-        record_status=record_status,
-        date_from=date_from,
-        date_to=date_to,
+        query=q,
+        record_status_id=record_status_id,
     )
+
     maternal_records = MaternalHealthListRow.fetch(
-        name_query=q,
-        family_code=family_code,
-        record_status=record_status,
-        date_from=date_from,
-        date_to=date_to,
+        query=q,
+        record_status_id=record_status_id,
         limit=per_page,
         offset=offset,
     )
 
-    total_pages = max(1, math.ceil(total_count / per_page)) if total_count else 1
-    if page > total_pages:
-        page = total_pages
+    # ---- Pagination building ----
+    total_pages = max(1, math.ceil(total_count / per_page))
+    page = min(page, total_pages)
 
-    # Simple window around current page (e.g., 1 2 [3] 4 5)
     window = 2
     start_page = max(1, page - window)
     end_page = min(total_pages, page + window)
-    page_range = list(range(start_page, end_page + 1))
+    page_range = range(start_page, end_page + 1)
 
-    # Build base query string for pagination links (keep filters, change page)
+    # Build base_query (keep filters)
     qs_params = {}
-    for key in ["q", "family_code", "record_status", "date_from", "date_to"]:
+    for key in ["q", "record_status"]:
         val = request.GET.get(key)
         if val:
             qs_params[key] = val
+
     base_query = urlencode(qs_params)
 
-    context = {
+    return render(request, "nurse_module/maternalrecord.html", {
         "maternal_records": maternal_records,
         "filters": {
             "q": q or "",
-            "family_code": family_code or "",
-            "record_status": record_status or "",
-            "date_from": date_from_str,
-            "date_to": date_to_str,
+            "record_status": record_status_text or "",
         },
         "pagination": {
             "page": page,
@@ -1109,8 +1102,7 @@ def maternalrecord(request):
             "page_range": page_range,
         },
         "base_query": base_query,
-    }
-    return render(request, 'nurse_module/maternalrecord.html', context)
+    })
 
 
 def _parse_date(value):

@@ -1938,53 +1938,50 @@ class ChildHealthRecordUpdateView(APIView):
 class ChildImmunizationListView(APIView):
     """
     GET /child-health-records/<child_health_id>/immunizations/
-    List all immunization records for a child.
-    Returns: Immunization schedule with dose completion status
+    Returns FULL immunization schedule with dose DATES
     """
     def get(self, request, child_health_id):
         try:
             child_health_id = int(child_health_id)
             
-            # 1) Get child info
+            # 1) Child info
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT child_full_name 
                     FROM view_specific_child_health_record(%s)
                 """, [child_health_id])
+                row = cursor.fetchone()
+                if not row:
+                    return Response({
+                        'success': False,
+                        'error': 'Child health record not found'
+                    }, status=404)
                 
-                child_data = cursor.fetchone()
-                if not child_data:
-                    return Response(
-                        {
-                            'success': False,
-                            'error': 'Child health record not found'
-                        },
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-                
-                child_name = child_data[0]
-            
-            # 2) Get immunization records using the SQL view function
+                child_name = row[0]
+
+            # 2) Immunization records
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT * FROM view_specific_child_immunization_record(%s)
                 """, [child_health_id])
-                
+
                 columns = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
-                
+
                 immunizations = []
-                for row in rows:
-                    record = dict(zip(columns, row))
-                    
-                    # Format for frontend
+                for r in rows:
+                    record = dict(zip(columns, r))
+
                     immunizations.append({
                         'vaccine_type_id': record['vaccine_type_id'],
                         'vaccine_name': record['vaccine_name'],
-                        'at_birth_given': record['at_birth_given'],
-                        'first_dose_given': record['first_dose_given'],
-                        'second_dose_given': record['second_dose_given'],
-                        'third_dose_given': record['third_dose_given'],
+
+                        # UPDATED: USE DATES, NOT BOOLEANS
+                        'at_birth_date': record['at_birth_date'],
+                        'first_dose_date': record['first_dose_date'],
+                        'second_dose_date': record['second_dose_date'],
+                        'third_dose_date': record['third_dose_date'],
+
                         'last_administered': (
                             record['last_administered'].isoformat()
                             if record['last_administered'] else None
@@ -1993,29 +1990,24 @@ class ChildImmunizationListView(APIView):
                             record['next_recommended_date'].isoformat()
                             if record['next_recommended_date'] else None
                         ),
+
                         'is_delayed': record['is_delayed'],
                     })
-            
-            return Response(
-                {
-                    'success': True,
-                    'child_name': child_name,
-                    'child_health_id': child_health_id,
-                    'data': immunizations,
-                    'count': len(immunizations),
-                },
-                status=status.HTTP_200_OK
-            )
-            
+
+            return Response({
+                'success': True,
+                'child_name': child_name,
+                'child_health_id': child_health_id,
+                'data': immunizations,
+                'count': len(immunizations),
+            })
+
         except Exception as e:
-            print(f"❌ Failed to fetch immunizations: {str(e)}")
-            return Response(
-                {
-                    'success': False,
-                    'error': f'Failed to fetch immunization records: {str(e)}'
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            print("❌ Error:", str(e))
+            return Response({
+                'success': False,
+                'error': f"Failed to fetch immunizations: {str(e)}"
+            }, status=500)
 
 class ChildImmunizationCreateView(APIView):
     """Add immunization record"""
