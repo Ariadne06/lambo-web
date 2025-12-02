@@ -6,7 +6,7 @@ from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from .models import (
     Secretary, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType,
-    BusinessTaxConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
+    BusinessTaxConfig, CTCFeeConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
 )
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
@@ -2287,6 +2287,50 @@ def tax_penalties_update(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def ctc_fee(request):
+    ctc_config = CTCFeeConfig.sp_get_ctc_fee()
+    flash = get_flash(request)
+    return render(request, 'secretary_module/ctcFee.html', {
+        'ctc_config': ctc_config,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def ctc_fee_update(request):
+    try:
+        pid = _get_personnel_id(request)
+        amount = request.POST.get('amount', '').strip()
+        
+        if not amount:
+            return JsonResponse({'ok': False, 'error': 'Amount is required'}, status=400)
+        
+        try:
+            amount_decimal = Decimal(amount)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid amount format'}, status=400)
+        
+        if amount_decimal < 0:
+            return JsonResponse({'ok': False, 'error': 'Amount must be non-negative'}, status=400)
+
+        CTCFeeConfig.sp_update_ctc_fee(amount=amount_decimal, updated_by=pid)
+        
+        new_row = CTCFeeConfig.sp_get_ctc_fee()
+        return JsonResponse({
+            'ok': True,
+            'row': {
+                'amount': float(new_row.get('amount')) if new_row.get('amount') else None,
+                'updated_at': new_row.get('updated_at').isoformat() if new_row.get('updated_at') else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
     
 
 def _acting_personnel_id(request) -> int:
