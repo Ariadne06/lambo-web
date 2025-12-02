@@ -375,7 +375,7 @@ class TestType(models.Model):
     test_name = models.CharField(max_length=100, unique=True)
     
     class Meta:
-        db_table = 'Test_Type'
+        db_table = 'test_type'
         managed = False
 
 
