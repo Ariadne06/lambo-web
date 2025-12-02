@@ -74,6 +74,9 @@ urlpatterns = [
     path('child-health-records/<int:child_health_id>/', views.ChildHealthRecordDetailView.as_view(), name='child-health-record-detail'),
     path('child-health-records/<int:child_health_id>/update/', views.ChildHealthRecordUpdateView.as_view(), name='update-child-health-record'),
 
+
+path("bhw-dashboard/", views.bhw_dashboard_view, name="bhw-dashboard"),
+
     # CHILD HEALTH - IMMUNIZATION
     path(
     'child-health-records/<int:child_health_id>/immunizations/',

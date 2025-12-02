@@ -55,6 +55,8 @@ urlpatterns = [
      path('residents/search/', views.resident_search_api, name='resident_search_api'),
      path('api/mother/search/', views.mother_search_api, name='mother_search_api'),
      path('maternal/add-disease-screening/', views.add_disease_screening, name='addDiseaseScreening'),
+     path('maternal/add-lab-screening/', views.add_lab_screening, name='addLabScreening'),
+     path('maternal/add-checkup-record/', views.add_checkup_record, name='addCheckupRecord'),
      # PDF Generation endpoints
      path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
      path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),

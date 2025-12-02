@@ -94,3 +94,4 @@ venv/
 
 # Ignore collected static files
 staticfiles/
+node_modules
