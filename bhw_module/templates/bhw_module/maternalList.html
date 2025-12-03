@@ -1,281 +1,184 @@
 {% extends "base_bhw.html" %}
-{% block title %}Maternal Health Record{% endblock %}
 
 {% block content %}
-<style>
-  .btn-print {
-    background-color: #ef3f3f !important; /* gray-800 */
-    color: #fff !important;
-  }
-  .btn-print:hover {
-    background-color: #111827 !important; /* gray-900 */
-  }
-</style>
-<div class="px-6 py-6 bg-gradient-to-br from-rose-50 via-white to-rose-50/40">
+<div class="p-6">
 
-  <!-- Header -->
-  <div class="mb-6 flex items-center justify-between">
-    <!-- Title chip -->
-    <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5 bg-rose-600">
-      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
-      List of Maternal Health Record
-    </div>
+  <style>
+    .ch-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.375rem .75rem;border-radius:.5rem;
+      font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.15);color:#fff !important}
+    .ch-btn--green{background:#22c55e !important}
+    .ch-btn--blue {background:#3b82f6 !important}
+    .ch-btn:hover{filter:brightness(.95)}
+    .ch-topbtn{background:linear-gradient(90deg,#f43f5e,#dc2626) !important;color:#fff !important}
+    .ch-topbtn:hover{background:linear-gradient(90deg,#fb7185,#ef4444) !important}
+  </style>
 
-    <!-- Actions -->
-    <div class="flex items-center gap-2">
-      <button type="button" onclick="window.print()" 
-        class="btn-print inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 9V3h12v6h1.5A2.5 2.5 0 0 1 22 11.5v5A2.5 2.5 0 0 1 19.5 19H18v-4H6v4H4.5A2.5 2.5 0 0 1 2 16.5v-5A2.5 2.5 0 0 1 4.5 9H6Zm2 0h8V5H8v4Z"/>
+  <h1 class="text-2xl font-bold text-red-700">Maternal Health List</h1>
+
+  <!-- Top Controls -->
+  <div class="flex justify-between items-center mb-4">
+   <div class="flex gap-3">
+      <a href="{% url 'bhw_module:maternalAdd' %}"
+         class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ch-topbtn">
+        ➕ Add Maternal Record
+      </a>
+      <button type="button" onclick="window.print()"
+              class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ch-topbtn">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 9V3h12v6h1a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-2v-4H8v4H6v-4H5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3h1Zm2 0h8V5H8v4Z"/>
         </svg>
         Print Report
       </button>
-
-      <!-- Add Maternal Record -->
-      <a href="#"
-         class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow bg-rose-600 hover:bg-rose-700">
-        <!-- plus -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>
-        </svg>
-        Add Maternal Record
-      </a>
     </div>
-  </div>
 
-  <!-- Card -->
-  <div class="mx-auto max-w-6xl rounded-2xl border border-gray-200 bg-white p-6 shadow-md">
-
-    <!-- Search & Filters -->
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <!-- Search -->
-      <div class="relative w-full sm:w-80">
-        <input type="text" placeholder="Search Maternal"
-               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-9 text-sm focus:border-rose-500 focus:ring focus:ring-rose-200" />
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M10 2a8 8 0 1 0 5.3 14.3l4.7 4.7 1.4-1.4-4.7-4.7A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
-        </svg>
+    <form id="controlsForm" method="GET" class="flex items-center gap-3">
+      <div class="flex items-center gap-3">
+        <input type="text" placeholder="Search Maternal Record" name="query" id="queryInput"
+               value="{{ query|default:'' }}"
+               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
       </div>
 
-      <!-- Filters -->
-      <button class="inline-flex items-center gap-1 text-sm font-semibold text-rose-700 hover:text-rose-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M4 6h16v2H4Zm4 5h8v2H8Zm-2 5h12v2H6Z"/>
-        </svg>
-        Advanced Filters
-      </button>
-    </div>
+      <div class="flex items-center gap-2 text-sm">
+        <label for="record_status_id" class="text-gray-600">Status:</label>
+        <select name="record_status_id" id="record_status_id"
+                class="appearance-none border rounded py-2 px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit w-28">
+          <option value="">All Status</option>
+          {% for status in record_status_options %}
+            <option value="{{ status.record_status_id }}" {% if status.record_status_id == record_status_id %}selected{% endif %}>
+              {{ status.record_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-rose-600 text-white">
-          <tr>
-            <th class="px-4 py-2 font-semibold">Resident ID</th>
-            <th class="px-4 py-2 font-semibold">Full Name</th>
-            <th class="px-4 py-2 font-semibold">Registered Date</th>
-            <th class="px-4 py-2 font-semibold">NHTS Status</th>
-            <th class="px-4 py-2 text-center font-semibold">Action</th>
-          </tr>
-        </thead>
-        <tbody class="text-gray-800">
-          <!-- Example row -->
-          <tr class="odd:bg-white even:bg-gray-50 hover:bg-rose-50">
-            <td class="px-4 py-2">1000</td>
-            <td class="px-4 py-2 font-medium">Adrianne Villarta</td>
-            <td class="px-4 py-2">01/02/2020</td>
-            <td class="px-4 py-2">
-              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">NHTS</span>
-            </td>
-            <td class="px-4 py-2">
-              <div class="flex items-center justify-center gap-2">
-                <!-- View -->
-                <button class="rounded-full bg-rose-100 p-2 text-rose-700 hover:bg-rose-200" title="View">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 5c-7.63 0-12 7-12 7s4.37 7 12 7 12-7 12-7-4.37-7-12-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  class="rounded-full bg-blue-100 p-2 text-blue-700 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
-                  title="Edit / Update"
-                  onclick="openMaternalEditModal(this)"
-                  data-resident-id="1000"
-                  data-full-name="Adrianne Villarta"
-                  data-registered-date="2020-01-02"
-                  data-nhts="NHTS"
-                >
-                  <!-- edit icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11ZM20.7 7.04c.39-.39.39-1.02 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84Z"/>
-                  </svg>
-                </button>
-
-              </div>
-            </td>
-          </tr>
-
-          <!-- Duplicate this <tr> for more rows -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div class="mt-4 flex justify-center text-sm text-gray-600">1 2 3 4 5 6 7 … 60</div>
-
-    
-  </div>
-  <!-- Edit Maternal Record Modal -->
-<div id="maternalEditModal" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="maternalEditModal_title">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="closeMaternalEditModal()"></div>
-
-  <!-- Modal container -->
-  <div class="relative mx-auto my-8 w-[95%] max-w-3xl">
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white px-6 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/25 grid place-items-center">
-            <!-- clipboard-heart icon -->
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 3h6a2 2 0 0 1 2 2h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2-2Z" opacity=".15"/>
-              <path d="M16 5a2 2 0 0 0-2-2h-1a1 1 0 0 1-2 0H10a2 2 0 0 0-2 2H5v14h14V5h-3Z"/>
-              <path d="M12 19s-5-3.1-5-6.5A3.5 3.5 0 0 1 12 10a3.5 3.5 0 0 1 5 2.5C17 15.9 12 19 12 19Z"/>
-            </svg>
-          </div>
-          <div>
-            <h2 id="maternalEditModal_title" class="text-base font-semibold">Maternal Health Record — Edit</h2>
-            <p id="maternalEditModal_meta" class="text-white/80 text-xs">
-              Resident: <span id="maternalEdit_name">—</span> • ID: <span id="maternalEdit_id">—</span>
-            </p>
-          </div>
+      <div class="flex items-center gap-2 text-sm">
+        <label for="limit" class="text-gray-600">Rows per page:</label>
+        <div class="relative inline-block">
+          <select id="limit" name="limit"
+                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+            {% for n in limit_options %}
+              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
         </div>
-
-        <button type="button" class="text-white/90 hover:text-white text-2xl leading-none font-bold"
-                aria-label="Close modal" onclick="closeMaternalEditModal()">&times;</button>
       </div>
 
-      <!-- Body -->
-      <div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
-        <form id="maternalEditForm" class="space-y-6">
-          <!-- NHTS -->
-          <div>
-            <label class="text-[11px] font-semibold text-gray-500">NHTS Status</label>
-            <select id="edit_nhts"
-                    class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-              <option>NHTS</option>
-              <option>Non-NHTS</option>
-            </select>
-          </div>
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+    </form>
+  </div>
 
-          <!-- Address -->
-          <div>
-            <label class="text-[11px] font-semibold text-gray-500">Address</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>
-              </span>
-              <input id="edit_address" type="text" value="Purok 3, Cansaga"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
-          </div>
-
-          <!-- Contact -->
-          <div>
-            <label class="text-[11px] font-semibold text-gray-500">Contact Number</label>
-            <div class="relative mt-1">
-              <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.5 3 3.6 5.1 6.6 6.6l2.2-2.2c.3-.3.8-.4 1.1-.2 1.2.4 2.6.6 3.9.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11.8 21 3 12.2 3 2.5 3 1.9 3.4 1.5 4 1.5H7c.6 0 1 .4 1 1 0 1.4.2 2.7.6 3.9.1.4 0 .8-.3 1.1l-1.7 2.3Z"/></svg>
-              </span>
-              <input id="edit_contact" type="tel" value="09672687206"
-                     class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            </div>
-          </div>
-
-          <!-- Sticky footer inside modal -->
-          <div class="sticky bottom-0 -mx-6 mt-2 bg-gradient-to-t from-white to-white/70 px-6 py-4">
-            <div class="flex items-center justify-end gap-3">
-              <button type="button" class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5"
-                      onclick="closeMaternalEditModal()">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18 18 6l-1.4-1.4L4.6 16.6 6 18Zm0 0v4h4l10.6-10.6-4-4L6 18Z"/></svg>
-                Cancel
-              </button>
-
-              <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21 7 9 19l-6-6 1.4-1.4L9 16.2 19.6 5.6 21 7Z"/></svg>
-                Update
-              </button>
-            </div>
-          </div>
-
-          <!-- Note -->
-          <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            <span class="font-semibold">Note:</span> Please review the information before saving. Make sure all fields are complete and accurate.
-          </div>
-        </form>
+    {% if message %}
+      <div id="messages" class="mb-4 px-4 py-3 rounded border
+          {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+          {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+          {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+        {{ message }}
       </div>
-    </div>
+    {% endif %}
+
+  <!-- Table -->
+  <div class="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200">
+    <table class="min-w-full text-sm text-gray-700">
+      <thead class="bg-red-600 text-white">
+        <tr>
+          <th class="py-3 px-4 text-left">Maternal Health ID</th>
+          <th class="py-3 px-4 text-left">Full Name</th>
+          <th class="py-3 px-4 text-left">DOB</th>
+          <th class="py-3 px-4 text-left">Family Code</th>
+          <th class="py-3 px-4 text-left">Record Status</th>
+          <th class="py-3 px-4 text-left">Date Created</th>
+          <th class="py-3 px-4 text-center">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-200">
+        {% if results|length == 0 %}
+          <tr>
+            <td colspan="6" class="py-10 px-4 text-center text-gray-500">
+              No maternal records available.
+            </td>
+          </tr>
+        {% else %}
+          {% for person in results %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3">{{ person.maternal_health_id }}</td>
+              <td class="px-6 py-3">{{ person.maternal_full_name }}</td>
+              <td class="px-6 py-3">{{ person.dob }}</td>
+              <td class="px-6 py-3">{{ person.family_code }}</td>
+              <td class="px-6 py-3">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">{{ person.record_status }}</span>
+              </td>
+              <td class="px-6 py-3">{{ person.date_created|date:"M d, Y" }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-center gap-2">
+                  <!-- View button -->
+                  <form method="post" action="{% url 'bhw_module:maternalView' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="maternal_health_id" value="{{ person.maternal_health_id }}">
+                    <button type="submit"
+                            class="gh-green gh-view-btn inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+                      </svg>
+                      View
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- Scoped styles to ensure buttons keep their colors -->
-<style>
-  .btn-red{background:linear-gradient(90deg,#f43f5e,#dc2626)!important;color:#fff!important}
-  .btn-red:hover{filter:brightness(.97)}
-  .btn-gray{background:#f3f4f6!important;color:#111827!important}
-  .btn-gray:hover{background:#e5e7eb!important}
-</style>
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+
+  <style>
+    .gh-red{background:linear-gradient(90deg,#f43f5e,#dc2626);color:#fff!important}
+    .gh-red:hover{background:linear-gradient(90deg,#fb7185,#ef4444)}
+    .gh-gray{background:#f3f4f6;color:#111827!important}
+    .gh-gray:hover{background:#e5e7eb}
+    .gh-green{background:#22c55e;color:#fff!important}
+    .gh-green:hover{filter:brightness(.95)}
+    .gh-blue{background:#3b82f6;color:#fff!important}
+    .gh-blue:hover{filter:brightness(.95)}
+  </style>
+</div>
 
 <script>
-  function openMaternalEditModal(triggerBtn){
-    const modal = document.getElementById('maternalEditModal');
-    modal.classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
+  // Debounce
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
-    // Populate header meta from button data-* (if provided)
-    const name = triggerBtn?.dataset.fullName || '';
-    const id = triggerBtn?.dataset.residentId || '';
-    const nhts = triggerBtn?.dataset.nhts || '';
-    const address = triggerBtn?.dataset.address || '';
-    const contact = triggerBtn?.dataset.contact || '';
+  const form = document.getElementById('controlsForm');
+  const pageField = document.getElementById('pageField');
 
-    if (name) document.getElementById('maternalEdit_name').textContent = name;
-    if (id) document.getElementById('maternalEdit_id').textContent = id;
-
-    const nhtsSelect = document.getElementById('edit_nhts');
-    if (nhts){
-      const match = Array.from(nhtsSelect.options).find(o => o.textContent.trim().toLowerCase() === nhts.trim().toLowerCase());
-      if (match) nhtsSelect.value = match.value;
-    }
-    if (address) document.getElementById('edit_address').value = address;
-    if (contact) document.getElementById('edit_contact').value = contact;
-
-    // Focus first field
-    setTimeout(()=> nhtsSelect.focus(), 0);
-  }
-
-  function closeMaternalEditModal(){
-    const modal = document.getElementById('maternalEditModal');
-    modal.classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
-  }
-
-  // Close on ESC
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape'){
-      const modal = document.getElementById('maternalEditModal');
-      if (modal && !modal.classList.contains('hidden')) closeMaternalEditModal();
-    }
+  document.querySelectorAll('#controlsForm .auto-submit').forEach(el => {
+    el.addEventListener('change', () => { pageField.value = 1; form.requestSubmit(); });
   });
 
-  // (Optional) intercept submit (remove if you post to server)
-  document.getElementById('maternalEditForm')?.addEventListener('submit', (e) => {
-    // e.preventDefault();
-    // TODO: AJAX submit or regular form submission
-  });
+  const queryInput = document.getElementById('queryInput');
+  if (queryInput){
+    const SEARCH_DEBOUNCE_MS = 1000;
+    queryInput.addEventListener('input', debounce(() => { pageField.value = 1; form.requestSubmit(); }, SEARCH_DEBOUNCE_MS));
+  }
 </script>
 
-</div>
+
+
 {% endblock %}

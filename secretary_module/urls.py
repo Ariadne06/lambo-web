@@ -6,6 +6,7 @@ app_name = 'secretary_module'
 urlpatterns = [
     path('', views.secretary_dashboard, name='secretary_dashboard'),
     path('resident_list/', views.resident_list, name="resident_list"),
+    path('resident/<int:resident_id>/detail/', views.resident_detail_json, name='resident_detail_json'),
     path('household_list/', views.household_list, name="household_list"),
     path('sec_householdView/', views.sec_householdView, name="sec_householdView"),
     path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),
@@ -46,6 +47,8 @@ urlpatterns = [
     path("otherClearances/update/", views.other_clearances_update, name="other_clearances_update"),
     path("taxPenalties/", views.tax_penalties, name="tax_penalties"),
     path("taxPenalties/update/", views.tax_penalties_update, name="tax_penalties_update"),
+    path("ctcFee/", views.ctc_fee, name="ctc_fee"),
+    path("ctcFee/update/", views.ctc_fee_update, name="ctc_fee_update"),
 
     # Dynamic AJAX endpoints for the Create Application (walk-in) UI
     path('applications/search/', views.application_search, name='application_search'),
@@ -55,4 +58,15 @@ urlpatterns = [
     path('applications/renewal/', views.create_renewal_business_clearance, name='create_renewal_business_clearance'),
     path('applications/registration/', views.create_registration_business_clearance, name='create_registration_business_clearance'),
     path('applications/closure/', views.create_closure_business_clearance, name='create_closure_business_clearance'),
+    
+    # Reports page
+    path('reports/', views.reports, name='reports'),
+    
+    # PDF Generation endpoints - Residents
+    path('resident_list/pdf/', views.generate_resident_list_pdf, name='generate_resident_list_pdf'),
+    path('resident/<int:resident_id>/pdf/', views.generate_resident_detail_pdf, name='generate_resident_detail_pdf'),
+    
+    # PDF Generation endpoints - Households
+    path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
+    path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
 ]

@@ -1,0 +1,243 @@
+{% extends "base_bhw.html" %}
+
+{% block content %}
+<div class="p-6 bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+      <span class="inline-block h-6 w-6 rounded-md bg-red-600"></span>
+      Add Child Health Record - Step 4: Review
+    </h1>
+    <p class="text-sm text-gray-600 mt-2">Review all information carefully before submitting</p>
+  </div>
+
+  {% if message %}
+    <div id="messages" class="mb-4 px-4 py-3 rounded border
+        {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+        {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+        {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <!-- Warning Notice -->
+  <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-6 py-4">
+    <div class="flex items-start gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/>
+      </svg>
+      <div>
+        <h3 class="text-lg font-semibold text-red-800">Review Data Carefully</h3>
+        <p class="text-sm text-red-700 mt-1">
+          Please review all the information below carefully. <strong>Once submitted, this data cannot be edited.</strong>
+          Make sure all details are correct before proceeding.
+        </p>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Review Card -->
+  <div class="bg-white shadow-md rounded-xl p-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">Child Health Record Summary</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Child Information -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-medium text-gray-800 border-b pb-2">Child Information</h3>
+        
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span class="font-medium text-gray-600">Child Name:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.child_name }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Sex:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.sex|default:"Not specified" }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Date of Birth:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.dob }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Time of Birth:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.time_of_birth|default:"Not specified" }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Birth Weight:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.birth_weight|default:"Not specified" }} kg</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Birth Height:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.birth_height|default:"Not specified" }} cm</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parent Information -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-medium text-gray-800 border-b pb-2">Parent Information</h3>
+        
+        <div class="grid grid-cols-1 gap-4 text-sm">
+          <div>
+            <span class="font-medium text-gray-600">Mother's Name:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.mother_name }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Father's Name:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.father_name }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">PhilHealth Number:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.philhealth_no|default:"Not provided" }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Phone Number:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.phone_number|default:"Not provided" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Health Information -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-medium text-gray-800 border-b pb-2">Health Information</h3>
+        
+        <div class="grid grid-cols-1 gap-4 text-sm">
+          <div>
+            <span class="font-medium text-gray-600">Place of Delivery:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.place_of_delivery|default:"Not specified" }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Address with Landmark:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.address_landmark }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">TT Status of Mother:</span>
+            <p class="text-gray-900 font-bold">
+              {% if child_data.tt_status_mother == "1" %}Tetanus Toxoid 1
+              {% elif child_data.tt_status_mother == "2" %}Tetanus Toxoid 2
+              {% elif child_data.tt_status_mother == "3" %}Tetanus Toxoid 3
+              {% elif child_data.tt_status_mother == "4" %}Tetanus Toxoid 4
+              {% elif child_data.tt_status_mother == "5" %}Tetanus Toxoid 5
+              {% else %}Not specified{% endif %}
+            </p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">TT Status Date:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.tt_status_date|default:"Not specified" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screening & Feeding -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-medium text-gray-800 border-b pb-2">Screening & Feeding</h3>
+        
+        <div class="grid grid-cols-1 gap-4 text-sm">
+          <div>
+            <span class="font-medium text-gray-600">Newborn Screening:</span>
+            <p class="text-gray-900 font-bold">
+              {% if child_data.newborn_screening == "true" %}Done
+              {% elif child_data.newborn_screening == "false" %}Not Done
+              {% else %}Not specified{% endif %}
+            </p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Screening Date:</span>
+            <p class="text-gray-900 font-bold">{{ child_data.newborn_screening_date|default:"Not applicable" }}</p>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Feeding Method:</span>
+            <p class="text-gray-900 font-bold">
+              {% if child_data.feeding_method_id == "1" %}Breastfeeding
+              {% elif child_data.feeding_method_id == "2" %}Bottle Feeding
+              {% elif child_data.feeding_method_id == "3" %}Mixed
+              {% else %}Not specified{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mt-8 flex items-center justify-between" style="width: 100%; display: flex !important;">
+    <button type="button" onclick="goBack()" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition" style="background-color: #4b5563 !important; color: white !important; padding: 8px 24px !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; display: block !important;">
+      ← Back to Edit
+    </button>
+    <button type="button" onclick="submitFinal()" class="px-8 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
+      Submit Child Record
+    </button>
+  </div>
+
+  <!-- Hidden form for final submission -->
+  <form id="finalForm" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="submit_final" value="1">
+    {% if child_data %}
+      <input type="hidden" name="child_id" value="{{ child_data.child_id }}">
+      <input type="hidden" name="child_name" value="{{ child_data.child_name }}">
+      <input type="hidden" name="mother_id" value="{{ child_data.mother_id }}">
+      <input type="hidden" name="mother_name" value="{{ child_data.mother_name }}">
+      <input type="hidden" name="father_id" value="{{ child_data.father_id }}">
+      <input type="hidden" name="father_name" value="{{ child_data.father_name }}">
+      <input type="hidden" name="sex" value="{{ child_data.sex }}">
+      <input type="hidden" name="dob" value="{{ child_data.dob }}">
+      <input type="hidden" name="philhealth_no" value="{{ child_data.philhealth_no }}">
+      <input type="hidden" name="phone_number" value="{{ child_data.phone_number }}">
+      <input type="hidden" name="time_of_birth" value="{{ child_data.time_of_birth }}">
+      <input type="hidden" name="birth_weight" value="{{ child_data.birth_weight }}">
+      <input type="hidden" name="birth_height" value="{{ child_data.birth_height }}">
+      <input type="hidden" name="place_of_delivery" value="{{ child_data.place_of_delivery }}">
+      <input type="hidden" name="address_landmark" value="{{ child_data.address_landmark }}">
+      <input type="hidden" name="tt_status_mother" value="{{ child_data.tt_status_mother }}">
+      <input type="hidden" name="tt_status_date" value="{{ child_data.tt_status_date }}">
+      <input type="hidden" name="newborn_screening" value="{{ child_data.newborn_screening }}">
+      <input type="hidden" name="newborn_screening_date" value="{{ child_data.newborn_screening_date }}">
+      <input type="hidden" name="feeding_method_id" value="{{ child_data.feeding_method_id }}">
+    {% endif %}
+  </form>
+
+  <!-- Hidden form for back navigation -->
+  <form id="backForm" method="post" action="{% url 'bhw_module:addchild3' %}" style="display: none;">
+    {% csrf_token %}
+    {% if child_data %}
+      <input type="hidden" name="child_id" value="{{ child_data.child_id }}">
+      <input type="hidden" name="child_name" value="{{ child_data.child_name }}">
+      <input type="hidden" name="mother_id" value="{{ child_data.mother_id }}">
+      <input type="hidden" name="mother_name" value="{{ child_data.mother_name }}">
+      <input type="hidden" name="father_id" value="{{ child_data.father_id }}">
+      <input type="hidden" name="father_name" value="{{ child_data.father_name }}">
+      <input type="hidden" name="sex" value="{{ child_data.sex }}">
+      <input type="hidden" name="dob" value="{{ child_data.dob }}">
+      <input type="hidden" name="philhealth_no" value="{{ child_data.philhealth_no }}">
+      <input type="hidden" name="phone_number" value="{{ child_data.phone_number }}">
+      <input type="hidden" name="time_of_birth" value="{{ child_data.time_of_birth }}">
+      <input type="hidden" name="birth_weight" value="{{ child_data.birth_weight }}">
+      <input type="hidden" name="birth_height" value="{{ child_data.birth_height }}">
+      <input type="hidden" name="place_of_delivery" value="{{ child_data.place_of_delivery }}">
+      <input type="hidden" name="address_landmark" value="{{ child_data.address_landmark }}">
+      <input type="hidden" name="tt_status_mother" value="{{ child_data.tt_status_mother }}">
+      <input type="hidden" name="tt_status_date" value="{{ child_data.tt_status_date }}">
+      <input type="hidden" name="newborn_screening" value="{{ child_data.newborn_screening }}">
+      <input type="hidden" name="newborn_screening_date" value="{{ child_data.newborn_screening_date }}">
+      <input type="hidden" name="feeding_method_id" value="{{ child_data.feeding_method_id }}">
+    {% endif %}
+  </form>
+</div>
+
+<script>
+function goBack() {
+  console.log('Back button clicked - redirecting to step 3');
+  window.location.href = '{% url "bhw_module:addchild3" %}';
+}
+
+function submitFinal() {
+  if (confirm('Are you sure you want to submit this child health record? This action cannot be undone.')) {
+    document.getElementById('finalForm').submit();
+  }
+}
+</script>
+
+{% endblock %}

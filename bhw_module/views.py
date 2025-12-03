@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, Child
+from .models import Dashboard, AnnouncementRepo, Child, Maternal
 from household_module.models import Household, Family
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params, coerce_message
@@ -33,40 +33,64 @@ _SQL_TO_UI_AUDIENCE = {
 @custom_login_required
 @role_required('Barangay Health Worker')  # add more personnel roles if needed
 def bhw_dashboard(request):
-    # ---- KPIs ----
-    try:
-        totals = Dashboard.sp_dashboard_totals(barangay=None, city=None)
-    except Exception as e:
-        messages.error(request, f"Failed loading totals: {e}")
-        totals = {
-            "total_resident": 0, "total_non_resident": 0, "total_pending": 0,
-            "total_male": 0, "total_female": 0
-        }
+    # ---- Core BHW/Nurse dashboard metrics ----
+    # Fallback to 0 if personnel_id is not set; this still returns barangay-wide totals.
+    personnel_id = getattr(request.user, "personnel_id", 0) or 0
 
-    # ---- Bar (per sitio) ----
-    try:
-        per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
-        per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
-        per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
-    except Exception as e:
-        messages.error(request, f"Failed loading per-sitio data: {e}")
-        per_sitio_labels, per_sitio_data = [], []
+    # Safe defaults for all expected keys
+    default_dash = {
+        "total_households": 0,
+        "total_families": 0,
+        "total_active_maternal": 0,
+        "total_active_maternal_by_bhw": 0,
+        "total_children_upcoming_immun_5d": 0,
+        "households_visited_today_by_bhw": 0,
+        "total_male": 0,
+        "total_female": 0,
+        "age_group_0_5": 0,
+        "age_group_6_12": 0,
+        "age_group_13_17": 0,
+        "age_group_18_59": 0,
+        "age_group_60_plus": 0,
+        "hh_visited_count": 0,
+        "hh_not_visited_count": 0,
+        "hh_visited_percent": 0,
+        "fam_visited_count": 0,
+        "fam_not_visited_count": 0,
+        "fam_visited_percent": 0,
+        "households_per_purok": [],
+        "quarter_id": None,
+    }
 
-    # ---- Pie (age) ----
     try:
-        age_rows = Dashboard.sp_age_bracket_distribution()
-        cleaned = []
-        for item in age_rows or []:
-            cleaned.append(item.get("jsonb_build_object", item))
-        age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
-        age_data   = [int(r.get("count") or 0) for r in cleaned]
-        total = sum(age_data) or 1
-        age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
+        raw_dash = Dashboard.bhw_dashboard(personnel_id=personnel_id, quarter_id=None)
     except Exception as e:
-        messages.error(request, f"Failed loading age distribution: {e}")
-        age_labels, age_data, age_labels_pct = [], [], []
+        messages.error(request, f"Failed loading dashboard metrics: {e}")
+        raw_dash = {}
 
-    # === Recent announcements (use list_all so we surely have 'audience') ===
+    dash = {**default_dash, **(raw_dash or {})}
+
+    # ---- Households per Purok (bar chart) ----
+    hh_per_purok = dash.get("households_per_purok") or []
+    per_sitio_labels = [str(r.get("sitio_name") or "Unassigned") for r in hh_per_purok]
+    per_sitio_data = [int(r.get("total_households") or 0) for r in hh_per_purok]
+
+    # ---- Age distribution (pie chart) ----
+    age_labels = ["0–5 yrs", "6–12 yrs", "13–17 yrs", "18–59 yrs", "60+ yrs"]
+    age_data = [
+        int(dash.get("age_group_0_5") or 0),
+        int(dash.get("age_group_6_12") or 0),
+        int(dash.get("age_group_13_17") or 0),
+        int(dash.get("age_group_18_59") or 0),
+        int(dash.get("age_group_60_plus") or 0),
+    ]
+    total_age = sum(age_data) or 1
+    age_labels_pct = [
+        f"{lbl} ({round((cnt / total_age) * 100)}%)"
+        for lbl, cnt in zip(age_labels, age_data)
+    ]
+
+    # === Recent announcements (unchanged) ===
     try:
         raw_latest = AnnouncementRepo.list_all(sort='date_desc', limit=20, audience=None)
         latest_announcements = []
@@ -74,7 +98,7 @@ def bhw_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):     # BHW sees Personnel + Everyone
+            if aud in ("personnel", "both"):     # Midwife sees Personnel + Everyone
                 latest_announcements.append(a)
             if len(latest_announcements) >= 3:
                 break
@@ -109,14 +133,14 @@ def bhw_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):   # enforce BHW scope
+            if aud in ("personnel", "both"):   # enforce personnel scope
                 announcements_all.append(a)
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
 
     ctx = {
-        "totals": totals,
+        "dash": dash,
         "per_sitio_labels": per_sitio_labels,
         "per_sitio_data": per_sitio_data,
         "age_labels": age_labels,
@@ -1311,7 +1335,7 @@ def general_health_get_api(request):
         row = Family.sp_get_specific_family_member_genhealth(fm_id)
     except Exception as e:
         # Log if you have logging; return a safe message to client
-        return JsonResponse({"error": "database_error", "detail": str(e)}, status=500)
+        return JsonResponse({"error": "database_error", "detail": _clean_db_error(e)}, status=500)
 
     if not row:
         return JsonResponse({"record": None, "exists": False}, status=200)
@@ -1410,7 +1434,7 @@ def update_general_health(request):
             set_flash(request, "No General Health record for this member in the current quarter.", "error")
             return _redirect_back(hid, household_number)
     except Exception as e:
-        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else _clean_db_error(e), "error")
         return _redirect_back(hid, household_number)
 
     # Normalize current values
@@ -1528,7 +1552,7 @@ def update_general_health(request):
         )
         set_flash(request, f"General Health updated. Changed: {', '.join(changed)}.", "success")
     except Exception as e:
-        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else str(e), "error")
+        set_flash(request, _clean_db_error(e) if ' _clean_db_error' in globals() else _clean_db_error(e), "error")
 
     return _redirect_back(hid, household_number)
 
@@ -1774,7 +1798,7 @@ def childList(request):
         )
     except Exception as e:
         msg = _clean_db_error(e)
-        set_flash(request, str(e), "error")
+        set_flash(request, msg, "error")
     
     has_next = len(results) > limit
     has_prev = page > 1
@@ -1826,22 +1850,615 @@ def childList(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild1(request):
-    return render(request, 'bhw_module/addchild1.html')
+    context = {}
+    if request.method == 'POST':
+        # Handle back navigation from addchild2 - pass POST data to template
+        context.update({
+            'child_data': {
+                'child_id': request.POST.get('child_id', ''),
+                'child_name': request.POST.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', ''),
+                'father_name': request.POST.get('father_name', ''),
+                'sex': request.POST.get('sex', ''),
+                'dob': request.POST.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', ''),
+            }
+        })
+    else:
+        # Clear session data when starting new record
+        if 'child_step4_data' in request.session:
+            del request.session['child_step4_data']
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild1.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild2(request):
-    return render(request, 'bhw_module/addchild2.html')
+    context = {}
+    # Always get existing session data first
+    existing_data = request.session.get('child_step4_data', {})
+    
+    if request.method == 'POST':
+        # Check if child ID changed - clear session if different child selected
+        current_child_id = request.POST.get('child_id', '')
+        if current_child_id and existing_data.get('child_id') and current_child_id != existing_data.get('child_id'):
+            existing_data = {}
+            if 'child_step4_data' in request.session:
+                del request.session['child_step4_data']
+        
+        # Check if this is form submission to go to step 3
+        if request.POST.get('time_of_birth') is not None:
+            # Store data in session before going to step 3, preserving step 3 data
+            session_data = {
+                'child_id': request.POST.get('child_id', '') or existing_data.get('child_id', ''),
+                'child_name': request.POST.get('child_name', '') or existing_data.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', '') or existing_data.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', '') or existing_data.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', '') or existing_data.get('father_id', ''),
+                'father_name': request.POST.get('father_name', '') or existing_data.get('father_name', ''),
+                'sex': request.POST.get('sex', '') or existing_data.get('sex', ''),
+                'dob': request.POST.get('dob', '') or existing_data.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', '') or existing_data.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', '') or existing_data.get('phone_number', ''),
+                'time_of_birth': request.POST.get('time_of_birth', ''),
+                'birth_weight': request.POST.get('birth_weight', ''),
+                'birth_height': request.POST.get('birth_height', ''),
+                'place_of_delivery': request.POST.get('place_of_delivery', ''),
+                # Preserve existing step 3 data
+                'address_landmark': existing_data.get('address_landmark', ''),
+                'tt_status_mother': existing_data.get('tt_status_mother', ''),
+                'tt_status_date': existing_data.get('tt_status_date', ''),
+                'newborn_screening': existing_data.get('newborn_screening', ''),
+                'newborn_screening_date': existing_data.get('newborn_screening_date', ''),
+                'feeding_method_id': existing_data.get('feeding_method_id', ''),
+            }
+            request.session['child_step4_data'] = session_data
+            return redirect('/bhw_module/addchild3/')
+        
+        # Handle POST data from addchild1 or back navigation from addchild3
+        # Merge POST data with existing session data, preserving step 3 data
+        merged_data = {
+            'child_id': request.POST.get('child_id', '') or existing_data.get('child_id', ''),
+            'child_name': request.POST.get('child_name', '') or existing_data.get('child_name', ''),
+            'mother_id': request.POST.get('mother_id', '') or existing_data.get('mother_id', ''),
+            'mother_name': request.POST.get('mother_name', '') or existing_data.get('mother_name', ''),
+            'father_id': request.POST.get('father_id', '') or existing_data.get('father_id', ''),
+            'father_name': request.POST.get('father_name', '') or existing_data.get('father_name', ''),
+            'sex': request.POST.get('sex', '') or existing_data.get('sex', ''),
+            'dob': request.POST.get('dob', '') or existing_data.get('dob', ''),
+            'philhealth_no': request.POST.get('philhealth_no', '') or existing_data.get('philhealth_no', ''),
+            'phone_number': request.POST.get('phone_number', '') or existing_data.get('phone_number', ''),
+            'time_of_birth': request.POST.get('time_of_birth', '') or existing_data.get('time_of_birth', ''),
+            'birth_weight': request.POST.get('birth_weight', '') or existing_data.get('birth_weight', ''),
+            'birth_height': request.POST.get('birth_height', '') or existing_data.get('birth_height', ''),
+            'place_of_delivery': request.POST.get('place_of_delivery', '') or existing_data.get('place_of_delivery', ''),
+            # Always preserve step 3 data
+            'address_landmark': existing_data.get('address_landmark', ''),
+            'tt_status_mother': existing_data.get('tt_status_mother', ''),
+            'tt_status_date': existing_data.get('tt_status_date', ''),
+            'newborn_screening': existing_data.get('newborn_screening', ''),
+            'newborn_screening_date': existing_data.get('newborn_screening_date', ''),
+            'feeding_method_id': existing_data.get('feeding_method_id', ''),
+        }
+        context.update({'child_data': merged_data})
+    else:
+        # Handle GET request - always use session data if available
+        if existing_data:
+            context.update({'child_data': existing_data})
+    
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild2.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def addchild3(request):
-    return render(request, 'bhw_module/addchild3.html')
+    context = {}
+    # Always get existing session data first
+    existing_data = request.session.get('child_step4_data', {})
+    
+    if request.method == 'POST':
+        # Check if this is just saving step 3 data (back navigation)
+        if request.POST.get('save_step3_data'):
+            session_data = {
+                'child_id': request.POST.get('child_id', '') or existing_data.get('child_id', ''),
+                'child_name': request.POST.get('child_name', '') or existing_data.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', '') or existing_data.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', '') or existing_data.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', '') or existing_data.get('father_id', ''),
+                'father_name': request.POST.get('father_name', '') or existing_data.get('father_name', ''),
+                'sex': request.POST.get('sex', '') or existing_data.get('sex', ''),
+                'dob': request.POST.get('dob', '') or existing_data.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', '') or existing_data.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', '') or existing_data.get('phone_number', ''),
+                'time_of_birth': request.POST.get('time_of_birth', '') or existing_data.get('time_of_birth', ''),
+                'birth_weight': request.POST.get('birth_weight', '') or existing_data.get('birth_weight', ''),
+                'birth_height': request.POST.get('birth_height', '') or existing_data.get('birth_height', ''),
+                'place_of_delivery': request.POST.get('place_of_delivery', '') or existing_data.get('place_of_delivery', ''),
+                'address_landmark': request.POST.get('address_landmark', ''),
+                'tt_status_mother': request.POST.get('tt_status_mother', ''),
+                'tt_status_date': request.POST.get('tt_status_date', ''),
+                'newborn_screening': request.POST.get('newborn_screening', ''),
+                'newborn_screening_date': request.POST.get('newborn_screening_date', ''),
+                'feeding_method_id': request.POST.get('feeding_method_id', ''),
+            }
+            request.session['child_step4_data'] = session_data
+            return JsonResponse({'status': 'saved'})
+        
+        # Check if this is form submission to go to step 4 (review)
+        if request.POST.get('address_landmark') is not None:
+            # Update session data with current form data
+            session_data = {
+                'child_id': request.POST.get('child_id', '') or existing_data.get('child_id', ''),
+                'child_name': request.POST.get('child_name', '') or existing_data.get('child_name', ''),
+                'mother_id': request.POST.get('mother_id', '') or existing_data.get('mother_id', ''),
+                'mother_name': request.POST.get('mother_name', '') or existing_data.get('mother_name', ''),
+                'father_id': request.POST.get('father_id', '') or existing_data.get('father_id', ''),
+                'father_name': request.POST.get('father_name', '') or existing_data.get('father_name', ''),
+                'sex': request.POST.get('sex', '') or existing_data.get('sex', ''),
+                'dob': request.POST.get('dob', '') or existing_data.get('dob', ''),
+                'philhealth_no': request.POST.get('philhealth_no', '') or existing_data.get('philhealth_no', ''),
+                'phone_number': request.POST.get('phone_number', '') or existing_data.get('phone_number', ''),
+                'time_of_birth': request.POST.get('time_of_birth', '') or existing_data.get('time_of_birth', ''),
+                'birth_weight': request.POST.get('birth_weight', '') or existing_data.get('birth_weight', ''),
+                'birth_height': request.POST.get('birth_height', '') or existing_data.get('birth_height', ''),
+                'place_of_delivery': request.POST.get('place_of_delivery', '') or existing_data.get('place_of_delivery', ''),
+                'address_landmark': request.POST.get('address_landmark', ''),
+                'tt_status_mother': request.POST.get('tt_status_mother', ''),
+                'tt_status_date': request.POST.get('tt_status_date', ''),
+                'newborn_screening': request.POST.get('newborn_screening', ''),
+                'newborn_screening_date': request.POST.get('newborn_screening_date', ''),
+                'feeding_method_id': request.POST.get('feeding_method_id', ''),
+            }
+            request.session['child_step4_data'] = session_data
+            return redirect('/bhw_module/addchild4/')
+        
+        # Handle POST data from addchild2 or back navigation from addchild4
+        # Merge POST data with existing session data
+        merged_data = {
+            'child_id': request.POST.get('child_id', '') or existing_data.get('child_id', ''),
+            'child_name': request.POST.get('child_name', '') or existing_data.get('child_name', ''),
+            'mother_id': request.POST.get('mother_id', '') or existing_data.get('mother_id', ''),
+            'mother_name': request.POST.get('mother_name', '') or existing_data.get('mother_name', ''),
+            'father_id': request.POST.get('father_id', '') or existing_data.get('father_id', ''),
+            'father_name': request.POST.get('father_name', '') or existing_data.get('father_name', ''),
+            'sex': request.POST.get('sex', '') or existing_data.get('sex', ''),
+            'dob': request.POST.get('dob', '') or existing_data.get('dob', ''),
+            'philhealth_no': request.POST.get('philhealth_no', '') or existing_data.get('philhealth_no', ''),
+            'phone_number': request.POST.get('phone_number', '') or existing_data.get('phone_number', ''),
+            'time_of_birth': request.POST.get('time_of_birth', '') or existing_data.get('time_of_birth', ''),
+            'birth_weight': request.POST.get('birth_weight', '') or existing_data.get('birth_weight', ''),
+            'birth_height': request.POST.get('birth_height', '') or existing_data.get('birth_height', ''),
+            'place_of_delivery': request.POST.get('place_of_delivery', '') or existing_data.get('place_of_delivery', ''),
+            'address_landmark': request.POST.get('address_landmark', '') or existing_data.get('address_landmark', ''),
+            'tt_status_mother': request.POST.get('tt_status_mother', '') or existing_data.get('tt_status_mother', ''),
+            'tt_status_date': request.POST.get('tt_status_date', '') or existing_data.get('tt_status_date', ''),
+            'newborn_screening': request.POST.get('newborn_screening', '') or existing_data.get('newborn_screening', ''),
+            'newborn_screening_date': request.POST.get('newborn_screening_date', '') or existing_data.get('newborn_screening_date', ''),
+            'feeding_method_id': request.POST.get('feeding_method_id', '') or existing_data.get('feeding_method_id', ''),
+        }
+        context.update({'child_data': merged_data})
+    else:
+        # Handle GET request - always use session data if available
+        if existing_data:
+            context.update({'child_data': existing_data})
+    
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild3.html', context)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def addchild4(request):
+    context = {}
+    
+    # Always get data from session
+    child_data = request.session.get('child_step4_data', {})
+    context['child_data'] = child_data
+    
+    if request.method == 'POST':
+        # Handle final submission
+        if 'submit_final' in request.POST:
+            try:
+                # Get and validate data from session (not POST)
+                child_id = int(child_data.get('child_id', 0))
+                time_of_birth = child_data.get('time_of_birth', '').strip() or None
+                
+                # Convert numeric fields
+                birth_weight_str = child_data.get('birth_weight', '').strip()
+                birth_weight = float(birth_weight_str) if birth_weight_str else None
+                
+                birth_height_str = child_data.get('birth_height', '').strip()
+                birth_height = float(birth_height_str) if birth_height_str else None
+                
+                place_of_delivery = child_data.get('place_of_delivery', '').strip() or None
+                address_landmark = child_data.get('address_landmark', '').strip() or None
+                
+                # Convert TT status to integer
+                tt_status_str = child_data.get('tt_status_mother', '').strip()
+                tt_status_mother = int(tt_status_str) if tt_status_str else None
+                
+                # Convert date fields
+                tt_status_date_str = child_data.get('tt_status_date', '').strip()
+                tt_status_date = tt_status_date_str if tt_status_date_str else None
+                
+                # Convert boolean field
+                newborn_screening_str = child_data.get('newborn_screening', '').strip()
+                newborn_screening_status = newborn_screening_str == 'true' if newborn_screening_str else None
+                
+                # Convert screening date
+                screening_date_str = child_data.get('newborn_screening_date', '').strip()
+                newborn_screening_status_date = screening_date_str if screening_date_str else None
+                
+                # Convert feeding method ID
+                feeding_method_str = child_data.get('feeding_method_id', '').strip()
+                feeding_method_id = int(feeding_method_str) if feeding_method_str else None
+                
+                pid = int(request.session.get('personnel_id') or 0)
+                
+                # Validate required fields
+                if not child_id:
+                    raise ValueError("Child ID is required")
+                if not pid:
+                    raise ValueError("Personnel ID is required")
+                if not address_landmark:
+                    raise ValueError("Address with Landmark is required")
+                
+                result = Child.sp_insert_child_health_record(
+                    child_id=child_id,
+                    time_of_birth=time_of_birth,
+                    birth_weight=birth_weight,
+                    birth_height=birth_height,
+                    place_of_delivery=place_of_delivery,
+                    address_landmark=address_landmark,
+                    tt_status_mother=tt_status_mother,
+                    tt_status_date=tt_status_date,
+                    newborn_screening_status=newborn_screening_status,
+                    newborn_screening_date=newborn_screening_status_date,
+                    feeding_method=feeding_method_id,
+                    pid=pid,
+                )
+                msg = coerce_message(result, "Child Record successfully added.")
+                set_flash(request, msg, 'success')
+                # Clear session data after successful submission
+                if 'child_step4_data' in request.session:
+                    del request.session['child_step4_data']
+                return redirect('bhw_module:childList')
+            except ValueError as e:
+                set_flash(request, _clean_db_error(e), "error")
+            except Exception as e:
+                msg = _clean_db_error(e)
+                set_flash(request, msg, "error")
+    
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/addchild4.html', context)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_medical_condition(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    medical_condition = request.POST.get('medical_condition_name', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not medical_condition:
+        set_flash(request, "Medical condition name is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Child.sp_add_child_medical_condition(
+            child_health_id=child_health_id,
+            medical_condition=medical_condition,
+            pid=pid
+        )
+        set_flash(request, "Medical condition added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_surgical_history(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    surgical_history_name = request.POST.get('surgical_history_name', '').strip()
+    date_of_surgery = request.POST.get('date_of_surgery', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not surgical_history_name:
+        set_flash(request, "Surgical history name is required.", "error")
+        return redirect_to_view()
+    
+    if not date_of_surgery:
+        set_flash(request, "Date of surgery is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Child.sp_add_child_surgical_history(
+            child_health_id=child_health_id,
+            surgical_history_name=surgical_history_name,
+            date_of_surgery=date_of_surgery,
+            pid=pid
+        )
+        set_flash(request, "Surgical history added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_child_growth_monitoring(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    try:
+        Child.sp_add_child_growth_monitoring(
+            child_health_id=child_health_id,
+            weight_kg=float(request.POST.get('weight_kg')),
+            height_cm=float(request.POST.get('height_cm')),
+            temp_c=float(request.POST.get('temp_c')),
+            resp_rate=int(request.POST.get('resp_rate')),
+            pulse_rate=int(request.POST.get('pulse_rate')),
+            notes=request.POST.get('notes', '').strip() or None,
+            pid=pid
+        )
+        set_flash(request, "Growth monitoring record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_child_supplement(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    supplement_id = request.POST.get('supplement_id')
+    age_in_months = request.POST.get('age_in_months')
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not supplement_id:
+        set_flash(request, "Supplement type is required.", "error")
+        return redirect_to_view()
+    
+    if not age_in_months:
+        set_flash(request, "Age in months is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Child.sp_add_child_supplement(
+            child_health_id=child_health_id,
+            supplement_id=int(supplement_id),
+            age_in_months=int(age_in_months),
+            pid=pid
+        )
+        set_flash(request, "Supplement added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_child_health_record(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    # Get current record for comparison
+    try:
+        prev = Child.sp_view_specific_child_health_record(child_health_id)
+        if not prev:
+            set_flash(request, "Child health record not found.", "error")
+            return redirect('bhw_module:childList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('bhw_module:childList')
+    
+    # Current values
+    curr_place = (prev.get('place_of_delivery') or '').strip()
+    curr_address = (prev.get('address_landmark') or '').strip()
+    curr_tt_status = prev.get('tt_status_id')
+    curr_tt_date = prev.get('tt_status_date')
+    curr_screening = prev.get('newborn_screening_status')
+    curr_screening_date = prev.get('newborn_screening_status_date')
+    curr_feeding = prev.get('feeding_method_id')
+    
+    # New values
+    new_place = (request.POST.get('place_of_delivery', '').strip() or '').strip()
+    new_address = (request.POST.get('address_landmark', '').strip() or '').strip()
+    new_tt_status = int(request.POST.get('tt_status_of_mother')) if request.POST.get('tt_status_of_mother') else None
+    new_tt_date = request.POST.get('tt_status_date', '').strip() or None
+    new_screening = request.POST.get('newborn_screening_status') == 'true' if request.POST.get('newborn_screening_status') else None
+    new_screening_date = request.POST.get('newborn_screening_status_date', '').strip() or None
+    new_feeding = int(request.POST.get('feeding_method_id')) if request.POST.get('feeding_method_id') else None
+    
+    # Compare changes
+    changed = []
+    if new_place != curr_place: changed.append("Place of delivery")
+    if new_address != curr_address: changed.append("Address with landmark")
+    if new_tt_status != curr_tt_status: changed.append("TT status of mother")
+    if str(new_tt_date or '') != str(curr_tt_date or ''): changed.append("TT status date")
+    if new_screening != curr_screening: changed.append("Newborn screening status")
+    if str(new_screening_date or '') != str(curr_screening_date or ''): changed.append("Screening date")
+    if new_feeding != curr_feeding: changed.append("Feeding method")
+    
+    if not changed:
+        set_flash(request, "No changes detected — nothing to update.", "info")
+        return redirect_to_view()
+    
+    try:
+        Child.sp_update_child_health_record(
+            child_health_id=child_health_id,
+            place_of_delivery=new_place or None,
+            address_landmark=new_address or None,
+            tt_status_of_mother=new_tt_status,
+            tt_status_date=new_tt_date,
+            newborn_screening_status=new_screening,
+            newborn_screening_status_date=new_screening_date,
+            feeding_method_id=new_feeding,
+            updated_by=pid
+        )
+        set_flash(request, f"Child health record updated successfully. Changed: {', '.join(changed)}.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def childView(request):
-    return render(request, 'bhw_module/childView.html')
+    child_health_id = request.POST.get('child_health_id') or request.GET.get('child_health_id')
+    result = None
+    medical_result = []
+    surgical_result = []
+    immunization_result = []
+    supplement_result = []
+    
+    try:
+        result = Child.sp_view_specific_child_health_record(child_health_id)
+        medical_data = Child.sp_view_specific_child_all_medical_condition(child_health_id)
+        surgical_data = Child.sp_view_specific_child_all_surgical_history(child_health_id)
+        immunization_data = Child.sp_view_specific_child_immunization_record(child_health_id)
+        supplement_data = Child.sp_view_all_child_supplements(child_health_id)
+        growth_data = Child.sp_view_specific_child_all_growth_monitoring(child_health_id)
+        breastfeed_data = Child.sp_view_specific_child_exclusive_breastfeed_track(child_health_id)
+        
+        medical_result = medical_data if medical_data else []
+        surgical_result = surgical_data if surgical_data else []
+        immunization_result = immunization_data if immunization_data else []
+        supplement_result = supplement_data if supplement_data else []
+        growth_result = growth_data if growth_data else []
+        breastfeed_result = breastfeed_data if breastfeed_data else []
+        
+        # Calculate growth trends for the template
+        growth_trends = {}
+        if len(growth_result) >= 2:
+            sorted_growth = sorted(growth_result, key=lambda x: (x.get('date_of_visit', ''), x.get('created_at', '')), reverse=True)
+            latest = sorted_growth[0]
+            previous = sorted_growth[1]
+            
+            latest_weight = float(latest.get('weight_kg', 0))
+            latest_height = float(latest.get('height_cm', 0))
+            previous_weight = float(previous.get('weight_kg', 0))
+            previous_height = float(previous.get('height_cm', 0))
+            
+            weight_diff = latest_weight - previous_weight
+            height_diff = latest_height - previous_height
+            
+            growth_trends = {
+                'weight_change': weight_diff,
+                'height_change': height_diff,
+                'latest_values': latest,
+                'previous_values': previous,
+                'has_weight_change': abs(weight_diff) > 0.01,
+                'has_height_change': abs(height_diff) > 0.01
+            }
+        
+        if not result:
+            set_flash(request, "Child Record not found.", "error")
+            return redirect('bhw_module:childList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('bhw_module:childList')
+    
+    # Get supplements list for dropdown
+    supplements = []
+    try:
+        supplements = Child.sp_get_supplements()
+    except Exception as e:
+        pass  # Continue without supplements if there's an error
+    
+    flash = get_flash(request)
+    
+    return render(request, 'bhw_module/childView.html', {
+        "results": result,
+        "medical_results": medical_result,
+        "surgical_results": surgical_result,
+        "immunization_results": immunization_result,
+        "supplement_results": supplement_result,
+        "growth_results": growth_result,
+        "growth_trends": growth_trends,
+        "breastfeed_results": breastfeed_result,
+        "supplements": supplements,
+        "message": flash['message'],
+        "message_level": flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -1953,17 +2570,540 @@ def genInfo(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalList(request):
-    return render(request, 'bhw_module/maternalList.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    raw_record_status = request.GET.get('record_status_id')
+    
+    try:
+        record_status_id = int(raw_record_status) if raw_record_status not in (None, '', '0') else None
+    except ValueError:
+        record_status_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Maternal.sp_view_all_maternal_record(
+            name_query=query,
+            record_status_id=record_status_id,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if record_status_id is not None:
+        base_params["record_status_id"] = record_status_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    record_status_options = []
+    try:
+        record_status_options = Maternal.sp_get_record_status()
+    except Exception:
+        pass
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/maternalList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "record_status_id": record_status_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        "record_status_options": record_status_options,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalAdd(request):
-    return render(request, 'bhw_module/maternalAdd.html')
+    context = {}
+    if request.method == 'POST':
+        try:
+            maternal_id = int(request.POST.get('maternal_id', 0))
+            address_landmark = request.POST.get('address_landmark', '').strip()
+            pid = int(request.session.get('personnel_id') or 0)
+            
+            if not maternal_id:
+                raise ValueError("Maternal ID is required")
+            if not pid:
+                raise ValueError("Personnel ID is required")
+            if not address_landmark:
+                raise ValueError("Address with Landmark is required")
+            
+            result = Maternal.sp_insert_maternal(
+                maternal_id=maternal_id,
+                address_landmark=address_landmark,
+                created_by=pid,
+            )
+            msg = coerce_message(result, "Maternal Record successfully added.")
+            set_flash(request, msg, 'success')
+            return redirect('bhw_module:maternalList')
+        except ValueError as e:
+            set_flash(request, _clean_db_error(e), "error")
+        except Exception as e:
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
+    
+    flash = get_flash(request)
+    context.update({
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+    return render(request, 'bhw_module/maternalAdd.html', context)
 
 @custom_login_required
 @role_required('Barangay Health Worker')
 def maternalView(request):
-    return render(request, 'bhw_module/maternalView.html')
+    maternal_health_id = request.POST.get('maternal_health_id') or request.GET.get('maternal_health_id')
+    result = None
+    
+    try:
+        result = Maternal.sp_view_specific_maternal_health_record(maternal_health_id)
+        obstetrical_data = Maternal.sp_view_obstetrical_history(maternal_health_id)
+        medical_conditions = Maternal.sp_view_specific_maternal_all_medical_condition(maternal_health_id)
+        surgical_history = Maternal.sp_view_specific_maternal_all_surgical_history(maternal_health_id)
+        immunization_data = Maternal.sp_view_specific_maternal_immunization_status_track(maternal_health_id)
+        
+        # Get last gravida and abortion for validation
+        last_gravida = 0
+        last_abortion = 0
+        if result and result.get('maternal_id'):
+            last_gravida = Maternal.sp_get_last_completed_gravida(result.get('maternal_id'))
+            last_abortion = Maternal.sp_get_last_completed_abortion(result.get('maternal_id'))
+        
+        if not result:
+            set_flash(request, "Maternal Record not found.", "error")
+            return redirect('bhw_module:maternalList')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('bhw_module:maternalList')
+    
+    flash = get_flash(request)
+    
+    # Get disease surveillance data
+    disease_surveillance_data = []
+    try:
+        disease_surveillance_data = Maternal.sp_view_specific_maternal_all_disease_surveillance(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without disease surveillance data if there's an error
+    
+    # Get disease types for dropdown
+    disease_types = []
+    try:
+        disease_types = Maternal.sp_get_disease_types()
+    except Exception as e:
+        pass  # Continue without disease types if there's an error
+    
+    # Get laboratory screening data
+    laboratory_screening_data = []
+    try:
+        laboratory_screening_data = Maternal.sp_view_specific_maternal_all_laboratory_screening(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without lab screening data if there's an error
+    
+    # Get test types for dropdown
+    test_types = []
+    try:
+        test_types = Maternal.sp_get_test_types()
+    except Exception as e:
+        pass  # Continue without test types if there's an error
+    
+    # Get checkup records
+    checkup_records = []
+    try:
+        checkup_records = Maternal.sp_view_specific_maternal_all_checkup_records(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without checkup records if there's an error
+    
+    # Get supplement records
+    supplement_records = []
+    try:
+        supplement_records = Maternal.sp_view_specific_maternal_all_supplements_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without supplement records if there's an error
+    
+    # Get supplement types for dropdown
+    supplement_types = []
+    try:
+        supplement_types = Maternal.sp_get_supplement_types()
+    except Exception as e:
+        pass  # Continue without supplement types if there's an error
+    
+    # Get deworming records
+    deworming_records = []
+    try:
+        deworming_records = Maternal.sp_view_specific_maternal_all_deworming_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without deworming records if there's an error
+    
+    # Get deworming types for dropdown
+    deworming_types = []
+    try:
+        deworming_types = Maternal.sp_get_deworming_types()
+    except Exception as e:
+        pass  # Continue without deworming types if there's an error
+    
+    # Get delivery outcome data
+    delivery_outcome = None
+    try:
+        delivery_outcome = Maternal.sp_view_specific_maternal_delivery_outcome(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without delivery outcome if there's an error
+    
+    # Get delivery outcome dropdown data
+    outcome_types = []
+    delivery_types = []
+    place_delivery_types = []
+    ownership_types = []
+    birth_attendants = []
+    try:
+        outcome_types = Maternal.sp_get_outcome_types()
+        delivery_types = Maternal.sp_get_delivery_types()
+        place_delivery_types = Maternal.sp_get_place_delivery_types()
+        ownership_types = Maternal.sp_get_ownership_types()
+        birth_attendants = Maternal.sp_get_birth_attendants()
+    except Exception as e:
+        pass  # Continue without dropdown data if there's an error
+    
+    # Get postpartum visit records
+    postpartum_records = []
+    try:
+        postpartum_records = Maternal.sp_view_specific_maternal_all_postpartum_visit(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without postpartum records if there's an error
+    
+    return render(request, 'bhw_module/maternalView.html', {
+        "results": result,
+        "obstetrical_data": obstetrical_data,
+        "medical_conditions": medical_conditions or [],
+        "surgical_history": surgical_history or [],
+        "immunization_data": immunization_data,
+        "disease_surveillance_data": disease_surveillance_data,
+        "disease_types": disease_types,
+        "laboratory_screening_data": laboratory_screening_data,
+        "test_types": test_types,
+        "checkup_records": checkup_records,
+        "supplement_records": supplement_records,
+        "supplement_types": supplement_types,
+        "deworming_records": deworming_records,
+        "deworming_types": deworming_types,
+        "delivery_outcome": delivery_outcome,
+        "outcome_types": outcome_types,
+        "delivery_types": delivery_types,
+        "place_delivery_types": place_delivery_types,
+        "ownership_types": ownership_types,
+        "birth_attendants": birth_attendants,
+        "postpartum_records": postpartum_records,
+        "last_gravida": last_gravida,
+        "last_abortion": last_abortion,
+        "message": flash['message'],
+        "message_level": flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def add_obstetrical_history(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if request.method == 'POST':
+        try:
+            maternal_health_id = int(request.POST.get('maternal_health_id', 0))
+            gravida = int(request.POST.get('gravida', 0))
+            para = int(request.POST.get('para', 0))
+            abortion = int(request.POST.get('abortion', 0))
+            last_menstrual_period = request.POST.get('last_menstrual_period')
+            expected_date_of_delivery = request.POST.get('expected_date_of_delivery')
+            
+            if not maternal_health_id:
+                raise ValueError("Maternal Health ID is required")
+            if not pid:
+                raise ValueError("Personnel ID is required")
+            
+            # Get maternal record to find maternal_id
+            maternal_record = Maternal.sp_view_specific_maternal_health_record(maternal_health_id)
+            if not maternal_record:
+                raise ValueError("Maternal record not found")
+            
+            maternal_id = maternal_record.get('maternal_id')
+            if not maternal_id:
+                raise ValueError("Maternal ID not found in record")
+            
+            # Check gravida restriction - new record must have higher gravida
+            last_gravida = Maternal.sp_get_last_completed_gravida(maternal_id)
+            if gravida <= last_gravida:
+                raise ValueError(f"Gravida must be greater than {last_gravida} (based on previous record)")
+            
+            # Check abortion restriction - new record must have >= abortion count
+            last_abortion = Maternal.sp_get_last_completed_abortion(maternal_id)
+            if abortion < last_abortion:
+                raise ValueError(f"Abortion count must be greater than or equal to {last_abortion} (based on previous record)")
+            
+            result = Maternal.sp_add_obstetrical_history(
+                maternal_health_id=maternal_health_id,
+                gravida=gravida,
+                para=para,
+                aborption=abortion,
+                last_menstrual_period=last_menstrual_period,
+                expected_date_of_delivery=expected_date_of_delivery,
+                pid=pid
+            )
+            
+            msg = coerce_message(result, "Obstetrical history successfully added.")
+            set_flash(request, msg, 'success')
+            
+        except ValueError as e:
+            set_flash(request, str(e), "error")
+        except Exception as e:
+            msg = _clean_db_error(e)
+            set_flash(request, msg, "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_medical_condition(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    medical_condition_name = request.POST.get('medical_condition_name', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not medical_condition_name:
+        set_flash(request, "Medical condition name is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_medical_condition(
+            maternal_health_id=maternal_health_id,
+            medical_condition_name=medical_condition_name,
+            pid=pid
+        )
+        set_flash(request, "Medical condition added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_surgical_history(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    surgical_history_name = request.POST.get('surgical_history_name', '').strip()
+    date_of_surgery = request.POST.get('date_of_surgery', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not surgical_history_name:
+        set_flash(request, "Surgical history name is required.", "error")
+        return redirect_to_view()
+    
+    if not date_of_surgery:
+        set_flash(request, "Date of surgery is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_surgical_history(
+            maternal_health_id=maternal_health_id,
+            surgical_history_name=surgical_history_name,
+            date_of_surgery=date_of_surgery,
+            pid=pid
+        )
+        set_flash(request, "Surgical history added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_immunization(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    dose_number = request.POST.get('dose_number')
+    date_given = request.POST.get('date_given', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not dose_number:
+        set_flash(request, "Dose number is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_immunization(
+            maternal_health_id=maternal_health_id,
+            dose_number=int(dose_number),
+            date_given=date_given,
+            pid=pid
+        )
+        set_flash(request, f"Dose {dose_number} immunization added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_disease_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    disease_type_id = request.POST.get('disease_type_id')
+    screening_date = request.POST.get('screening_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not disease_type_id:
+        set_flash(request, "Disease type is required.", "error")
+        return redirect_to_view()
+    
+    if not screening_date:
+        set_flash(request, "Screening date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_disease_screen_record(
+            maternal_health_id=maternal_health_id,
+            disease_type_id=int(disease_type_id),
+            screening_date=screening_date,
+            result=result or None,
+            pid=pid
+        )
+        set_flash(request, "Disease screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_lab_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    test_type_id = request.POST.get('test_type_id')
+    test_date = request.POST.get('test_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    iron_tablet_given_date = request.POST.get('iron_tablet_given_date', '').strip()
+    iron_tablet_quantity = request.POST.get('iron_tablet_quantity', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not test_type_id:
+        set_flash(request, "Test type is required.", "error")
+        return redirect_to_view()
+    
+    if not test_date:
+        set_flash(request, "Test date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_lab_screening_record(
+            maternal_health_id=maternal_health_id,
+            test_type_id=int(test_type_id),
+            test_date=test_date,
+            result=result or None,
+            iron_tablet_given_date=iron_tablet_given_date or None,
+            iron_tablet_quantity=int(iron_tablet_quantity) if iron_tablet_quantity else None,
+            pid=pid
+        )
+        set_flash(request, "Lab screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2049,7 +3189,7 @@ def resident_search_api(request):
             })
         return JsonResponse({'results': normalized})
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
     
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2062,7 +3202,7 @@ def child_search_api(request):
     try:
         # Call your search_child() SQL function
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM search_child(%s)", [q])
+            cursor.callproc("search_child", [q])
             cols = [col[0] for col in cursor.description]
             raw_rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
@@ -2093,4 +3233,406 @@ def child_search_api(request):
         return JsonResponse({'results': normalized})
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_exclusive_breastfeed(request):
+    child_health_id = request.POST.get('child_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    month_id = request.POST.get('month_id')
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/childView/?child_health_id={child_health_id}') if child_health_id else redirect('bhw_module:childList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not child_health_id:
+        set_flash(request, "Missing child health record ID.", "error")
+        return redirect('bhw_module:childList')
+    
+    if not month_id:
+        set_flash(request, "Assessment month is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Child.sp_add_exclusive_breastfeed_backfill(
+            child_health_id=child_health_id,
+            month_id=int(month_id),
+            pid=pid
+        )
+        set_flash(request, "Exclusive breastfeeding assessment added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def mother_search_api(request):
+    q = (request.GET.get('q') or '').strip()
+    if not q:
+        return JsonResponse({'results': []})
+    
+    try:
+        # Call Search_mother() SQL function
+        with connection.cursor() as cursor:
+            cursor.callproc("search_mother", [q])
+            cols = [col[0] for col in cursor.description]
+            raw_rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
+        
+        normalized = []
+        for r in raw_rows:
+            normalized.append({
+                'maternal_id': r.get('maternal_id'),
+                'full_name': r.get('full_name') or '',
+                'dob': r.get('dob').isoformat() if r.get('dob') else '',
+                'age_years': r.get('age_years') or 0,
+                'family_code': r.get('family_code') or '',
+                'nhts_status': r.get('nhts_status'),
+                'complete_address': r.get('complete_address') or '',
+                'phone_number': r.get('phone_number') or '',
+            })
+        return JsonResponse({'results': normalized})
+    except Exception as e:
+        return JsonResponse({'error': _clean_db_error(e)}, status=500)
+    
+# ===========================================================================================
+# HOUSEHOLD PDF GENERATION VIEWS FOR BHW MODULE
+# ===========================================================================================
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def generate_household_list_pdf(request):
+    '''
+    Generate PDF report for household list with applied filters
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    
+    try:
+        # Get filter parameters from query string
+        query = request.GET.get('query', '').strip() or None
+        status = request.GET.get('status', 'all').strip()
+        sitio_id = request.GET.get('sitio_id', '').strip() or None
+        quarter_id = request.GET.get('quarter_id', '').strip() or None
+        
+        # Generate PDF using the report utility
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="household_list_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating household list PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    '''
+    Generate PDF report for specific household details
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    
+    try:
+        quarter_id = request.GET.get('quarter_id', '').strip() or None
+        
+        # Generate PDF using the report utility
+        pdf_generator = HouseholdDetailPDF(
+            household_id=household_id,
+            quarter_id=quarter_id
+        )
+        
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="household_{household_id}_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating household detail PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_checkup_record(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    try:
+        maternal_health_id = int(request.POST.get('maternal_health_id', 0))
+        aog_weeks = int(request.POST.get('aog_weeks', 0))
+        weight_kg = float(request.POST.get('weight_kg', 0))
+        height_cm = float(request.POST.get('height_cm', 0))
+        bmi = request.POST.get('bmi') or None
+        blood_pressure = request.POST.get('blood_pressure', '').strip()
+        fetal_heart_rate = request.POST.get('fetal_heart_rate') or None
+        laboratory_results = request.POST.get('laboratory_results', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        if not maternal_health_id:
+            raise ValueError("Maternal Health ID is required")
+        if not aog_weeks:
+            raise ValueError("AOG (weeks) is required")
+        if not weight_kg:
+            raise ValueError("Weight is required")
+        if not height_cm:
+            raise ValueError("Height is required")
+        if not pid:
+            raise ValueError("Personnel ID is required")
+        
+        # Convert optional fields
+        if bmi:
+            bmi = float(bmi)
+        if fetal_heart_rate:
+            fetal_heart_rate = int(fetal_heart_rate)
+        
+        result = Maternal.sp_add_checkup_record(
+            maternal_health_id=maternal_health_id,
+            aog_weeks=aog_weeks,
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            bmi=bmi,
+            blood_pressure=blood_pressure,
+            fetal_heart_rate=fetal_heart_rate,
+            laboratory_results=laboratory_results,
+            notes=notes,
+            personnel_id=pid
+        )
+        
+        msg = coerce_message(result, "Checkup record successfully added.")
+        set_flash(request, msg, 'success')
+        
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_supplement(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    supplement_type_id = request.POST.get('supplement_type_id')
+    date_given = request.POST.get('date_given', '').strip()
+    number_of_tablets = request.POST.get('number_of_tablets', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not supplement_type_id:
+        set_flash(request, "Supplement type is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_supplement_record(
+            maternal_health_id=maternal_health_id,
+            supplement_type_id=int(supplement_type_id),
+            date_given=date_given,
+            number_of_tablets=int(number_of_tablets) if number_of_tablets else None,
+            personnel_id=pid
+        )
+        set_flash(request, "Supplement record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_deworming(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    deworming_type_id = request.POST.get('deworming_type_id')
+    date_given = request.POST.get('date_given', '').strip()
+    number_of_tablets = request.POST.get('number_of_tablets', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not deworming_type_id:
+        set_flash(request, "Deworming medicine is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_deworming_record(
+            maternal_health_id=maternal_health_id,
+            deworming_type_id=int(deworming_type_id),
+            number_of_tablets=int(number_of_tablets) if number_of_tablets else None,
+            date_given=date_given,
+            personnel_id=pid
+        )
+        set_flash(request, "Deworming record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_delivery_outcome(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        outcome_type_id = int(request.POST.get('outcome_type_id'))
+        delivery_type_id = int(request.POST.get('delivery_type_id'))
+        place_delivery_type_id = int(request.POST.get('place_delivery_type_id'))
+        birth_attendant_id = int(request.POST.get('birth_attendant_id'))
+        date_terminated = request.POST.get('date_terminated', '').strip()
+        
+        ownership_type_id = request.POST.get('ownership_type_id')
+        ownership_type_id = int(ownership_type_id) if ownership_type_id else None
+        
+        others_description = request.POST.get('others_description', '').strip() or None
+        other_attendant = request.POST.get('other_attendant', '').strip() or None
+        time_of_delivery = request.POST.get('time_of_delivery', '').strip() or None
+        
+        if not date_terminated:
+            raise ValueError("Date terminated is required")
+        
+        Maternal.sp_add_delivery_outcome(
+            maternal_health_id=maternal_health_id,
+            outcome_type_id=outcome_type_id,
+            delivery_type_id=delivery_type_id,
+            place_delivery_type_id=place_delivery_type_id,
+            ownership_type_id=ownership_type_id,
+            others_description=others_description,
+            birth_attendant_id=birth_attendant_id,
+            other_attendant=other_attendant,
+            time_of_delivery=time_of_delivery,
+            date_terminated=date_terminated,
+            personnel_id=pid
+        )
+        set_flash(request, "Delivery outcome added successfully.", "success")
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_postpartum_visit(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        date_of_visit = request.POST.get('date_of_visit', '').strip()
+        weight_kg = request.POST.get('weight_kg', '').strip()
+        height_cm = request.POST.get('height_cm', '').strip()
+        blood_pressure = request.POST.get('blood_pressure', '').strip() or None
+        notes = request.POST.get('notes', '').strip() or None
+        laboratory_notes = request.POST.get('laboratory_notes', '').strip() or None
+        
+        # Convert numeric fields
+        weight_kg = float(weight_kg) if weight_kg else None
+        height_cm = float(height_cm) if height_cm else None
+        
+        if not date_of_visit:
+            raise ValueError("Visit date is required")
+        
+        Maternal.sp_add_postpartum_visit(
+            maternal_health_id=maternal_health_id,
+            date_of_visit=date_of_visit,
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            blood_pressure=blood_pressure,
+            notes=notes,
+            laboratory_notes=laboratory_notes,
+            personnel_id=pid
+        )
+        set_flash(request, "Postpartum visit added successfully.", "success")
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()

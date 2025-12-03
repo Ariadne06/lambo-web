@@ -1,0 +1,103 @@
+{# nurse_module/templates/nurse_module/vaccine_edit.html #}
+{% extends "base_nurse.html" %}
+
+{% block title %}Edit Vaccine{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-5">
+
+  <div class="flex items-center gap-3">
+    <button type="button"
+            onclick="window.history.back()"
+            class="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100">
+      <i class="ri-arrow-left-line text-sm"></i>
+    </button>
+    <div>
+      <h1 class="text-base md:text-lg font-semibold text-gray-900">Edit Vaccine</h1>
+      <p class="text-xs text-gray-500">
+        Updating: <span class="font-semibold">{{ vaccine.vaccine_name }}</span>
+      </p>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+        {% with tag=message.tags %}
+        <div class="rounded-lg px-3 py-2 text-sm
+             {% if 'success' in tag %} bg-emerald-50 text-emerald-800 border border-emerald-200
+             {% elif 'error' in tag %} bg-rose-50 text-rose-800 border border-rose-200
+             {% else %} bg-gray-50 text-gray-800 border border-gray-200 {% endif %}">
+          {{ message }}
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="POST" class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-xs font-medium text-gray-700 mb-1">Vaccine Name</label>
+      <input type="text" name="vaccine_name"
+             value="{{ vaccine.vaccine_name }}"
+             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500">
+      <p class="mt-1 text-[11px] text-gray-500">
+        Leave blank to keep the current name (function will reuse existing value).
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-700 mb-1">Interval Between Doses</label>
+      <input type="text" name="interval_between_doses"
+             value="{{ vaccine.interval_between_doses }}"
+             placeholder="e.g. 4 weeks"
+             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500">
+      <p class="mt-1 text-[11px] text-gray-500">
+        Leave blank to keep the current interval. Required if any of 1st/2nd/3rd dose are enabled.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+        <input type="checkbox" name="at_birth"
+               {% if vaccine.at_birth %}checked{% endif %}
+               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+        <span>At Birth</span>
+      </label>
+      <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+        <input type="checkbox" name="first_dose"
+               {% if vaccine.first_dose %}checked{% endif %}
+               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+        <span>1st Dose</span>
+      </label>
+      <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+        <input type="checkbox" name="second_dose"
+               {% if vaccine.second_dose %}checked{% endif %}
+               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+        <span>2nd Dose</span>
+      </label>
+      <label class="inline-flex items-center gap-2 text-xs text-gray-800">
+        <input type="checkbox" name="third_dose"
+               {% if vaccine.third_dose %}checked{% endif %}
+               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+        <span>3rd Dose</span>
+      </label>
+    </div>
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+      <a href="{% url 'nurse_module:vaccine_list' %}"
+         class="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-gray-50">
+        Cancel
+      </a>
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">
+        <i class="ri-save-2-line text-sm"></i>
+        Save Changes
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
