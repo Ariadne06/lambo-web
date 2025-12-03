@@ -772,37 +772,29 @@ class ChildGrowthMonitoringCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Failed to add growth record: {str(e)}")
         
 class ChildImmunizationCreateSerializer(serializers.Serializer):
-    """
-    Serializer for creating child immunization records.
-    We DON'T ask for date_given (DB uses date_added).
-    """
-
     vaccine_type_id = serializers.IntegerField(required=True)
     dose_type_id = serializers.IntegerField(required=True)
+    date_given = serializers.DateField(required=True)   # <-- ADD THIS
 
     def create(self, validated_data):
         child_health_id = self.context.get("child_health_id")
         personnel_id = self.context.get("personnel_id")
 
-        if not child_health_id or not personnel_id:
-            raise serializers.ValidationError(
-                "Missing child_health_id or personnel_id"
-            )
-
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT add_immunization(%s, %s, %s, %s);",
+                "SELECT add_immunization(%s, %s, %s, %s, %s);",
                 [
                     child_health_id,
                     validated_data["vaccine_type_id"],
                     validated_data["dose_type_id"],
+                    validated_data["date_given"],
                     personnel_id,
                 ],
             )
             row = cursor.fetchone()
 
-        immunization_id = row[0] if row else None
-        return immunization_id
+        return row[0] if row else None
+
 
 
 class ChildSupplementCreateSerializer(serializers.Serializer):
@@ -1166,6 +1158,7 @@ class DewormingCreateSerializer(serializers.Serializer):
 
 
 class DeliveryOutcomeCreateSerializer(serializers.Serializer):
+    """Serializer for adding delivery outcome"""
     outcome_type_id = serializers.IntegerField(required=True)
     delivery_type_id = serializers.IntegerField(required=True)
     place_delivery_type_id = serializers.IntegerField(required=True)
@@ -1176,16 +1169,78 @@ class DeliveryOutcomeCreateSerializer(serializers.Serializer):
     time_of_delivery = serializers.TimeField(required=False, allow_null=True)
     date_terminated = serializers.DateField(required=True)
     personnel_id = serializers.IntegerField(required=True)
+    
+    def validate(self, data):
+        # Validate that ownership is provided if place is Health Facility
+        if data.get('place_delivery_type_id'):
+            try:
+                place = PlaceDeliveryType.objects.get(pk=data['place_delivery_type_id'])
+                if place.place_delivery_name.upper() == 'HEALTH FACILITY':
+                    if not data.get('ownership_type_id'):
+                        raise serializers.ValidationError({
+                            'ownership_type_id': 'Required when place is Health Facility'
+                        })
+                if place.place_delivery_name.upper() == 'OTHERS':
+                    if not data.get('others_description'):
+                        raise serializers.ValidationError({
+                            'others_description': 'Required when place is Others'
+                        })
+            except PlaceDeliveryType.DoesNotExist:
+                raise serializers.ValidationError({
+                    'place_delivery_type_id': 'Invalid place delivery type'
+                })
+        
+        # Validate other_attendant if attendant is Others
+        if data.get('birth_attendant_id'):
+            try:
+                attendant = BirthAttendant.objects.get(pk=data['birth_attendant_id'])
+                if attendant.birth_attendant_name.upper() == 'OTHERS':
+                    if not data.get('other_attendant'):
+                        raise serializers.ValidationError({
+                            'other_attendant': 'Required when attendant is Others'
+                        })
+            except BirthAttendant.DoesNotExist:
+                raise serializers.ValidationError({
+                    'birth_attendant_id': 'Invalid birth attendant'
+                })
+        
+        return data
 
 
 class PostpartumVisitCreateSerializer(serializers.Serializer):
+    """Serializer for adding postpartum visit"""
     date_of_visit = serializers.DateField(required=False, allow_null=True)
-    weight_kg = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    height_cm = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    blood_pressure = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    weight_kg = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    height_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    blood_pressure = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=20)
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     laboratory_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     personnel_id = serializers.IntegerField(required=True)
+    
+    def validate_weight_kg(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError('Weight must be greater than 0')
+        return value
+    
+    def validate_height_cm(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError('Height must be greater than 0')
+        return value
+    
+    def create(self, validated_data):
+        """Create postpartum visit via SQL function"""
+        from .utils.database_helpers import add_postpartum_visit
+        
+        maternal_health_id = self.context.get('maternal_health_id')
+        personnel_id = validated_data.pop('personnel_id')
+        
+        postpartum_id = add_postpartum_visit(
+            maternal_health_id=maternal_health_id,
+            data=validated_data,
+            personnel_id=personnel_id
+        )
+        
+        return {'postpartum_id': postpartum_id}
 
 
 # Child Vaccine Management

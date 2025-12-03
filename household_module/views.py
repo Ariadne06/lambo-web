@@ -20,7 +20,8 @@ from .serializers import (
     MaternalHealthUpdateSerializer, MaternalHealthStatusUpdateSerializer
 )
 from .utils.database_helpers import (
-    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record
+    search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record,
+    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -1938,84 +1939,100 @@ class ChildHealthRecordUpdateView(APIView):
 class ChildImmunizationListView(APIView):
     """
     GET /child-health-records/<child_health_id>/immunizations/
-    List all immunization records for a child.
-    Returns: Immunization schedule with dose completion status
+    Returns FULL immunization schedule with REAL DATE VALUES
     """
     def get(self, request, child_health_id):
         try:
             child_health_id = int(child_health_id)
             
-            # 1) Get child info
+            # 1) Child info
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT child_full_name 
                     FROM view_specific_child_health_record(%s)
                 """, [child_health_id])
+                row = cursor.fetchone()
+                if not row:
+                    return Response({
+                        'success': False,
+                        'error': 'Child health record not found'
+                    }, status=404)
                 
-                child_data = cursor.fetchone()
-                if not child_data:
-                    return Response(
-                        {
-                            'success': False,
-                            'error': 'Child health record not found'
-                        },
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-                
-                child_name = child_data[0]
-            
-            # 2) Get immunization records using the SQL view function
+                child_name = row[0]
+
+            # 2) Immunization records
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT * FROM view_specific_child_immunization_record(%s)
+                    SELECT 
+                        vaccine_type_id,
+                        vaccine_name,
+                        at_birth_date,
+                        first_dose_date,
+                        second_dose_date,
+                        third_dose_date,
+                        last_administered,
+                        next_recommended_date,
+                        status,
+                        is_delayed
+                    FROM view_specific_child_immunization_record(%s)
                 """, [child_health_id])
-                
+
                 columns = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
-                
+
                 immunizations = []
                 for row in rows:
                     record = dict(zip(columns, row))
-                    
-                    # Format for frontend
+
                     immunizations.append({
-                        'vaccine_type_id': record['vaccine_type_id'],
-                        'vaccine_name': record['vaccine_name'],
-                        'at_birth_given': record['at_birth_given'],
-                        'first_dose_given': record['first_dose_given'],
-                        'second_dose_given': record['second_dose_given'],
-                        'third_dose_given': record['third_dose_given'],
-                        'last_administered': (
-                            record['last_administered'].isoformat()
-                            if record['last_administered'] else None
+                        "vaccine_type_id": record["vaccine_type_id"],
+                        "vaccine_name": record["vaccine_name"],
+
+                        # RETURN REAL DATE VALUES
+                        "at_birth_date": (
+                            record["at_birth_date"].isoformat()
+                            if record["at_birth_date"] else None
                         ),
-                        'next_recommended_date': (
-                            record['next_recommended_date'].isoformat()
-                            if record['next_recommended_date'] else None
+                        "first_dose_date": (
+                            record["first_dose_date"].isoformat()
+                            if record["first_dose_date"] else None
                         ),
-                        'is_delayed': record['is_delayed'],
+                        "second_dose_date": (
+                            record["second_dose_date"].isoformat()
+                            if record["second_dose_date"] else None
+                        ),
+                        "third_dose_date": (
+                            record["third_dose_date"].isoformat()
+                            if record["third_dose_date"] else None
+                        ),
+
+                        "last_administered": (
+                            record["last_administered"].isoformat()
+                            if record["last_administered"] else None
+                        ),
+                        "next_recommended_date": (
+                            record["next_recommended_date"].isoformat()
+                            if record["next_recommended_date"] else None
+                        ),
+
+                        "status": record["status"],
+                        "is_delayed": record["is_delayed"],
                     })
-            
-            return Response(
-                {
-                    'success': True,
-                    'child_name': child_name,
-                    'child_health_id': child_health_id,
-                    'data': immunizations,
-                    'count': len(immunizations),
-                },
-                status=status.HTTP_200_OK
-            )
-            
+
+            return Response({
+                'success': True,
+                'child_name': child_name,
+                'child_health_id': child_health_id,
+                'data': immunizations,
+                'count': len(immunizations),
+            })
+
         except Exception as e:
-            print(f"❌ Failed to fetch immunizations: {str(e)}")
-            return Response(
-                {
-                    'success': False,
-                    'error': f'Failed to fetch immunization records: {str(e)}'
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            print("❌ Error:", str(e))
+            return Response({
+                'success': False,
+                'error': f"Failed to fetch immunizations: {str(e)}"
+            }, status=500)
 
 class ChildImmunizationCreateView(APIView):
     """Add immunization record"""
@@ -2645,40 +2662,50 @@ class SearchMotherView(APIView):
 
 
 class MaternalHealthRecordListView(APIView):
-    """List all maternal health records with filtering"""
+    """List maternal health records with search, status filter, and pagination"""
+
     def get(self, request):
         try:
-            # Get filter parameters
-            name_query = request.query_params.get('name_query')
-            family_code = request.query_params.get('family_code')
-            record_status = request.query_params.get('record_status')
-            date_from = request.query_params.get('date_from')
-            date_to = request.query_params.get('date_to')
-            limit = int(request.query_params.get('limit', 50))
-            
-            from .utils.database_helpers import view_all_maternal_record
-            results = view_all_maternal_record(
-                name_query=name_query,
-                family_code=family_code,
-                record_status=record_status,
-                date_from=date_from,
-                date_to=date_to
-            )
-            
-            # Apply limit
-            results = results[:limit]
-            
+            # NEW correct parameters (matching SQL function)
+            p_query = request.query_params.get("p_query", "").strip() or None
+            p_record_status_id = request.query_params.get("p_record_status_id", None)
+            p_limit = int(request.query_params.get("limit", 50))
+            p_offset = int(request.query_params.get("offset", 0))
+
+            # Convert record_status_id to int when provided
+            if p_record_status_id is not None:
+                try:
+                    p_record_status_id = int(p_record_status_id)
+                except ValueError:
+                    return Response({
+                        "success": False,
+                        "error": "Invalid p_record_status_id"
+                    }, status=400)
+
+            with connection.cursor() as cursor:
+                cursor.callproc("view_all_maternal_record", [
+                    p_query,
+                    p_record_status_id,
+                    p_limit,
+                    p_offset
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                results = [dict(zip(cols, row)) for row in rows]
+
             return Response({
-                'success': True,
-                'count': len(results),
-                'data': results
-            })
+                "success": True,
+                "count": len(results),
+                "data": results   # data includes household_number + family_code
+            }, status=200)
+
         except Exception as e:
-            print(f"❌ List maternal records error: {str(e)}")
+            print(f"❌ Error in View_all_maternal_record: {e}")
             return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
 
 
 # ========================================
@@ -3281,10 +3308,37 @@ class DiseaseScreenListView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class DiseaseTypeListView(APIView):
+    def get(self, request):
+        types = DiseaseType.objects.filter(is_active=True).values(
+            "disease_type_id",
+            "disease_name"
+        )
+        return Response({
+            "success": True,
+            "data": list(types)
+        })
+
 
 # ========================================
 # LABORATORY SCREENING
 # ========================================
+class TestTypeListView(APIView):
+    def get(self, request):
+        try:
+            test_types = TestType.objects.all().values(
+                "test_type_id", "test_name"
+            )
+            return Response({
+                "success": True,
+                "data": list(test_types)
+            })
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
 
 class LabScreeningCreateView(APIView):
     """Add laboratory screening"""
@@ -3562,19 +3616,22 @@ class DewormingListView(APIView):
 # PREGNANCY OUTCOME
 # ========================================
 
+# ========================================
+# PREGNANCY OUTCOME
+# ========================================
+
 class DeliveryOutcomeCreateView(APIView):
-    """Add delivery outcome (marks record as Completed)"""
+    """Add delivery outcome (marks maternal record as completed)"""
     def post(self, request, maternal_health_id):
-        serializer = DeliveryOutcomeCreateSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({
-                'success': False,
-                'error': 'Validation failed',
-                'details': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
-            from .utils.database_helpers import add_delivery_outcome
+            serializer = DeliveryOutcomeCreateSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             outcome_id = add_delivery_outcome(
                 maternal_health_id=maternal_health_id,
@@ -3585,21 +3642,34 @@ class DeliveryOutcomeCreateView(APIView):
             return Response({
                 'success': True,
                 'outcome_id': outcome_id,
-                'message': 'Delivery outcome recorded successfully'
+                'message': 'Delivery outcome recorded successfully. Maternal record marked as Completed.'
             }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
+            error_msg = str(e)
+            
+            # Handle specific error codes
+            if 'M4B08' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Delivery outcome already exists for this record'
+                }, status=status.HTTP_409_CONFLICT)
+            elif 'M4B11' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Cannot add outcome: record status is not Ongoing'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
             return Response({
                 'success': False,
-                'error': str(e)
+                'error': error_msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DeliveryOutcomeView(APIView):
-    """View delivery outcome"""
+    """View delivery outcome for a maternal health record"""
     def get(self, request, maternal_health_id):
         try:
-            from .utils.database_helpers import view_maternal_delivery_outcome
-            
             outcome = view_maternal_delivery_outcome(maternal_health_id)
             
             return Response({
@@ -3620,47 +3690,62 @@ class DeliveryOutcomeView(APIView):
 class PostpartumVisitCreateView(APIView):
     """Add postpartum visit"""
     def post(self, request, maternal_health_id):
-        serializer = PostpartumVisitCreateSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({
-                'success': False,
-                'error': 'Validation failed',
-                'details': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
-            from .utils.database_helpers import add_postpartum_visit
-            
-            postpartum_id = add_postpartum_visit(
-                maternal_health_id=maternal_health_id,
-                data=serializer.validated_data,
-                personnel_id=serializer.validated_data['personnel_id']
+            serializer = PostpartumVisitCreateSerializer(
+                data=request.data,
+                context={'maternal_health_id': maternal_health_id}
             )
+            
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            result = serializer.save()
             
             return Response({
                 'success': True,
-                'postpartum_id': postpartum_id,
+                'postpartum_id': result['postpartum_id'],
                 'message': 'Postpartum visit recorded successfully'
             }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
+            error_msg = str(e)
+            
+            # Handle specific error codes
+            if 'M4C02' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Add delivery outcome first before recording postpartum visit'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            elif 'M4C03' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Postpartum visit date cannot be before delivery date'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
             return Response({
                 'success': False,
-                'error': str(e)
+                'error': error_msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PostpartumVisitListView(APIView):
-    """List all postpartum visits"""
+    """View all postpartum visits"""
     def get(self, request, maternal_health_id):
         try:
-            from .utils.database_helpers import view_maternal_all_postpartum_visits
-            
             visits = view_maternal_all_postpartum_visits(maternal_health_id)
+            
+            # Get maternal name
+            maternal_data = view_specific_maternal_health_record(maternal_health_id)
             
             return Response({
                 'success': True,
                 'count': len(visits),
-                'data': visits
+                'data': visits,
+                'maternal_name': maternal_data.get('full_name') if maternal_data else None
             })
         except Exception as e:
             return Response({
