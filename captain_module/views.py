@@ -3,6 +3,8 @@ from authentication.decorators import custom_login_required, role_required
 from utils.flash import set_flash, get_flash
 from utils.db_message import _clean_db_error, _clean_params
 from .models import Captain, Dashboard, AnnouncementRepo, ResidentList, BusinessList
+from django.conf import settings
+from django.http import Http404
 from django.utils.http import urlencode
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from django.contrib import messages
@@ -1213,3 +1215,51 @@ def generate_resident_detail_pdf(request, resident_id: int):
         import traceback
         print(f"[ERROR] Failed to generate resident detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+def _public_url(request, path: str | None):
+    """Normalize DB-stored image paths so the template always gets a usable URL."""
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    media_path = base + path.lstrip('/')
+    return request.build_absolute_uri(media_path)
+
+@custom_login_required
+@role_required('Barangay Captain')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details using get_specific_announcement function"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        # Normalize image URL for display
+        if announcement.get('announcement_image_path'):
+            image_path = announcement.get('announcement_image_path')
+            if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+                announcement['image_url'] = image_path  # Already a full URL from Supabase
+            else:
+                announcement['image_url'] = _public_url(request, image_path)  # Fallback for local files
+        
+        # Normalize audience display
+        if announcement.get('audience'):
+            announcement['audience'] = _SQL_TO_UI_AUDIENCE.get(announcement['audience'], 'EVERYONE')
+        
+        # Compatibility aliases
+        if 'created_date' in announcement and 'date' not in announcement:
+            announcement['date'] = announcement['created_date']
+        
+        return render(request, 'captain_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('captain_module:captain_dashboard')

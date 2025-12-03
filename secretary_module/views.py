@@ -27,7 +27,10 @@ from household_module.models import Household, Family
 import json
 from django.views.decorators.http import require_GET
 from notifications.service import NotificationService
+from supabase import create_client, Client
 import logging
+import uuid
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -2463,10 +2466,46 @@ def _public_url(request, path: str | None):
         return path
     if path.startswith('/'):
         return request.build_absolute_uri(path)
+    # For relative paths, construct the media URL
     base = settings.MEDIA_URL or '/media/'
     if not base.endswith('/'):
         base += '/'
-    return request.build_absolute_uri(base + path.lstrip('/'))
+    media_path = base + path.lstrip('/')
+    return request.build_absolute_uri(media_path)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details using get_specific_announcement function"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        # Normalize image URL for display
+        if announcement.get('announcement_image_path'):
+            image_path = announcement.get('announcement_image_path')
+            if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+                announcement['image_url'] = image_path  # Already a full URL from Supabase
+            else:
+                announcement['image_url'] = _public_url(request, image_path)  # Fallback for local files
+        
+        # Normalize audience display
+        if announcement.get('audience'):
+            announcement['audience'] = _SQL_TO_UI_AUDIENCE.get(announcement['audience'], 'EVERYONE')
+        
+        # Compatibility aliases
+        if 'created_date' in announcement and 'date' not in announcement:
+            announcement['date'] = announcement['created_date']
+        
+        return render(request, 'secretary_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('secretary_module:secretary_dashboard')
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -2502,8 +2541,44 @@ def announcement(request):
             image_db_path = None
             f = request.FILES.get('image')
             if f:
-                saved = default_storage.save(f"announcements/{f.name}", f)  # store relative path
-                image_db_path = saved
+                try:
+                    # Validate file type
+                    if not f.content_type.startswith('image/'):
+                        ctx['errors'].append('Please upload a valid image file.')
+                    # Validate file size (5MB limit)
+                    elif f.size > 5 * 1024 * 1024:
+                        ctx['errors'].append('Image file size must be less than 5MB.')
+                    else:
+                        # Upload to Supabase
+                        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+                        
+                        # Generate unique filename
+                        file_extension = os.path.splitext(f.name)[1].lower()
+                        if file_extension not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            file_extension = '.jpg'
+                        unique_filename = f"{uuid.uuid4()}{file_extension}"
+                        
+                        # Upload file to Supabase storage
+                        response = supabase.storage.from_(settings.SUPABASE_BUCKET_ANNOUNCEMENTS).upload(
+                            unique_filename,
+                            f.read()
+                        )
+                        
+                        if response:
+                            # Try public URL first, fallback to signed URL if bucket is private
+                            try:
+                                public_url = supabase.storage.from_(settings.SUPABASE_BUCKET_ANNOUNCEMENTS).get_public_url(unique_filename)
+                                image_db_path = public_url
+                            except Exception:
+                                # Fallback to signed URL (24 hours expiry)
+                                signed_url = supabase.storage.from_(settings.SUPABASE_BUCKET_ANNOUNCEMENTS).create_signed_url(unique_filename, 86400)
+                                image_db_path = signed_url.get('signedURL') if signed_url else None
+                                if not image_db_path:
+                                    ctx['errors'].append('Failed to generate image URL.')
+                        else:
+                            ctx['errors'].append('Failed to upload image. Please try again.')
+                except Exception as e:
+                    ctx['errors'].append(f'Failed to upload image: {str(e)}')
 
             try:
                 if action == 'create' and not ctx['errors']:
@@ -2564,9 +2639,13 @@ def announcement(request):
     elif announcements:
         selected = AnnouncementRepo.get_one(int(announcements[0]['announcement_id']))
 
-    # normalize image URL for the selected item (keeps your existing behavior)
+    # normalize image URL for the selected item (Supabase URLs are already public)
     if selected and 'announcement_image_path' in selected:
-        selected['image_url'] = _public_url(request, selected.get('announcement_image_path'))
+        image_path = selected.get('announcement_image_path')
+        if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+            selected['image_url'] = image_path  # Already a full URL from Supabase
+        else:
+            selected['image_url'] = _public_url(request, image_path)  # Fallback for local files
 
     # normalize audience to what your template expects (EVERYONE | PERSONNEL | RESIDENTS)
     if selected and selected.get('audience'):
