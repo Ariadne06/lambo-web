@@ -1474,7 +1474,7 @@ def add_delivery_outcome(maternal_health_id, data, personnel_id):
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT add_delivery_outcome(
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """, [
                 maternal_health_id,
@@ -1487,6 +1487,8 @@ def add_delivery_outcome(maternal_health_id, data, personnel_id):
                 data.get('other_attendant'),
                 data.get('time_of_delivery'),
                 data['date_terminated'],
+                data.get('baby_birthweight_in_grams'), 
+                data.get('baby_sex'),                   
                 personnel_id
             ])
             return cursor.fetchone()[0]
@@ -1764,3 +1766,39 @@ def get_bhw_dashboard(personnel_id, quarter_id=None):
     except Exception as e:
         print(f"Failed to get BHW dashboard: {str(e)}")
         raise Exception(f"Database operation failed: {str(e)}")
+
+def view_all_child_immunization_schedule(query=None, limit=100, offset=0):
+    """
+    View all upcoming child immunization schedules
+    
+    Args:
+        query (str, optional): Search term for child name, family code, or vaccine name
+        limit (int): Pagination limit (default: 100, max: 500)
+        offset (int): Pagination offset (default: 0)
+    
+    Returns:
+        list: List of upcoming immunization schedules
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM view_all_child_immunization_schedule(
+                    p_query := %s,
+                    p_limit := %s,
+                    p_offset := %s
+                )
+                """,
+                [query, limit, offset]
+            )
+            
+            columns = [col[0] for col in cursor.description]
+            results = []
+            for row in cursor.fetchall():
+                results.append(dict(zip(columns, row)))
+            
+            return results
+            
+    except Exception as e:
+        print(f"❌ Failed to view immunization schedule: {str(e)}")
+        raise Exception(f"Failed to view immunization schedule: {str(e)}")
