@@ -661,6 +661,29 @@ class BusinessTaxConfig(models.Model):
             return cur.fetchone()[0]
         
 
+class CTCFeeConfig(models.Model):
+    """
+    Thin wrapper for Business Clearance Certified True Copy Fee configuration SQL functions.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_ctc_fee():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_ctc_fee()")
+            row = cursor.fetchone()
+            if row:
+                return dict(zip([col[0] for col in cursor.description], row))
+            return {'amount': None, 'updated_at': None, 'updated_by': None}
+
+    @staticmethod
+    def sp_update_ctc_fee(amount, updated_by=None):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_ctc_fee(%s, %s)", [amount, updated_by])
+            cursor.fetchone()
+
+
 class AnnouncementRepo(models.Model):
     """
     Thin wrapper around your SQL functions:

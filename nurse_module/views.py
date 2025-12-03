@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
+from .models import Dashboard, AnnouncementRepo, ResidentList, Maternal, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -622,13 +622,13 @@ def nurse_householdView(request):
 
     if not raw_hid:
         set_flash(request, "No household selected.", "error")
-        return redirect('bhw_module:householdList')
+        return redirect('nurse_module:nurse_householdView')
 
     try:
         hid = int(raw_hid)
     except (TypeError, ValueError):
         set_flash(request, "Invalid household id.", "error")
-        return redirect('bhw_module:householdList')
+        return redirect('nurse_module:nurse_householdView')
 
     # Parse quarter id if present
     qid = None
@@ -644,10 +644,10 @@ def nurse_householdView(request):
         
         if not result:
             set_flash(request, "Household not found.", "error")
-            return redirect('bhw_module:householdList')
+            return redirect('nurse_module:nurse_householdView')
     except Exception as e:
         set_flash(request, _clean_db_error(e), "error")
-        return redirect('bhw_module:householdList')
+        return redirect('nurse_module:nurse_householdView')
 
     # Build families list and decode JSONB members
     families = []
@@ -1031,78 +1031,322 @@ def childSupplements(request, child_health_id: int):
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
-
-    # ---- Filters ----
-    q = request.GET.get("q") or None
-    record_status_text = request.GET.get("record_status") or None
-
-    # Map text → record_status_id
-    status_map = {
-        "Ongoing": 1,
-        "Completed": 2,
-        "Incomplete": 3,
-    }
-    record_status_id = status_map.get(record_status_text)
-
-    # ---- Pagination ----
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    raw_record_status = request.GET.get('record_status_id')
+    
     try:
-        page = int(request.GET.get("page", "1"))
+        record_status_id = int(raw_record_status) if raw_record_status not in (None, '', '0') else None
     except ValueError:
+        record_status_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
         page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        results = Maternal.sp_view_all_maternal_record(
+            name_query=query,
+            record_status_id=record_status_id,
+            limit=limit + 1,
+            offset=offset,
+        )
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if record_status_id is not None:
+        base_params["record_status_id"] = record_status_id
 
-    per_page = 10
-    offset = (page - 1) * per_page
-
-    # ---- Fetch data ----
-    total_count = MaternalHealthListRow.count(
-        query=q,
-        record_status_id=record_status_id,
-    )
-
-    maternal_records = MaternalHealthListRow.fetch(
-        query=q,
-        record_status_id=record_status_id,
-        limit=per_page,
-        offset=offset,
-    )
-
-    # ---- Pagination building ----
-    total_pages = max(1, math.ceil(total_count / per_page))
-    page = min(page, total_pages)
-
-    window = 2
-    start_page = max(1, page - window)
-    end_page = min(total_pages, page + window)
-    page_range = range(start_page, end_page + 1)
-
-    # Build base_query (keep filters)
-    qs_params = {}
-    for key in ["q", "record_status"]:
-        val = request.GET.get(key)
-        if val:
-            qs_params[key] = val
-
-    base_query = urlencode(qs_params)
-
-    return render(request, "nurse_module/maternalrecord.html", {
-        "maternal_records": maternal_records,
-        "filters": {
-            "q": q or "",
-            "record_status": record_status_text or "",
-        },
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "total_count": total_count,
-            "has_prev": page > 1,
-            "has_next": page < total_pages,
-            "prev_page": page - 1,
-            "next_page": page + 1,
-            "page_range": page_range,
-        },
-        "base_query": base_query,
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    record_status_options = []
+    try:
+        record_status_options = Maternal.sp_get_record_status()
+    except Exception:
+        pass
+    
+    flash = get_flash(request)
+    return render(request, 'nurse_module/maternalrecord.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "record_status_id": record_status_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        "record_status_options": record_status_options,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
     })
+    
+@custom_login_required
+@role_required('Midwife')
+def maternalView(request):
+    maternal_health_id = request.POST.get('maternal_health_id') or request.GET.get('maternal_health_id')
+    result = None
+    
+    try:
+        result = Maternal.sp_view_specific_maternal_health_record(maternal_health_id)
+        obstetrical_data = Maternal.sp_view_obstetrical_history(maternal_health_id)
+        medical_conditions = Maternal.sp_view_specific_maternal_all_medical_condition(maternal_health_id)
+        surgical_history = Maternal.sp_view_specific_maternal_all_surgical_history(maternal_health_id)
+        immunization_data = Maternal.sp_view_specific_maternal_immunization_status_track(maternal_health_id)
+        
+        # Get last gravida and abortion for validation
+        last_gravida = 0
+        last_abortion = 0
+        if result and result.get('maternal_id'):
+            last_gravida = Maternal.sp_get_last_completed_gravida(result.get('maternal_id'))
+            last_abortion = Maternal.sp_get_last_completed_abortion(result.get('maternal_id'))
+        
+        if not result:
+            set_flash(request, "Maternal Record not found.", "error")
+            return redirect('nurse_module:maternalrecord')
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    flash = get_flash(request)
+    
+    # Get disease surveillance data
+    disease_surveillance_data = []
+    try:
+        disease_surveillance_data = Maternal.sp_view_specific_maternal_all_disease_surveillance(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without disease surveillance data if there's an error
+    
+    # Get disease types for dropdown
+    disease_types = []
+    try:
+        disease_types = Maternal.sp_get_disease_types()
+    except Exception as e:
+        pass  # Continue without disease types if there's an error
+    
+    # Get laboratory screening data
+    laboratory_screening_data = []
+    try:
+        laboratory_screening_data = Maternal.sp_view_specific_maternal_all_laboratory_screening(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without lab screening data if there's an error
+    
+    # Get test types for dropdown
+    test_types = []
+    try:
+        test_types = Maternal.sp_get_test_types()
+    except Exception as e:
+        pass  # Continue without test types if there's an error
+    
+    # Get checkup records
+    checkup_records = []
+    try:
+        checkup_records = Maternal.sp_view_specific_maternal_all_checkup_records(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without checkup records if there's an error
+    
+    # Get supplement records
+    supplement_records = []
+    try:
+        supplement_records = Maternal.sp_view_specific_maternal_all_supplements_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without supplement records if there's an error
+    
+    # Get supplement types for dropdown
+    supplement_types = []
+    try:
+        supplement_types = Maternal.sp_get_supplement_types()
+    except Exception as e:
+        pass  # Continue without supplement types if there's an error
+    
+    # Get deworming records
+    deworming_records = []
+    try:
+        deworming_records = Maternal.sp_view_specific_maternal_all_deworming_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without deworming records if there's an error
+    
+    # Get deworming types for dropdown
+    deworming_types = []
+    try:
+        deworming_types = Maternal.sp_get_deworming_types()
+    except Exception as e:
+        pass  # Continue without deworming types if there's an error
+    
+    # Get delivery outcome data
+    delivery_outcome = None
+    try:
+        delivery_outcome = Maternal.sp_view_specific_maternal_delivery_outcome(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without delivery outcome if there's an error
+    
+    # Get delivery outcome dropdown data
+    outcome_types = []
+    delivery_types = []
+    place_delivery_types = []
+    ownership_types = []
+    birth_attendants = []
+    try:
+        outcome_types = Maternal.sp_get_outcome_types()
+        delivery_types = Maternal.sp_get_delivery_types()
+        place_delivery_types = Maternal.sp_get_place_delivery_types()
+        ownership_types = Maternal.sp_get_ownership_types()
+        birth_attendants = Maternal.sp_get_birth_attendants()
+    except Exception as e:
+        pass  # Continue without dropdown data if there's an error
+    
+    # Get postpartum visit records
+    postpartum_records = []
+    try:
+        postpartum_records = Maternal.sp_view_specific_maternal_all_postpartum_visit(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without postpartum records if there's an error
+    
+    return render(request, 'nurse_module/Morematernalrecord.html', {
+        "results": result,
+        "obstetrical_data": obstetrical_data,
+        "medical_conditions": medical_conditions or [],
+        "surgical_history": surgical_history or [],
+        "immunization_data": immunization_data,
+        "disease_surveillance_data": disease_surveillance_data,
+        "disease_types": disease_types,
+        "laboratory_screening_data": laboratory_screening_data,
+        "test_types": test_types,
+        "checkup_records": checkup_records,
+        "supplement_records": supplement_records,
+        "supplement_types": supplement_types,
+        "deworming_records": deworming_records,
+        "deworming_types": deworming_types,
+        "delivery_outcome": delivery_outcome,
+        "outcome_types": outcome_types,
+        "delivery_types": delivery_types,
+        "place_delivery_types": place_delivery_types,
+        "ownership_types": ownership_types,
+        "birth_attendants": birth_attendants,
+        "postpartum_records": postpartum_records,
+        "last_gravida": last_gravida,
+        "last_abortion": last_abortion,
+        "message": flash['message'],
+        "message_level": flash['message_level'],
+    })
+    
+@custom_login_required
+@role_required('Midwife')
+@require_POST
+def add_disease_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    disease_type_id = request.POST.get('disease_type_id')
+    screening_date = request.POST.get('screening_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/nurse_module/nurseMaternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('nurse_module:maternalrecord')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    if not disease_type_id:
+        set_flash(request, "Disease type is required.", "error")
+        return redirect_to_view()
+    
+    if not screening_date:
+        set_flash(request, "Screening date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_disease_screen_record(
+            maternal_health_id=maternal_health_id,
+            disease_type_id=int(disease_type_id),
+            screening_date=screening_date,
+            result=result or None,
+            pid=pid
+        )
+        set_flash(request, "Disease screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Midwife')
+@require_POST
+def add_lab_screening(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    test_type_id = request.POST.get('test_type_id')
+    test_date = request.POST.get('test_date', '').strip()
+    result = request.POST.get('result', '').strip()
+    iron_tablet_given_date = request.POST.get('iron_tablet_given_date', '').strip()
+    iron_tablet_quantity = request.POST.get('iron_tablet_quantity', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/nurse_module/nurseMaternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('nurse_module:maternalrecord')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    if not test_type_id:
+        set_flash(request, "Test type is required.", "error")
+        return redirect_to_view()
+    
+    if not test_date:
+        set_flash(request, "Test date is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_lab_screening_record(
+            maternal_health_id=maternal_health_id,
+            test_type_id=int(test_type_id),
+            test_date=test_date,
+            result=result or None,
+            iron_tablet_given_date=iron_tablet_given_date or None,
+            iron_tablet_quantity=int(iron_tablet_quantity) if iron_tablet_quantity else None,
+            pid=pid
+        )
+        set_flash(request, "Lab screening record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
 
 
 def _parse_date(value):
@@ -1114,158 +1358,6 @@ def _parse_date(value):
     except ValueError:
         return None
     
-
-@custom_login_required
-@role_required('Midwife')
-def Morematernalrecord(request, maternal_health_id: int):
-    mhr = MaternalHealthDetailRow.get_by_id(maternal_health_id)
-    if mhr is None:
-        raise Http404("Maternal health record not found.")
-
-    obst_hist = ObstetricalHistoryRow.fetch_for_mhr(maternal_health_id)
-    medical_conditions = MaternalMedicalConditionRow.fetch_for_mhr(maternal_health_id)
-    surgical_history = MaternalSurgicalHistoryRow.fetch_for_mhr(maternal_health_id)
-    immu_track = MaternalImmunizationStatusTrackRow.fetch_for_mhr(maternal_health_id)
-    disease_surveillance = MaternalDiseaseSurveillanceRow.fetch_for_mhr(maternal_health_id)
-    checkups = MaternalCheckupRow.fetch_for_mhr(maternal_health_id)
-    lab_screenings = MaternalLaboratoryScreeningRow.fetch_for_mhr(maternal_health_id)
-    supplements = MaternalSupplementRow.fetch_for_mhr(maternal_health_id)
-    delivery_outcomes = MaternalDeliveryOutcomeRow.fetch_for_mhr(maternal_health_id)
-    postpartum_visits = MaternalPostpartumVisitRow.fetch_for_mhr(maternal_health_id)
-
-    disease_types = DiseaseTypeRow.fetch_all()
-    test_types = TestTypeRow.fetch_all()   # 👈 for Lab Screening dropdown
-
-    context = {
-        "mhr": mhr,
-        "obst_hist": obst_hist,
-        "medical_conditions": medical_conditions,
-        "surgical_history": surgical_history,
-        "immu_track": immu_track,
-        "disease_surveillance": disease_surveillance,
-        "checkups": checkups,
-        "lab_screenings": lab_screenings,
-        "supplements": supplements,
-        "delivery_outcomes": delivery_outcomes,
-        "postpartum_visits": postpartum_visits,
-        "disease_types": disease_types,
-        "test_types": test_types,          # 👈 pass to template
-    }
-    return render(request, "nurse_module/Morematernalrecord.html", context)
-
-
-@custom_login_required
-@role_required("Midwife")
-def add_maternal_disease_screening(request, maternal_health_id: int):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    # 1. Resolve personnel_id (required by add_disease_screen_record)
-    personnel_id = get_current_personnel_id(request)
-    if not personnel_id:
-        messages.error(request, "Unable to resolve current personnel account for this action.")
-        return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
-
-    # 2. Get form values
-    disease_type_id = request.POST.get("disease_type_id") or None
-    screening_date = request.POST.get("screening_date") or None  # YYYY-MM-DD string, psycopg2 will cast
-    result = request.POST.get("result") or None
-
-    try:
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT add_disease_screen_record(%s, %s, %s, %s, %s)
-                """,
-                [maternal_health_id, disease_type_id, screening_date, result, personnel_id],
-            )
-            new_id = cur.fetchone()[0]  # ids_id
-        messages.success(request, "Infectious disease screening record added.")
-    except DatabaseError as e:
-        # Optional: inspect e.__cause__ / e.args for custom ERRCODEs like M4601..M4604
-        messages.error(request, f"Unable to add disease screening record: {e}")
-    
-    return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
-
-def get_current_personnel_id(request) -> int | None:
-    # 1. Prefer session if you already store it during login
-    pid = request.session.get("personnel_id")
-    if pid:
-        return pid
-
-    # 2. Fallback: resolve via SQL helper, if you’re using it
-    user = getattr(request, "user", None)
-    if not user or not getattr(user, "id", None):
-        return None
-
-    try:
-        with connection.cursor() as cur:
-            cur.execute("SELECT resolve_current_personnel_id(%s)", [user.id])
-            row = cur.fetchone()
-            return row[0] if row and row[0] is not None else None
-    except DatabaseError:
-        return None
-
-
-@custom_login_required
-@role_required("Midwife")
-def add_maternal_lab_screening(request, maternal_health_id: int):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    # Resolve personnel_id
-    personnel_id = get_current_personnel_id(request)
-    if not personnel_id:
-        messages.error(request, "Unable to resolve current personnel account for this action.")
-        return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
-
-    # Get form values
-    test_type_id = request.POST.get("test_type_id") or None
-    test_date = request.POST.get("test_date") or None          # YYYY-MM-DD string
-    result = request.POST.get("result") or None
-
-    iron_tablet_given_date = request.POST.get("iron_tablet_given_date") or None
-    iron_quantity_raw = request.POST.get("iron_tablet_quantity") or None
-
-    iron_tablet_quantity = None
-    if iron_quantity_raw not in (None, ""):
-        try:
-            iron_tablet_quantity = int(iron_quantity_raw)
-        except ValueError:
-            messages.error(request, "Iron tablet quantity must be a whole number.")
-            return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
-
-    try:
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT add_lab_screening_record(
-                  %s,  -- p_maternal_health_id
-                  %s,  -- p_test_type_id
-                  %s,  -- p_test_date
-                  %s,  -- p_result
-                  %s,  -- p_iron_tablet_given_date
-                  %s,  -- p_iron_tablet_quantity
-                  %s   -- p_personnel_id
-                )
-                """,
-                [
-                    maternal_health_id,
-                    test_type_id,
-                    test_date,
-                    result,
-                    iron_tablet_given_date,
-                    iron_tablet_quantity,
-                    personnel_id,
-                ],
-            )
-            new_id = cur.fetchone()[0]  # lab_screening_id
-        messages.success(request, "Laboratory screening record added.")
-    except DatabaseError as e:
-        # If you later want to decode custom ERRCODEs (M4701..M4704), you can inspect e.__cause__
-        messages.error(request, f"Unable to add laboratory screening record: {e}")
-
-    return redirect("nurse_module:Morematernalrecord", maternal_health_id=maternal_health_id)
 
 @custom_login_required
 @role_required('Midwife')
@@ -1425,6 +1517,68 @@ def nurseGeneralInfo(request):
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
+
+@custom_login_required
+@role_required('Midwife')
+@require_POST
+def update_checkup_record(request):
+    checkup_id = request.POST.get('checkup_id')
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    weight_kg = request.POST.get('weight_kg', '').strip()
+    height_cm = request.POST.get('height_cm', '').strip()
+    bmi = request.POST.get('bmi', '').strip()
+    blood_pressure = request.POST.get('blood_pressure', '').strip()
+    fetal_heart_rate = request.POST.get('fetal_heart_rate', '').strip()
+    laboratory_results = request.POST.get('laboratory_results', '').strip()
+    notes = request.POST.get('notes', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/nurse_module/nurseMaternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('nurse_module:maternalrecord')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('nurse_module:maternalrecord')
+    
+    if not checkup_id:
+        set_flash(request, "Missing checkup record ID.", "error")
+        return redirect_to_view()
+    
+    try:
+        # Convert values to appropriate types, None if empty
+        weight_val = float(weight_kg) if weight_kg else None
+        height_val = float(height_cm) if height_cm else None
+        bmi_val = float(bmi) if bmi else None
+        fhr_val = int(fetal_heart_rate) if fetal_heart_rate else None
+        
+        # Call the stored procedure
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT update_specific_maternal_checkup_record(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                [
+                    int(checkup_id),
+                    weight_val,
+                    height_val,
+                    bmi_val,
+                    blood_pressure or None,
+                    fhr_val,
+                    laboratory_results or None,
+                    notes or None,
+                    pid
+                ]
+            )
+            result = cursor.fetchone()[0]
+        
+        if result:
+            set_flash(request, "Checkup record updated successfully.", "success")
+        else:
+            set_flash(request, "No changes were made to the checkup record.", "info")
+            
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
 
 @custom_login_required
 @role_required('Midwife')
