@@ -44,51 +44,28 @@ def register_push_device(
         if user_type == 'PERSONNEL' and not personnel_id:
             raise ValueError("personnel_id required for PERSONNEL")
         
-        # Check if device already exists
-        if user_type == 'RESIDENT':
-            cursor.execute(
-                """
-                SELECT push_device_id FROM push_device
-                WHERE user_type_id = %s AND resident_id = %s AND expo_push_token = %s
-                """,
-                [user_type_id, resident_id, expo_push_token]
-            )
-        else:
-            cursor.execute(
-                """
-                SELECT push_device_id FROM push_device
-                WHERE user_type_id = %s AND personnel_id = %s AND expo_push_token = %s
-                """,
-                [user_type_id, personnel_id, expo_push_token]
-            )
-        
-        existing = cursor.fetchone()
-        
-        if existing:
-            # Update existing device
-            cursor.execute(
-                """
-                UPDATE push_device
-                SET last_seen = NOW(), platform = COALESCE(%s, platform)
-                WHERE push_device_id = %s
-                RETURNING push_device_id
-                """,
-                [platform, existing[0]]
-            )
-            device_id = cursor.fetchone()[0]
-            message = 'Push token updated'
-        else:
-            # Insert new device
-            cursor.execute(
-                """
-                INSERT INTO push_device (user_type_id, resident_id, personnel_id, platform, expo_push_token, last_seen)
-                VALUES (%s, %s, %s, %s, %s, NOW())
-                RETURNING push_device_id
-                """,
-                [user_type_id, resident_id, personnel_id, platform, expo_push_token]
-            )
-            device_id = cursor.fetchone()[0]
-            message = 'Push token registered'
+        # Use upsert to insert or update existing token
+        # The unique constraint is on expo_push_token, so we use ON CONFLICT to handle duplicates
+        cursor.execute(
+            """
+            INSERT INTO push_device (user_type_id, resident_id, personnel_id, platform, expo_push_token, last_seen)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (expo_push_token) 
+            DO UPDATE SET
+                user_type_id = EXCLUDED.user_type_id,
+                resident_id = EXCLUDED.resident_id,
+                personnel_id = EXCLUDED.personnel_id,
+                platform = COALESCE(EXCLUDED.platform, push_device.platform),
+                last_seen = NOW()
+            RETURNING push_device_id, 
+                      CASE WHEN xmax = 0 THEN 'inserted' ELSE 'updated' END as action
+            """,
+            [user_type_id, resident_id, personnel_id, platform, expo_push_token]
+        )
+        result = cursor.fetchone()
+        device_id = result[0]
+        action = result[1]
+        message = 'Push token registered' if action == 'inserted' else 'Push token updated'
         
         return {
             'push_device_id': device_id,

@@ -885,6 +885,38 @@ def _find_resident_id_by_name(query: str):
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def search_residents_api(request):
+    """API endpoint for resident autocomplete search"""
+    query = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    
+    if not query or len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM search_business_owner(%s, %s, %s)", [query, limit, 0])
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                resident = dict(zip(columns, row))
+                results.append({
+                    'resident_id': resident.get('resident_id'),
+                    'full_name': resident.get('full_name'),
+                    'email': resident.get('email'),
+                    'phone': resident.get('phone_number') or resident.get('phone'),
+                })
+            
+            return JsonResponse({'results': results})
+    except Exception as e:
+        logger.error(f"Error searching residents: {e}")
+        return JsonResponse({'results': [], 'error': str(e)}, status=500)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def Addbusiness(request):
     # load dropdown options
     try:
@@ -896,7 +928,12 @@ def Addbusiness(request):
     if request.method == "POST":
         try:
             resident_name = request.POST.get("resident_name")
-            resident_id = _find_resident_id_by_name(resident_name)
+            # Check if resident was selected from autocomplete
+            selected_resident_id = request.POST.get("selected_resident_id")
+            if selected_resident_id:
+                resident_id = int(selected_resident_id)
+            else:
+                resident_id = _find_resident_id_by_name(resident_name)
 
             business_name         = request.POST.get("business_name")
             business_type_id      = int(request.POST.get("business_type_id"))
@@ -935,6 +972,26 @@ def Addbusiness(request):
                 videoke_count, billiard_count, other_device_count,  # <-- NEW
                 clearance_date_issued, personnel_id
             )
+            
+            # Determine business status based on clearance_date_issued
+            business_status = "Active" if clearance_date_issued else "Pending"
+            
+            # Send notification to business owner
+            try:
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Business Successfully Added",
+                    body=f'Your business "{business_name}" has been successfully registered with status: {business_status}. Proceed to request a business clearance.',
+                    deep_link="/(tabs)/business",
+                    data={
+                        'type': 'business_registered',
+                        'business_name': business_name,
+                        'business_status': business_status
+                    }
+                )
+            except Exception as notif_error:
+                logger.warning(f"Failed to send business registration notification: {notif_error}")
+            
             set_flash(request, "Successfully Submitted", "success")
         except Exception as e:
             set_flash(request, _clean_db_error(e), "error")
@@ -2912,6 +2969,47 @@ def create_renewal_business_clearance(request):
         )
         if not app_id:
             return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        
+        # Send notification to business owner
+        # Note: The database trigger will automatically send the push notification via webhook
+        try:
+            # Get business details
+            business_detail = Business.sp_get_business_detail(business_id)
+            
+            if business_detail:
+                # Try different possible field names for resident_id
+                resident_id = (
+                    business_detail.get('resident_id') or 
+                    business_detail.get('owner_id') or 
+                    business_detail.get('owner_resident_id') or
+                    business_detail.get('residentid')
+                )
+                business_name = business_detail.get('business_name')
+                
+                # Get application details for total amount
+                app_data = SecretaryHelpers.get_specific_application(app_id)
+                total_amount = app_data.get('total_amount') if app_data else None
+                
+                if resident_id and business_name:
+                    amount_text = f"₱{total_amount:,.2f}" if total_amount else "TBD"
+                    
+                    # Create notification record only - trigger handles push notification
+                    NotificationService.send_to_resident(
+                        resident_id=resident_id,
+                        title="Business Clearance Renewal Submitted",
+                        body=f'Your business clearance renewal request for "{business_name}" has been successfully submitted.  Total amount: {amount_text}. Please proceed to payment.',
+                        deep_link="/(tabs)/business",
+                        data={
+                            'type': 'business_clearance_renewal',
+                            'application_id': app_id,
+                            'business_id': business_id,
+                            'business_name': business_name,
+                            'total_amount': str(total_amount) if total_amount else None
+                        }
+                    )
+        except Exception as notif_error:
+            logger.error(f"Failed to create business clearance renewal notification: {notif_error}", exc_info=True)
+        
         return JsonResponse({'ok': True, 'application_id': app_id})
     except Exception as e:
         return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
@@ -2941,6 +3039,47 @@ def create_registration_business_clearance(request):
         )
         if not app_id:
             return JsonResponse({'ok': False, 'message': 'No application id returned.'}, status=400)
+        
+        # Send notification to business owner
+        # Note: The database trigger will automatically send the push notification via webhook
+        try:
+            # Get business details
+            business_detail = Business.sp_get_business_detail(business_id)
+            
+            if business_detail:
+                # Try different possible field names for resident_id
+                resident_id = (
+                    business_detail.get('resident_id') or 
+                    business_detail.get('owner_id') or 
+                    business_detail.get('owner_resident_id') or
+                    business_detail.get('residentid')
+                )
+                business_name = business_detail.get('business_name')
+                
+                # Get application details for total amount
+                app_data = SecretaryHelpers.get_specific_application(app_id)
+                total_amount = app_data.get('total_amount') if app_data else None
+                
+                if resident_id and business_name:
+                    amount_text = f"₱{total_amount:,.2f}" if total_amount else "TBD"
+                    
+                    # Create notification record only - trigger handles push notification
+                    NotificationService.send_to_resident(
+                        resident_id=resident_id,
+                        title="Business Clearance Request Submitted",
+                        body=f'Your business clearance request for "{business_name}" has been successfully submitted.  Total amount: {amount_text}. Please proceed to payment.',
+                        deep_link="/(tabs)/business",
+                        data={
+                            'type': 'business_clearance_registration',
+                            'application_id': app_id,
+                            'business_id': business_id,
+                            'business_name': business_name,
+                            'total_amount': str(total_amount) if total_amount else None
+                        }
+                    )
+        except Exception as notif_error:
+            logger.error(f"Failed to create business clearance registration notification: {notif_error}", exc_info=True)
+        
         return JsonResponse({'ok': True, 'application_id': app_id})
     except Exception as e:
         return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
@@ -3570,91 +3709,4 @@ def generate_household_detail_pdf(request, household_id: int):
         import traceback
         print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
-
-
-@require_POST
-def cron_renew_businesses(request):
-    """
-    Endpoint for Supabase cron job to trigger annual business renewal.
-    This should be called via HTTP POST from Supabase cron using pg_net.
-    
-    Expected to run on January 1st each year at midnight.
-    
-    Security: Add authentication token in production (e.g., check header or secret key)
-    """
-    # Optional: Add simple token-based auth for security
-    auth_token = request.headers.get('X-Cron-Token')
-    expected_token = getattr(settings, 'CRON_SECRET_TOKEN', None)
-    
-    if expected_token and auth_token != expected_token:
-        logger.warning(f"Unauthorized cron attempt from {request.META.get('REMOTE_ADDR')}")
-        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
-    
-    try:
-        with connection.cursor() as cursor:
-            # Call the SQL function to update statuses
-            cursor.execute("SELECT set_all_business_to_for_renewal()")
-            updated_count = cursor.fetchone()[0]
-            
-            logger.info(f"Business renewal cron: {updated_count} businesses set to For Renewal")
-            
-            if updated_count == 0:
-                return JsonResponse({
-                    'ok': True,
-                    'message': 'No active businesses found to renew',
-                    'updated_count': 0,
-                    'notification_count': 0
-                })
-            
-            # Fetch all businesses that were just set to "For Renewal"
-            cursor.execute("""
-                SELECT 
-                    b.business_id,
-                    b.business_name,
-                    b.resident_id AS owner_id,
-                    r.first_name || ' ' || COALESCE(r.middle_name || ' ', '') || r.last_name AS owner_name
-                FROM Business b
-                JOIN Resident r ON r.resident_id = b.resident_id
-                JOIN Business_Status bs ON bs.business_status_id = b.business_status_id
-                WHERE LOWER(bs.status_name) = 'for renewal'
-            """)
-            
-            businesses = cursor.fetchall()
-            notification_count = 0
-            failed_count = 0
-            
-            current_year = datetime.now().year
-            
-            # Send notification to each business owner
-            for business_id, business_name, owner_id, owner_name in businesses:
-                try:
-                    NotificationService.send_to_resident(
-                        resident_id=owner_id,
-                        title="🔄 Business Renewal Required",
-                        body=f'Your business "{business_name}" is now due for renewal. Please complete the renewal process before March 31, {current_year}. Failure to renew may result in penalties or business closure.',
-                        deep_link="/(tabs)/business"
-                    )
-                    notification_count += 1
-                    logger.info(f"Notification sent to {owner_name} (ID: {owner_id}) for business '{business_name}' (ID: {business_id})")
-                    
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"Failed to send notification for business_id {business_id} to resident_id {owner_id}: {e}")
-            
-            logger.info(f"Business renewal cron completed: {updated_count} businesses updated, {notification_count} notifications sent, {failed_count} failed")
-            
-            return JsonResponse({
-                'ok': True,
-                'message': 'Business renewal process completed',
-                'updated_count': updated_count,
-                'notification_count': notification_count,
-                'failed_count': failed_count
-            })
-            
-    except Exception as e:
-        logger.error(f"Business renewal cron job failed: {e}")
-        return JsonResponse({
-            'ok': False,
-            'error': str(e)
-        }, status=500)
 

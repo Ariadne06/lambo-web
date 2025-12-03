@@ -38,10 +38,26 @@
             <input value="{{ request.GET.owner }}" disabled 
                    class="border rounded-lg w-full px-3 py-2 bg-gray-50 text-gray-600"/>
           {% else %}
-            <input name="resident_name" type="text" 
-                   class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none" 
-                   placeholder="Enter resident's full name" required/>
-            <p class="text-xs text-gray-500 mt-1">Must be a registered resident</p>
+            <div class="relative">
+              <input id="residentSearch" name="resident_name" type="text" autocomplete="off"
+                     class="border rounded-lg w-full px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none" 
+                     placeholder="Enter resident's full name" required/>
+              <input type="hidden" id="selectedResidentId" name="selected_resident_id" value=""/>
+              
+              <!-- Dropdown results -->
+              <div id="residentDropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <!-- Results will be populated here -->
+              </div>
+              
+              <!-- Loading indicator -->
+              <div id="loadingIndicator" class="hidden absolute right-3 top-3">
+                <svg class="animate-spin h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Start typing to search for a registered resident</p>
           {% endif %}
         </div>
 
@@ -240,6 +256,100 @@
 
 <script>
   (function () {
+    // ===== Resident Autocomplete =====
+    const residentInput = document.getElementById('residentSearch');
+    const residentDropdown = document.getElementById('residentDropdown');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const selectedResidentIdInput = document.getElementById('selectedResidentId');
+    
+    let searchTimeout;
+    let currentRequest = null;
+
+    if (residentInput) {
+      residentInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        // Hide dropdown if query is too short
+        if (query.length < 2) {
+          residentDropdown.classList.add('hidden');
+          selectedResidentIdInput.value = '';
+          return;
+        }
+        
+        // Cancel previous request
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+        
+        // Show loading indicator
+        loadingIndicator.classList.remove('hidden');
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+          currentRequest = new AbortController();
+          
+          fetch(`/secretary_module/api/search-residents/?q=${encodeURIComponent(query)}&limit=10`, {
+            signal: currentRequest.signal
+          })
+            .then(response => response.json())
+            .then(data => {
+              loadingIndicator.classList.add('hidden');
+              
+              if (data.results && data.results.length > 0) {
+                residentDropdown.innerHTML = data.results.map(resident => `
+                  <div class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 resident-option"
+                       data-id="${resident.resident_id}"
+                       data-name="${resident.full_name}">
+                    <div class="font-medium text-gray-900">${resident.full_name}</div>
+                    <div class="text-xs text-gray-500">
+                      ${resident.email || 'No email'} • ${resident.phone || 'No phone'}
+                    </div>
+                  </div>
+                `).join('');
+                
+                residentDropdown.classList.remove('hidden');
+                
+                // Add click handlers to options
+                document.querySelectorAll('.resident-option').forEach(option => {
+                  option.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    
+                    residentInput.value = name;
+                    selectedResidentIdInput.value = id;
+                    residentDropdown.classList.add('hidden');
+                  });
+                });
+              } else {
+                residentDropdown.innerHTML = `
+                  <div class="px-4 py-3 text-gray-500 text-sm">
+                    No residents found
+                  </div>
+                `;
+                residentDropdown.classList.remove('hidden');
+              }
+            })
+            .catch(error => {
+              if (error.name !== 'AbortError') {
+                console.error('Search error:', error);
+                loadingIndicator.classList.add('hidden');
+              }
+            });
+        }, 300);
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!residentInput.contains(e.target) && !residentDropdown.contains(e.target)) {
+          residentDropdown.classList.add('hidden');
+        }
+      });
+    }
+
+    // ===== Clearance Category Logic =====
     const sel = document.getElementById('clearanceCategory');
 
     const unitsWrap = document.getElementById('unitsWrap');
