@@ -166,8 +166,10 @@
                 </p>
               </div>
               <div class="mt-2 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <!-- htmlmin:ignore -->
                 <div class="h-full rounded-full bg-emerald-500 transition-all"
-                     style="width: {{ dash.hh_visited_percent }}%;"></div>
+                     style="width: {{ dash.hh_visited_percent|floatformat:2 }}%"></div>
+                <!-- htmlmin:ignore -->
               </div>
               <p class="mt-1 text-[11px] text-gray-400">
                 Not yet visited: {{ dash.hh_not_visited_count }}
@@ -189,8 +191,10 @@
                 </p>
               </div>
               <div class="mt-2 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <!-- htmlmin:ignore -->
                 <div class="h-full rounded-full bg-sky-500 transition-all"
-                     style="width: {{ dash.fam_visited_percent }}%;"></div>
+                     style="width: {{ dash.fam_visited_percent|floatformat:2 }}%"></div>
+                <!-- htmlmin:ignore -->
               </div>
               <p class="mt-1 text-[11px] text-gray-400">
                 Not yet visited: {{ dash.fam_not_visited_count }}

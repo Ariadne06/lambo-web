@@ -3571,6 +3571,74 @@ def generate_household_detail_pdf(request, household_id: int):
 
 @custom_login_required
 @role_required('Barangay Health Worker')
+@require_GET
+def generate_maternal_list_pdf(request):
+    '''
+    Generate PDF report for maternal health list with applied filters
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.maternal_health.maternal_health_list_filtered import MaternalHealthListFilteredPDF
+    
+    try:
+        # Get filter parameters from query string
+        query = request.GET.get('query', '').strip() or None
+        record_status_id = request.GET.get('record_status_id', '').strip() or None
+        
+        # Generate PDF using the report utility
+        pdf_generator = MaternalHealthListFilteredPDF(
+            query=query,
+            record_status_id=record_status_id
+        )
+        
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="maternal_health_list_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating maternal health list PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_GET
+def generate_maternal_detail_pdf(request, maternal_health_id):
+    '''
+    Generate PDF report for specific maternal health record detail
+    '''
+    import traceback
+    from datetime import datetime
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.maternal_health.maternal_health_detail import MaternalHealthDetailPDF
+    
+    try:
+        # Generate PDF using the report utility
+        pdf_generator = MaternalHealthDetailPDF(maternal_health_id=maternal_health_id)
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'inline; filename="maternal_health_detail_{maternal_health_id}_{timestamp}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        # Log the error with full traceback
+        print(f"Error generating maternal health detail PDF: {str(e)}")
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@custom_login_required
+@role_required('Barangay Health Worker')
 @require_POST
 def add_checkup_record(request):
     maternal_health_id = request.POST.get('maternal_health_id')

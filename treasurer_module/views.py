@@ -475,6 +475,176 @@ def summary(request):
     return render(request, 'treasurer_module/summary.html', ctx)
 
 
+@custom_login_required
+@role_required('Barangay Treasurer')
+def summary_pdf(request):
+    """Generate PDF for treasurer summary report with applied filters."""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.treasurer.summary_report import generate_summary_report_pdf
+    
+    q = (request.GET.get('q') or '').strip() or None
+    
+    # Year (single select)
+    try:
+        year_choices = TreasurerRepo.get_year_for_filter_choice() or []
+    except Exception:
+        year_choices = []
+    import datetime
+    curr_year = datetime.date.today().year
+    raw_year = request.GET.get('year')
+    try:
+        sel_year = int(raw_year) if raw_year else (year_choices[-1] if year_choices else curr_year)
+    except (TypeError, ValueError):
+        sel_year = year_choices[-1] if year_choices else curr_year
+    
+    # Application labels (multi-select)
+    app_labels = [s.strip() for s in request.GET.getlist('application_label') if s and s.strip()]
+    
+    # Month (single select; 1-12)
+    try:
+        month = int(request.GET.get('month')) if request.GET.get('month') else None
+        if month is not None and (month < 1 or month > 12):
+            month = None
+    except Exception:
+        month = None
+    
+    # Fetch all summary rows from DB
+    try:
+        rows_all = TreasurerRepo.get_monthly_summary(sel_year, q)
+    except Exception as e:
+        rows_all = []
+    
+    # Apply Python-side filters for application_label and month
+    def _match(r):
+        if app_labels and (r.get('application_label') or '') not in app_labels:
+            return False
+        if month is not None and int(r.get('month_no') or 0) != month:
+            return False
+        return True
+    
+    rows_filtered = [r for r in rows_all if _match(r)]
+    
+    # Get month name if month filter is applied
+    month_name = None
+    if month:
+        month_map = {
+            1: 'January', 2: 'February', 3: 'March', 4: 'April',
+            5: 'May', 6: 'June', 7: 'July', 8: 'August',
+            9: 'September', 10: 'October', 11: 'November', 12: 'December'
+        }
+        month_name = month_map.get(month)
+    
+    # Build filters dictionary for PDF
+    filters_applied = {
+        'year': sel_year,
+        'month': month,
+        'month_name': month_name,
+        'application_labels': app_labels,
+        'search_query': q
+    }
+    
+    # Generate PDF
+    try:
+        pdf_buffer = generate_summary_report_pdf(rows_filtered, filters_applied)
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        
+        # Build filename based on filters
+        filename_parts = ['Summary_Report', str(sel_year)]
+        if month_name:
+            filename_parts.append(month_name)
+        filename = '_'.join(filename_parts) + '.pdf'
+        
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception as e:
+        messages.error(request, f"Failed to generate PDF: {_clean_db_error(e)}")
+        return redirect('treasurer_module:summary')
+
+
+@custom_login_required
+@role_required('Barangay Treasurer')
+def financial_report_pdf(request):
+    """Generate PDF for treasurer financial report with applied filters."""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.treasurer.financial_report import generate_financial_report_pdf
+    
+    # Get filter parameters
+    raw_year = request.GET.get('year')
+    raw_month = request.GET.get('month')
+    start_date = request.GET.get('start_date') or None
+    end_date = request.GET.get('end_date') or None
+    
+    # Parse year
+    year = None
+    if raw_year:
+        try:
+            year = int(raw_year)
+        except (TypeError, ValueError):
+            pass
+    
+    # Parse month
+    month = None
+    month_name = None
+    if raw_month:
+        try:
+            month = int(raw_month)
+            if month < 1 or month > 12:
+                month = None
+            else:
+                month_map = {
+                    1: 'January', 2: 'February', 3: 'March', 4: 'April',
+                    5: 'May', 6: 'June', 7: 'July', 8: 'August',
+                    9: 'September', 10: 'October', 11: 'November', 12: 'December'
+                }
+                month_name = month_map.get(month)
+        except (TypeError, ValueError):
+            pass
+    
+    # Fetch financial report data
+    try:
+        financial_data = TreasurerRepo.get_financial_report(
+            year=year,
+            month=month,
+            start_date=start_date,
+            end_date=end_date,
+            limit=10000,
+            offset=0
+        )
+    except Exception as e:
+        messages.error(request, f"Failed to fetch financial data: {_clean_db_error(e)}")
+        return redirect('treasurer_module:summary')
+    
+    # Build filters dictionary for PDF
+    filters_applied = {
+        'year': year,
+        'month': month,
+        'month_name': month_name,
+        'start_date': start_date,
+        'end_date': end_date
+    }
+    
+    # Generate PDF
+    try:
+        pdf_buffer = generate_financial_report_pdf(financial_data, filters_applied)
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        
+        # Build filename based on filters
+        filename_parts = ['Financial_Report']
+        if year:
+            filename_parts.append(str(year))
+        if month_name:
+            filename_parts.append(month_name)
+        if start_date and end_date:
+            filename_parts.append(f"{start_date}_to_{end_date}")
+        filename = '_'.join(filename_parts) + '.pdf'
+        
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception as e:
+        messages.error(request, f"Failed to generate PDF: {_clean_db_error(e)}")
+        return redirect('treasurer_module:summary')
+
+
 # --- API endpoints for details and payment action ---
 @custom_login_required
 @role_required('Barangay Treasurer')
