@@ -26,4 +26,5 @@ urlpatterns = [
      path('api/resident-links', views.resident_links_list_api, name='nurse_residentLinksListApi'),
      path("vaccine/", views.vaccine_list, name="vaccine_list"),                 # table + add form
      path("vaccine/<int:vaccine_type_id>/edit/", views.vaccine_edit, name="vaccine_edit"),
+     path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
 ]

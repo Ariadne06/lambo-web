@@ -67,6 +67,8 @@ urlpatterns = [
      # PDF Generation endpoints
      path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
      path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
+     # Announcement detail
+     path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
      path('maternal_list/pdf/', views.generate_maternal_list_pdf, name='generate_maternal_list_pdf'),
      path('maternal/<int:maternal_health_id>/pdf/', views.generate_maternal_detail_pdf, name='generate_maternal_detail_pdf'),
 ]
