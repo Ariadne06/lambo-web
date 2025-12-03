@@ -1,7 +1,17 @@
 """
 Quick test script for notification system
 Run with: python manage.py shell < notifications/test_notifications.py
+
+NOTE: This is NOT a Django unit test. This is a manual test script.
+Do not run this with 'python manage.py test' - it will fail.
 """
+
+import sys
+
+# Skip this file when running Django tests
+if 'test' in sys.argv:
+    print("Skipping manual test script (not a unit test)")
+    sys.exit(0)
 
 from notifications.service import NotificationService, notify_certificate_approved, notify_new_announcement
 
@@ -26,7 +36,7 @@ print("=" * 50)
 
 notify_certificate_approved(
     resident_id=1,
-    certificate_type="Barangay Clearance",
+    document_type_name="Barangay Clearance",
     application_id=1
 )
 print("Certificate approval notification sent!")
