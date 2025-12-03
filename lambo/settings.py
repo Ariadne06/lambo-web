@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'household_module',
     'certificate_issuance_module',
     'reports_module', # Reports Module
+    'notifications', # Notifications Module
 
     'django_browser_reload', # Browser Reload
 

@@ -56,6 +56,8 @@ urlpatterns = [
     path('certificate_api/', include('certificate_issuance_module.urls')),
 
     path('reports/', include('reports_module.urls')),
+
+    path('api/notifications/', include('notifications.urls')),
 ]
 
 
