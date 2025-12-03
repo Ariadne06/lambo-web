@@ -2575,6 +2575,12 @@ def maternalList(request):
     results = []
     
     query = (request.GET.get('query') or '').strip()
+    raw_record_status = request.GET.get('record_status_id')
+    
+    try:
+        record_status_id = int(raw_record_status) if raw_record_status not in (None, '', '0') else None
+    except ValueError:
+        record_status_id = None
     
     try:
         limit = int(request.GET.get("limit", 25))
@@ -2595,6 +2601,7 @@ def maternalList(request):
     try:
         results = Maternal.sp_view_all_maternal_record(
             name_query=query,
+            record_status_id=record_status_id,
             limit=limit + 1,
             offset=offset,
         )
@@ -2610,22 +2617,32 @@ def maternalList(request):
         "limit": limit,
         "query": query,
     }
+    if record_status_id is not None:
+        base_params["record_status_id"] = record_status_id
 
     prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
     next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
     limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    record_status_options = []
+    try:
+        record_status_options = Maternal.sp_get_record_status()
+    except Exception:
+        pass
     
     flash = get_flash(request)
     return render(request, 'bhw_module/maternalList.html', {
         "results": final_result,
         "limit": limit,
         "page": page,
+        "record_status_id": record_status_id,
         "has_prev": has_prev,
         "has_next": has_next,
         "prev_url": prev_url,
         "next_url": next_url,
         "limit_options": LIMIT_OPTIONS,
         "limit_urls": limit_urls,
+        "record_status_options": record_status_options,
         'query': query,
         'message': flash['message'],
         'message_level': flash['message_level'],
@@ -2733,6 +2750,63 @@ def maternalView(request):
     except Exception as e:
         pass  # Continue without checkup records if there's an error
     
+    # Get supplement records
+    supplement_records = []
+    try:
+        supplement_records = Maternal.sp_view_specific_maternal_all_supplements_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without supplement records if there's an error
+    
+    # Get supplement types for dropdown
+    supplement_types = []
+    try:
+        supplement_types = Maternal.sp_get_supplement_types()
+    except Exception as e:
+        pass  # Continue without supplement types if there's an error
+    
+    # Get deworming records
+    deworming_records = []
+    try:
+        deworming_records = Maternal.sp_view_specific_maternal_all_deworming_record(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without deworming records if there's an error
+    
+    # Get deworming types for dropdown
+    deworming_types = []
+    try:
+        deworming_types = Maternal.sp_get_deworming_types()
+    except Exception as e:
+        pass  # Continue without deworming types if there's an error
+    
+    # Get delivery outcome data
+    delivery_outcome = None
+    try:
+        delivery_outcome = Maternal.sp_view_specific_maternal_delivery_outcome(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without delivery outcome if there's an error
+    
+    # Get delivery outcome dropdown data
+    outcome_types = []
+    delivery_types = []
+    place_delivery_types = []
+    ownership_types = []
+    birth_attendants = []
+    try:
+        outcome_types = Maternal.sp_get_outcome_types()
+        delivery_types = Maternal.sp_get_delivery_types()
+        place_delivery_types = Maternal.sp_get_place_delivery_types()
+        ownership_types = Maternal.sp_get_ownership_types()
+        birth_attendants = Maternal.sp_get_birth_attendants()
+    except Exception as e:
+        pass  # Continue without dropdown data if there's an error
+    
+    # Get postpartum visit records
+    postpartum_records = []
+    try:
+        postpartum_records = Maternal.sp_view_specific_maternal_all_postpartum_visit(maternal_health_id)
+    except Exception as e:
+        pass  # Continue without postpartum records if there's an error
+    
     return render(request, 'bhw_module/maternalView.html', {
         "results": result,
         "obstetrical_data": obstetrical_data,
@@ -2744,6 +2818,17 @@ def maternalView(request):
         "laboratory_screening_data": laboratory_screening_data,
         "test_types": test_types,
         "checkup_records": checkup_records,
+        "supplement_records": supplement_records,
+        "supplement_types": supplement_types,
+        "deworming_records": deworming_records,
+        "deworming_types": deworming_types,
+        "delivery_outcome": delivery_outcome,
+        "outcome_types": outcome_types,
+        "delivery_types": delivery_types,
+        "place_delivery_types": place_delivery_types,
+        "ownership_types": ownership_types,
+        "birth_attendants": birth_attendants,
+        "postpartum_records": postpartum_records,
         "last_gravida": last_gravida,
         "last_abortion": last_abortion,
         "message": flash['message'],
@@ -3356,5 +3441,198 @@ def add_checkup_record(request):
     except Exception as e:
         msg = _clean_db_error(e)
         set_flash(request, msg, "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_supplement(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    supplement_type_id = request.POST.get('supplement_type_id')
+    date_given = request.POST.get('date_given', '').strip()
+    number_of_tablets = request.POST.get('number_of_tablets', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not supplement_type_id:
+        set_flash(request, "Supplement type is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_maternal_supplement_record(
+            maternal_health_id=maternal_health_id,
+            supplement_type_id=int(supplement_type_id),
+            date_given=date_given,
+            number_of_tablets=int(number_of_tablets) if number_of_tablets else None,
+            personnel_id=pid
+        )
+        set_flash(request, "Supplement record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_maternal_deworming(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    deworming_type_id = request.POST.get('deworming_type_id')
+    date_given = request.POST.get('date_given', '').strip()
+    number_of_tablets = request.POST.get('number_of_tablets', '').strip()
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not deworming_type_id:
+        set_flash(request, "Deworming medicine is required.", "error")
+        return redirect_to_view()
+    
+    if not date_given:
+        set_flash(request, "Date given is required.", "error")
+        return redirect_to_view()
+    
+    try:
+        Maternal.sp_add_deworming_record(
+            maternal_health_id=maternal_health_id,
+            deworming_type_id=int(deworming_type_id),
+            number_of_tablets=int(number_of_tablets) if number_of_tablets else None,
+            date_given=date_given,
+            personnel_id=pid
+        )
+        set_flash(request, "Deworming record added successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_delivery_outcome(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        outcome_type_id = int(request.POST.get('outcome_type_id'))
+        delivery_type_id = int(request.POST.get('delivery_type_id'))
+        place_delivery_type_id = int(request.POST.get('place_delivery_type_id'))
+        birth_attendant_id = int(request.POST.get('birth_attendant_id'))
+        date_terminated = request.POST.get('date_terminated', '').strip()
+        
+        ownership_type_id = request.POST.get('ownership_type_id')
+        ownership_type_id = int(ownership_type_id) if ownership_type_id else None
+        
+        others_description = request.POST.get('others_description', '').strip() or None
+        other_attendant = request.POST.get('other_attendant', '').strip() or None
+        time_of_delivery = request.POST.get('time_of_delivery', '').strip() or None
+        
+        if not date_terminated:
+            raise ValueError("Date terminated is required")
+        
+        Maternal.sp_add_delivery_outcome(
+            maternal_health_id=maternal_health_id,
+            outcome_type_id=outcome_type_id,
+            delivery_type_id=delivery_type_id,
+            place_delivery_type_id=place_delivery_type_id,
+            ownership_type_id=ownership_type_id,
+            others_description=others_description,
+            birth_attendant_id=birth_attendant_id,
+            other_attendant=other_attendant,
+            time_of_delivery=time_of_delivery,
+            date_terminated=date_terminated,
+            personnel_id=pid
+        )
+        set_flash(request, "Delivery outcome added successfully.", "success")
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def add_postpartum_visit(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    def redirect_to_view():
+        return redirect(f'/bhw_module/maternalView/?maternal_health_id={maternal_health_id}') if maternal_health_id else redirect('bhw_module:maternalList')
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        date_of_visit = request.POST.get('date_of_visit', '').strip()
+        weight_kg = request.POST.get('weight_kg', '').strip()
+        height_cm = request.POST.get('height_cm', '').strip()
+        blood_pressure = request.POST.get('blood_pressure', '').strip() or None
+        notes = request.POST.get('notes', '').strip() or None
+        laboratory_notes = request.POST.get('laboratory_notes', '').strip() or None
+        
+        # Convert numeric fields
+        weight_kg = float(weight_kg) if weight_kg else None
+        height_cm = float(height_cm) if height_cm else None
+        
+        if not date_of_visit:
+            raise ValueError("Visit date is required")
+        
+        Maternal.sp_add_postpartum_visit(
+            maternal_health_id=maternal_health_id,
+            date_of_visit=date_of_visit,
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            blood_pressure=blood_pressure,
+            notes=notes,
+            laboratory_notes=laboratory_notes,
+            personnel_id=pid
+        )
+        set_flash(request, "Postpartum visit added successfully.", "success")
+    except ValueError as e:
+        set_flash(request, str(e), "error")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
