@@ -15,5 +15,7 @@ urlpatterns = [
      path('activityLogs/', views.activityLogs, name='activityLogs'),
      path('authenticationlog/', views.authenticationlog, name='authenticationlog'),
      path('documentlog/', views.documentlog, name='documentlog'),
-     path('residentlog/', views.residentlog, name='residentlog'),
+     path('residentlog/', views.residentlog, name='residentlog'),\
+     path('residentList/', views.residentList, name='residentList'),
+     path('get-resident-profile/<int:resident_id>/', views.get_resident_profile, name='get_resident_profile'),
 ]
