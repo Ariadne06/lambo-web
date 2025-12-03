@@ -18,6 +18,10 @@ from .utils.database_helpers import (
     get_resident_transaction_detail,
     cancel_resident_clearance
 )
+from notifications.service import NotificationService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentTypeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,6 +61,19 @@ class CreateClearanceApplicationView(views.APIView):
             )
             
             if application_id:
+                # Send notification to resident
+                try:
+                    NotificationService.send_to_resident(
+                        resident_id=serializer.validated_data['resident_id'],
+                        title="Application Submitted",
+                        body="Your barangay clearance application has been successfully submitted. Please wait for the Barangay Secretary to review and approve your request.",
+                        deep_link=f"/(tabs)/documents/{application_id}"
+                    )
+                    logger.info(f"Application creation notification sent to resident_id {serializer.validated_data['resident_id']} for application {application_id}")
+                except Exception as notif_error:
+                    # Log but don't fail the main operation
+                    logger.error(f"Failed to send application creation notification for application {application_id}: {notif_error}")
+                
                 response_data = {
                     'application_id': application_id,
                     'message': 'Barangay clearance application created successfully'
