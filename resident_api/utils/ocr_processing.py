@@ -858,61 +858,65 @@ def _match_keywords(text, keywords):
 
 def validate_document_header(file_obj, expected_type):
     """
-    Validate if the uploaded document matches the expected type by checking headers/keywords.
-    
-    Args:
-        file_obj: File object (Django UploadedFile or BytesIO)
-        expected_type: Expected document type string (e.g., "Philippine National ID")
-    
-    Returns:
-        tuple: (is_valid: bool, message: str)
+    Extracts text and checks if it contains the header keywords for the chosen document_type.
+    Returns True if keywords found, else False.
     """
+    if not getattr(settings, 'ENABLE_OCR_VALIDATION', True):
+        print("[OCR] Validation disabled in settings.")
+        return True
+
     try:
-        # Convert file to PIL Image
-        if hasattr(file_obj, 'read'):
-            file_obj.seek(0)
-            image_data = file_obj.read()
-            pil_image = Image.open(BytesIO(image_data))  # ✅ BytesIO should now work
-        else:
-            pil_image = Image.open(file_obj)
-
-        # Preprocess for better OCR
-        processed_image = preprocess_image_for_ocr(pil_image)
+        file_obj.seek(0)
+        img = Image.open(io.BytesIO(file_obj.read()))
+        img = img.convert('L')
         
-        # Extract text
-        ocr_text = pytesseract.image_to_string(processed_image, config='--psm 3')
-        ocr_text_upper = ocr_text.upper()
-        
-        print(f"\n[OCR] Extracted text for '{expected_type}':")
-        print("----- OCR TEXT START -----")
-        print(ocr_text)
-        print("----- OCR TEXT END -----\n")
-
-        # Get keywords for expected document type
-        expected_type_lower = expected_type.lower()
-        keywords = DOCUMENT_TYPE_KEYWORDS.get(expected_type_lower, [])
-        
-        if not keywords:
-            print(f"[OCR] WARNING: No keywords defined for document type '{expected_type}'")
-            return True, "Document type validation skipped (no keywords defined)"
-
-        # Check if ANY of the keywords are found
-        found_keywords = []
-        for keyword in keywords:
-            if keyword.upper() in ocr_text_upper:
-                found_keywords.append(keyword)
-        
-        print(f"[OCR] Header keywords for '{expected_type_lower}' found: {len(found_keywords) > 0}")
-        print(f"[OCR] Found keywords: {found_keywords}")
-
-        if found_keywords:
-            return True, f"Document type validated successfully"
-        else:
-            return False, f"This does not appear to be a valid {expected_type}. Please upload the correct document type."
-
+        # Use high-quality OCR settings for header detection
+        custom_config = r'--oem 3 --psm 6'
+        text = pytesseract.image_to_string(img, lang='eng', config=custom_config) or ''
+        file_obj.seek(0)
     except Exception as e:
-        print(f"[OCR] Header validation error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        # Don't fail validation on errors - let it proceed
-        return True, f"Header validation skipped due to error: {str(e)}"
+        print(f"[OCR] Exception during OCR: {e}")
+        return False
+
+    print(f"[OCR] Extracted text for '{expected_type}':")
+    print("----- OCR TEXT START -----")
+    print(text)
+    print("----- OCR TEXT END -----")
+
+    # Normalize the text for comparison
+    normalized_text = text.upper().replace('\n', ' ').replace('  ', ' ')
+    normalized_type = expected_type.lower().strip()
+
+    # Get keywords for this document type
+    keywords = DOCUMENT_TYPE_KEYWORDS.get(normalized_type, [])
+    
+    if not keywords:
+        print(f"[OCR] No keywords defined for document type: '{expected_type}'")
+        return False
+
+    # Check if any keyword is found in the text
+    found_keywords = []
+    for keyword in keywords:
+        # Case-insensitive search with some flexibility
+        keyword_upper = keyword.upper()
+        
+        # Direct match
+        if keyword_upper in normalized_text:
+            found_keywords.append(keyword)
+            continue
+            
+        # Check with spaces removed (for multi-word keywords)
+        if keyword_upper.replace(' ', '') in normalized_text.replace(' ', ''):
+            found_keywords.append(keyword)
+            continue
+            
+        # Check individual words for multi-word keywords
+        keyword_words = keyword_upper.split()
+        if len(keyword_words) > 1:
+            if all(word in normalized_text for word in keyword_words):
+                found_keywords.append(keyword)
+
+    print(f"[OCR] Header keywords for '{normalized_type}' found: {len(found_keywords) > 0}")
+    print(f"[OCR] Found keywords: {found_keywords}")
+
+    return len(found_keywords) > 0

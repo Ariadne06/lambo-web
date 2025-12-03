@@ -180,93 +180,11 @@ class ResidentIdDocumentOCRView(APIView):
 
 
 
-# class VerifyIdFieldsView(APIView):
-#     parser_classes = (MultiPartParser, FormParser)
-
-#     def post(self, request):
-   
-#         try:
-#             registration_data = json.loads(request.data.get('registrationData', '{}'))
-#             id_image = request.FILES.get('id_image')
-#             doc_type = registration_data.get('document_type', None)
-            
-#             if not id_image:
-#                 return Response({'status': 'error', 'message': 'No image provided'}, status=400)
-
-#             # --- SUPPORTING DOCS HEADER CHECK ---
-#             # If this is a supporting document, only check the header/title
-#             if doc_type and any(x in doc_type.lower() for x in ['birth', 'voter']):
-#                 # Only check header/title for supporting docs
-#                 header_ok = validate_document_header(id_image, doc_type)
-#                 if not header_ok:
-#                     return Response({
-#                         'status': 'mismatch',
-#                         'mismatches': {
-#                             'header': {
-#                                 'user': doc_type,
-#                                 'ocr': 'Header/title not found in image'
-#                             }
-#                         }
-#                     }, status=200)
-
-#                 # If header is OK, you can skip field comparison and return match
-#                 return Response({'status': 'match'})
-
-#             # Extract fields using improved logic
-#             ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
-            
-#             if doc_type and 'umid' in doc_type.lower():
-#                 # Simple UMID fix: swap first and last names
-#                 temp_first = ocr_fields.get('first_name', '')
-#                 temp_last = ocr_fields.get('last_name', '')
-#                 ocr_fields['first_name'] = temp_last
-#                 ocr_fields['last_name'] = temp_first
-#                 print(f"DEBUG: UMID name swap applied - First: '{temp_last}', Last: '{temp_first}'")
-
-#             print('DEBUG: registration_data:', registration_data)
-#             print('DEBUG: ocr_fields:', ocr_fields)
-            
-#             mismatches = {}
-
-#             # Compare fields with improved logic
-#             for key in ['first_name', 'last_name', 'dob']:
-#                 reg_val = registration_data.get(key, '')
-#                 ocr_val = ocr_fields.get(key, '')
-#                 print(f'DEBUG: Comparing field "{key}": user="{reg_val}" ocr="{ocr_val}"')
-                
-#                 if key in ['first_name', 'last_name']:
-#                     # Use improved name comparison
-#                     if not are_names_equivalent(reg_val, ocr_val):
-#                         mismatches[key] = {
-#                             'user': reg_val,
-#                             'ocr': ocr_val
-#                         }
-#                 else:
-#                     # For non-name fields (like DOB), use exact comparison
-#                     if normalize_for_comparison(reg_val) != normalize_for_comparison(ocr_val):
-#                         mismatches[key] = {
-#                             'user': reg_val,
-#                             'ocr': ocr_val
-#                         }
-            
-#             print('DEBUG: mismatches:', mismatches)
-            
-#             if mismatches:
-#                 # return Response({'status': 'mismatch', 'mismatches': mismatches})
-#                 return Response({
-#                 'verified': False,
-#                 'error_type': 'MISMATCH',
-#                 'user_friendly_message': 'Some details don\'t match your ID. Please review and correct.',
-#                 'action_required': 'EDIT_OR_RETAKE',
-#                 'mismatches': mismatches,  # Keep for debugging
-#                 }, status=status.HTTP_200_OK)
-#             return Response({'status': 'match'})
-
-#         except Exception as e:
-#             print(f"Verification failed with error: {e}")
-#             return Response({'status': 'error', 'message': str(e)}, status=500)
 
 class VerifyIdFieldsView(APIView):
+    """
+    Verify ID fields by comparing OCR results with user input
+    """
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
@@ -275,157 +193,127 @@ class VerifyIdFieldsView(APIView):
         try:
             registration_data = json.loads(request.data.get('registrationData', '{}'))
             id_image = request.FILES.get('id_image')
-            doc_type = registration_data.get('document_type', None)
+            doc_type = registration_data.get('document_type', '')
             verification_type = registration_data.get('verification_type', 'ID')
             
-            print(f"[VerifyIdFieldsView] Document type: {doc_type}")
-            print(f"[VerifyIdFieldsView] Verification type: {verification_type}")
-            print(f"[VerifyIdFieldsView] Registration data: {registration_data}")
+            print(f"DEBUG: Verifying document type: {doc_type}")
+            print(f"DEBUG: Verification type: {verification_type}")
+            print(f"DEBUG: Registration data: {registration_data}")
             
             if not id_image:
                 return Response({
                     'verified': False,
-                    'error_type': 'MISSING_IMAGE',
-                    'message': 'No image file provided'
+                    'error_type': 'NO_IMAGE',
+                    'message': 'No image provided'
                 }, status=400)
 
-            # ============================================
-            # STEP 1: HEADER/DOCUMENT TYPE VALIDATION
-            # (Applies to ALL documents - both ID and Supporting)
-            # ============================================
+            # ✅ FIXED: More specific document classification
+            # Check for exact matches to avoid false positives
+            doc_type_lower = doc_type.lower().strip()
+            
+            # Supporting documents - exact matches only
+            is_supporting_doc = doc_type_lower in [
+                'birth certificate',
+                'voters certificate',  # Note: "voters certificate" not "voters id"
+                "voter's certificate"
+            ]
+            
+            # ID documents
+            is_id_doc = not is_supporting_doc
+            
+            print(f"DEBUG: Document classification - Supporting: {is_supporting_doc}, ID: {is_id_doc}")
+            print(f"DEBUG: Document type (normalized): '{doc_type_lower}'")
+
+            # ✅ STEP 2: MANDATORY HEADER VALIDATION FOR ALL DOCUMENTS
             if doc_type and ENABLE_OCR_VALIDATION:
-                print(f"[VerifyIdFieldsView] Running header validation for document type: {doc_type}")
-                
-                # Reset file pointer before reading
+                print(f"DEBUG: Running header validation for document type: {doc_type}")
                 id_image.seek(0)
                 
-                header_valid, header_msg = validate_document_header(
-                    BytesIO(id_image.read()), 
-                    doc_type
-                )
-                
-                print(f"[VerifyIdFieldsView] Header validation result: {header_valid}, message: {header_msg}")
+                header_valid = validate_document_header(id_image, doc_type)
+                print(f"DEBUG: Header validation result: {header_valid}")
                 
                 if not header_valid:
-                    # Wrong document type uploaded
+                    print(f"❌ Header validation FAILED for {doc_type}")
                     return Response({
                         'verified': False,
-                        'status': 'mismatch',
                         'error_type': 'DOCUMENT_TYPE_MISMATCH',
-                        'message': header_msg,
-                        'user_friendly_message': f'This does not appear to be a valid {doc_type}. Please upload the correct document type.',
-                        'action_required': 'RETAKE',
-                        'mismatches': {
-                            'header': {
-                                'user': doc_type,
-                                'ocr': 'Header/title not found in image'
-                            }
-                        }
+                        'user_friendly_message': f"This doesn't look like a {doc_type}. Please upload a clear photo of your {doc_type}.",
+                        'message': f'Document header validation failed for {doc_type}'
                     }, status=200)
+                
+                print(f"✅ Header validation PASSED for {doc_type}")
 
-            # ============================================
-            # STEP 2: SUPPORTING DOCUMENTS - STOP HERE
-            # ============================================
-            if verification_type == 'SUPPORTING':
-                # Supporting documents only need header check - no field matching
-                print("[VerifyIdFieldsView] Supporting document header validated - APPROVED for manual review")
+            # ✅ STEP 3: For SUPPORTING documents, stop here (header check only)
+            if is_supporting_doc:
+                print(f"DEBUG: Supporting document - returning success after header check")
+                
+                # Run OCR just to extract fields (even if empty) for admin review
+                id_image.seek(0)
+                ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
+                
                 return Response({
                     'verified': True,
                     'status': 'match',
-                    'message': 'Supporting document validated successfully. Pending manual review.',
-                    'extracted_fields': {}
+                    'message': 'Document verified successfully',
+                    'extracted_fields': ocr_fields
                 }, status=200)
 
-            # ============================================
-            # STEP 3: ID DOCUMENTS - OCR + FIELD MATCHING
-            # ============================================
-            print(f"[VerifyIdFieldsView] Running OCR + field matching for ID document: {doc_type}")
+            # ✅ STEP 4: For ID documents (including Voter's ID), proceed with FULL OCR validation
+            print(f"DEBUG: ID document - proceeding with OCR validation")
             
-            # Reset file pointer after header check
             id_image.seek(0)
-            
-            # Run OCR extraction
-            if ENABLE_OCR_VALIDATION:
-                ocr_fields = run_ocr_and_extract_fields_switchable(
-                    id_image, 
-                    doc_type=doc_type, 
-                    registration_data=registration_data
-                )
-                print(f"[VerifyIdFieldsView] OCR extracted fields: {ocr_fields}")
-            else:
-                print("[VerifyIdFieldsView] OCR validation disabled in settings")
-                ocr_fields = {}
+            ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, registration_data)
+            print(f"DEBUG: OCR extracted fields: {ocr_fields}")
 
-            # UMID name swap fix (UMID has reversed name format)
-            if doc_type and 'umid' in doc_type.lower():
-                temp_first = ocr_fields.get('first_name', '')
-                temp_last = ocr_fields.get('last_name', '')
-                ocr_fields['first_name'] = temp_last
-                ocr_fields['last_name'] = temp_first
-                print(f"[VerifyIdFieldsView] UMID name swap applied - First: '{temp_last}', Last: '{temp_first}'")
+            # Check if OCR returned meaningful data
+            ocr_first = (ocr_fields.get('first_name') or '').strip()
+            ocr_last = (ocr_fields.get('last_name') or '').strip()
 
-            print('[VerifyIdFieldsView] Registration data:', registration_data)
-            print('[VerifyIdFieldsView] OCR fields after processing:', ocr_fields)
+            print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}'")
+            print(f"DEBUG: User Names - First: '{registration_data.get('first_name')}', Last: '{registration_data.get('last_name')}'")
 
-            # ============================================
-            # STEP 4: COMPARE USER INPUT WITH OCR RESULTS
-            # ============================================
-            mismatches = {}
-            fields_to_check = ['first_name', 'last_name', 'dob']
+            # For ID documents, require OCR to extract names
+            if not ocr_first and not ocr_last:
+                return Response({
+                    'verified': False,
+                    'error_type': 'QUALITY_ISSUE',
+                    'user_friendly_message': f"We couldn't read your {doc_type} clearly. Please retake the photo with better lighting and ensure all text is visible.",
+                    'message': 'OCR could not extract readable names from the document'
+                }, status=200)
 
-            for key in fields_to_check:
-                reg_val = registration_data.get(key, '')
-                ocr_val = ocr_fields.get(key, '')
-                print(f'[VerifyIdFieldsView] Comparing field "{key}": user="{reg_val}" ocr="{ocr_val}"')
-                
-                if key in ['first_name', 'last_name']:
-                    # Use improved name comparison with fuzzy matching
-                    if not are_names_equivalent(reg_val, ocr_val):
-                        mismatches[key] = {
-                            'user': reg_val,
-                            'ocr': ocr_val
-                        }
-                else:
-                    # For non-name fields (like DOB), use exact comparison
-                    if normalize_for_comparison(reg_val) != normalize_for_comparison(ocr_val):
-                        mismatches[key] = {
-                            'user': reg_val,
-                            'ocr': ocr_val
-                        }
-            
-            print(f'[VerifyIdFieldsView] Mismatches found: {mismatches}')
+            # Find mismatches between user input and OCR
+            mismatches = find_mismatches(
+                registration_data,
+                ocr_fields,
+                ['first_name', 'last_name', 'dob']
+            )
 
-            # ============================================
-            # STEP 5: RETURN RESULTS
-            # ============================================
+            print(f"DEBUG: Comparison mismatches: {mismatches}")
+
             if mismatches:
                 return Response({
                     'verified': False,
-                    'status': 'mismatch',
                     'error_type': 'MISMATCH',
-                    'mismatches': mismatches,
                     'user_friendly_message': 'Some details don\'t match your ID. Please review and correct.',
-                    'action_required': 'EDIT_OR_RETAKE'
+                    'mismatches': mismatches
                 }, status=200)
 
-            # All fields match!
-            print("[VerifyIdFieldsView] ID document verified - all fields match!")
+            # SUCCESS: Document verified
             return Response({
                 'verified': True,
                 'status': 'match',
-                'message': 'ID verified successfully',
+                'message': 'Document verified successfully',
                 'extracted_fields': ocr_fields
             }, status=200)
 
         except Exception as e:
-            print(f"[VerifyIdFieldsView] ERROR: {str(e)}")
+            print(f"❌ ID verification error: {e}")
             import traceback
             traceback.print_exc()
             return Response({
                 'verified': False,
-                'status': 'error',
                 'error_type': 'SERVER_ERROR',
-                'message': f'Verification failed: {str(e)}'
+                'message': 'Server error during verification. Please try again.'
             }, status=500)
         
         finally:
@@ -433,190 +321,6 @@ class VerifyIdFieldsView(APIView):
 
 
 
-# class VerifyGuardianIdFieldsView(APIView):
-#     """
-#     Verify guardian ID fields by comparing OCR results with guardian's stored information
-#     """
-#     parser_classes = (MultiPartParser, FormParser)
-
-#     def post(self, request):
-#         try:
-#             registration_data = json.loads(request.data.get('registrationData', '{}'))
-#             id_image = request.FILES.get('id_image')
-#             doc_type = registration_data.get('document_type', None)
-#             guardian_username = registration_data.get('guardian_username', '')
-            
-#             if not id_image:
-#                 return Response({'error': 'No image provided'}, status=400)
-            
-#             if not guardian_username:
-#                 return Response({'error': 'Guardian username not provided'}, status=400) 
-
-#             print(f"DEBUG: Verifying guardian ID for username: {guardian_username}")
-#             print(f"DEBUG: Document type: {doc_type}")
-
-#             # --- GUARDIAN SUPPORTING DOCS HEADER CHECK ---
-#             if doc_type and any(x in doc_type.lower() for x in ['birth', 'voter']):
-#                 header_ok = validate_document_header(id_image, doc_type)
-#                 if not header_ok:
-#                     return Response({
-#                         'status': 'mismatch',
-#                         'mismatches': {
-#                             'header': {
-#                                 'user': doc_type,
-#                                 'ocr': 'Header/title not found in image'
-#                             }
-#                         }
-#                     }, status=200)
-#                 return Response({'status': 'match'})
-
-#             # Get guardian information from database
-#             guardian_info = None
-#             with connection.cursor() as cursor:
-#                 try:
-#                     cursor.execute("""
-#                         SELECT guardian_resident_id, last_name, first_name, middle_name, suffix, dob
-#                         FROM get_guardian_identity_by_username(%s)
-#                     """, [guardian_username])
-                    
-#                     result = cursor.fetchone()
-#                     if result:
-#                         guardian_info = {
-#                             'guardian_resident_id': result[0],
-#                             'last_name': result[1],
-#                             'first_name': result[2],
-#                             'middle_name': result[3] or '',
-#                             'suffix': result[4] or '',
-#                             'dob': result[5].strftime('%Y-%m-%d') if result[5] else ''
-#                         }
-#                         print(f"DEBUG: Guardian info retrieved: {guardian_info}")
-#                     else:
-#                         return Response({
-#                             'error': 'Guardian not found or not verified'
-#                         }, status=400)
-                        
-#                 except Exception as db_error:
-#                     print(f"DEBUG: Database error: {str(db_error)}")
-#                     return Response({
-#                         'error': 'Guardian verification failed'
-#                     }, status=400)
-
-#             # Extract fields from guardian's document using OCR
-#             extracted_fields = run_ocr_and_extract_fields_switchable(
-#                 id_image, 
-#                 doc_type, 
-#                 guardian_info  # Pass guardian info for context
-#             )
-
-#             print(f"DEBUG: OCR extracted fields: {extracted_fields}")
-
-#             # IMPORTANT: Remap OCR results to match guardian's stored information
-#             # The OCR might have the names in wrong order, so we need to match them
-#             ocr_first = extracted_fields.get('first_name', '').upper()
-#             ocr_last = extracted_fields.get('last_name', '').upper()
-#             ocr_middle = extracted_fields.get('middle_name', '').upper()
-            
-#             guardian_first = guardian_info['first_name'].upper()
-#             guardian_last = guardian_info['last_name'].upper()
-#             guardian_middle = guardian_info['middle_name'].upper()
-
-#             print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}', Middle: '{ocr_middle}'")
-#             print(f"DEBUG: Guardian Names - First: '{guardian_first}', Last: '{guardian_last}', Middle: '{guardian_middle}'")
-
-#             # Smart remapping: Check if OCR first/last are swapped
-#             corrected_fields = {}
-            
-#             # Check if OCR first name matches guardian's last name (indicating swap)
-#             if ocr_first == guardian_last and ocr_last == guardian_first:
-#                 print("DEBUG: Detected name swap - correcting...")
-#                 corrected_fields = {
-#                     'first_name': ocr_last,  # Swap: use OCR last as first
-#                     'last_name': ocr_first,  # Swap: use OCR first as last
-#                     'middle_name': ocr_middle,
-#                     'dob': extracted_fields.get('dob', '')
-#                 }
-#             else:
-#                 # No swap needed
-#                 corrected_fields = {
-#                     'first_name': ocr_first,
-#                     'last_name': ocr_last,
-#                     'middle_name': ocr_middle,
-#                     'dob': extracted_fields.get('dob', '')
-#                 }
-
-#             print(f"DEBUG: Corrected fields: {corrected_fields}")
-
-#             # Compare corrected fields with guardian's stored information
-#             mismatches = {}
-
-#             # Compare first name
-#             if corrected_fields.get('first_name'):
-#                 if not are_names_equivalent(corrected_fields['first_name'], guardian_info['first_name']):
-#                     mismatches['first_name'] = {
-#                         'guardian': corrected_fields['first_name'],
-#                         'expected': guardian_info['first_name']
-#                     }
-
-#             # Compare last name
-#             if corrected_fields.get('last_name'):
-#                 if not are_names_equivalent(corrected_fields['last_name'], guardian_info['last_name']):
-#                     mismatches['last_name'] = {
-#                         'guardian': corrected_fields['last_name'],
-#                         'expected': guardian_info['last_name']
-#                     }
-
-#             # Compare middle name
-#             if corrected_fields.get('middle_name') and guardian_info['middle_name']:
-#                 if not are_names_equivalent(corrected_fields['middle_name'], guardian_info['middle_name']):
-#                     mismatches['middle_name'] = {
-#                         'guardian': corrected_fields['middle_name'],
-#                         'expected': guardian_info['middle_name']
-#                     }
-
-#             # Compare date of birth
-#             if corrected_fields.get('dob') and guardian_info['dob']:
-#                 ocr_dob = normalize_for_comparison(corrected_fields['dob'])
-#                 guardian_dob = normalize_for_comparison(guardian_info['dob'])
-#                 if ocr_dob != guardian_dob:
-#                     mismatches['dob'] = {
-#                         'guardian': corrected_fields['dob'],
-#                         'expected': guardian_info['dob']
-#                     }
-
-#             print(f"DEBUG: Comparison mismatches after correction: {mismatches}")
-
-#             if mismatches:
-#                 return Response({
-#                     'status': 'mismatch',
-#                     'message': 'Guardian document details do not match stored information',
-#                     'mismatches': mismatches,
-#                     'extracted_fields': corrected_fields,
-#                     'guardian_stored_info': {
-#                         'first_name': guardian_info['first_name'],
-#                         'last_name': guardian_info['last_name'],
-#                         'middle_name': guardian_info['middle_name'],
-#                         'dob': guardian_info['dob']
-#                     }
-#                 })
-#             else:
-#                 return Response({
-#                     'status': 'match',
-#                     'message': 'Guardian document verified successfully',
-#                     'extracted_fields': corrected_fields,
-#                     'guardian_verified_info': {
-#                         'first_name': guardian_info['first_name'],
-#                         'last_name': guardian_info['last_name'],
-#                         'middle_name': guardian_info['middle_name'],
-#                         'dob': guardian_info['dob']
-#                     }
-#                 })
-
-#         except Exception as e:
-#             print(f"Guardian ID verification error: {str(e)}")
-#             return Response({
-#                 'error': f'Verification failed: {str(e)}'
-#             }, status=500)
-        
 
 class VerifyGuardianIdFieldsView(APIView):
     """
@@ -662,18 +366,71 @@ class VerifyGuardianIdFieldsView(APIView):
             guardian_resident_id, guardian_last_name, guardian_first_name, guardian_middle_name, guardian_suffix, guardian_dob = guardian_info
             print(f"DEBUG: Guardian info retrieved: {{'guardian_resident_id': {guardian_resident_id}, 'last_name': '{guardian_last_name}', 'first_name': '{guardian_first_name}', 'middle_name': '{guardian_middle_name}', 'suffix': '{guardian_suffix}', 'dob': '{guardian_dob}'}}")
 
-            # ✅ STEP 1: Validate document header first
-            if doc_type and any(x in doc_type.lower() for x in ['birth', 'voter']):
-                header_ok = validate_document_header(id_image, doc_type)
-                if not header_ok:
+            # ✅ FIXED: More specific document classification for guardian documents too
+            doc_type_lower = doc_type.lower().strip()
+            
+            # Supporting documents - exact matches only
+            is_supporting_doc = doc_type_lower in [
+                'birth certificate',
+                'voters certificate',  # Note: "voters certificate" not "voters id"
+                "voter's certificate"
+            ]
+            
+            # ID documents
+            is_id_doc = not is_supporting_doc
+            
+            print(f"DEBUG: Guardian document classification - Supporting: {is_supporting_doc}, ID: {is_id_doc}")
+            print(f"DEBUG: Document type (normalized): '{doc_type_lower}'")
+
+            # ✅ STEP 2: MANDATORY HEADER VALIDATION FOR ALL GUARDIAN DOCUMENTS
+            if doc_type and ENABLE_OCR_VALIDATION:
+                print(f"DEBUG: Running header validation for guardian document: {doc_type}")
+                id_image.seek(0)
+                
+                header_valid = validate_document_header(id_image, doc_type)
+                print(f"DEBUG: Header validation result: {header_valid}")
+                
+                if not header_valid:
+                    print(f"❌ Guardian header validation FAILED for {doc_type}")
                     return Response({
                         'verified': False,
                         'error_type': 'DOCUMENT_TYPE_MISMATCH',
                         'user_friendly_message': f"This doesn't look like a {doc_type}. Please upload a clear photo of your guardian's {doc_type}.",
                         'message': f'Document header validation failed for {doc_type}'
                     }, status=200)
+                
+                print(f"✅ Guardian header validation PASSED for {doc_type}")
 
-            # ✅ STEP 2: Extract OCR fields
+            # ✅ STEP 3: For GUARDIAN SUPPORTING documents, stop here (header check only)
+            if is_supporting_doc:
+                print(f"DEBUG: Guardian supporting document - returning success after header check")
+                
+                guardian_data_for_ocr = {
+                    'first_name': guardian_first_name,
+                    'last_name': guardian_last_name,
+                    'middle_name': guardian_middle_name or '',
+                    'dob': str(guardian_dob) if guardian_dob else ''
+                }
+                
+                id_image.seek(0)
+                ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, guardian_data_for_ocr)
+                
+                return Response({
+                    'verified': True,
+                    'status': 'match',
+                    'message': 'Guardian document verified successfully',
+                    'extracted_fields': ocr_fields,
+                    'guardian_verified_info': {
+                        'first_name': guardian_first_name,
+                        'last_name': guardian_last_name,
+                        'middle_name': guardian_middle_name or '',
+                        'dob': str(guardian_dob) if guardian_dob else ''
+                    }
+                }, status=200)
+
+            # ✅ STEP 4: For GUARDIAN ID documents, proceed with FULL OCR validation
+            print(f"DEBUG: Guardian ID document - proceeding with OCR validation")
+            
             guardian_data_for_ocr = {
                 'first_name': guardian_first_name,
                 'last_name': guardian_last_name,
@@ -681,38 +438,35 @@ class VerifyGuardianIdFieldsView(APIView):
                 'dob': str(guardian_dob) if guardian_dob else ''
             }
 
+            id_image.seek(0)
             ocr_fields = run_ocr_and_extract_fields_switchable(id_image, doc_type, guardian_data_for_ocr)
             print(f"DEBUG: OCR extracted fields: {ocr_fields}")
 
-            # ✅ STEP 3: Check if OCR returned meaningful data
+            # Check if OCR returned meaningful data
             ocr_first = (ocr_fields.get('first_name') or '').strip()
             ocr_last = (ocr_fields.get('last_name') or '').strip()
-            ocr_dob = (ocr_fields.get('dob') or '').strip()
 
-            print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}', Middle: '{ocr_fields.get('middle_name', '')}'")
-            print(f"DEBUG: Guardian Names - First: '{guardian_first_name.upper()}', Last: '{guardian_last_name.upper()}', Middle: '{guardian_middle_name or ''}'")
+            print(f"DEBUG: OCR Names - First: '{ocr_first}', Last: '{ocr_last}'")
+            print(f"DEBUG: Guardian Names - First: '{guardian_first_name}', Last: '{guardian_last_name}'")
 
-            # ✅ STEP 4: For ID documents, require OCR to extract names
-            if doc_type and not any(x in doc_type.lower() for x in ['birth', 'voter']):  # ID documents
-                if not ocr_first and not ocr_last:
-                    return Response({
-                        'verified': False,
-                        'error_type': 'QUALITY_ISSUE',
-                        'user_friendly_message': f"We couldn't read your guardian's {doc_type} clearly. Please retake the photo with better lighting and ensure all text is visible.",
-                        'message': 'OCR could not extract readable names from the document'
-                    }, status=200)
+            # For guardian ID documents, require OCR to extract names
+            if not ocr_first and not ocr_last:
+                return Response({
+                    'verified': False,
+                    'error_type': 'QUALITY_ISSUE',
+                    'user_friendly_message': f"We couldn't read your guardian's {doc_type} clearly. Please retake the photo with better lighting and ensure all text is visible.",
+                    'message': 'OCR could not extract readable names from the document'
+                }, status=200)
 
-            # ✅ STEP 5: Find mismatches between OCR and guardian info
+            # Find mismatches between OCR and guardian info
             mismatches = find_mismatches(
                 guardian_data_for_ocr,
                 ocr_fields,
                 ['first_name', 'last_name', 'dob']
             )
 
-            print(f"DEBUG: Corrected fields: {ocr_fields}")
-            print(f"DEBUG: Comparison mismatches after correction: {mismatches}")
+            print(f"DEBUG: Comparison mismatches: {mismatches}")
 
-            # ✅ STEP 6: Handle mismatches
             if mismatches:
                 return Response({
                     'verified': False,
@@ -727,7 +481,7 @@ class VerifyGuardianIdFieldsView(APIView):
                     }
                 }, status=200)
 
-            # ✅ SUCCESS: Document verified
+            # SUCCESS: Guardian document verified
             return Response({
                 'verified': True,
                 'status': 'match',
@@ -743,6 +497,8 @@ class VerifyGuardianIdFieldsView(APIView):
 
         except Exception as e:
             print(f"❌ Guardian ID verification error: {e}")
+            import traceback
+            traceback.print_exc()
             return Response({
                 'verified': False,
                 'error_type': 'SERVER_ERROR',
@@ -751,7 +507,7 @@ class VerifyGuardianIdFieldsView(APIView):
         
         finally:
             print("=== VerifyGuardianIdFieldsView END ===\n")
-
+            
 #Refactored
 class VerifyGuardianView(APIView):
     """Verify guardian username."""
