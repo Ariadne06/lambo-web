@@ -469,145 +469,6 @@
   .btn-gray:hover{background:#e5e7eb!important}
 </style>
 
-
-<!-- ===== Modal: Add Medical Condition ===== -->
-<div id="modalMedical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalMedical_title">
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalMedical')"></div>
-
-  <!-- Sheet -->
-  <div class="relative mx-auto my-8 w-[95%] max-w-xl">
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-      <!-- Header -->
-      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
-        <h2 id="modalMedical_title" class="text-lg font-semibold">Add Medical Condition</h2>
-        <button type="button" class="text-red-200 hover:text-red-100 text-xl leading-none font-bold"
-                onclick="closeModal('modalMedical')" aria-label="Close">&times;</button>
-      </div>
-
-      <!-- Body -->
-      <form class="px-6 py-6 space-y-5">
-        <!-- Condition Name -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-red-700">Condition Name</label>
-          <div class="relative">
-            <input type="text" placeholder="e.g., Asthma"
-                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
-            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5" opacity=".35"/><path d="M2 12l10 5 10-5" opacity=".35"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-red-700">Notes</label>
-          <div class="relative">
-            <textarea rows="4" placeholder="e.g., Diagnosed 2019, managed with inhaler"
-                      class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500"></textarea>
-            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5 3a2 2 0 0 0-2 2v14l4-3h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Z"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <!-- Note -->
-        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
-            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
-          </svg>
-          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center justify-end gap-3 pt-1">
-          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="closeModal('modalMedical')">Cancel</button>
-          <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
-            </svg>
-            Save
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Modal: Add Surgical History ===== -->
-<div id="modalSurgical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalSurgical_title">
-  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSurgical')"></div>
-
-  <div class="relative mx-auto my-8 w-[95%] max-w-xl">
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-      <div class="flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3 text-white">
-        <h2 id="modalSurgical_title" class="text-lg font-semibold">Add Surgical History</h2>
-        <button type="button" class="text-red-200 hover:text-red-100 text-xl leading-none font-bold"
-                onclick="closeModal('modalSurgical')" aria-label="Close">&times;</button>
-      </div>
-
-      <form class="px-6 py-6 space-y-5">
-        <!-- Procedure -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-red-700">Procedure Name</label>
-          <div class="relative">
-            <input type="text" placeholder="e.g., Appendectomy"
-                   class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
-            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5" opacity=".35"/><path d="M2 12l10 5 10-5" opacity=".35"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-red-700">Notes</label>
-          <div class="relative">
-            <textarea rows="4" placeholder="e.g., Done in 2018"
-                      class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500"></textarea>
-            <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5 3a2 2 0 0 0-2 2v14l4-3h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Z"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <!-- Note -->
-        <div class="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 flex items-start gap-2 border border-amber-200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.29 3.86a2 2 0 0 1 3.42 0l8 13.86A2 2 0 0 1 20 20H4a2 2 0 0 1-1.71-3.28l8-12.86Z"/>
-            <path d="M11 10h2v4h-2zm0 6h2v2h-2z" fill="#fff"/>
-          </svg>
-          <p>Please review the information before saving. Make sure all fields are complete and accurate.</p>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center justify-end gap-3 pt-1">
-          <button type="button" class="btn-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
-                  onclick="closeModal('modalSurgical')">Cancel</button>
-          <button type="submit" class="btn-red inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold shadow">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 0v6h4V3h-4Z"/>
-            </svg>
-            Save
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-
-
 <!-- Obstetrical History Modal -->
 <div id="modalObstetrical" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalObstetrical_title">
   <!-- Backdrop -->
@@ -1292,16 +1153,6 @@
       <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
         <h2 id="modalScreenings_title" class="text-lg font-semibold tracking-wide">Infectious Disease Surveillance</h2>
         <div class="flex items-center gap-2">
-          <!-- Add Screening opens nested modal -->
-          <button type="button"
-                  class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow bg-white text-red-600 hover:bg-gray-50"
-                  onclick="closeModal('modalScreenings'); openModal('modalAddScreening')">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
-            </svg>
-            Add Infectious Disease
-          </button>
-
           <!-- Close -->
           <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
                   onclick="closeModal('modalScreenings')" aria-label="Close modal">&times;</button>
@@ -1430,15 +1281,6 @@
       <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
         <h2 id="modalLabIron_title" class="text-lg font-semibold tracking-wide">Laboratory Screening</h2>
         <div class="flex items-center gap-2">
-          <!-- Add Lab Record -->
-          <button type="button"
-                  class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow bg-white text-red-600 hover:bg-gray-50"
-                  onclick="closeModal('modalLabIron'); openModal('modalAddLabResult')">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2z"/>
-            </svg>
-            Add Lab Record
-          </button>
           <!-- Close -->
           <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
                   onclick="closeModal('modalLabIron')" aria-label="Close modal">&times;</button>
@@ -2200,8 +2042,8 @@
                 <td class="px-4 py-2">{{ delivery_outcome.outcome_type|default:"—" }}</td>
                 <td class="px-4 py-2">{{ delivery_outcome.delivery_type|default:"—" }}</td>
                 <td class="px-4 py-2">{{ delivery_outcome.place_delivery_type|default:"—" }}{% if delivery_outcome.ownership_type %} ({{ delivery_outcome.ownership_type }}){% endif %}</td>
-                <td class="px-4 py-2">—</td>
-                <td class="px-4 py-2">—</td>
+                <td class="px-4 py-2">{{ delivery_outcome.baby_sex|default:"—" }}</td>
+                <td class="px-4 py-2">{% if delivery_outcome.baby_birthweight_in_grams %}{{ delivery_outcome.baby_birthweight_in_grams }}g{% else %}—{% endif %}</td>
                 <td class="px-4 py-2">{{ delivery_outcome.birth_attendant|default:"—" }}{% if delivery_outcome.other_attendant %} ({{ delivery_outcome.other_attendant }}){% endif %}</td>
                 <td class="px-4 py-2">{{ delivery_outcome.time_of_delivery|default:"—" }}</td>
               </tr>
@@ -2221,24 +2063,28 @@
       <div class="flex items-center justify-between border-t bg-gray-50 px-6 py-3">
         <button type="button" class="btn-red rounded-lg px-4 py-1.5 text-sm font-semibold shadow"
                 onclick="closeModal('modalDeliveryOutcome')">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <!-- ================= Add Delivery Outcome Modal ================= -->
+<!-- ================= Add Delivery Outcome Modal ================= -->
 <div id="modalAddDeliveryOutcome" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="addDeliveryOutcome_title">
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddDeliveryOutcome')"></div>
 
   <!-- Modal card -->
-        <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
-          <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
-              <h2 id="addDeliveryOutcome_title" class="text-lg font-semibold">Add Delivery Outcome</h2>
-              <button type="button" class="text-red-200 hover:text-red-100 text-xl leading-none font-bold"
-                      aria-label="Close" onclick="closeModal('modalAddDeliveryOutcome')">&times;</button>
-            </div>
+  <div class="relative mx-auto my-8 w-[95%] max-w-5xl">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="addDeliveryOutcome_title" class="text-lg font-semibold">Add Delivery Outcome</h2>
+        <button type="button" class="text-red-200 hover:text-red-100 text-xl leading-none font-bold"
+                aria-label="Close" onclick="closeModal('modalAddDeliveryOutcome')">&times;</button>
+      </div>
 
-            <!-- Form -->
-            <form method="post" action="{% url 'bhw_module:addDeliveryOutcome' %}">
+      <!-- Form -->
+      <form method="post" action="{% url 'bhw_module:addDeliveryOutcome' %}">
               {% csrf_token %}
               <input type="hidden" name="maternal_health_id" value="{{ results.maternal_health_id }}">
               
@@ -2339,6 +2185,26 @@
                     </div>
                   </div>
                   
+                  <div>
+                    <label class="text-[11px] font-semibold text-red-700">Baby Sex</label>
+                    <div class="relative mt-1">
+                      <select name="baby_sex" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <option value="">Select Baby Sex (optional)</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                      <span class="pointer-events-none absolute right-3 top-2.5 text-gray-400">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="m12 15 5-5-1.4-1.4L12 12.2 8.4 8.6 7 10l5 5Z"/></svg>
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label class="text-[11px] font-semibold text-red-700">Baby Birthweight (grams)</label>
+                    <input type="number" name="baby_birthweight_in_grams" min="0" placeholder="Enter birthweight in grams"
+                          class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  </div>
+                  
                   <div class="md:col-span-2">
                     <label class="text-[11px] font-semibold text-red-700">Others Description</label>
                     <input type="text" name="others_description" placeholder="Specify if place is 'Others'"
@@ -2364,7 +2230,6 @@
             </form>
           </div>
         </div>
-      </div>
       </div>
     </div>
   </div>

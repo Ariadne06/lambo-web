@@ -106,7 +106,12 @@
               <td class="px-6 py-3">{{ person.dob }}</td>
               <td class="px-6 py-3">{{ person.family_code }}</td>
               <td class="px-6 py-3">
-                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">{{ person.record_status }}</span>
+                <span class="rounded-full px-3 py-1 text-xs font-bold
+                  {% if 'completed' in person.record_status|lower %}bg-green-100 text-green-700
+                  {% elif 'ongoing' in person.record_status|lower %}bg-yellow-100 text-yellow-700
+                  {% elif 'transfer' in person.record_status|lower %}" style="background-color: #dbeafe; color: #1d4ed8;
+                  {% elif 'incomplete' in person.record_status|lower %}bg-red-100 text-red-700
+                  {% else %}bg-gray-100 text-gray-700{% endif %}">{{ person.record_status }}</span>
               </td>
               <td class="px-6 py-3">{{ person.date_created|date:"M d, Y" }}</td>
               <td class="px-4 py-3">
@@ -123,6 +128,15 @@
                       View
                     </button>
                   </form>
+                  <!-- Edit Status button -->
+                  <button type="button"
+                          class="gh-blue inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
+                          onclick="openEditStatusModal({{ person.maternal_health_id }}, '{{ person.record_status }}', {{ person.record_status_id }})">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                    Edit Status
+                  </button>
                 </div>
               </td>
             </tr>
@@ -161,7 +175,182 @@
   </style>
 </div>
 
+<!-- Edit Status Modal -->
+<div id="modalEditStatus" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="modalEditStatus_title">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalEditStatus')"></div>
+
+  <!-- Modal -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-md">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 id="modalEditStatus_title" class="text-lg font-semibold">Edit Record Status</h2>
+        <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalEditStatus')" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-red-700 mb-2">Current Status</label>
+          <input type="text" id="currentStatus" readonly
+                 class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-red-700 mb-2">New Status</label>
+          <select id="newStatus" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <option value="" selected disabled>Select New Status</option>
+            {% for status in record_status_options %}
+            <option value="{{ status.record_status_id }}">{{ status.record_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4">
+          <button type="button"
+                  class="gh-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalEditStatus')">
+            Cancel
+          </button>
+          <button type="button"
+                  class="gh-red inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="showConfirmModal()">
+            Update Status
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="modalConfirmStatus" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="modalConfirmStatus_title">
+  <div class="absolute inset-0 bg-black/60" onclick="closeModal('modalConfirmStatus')"></div>
+  <div class="relative mx-auto my-8 w-[95%] max-w-md">
+    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
+        <h3 id="modalConfirmStatus_title" class="text-lg font-semibold">Confirm Status Update</h3>
+        <button class="text-white/90 hover:text-white text-xl leading-none font-bold"
+                onclick="closeModal('modalConfirmStatus')">&times;</button>
+      </div>
+      <div class="p-6">
+        <div class="flex items-start gap-3 mb-4">
+          <svg class="h-6 w-6 text-amber-500 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/>
+          </svg>
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-2">Important Notice</h4>
+            <p class="text-sm text-gray-600">Are you sure you want to update the record status? This action will change the maternal health record status and may affect future operations.</p>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" class="gh-gray rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="closeModal('modalConfirmStatus'); openModal('modalEditStatus')">Cancel</button>
+          <button type="button" class="gh-red rounded-lg px-4 py-2 text-sm font-semibold shadow"
+                  onclick="submitStatusUpdate()">Confirm & Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Modal functions
+  function openModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+  
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+  
+  // Edit status modal functions
+  let currentMaternalHealthId = null;
+  
+  function openEditStatusModal(maternalHealthId, currentStatusName, currentStatusId) {
+    currentMaternalHealthId = maternalHealthId;
+    document.getElementById('currentStatus').value = currentStatusName;
+    
+    // Reset new status dropdown
+    const newStatusSelect = document.getElementById('newStatus');
+    newStatusSelect.value = '';
+    
+    // Remove current status from options
+    Array.from(newStatusSelect.options).forEach(option => {
+      if (option.value == currentStatusId) {
+        option.style.display = 'none';
+      } else {
+        option.style.display = 'block';
+      }
+    });
+    
+    openModal('modalEditStatus');
+  }
+  
+  function showConfirmModal() {
+    const newStatusSelect = document.getElementById('newStatus');
+    if (!newStatusSelect.value) {
+      alert('Please select a new status.');
+      return;
+    }
+    closeModal('modalEditStatus');
+    openModal('modalConfirmStatus');
+  }
+  
+  function submitStatusUpdate() {
+    const newStatusId = document.getElementById('newStatus').value;
+    
+    // Create and submit form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "bhw_module:updateMaternalStatus" %}';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add maternal health ID
+    const maternalIdInput = document.createElement('input');
+    maternalIdInput.type = 'hidden';
+    maternalIdInput.name = 'maternal_health_id';
+    maternalIdInput.value = currentMaternalHealthId;
+    form.appendChild(maternalIdInput);
+    
+    // Add new status ID
+    const statusInput = document.createElement('input');
+    statusInput.type = 'hidden';
+    statusInput.name = 'record_status_id';
+    statusInput.value = newStatusId;
+    form.appendChild(statusInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+  
+  // Close modals on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (!document.getElementById('modalConfirmStatus').classList.contains('hidden')) {
+        closeModal('modalConfirmStatus');
+      } else if (!document.getElementById('modalEditStatus').classList.contains('hidden')) {
+        closeModal('modalEditStatus');
+      }
+    }
+  });
+  
   // Debounce
   function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
