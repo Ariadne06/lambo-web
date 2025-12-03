@@ -1142,6 +1142,24 @@ class CheckupRecordCreateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     personnel_id = serializers.IntegerField(required=True)
 
+class CheckupRecordUpdateSerializer(serializers.Serializer):
+ 
+    personnel_id = serializers.IntegerField(required=True)
+    
+    fetal_heart_rate = serializers.IntegerField(required=False, allow_null=True, min_value=60, max_value=200)
+    laboratory_results = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=500)
+    notes = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=500)
+
+    def validate(self, data):
+        """Ensure at least one midwife field is provided"""
+        midwife_fields = ['fetal_heart_rate', 'laboratory_results', 'notes']
+        
+        if not any(field in data and data[field] not in [None, ''] for field in midwife_fields):
+            raise serializers.ValidationError(
+                "At least one field (fetal_heart_rate, laboratory_results, or notes) must be provided"
+            )
+        
+        return data
 
 class MaternalSupplementCreateSerializer(serializers.Serializer):
     supplement_type_id = serializers.IntegerField(required=True)
