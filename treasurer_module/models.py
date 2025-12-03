@@ -170,3 +170,24 @@ class TreasurerRepo(models.Model):
 			cur.execute("SELECT get_total_or_issued_today()")
 			row = cur.fetchone()
 			return int(row[0] or 0)
+
+	@staticmethod
+	def get_financial_report(
+		year: Optional[int] = None,
+		month: Optional[int] = None,
+		start_date: Optional[str] = None,
+		end_date: Optional[str] = None,
+		limit: int = 10000,
+		offset: int = 0
+	) -> List[Dict[str, Any]]:
+		"""Wrapper for treasurer_get_financial_report().
+		
+		Returns list of dicts with columns: or_number, total_amount, purpose, issued_by, issued_at
+		"""
+		with connection.cursor() as cur:
+			cur.execute(
+				"SELECT * FROM treasurer_get_financial_report(%s,%s,%s,%s,%s,%s)",
+				[year, month, start_date, end_date, limit, offset]
+			)
+			cols = [c[0] for c in cur.description]
+			return [dict(zip(cols, row)) for row in cur.fetchall()]
