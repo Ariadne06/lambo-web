@@ -1326,3 +1326,61 @@ class BHWDashboard(models.Model):
     class Meta:
         managed = False  # This is NOT a real table, it comes from a DB function
         # optional: db_table = "bhw_dashboard"
+
+
+
+# Model for Resident Status (e.g., Active, Inactive, etc.)
+class ResidentStatus(models.Model):
+    name = models.CharField(max_length=50)  # e.g., Active, Inactive
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+# Model for Household (represents a household address and related data)
+class Household(models.Model):
+    household_number = models.CharField(max_length=100)  # Household number (e.g., "123 Main St.")
+    street = models.CharField(max_length=200, blank=True, null=True)
+    barangay = models.CharField(max_length=100, blank=True, null=True)  # Barangay name
+    city_municipality = models.CharField(max_length=100, blank=True, null=True)  # City/Municipality
+    country = models.CharField(max_length=100, blank=True, null=True)
+    
+    def __str__(self):
+        return f"Household {self.household_number} - {self.street}, {self.city_municipality}"
+
+
+# Model for Family (represents a family unit, a group of residents)
+class Family(models.Model):
+    family_code = models.CharField(max_length=100, unique=True)  # Unique family code
+    household = models.ForeignKey(Household, related_name='families', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Family {self.family_code} (Household: {self.household.household_number})"
+
+
+# Model for Resident (each resident belongs to a household and a family)
+class Resident(models.Model):
+    resident_code = models.CharField(max_length=100, unique=True)  # Unique resident code
+    first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100)
+    suffix = models.CharField(max_length=10, blank=True, null=True)  # Suffix (e.g., Jr., Sr.)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female')])
+    dob = models.DateField()  # Date of birth
+    status = models.ForeignKey(ResidentStatus, on_delete=models.SET_NULL, null=True, blank=True)  # Resident status
+    family = models.ForeignKey(Family, related_name='residents', on_delete=models.CASCADE)
+    household = models.ForeignKey(Household, related_name='residents', on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=250, blank=True, null=True)  # Full name will be computed later
+
+    # Optional fields (for extended info)
+    educational_attain_id = models.IntegerField(blank=True, null=True)  # Placeholder for educational attainment
+    religion_id = models.IntegerField(blank=True, null=True)  # Placeholder for religion info
+    civil_stat_id = models.IntegerField(blank=True, null=True)  # Placeholder for civil status
+
+    def save(self, *args, **kwargs):
+        self.full_name = f"{self.first_name} {self.middle_name or ''} {self.last_name} {self.suffix or ''}".strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.resident_code})"

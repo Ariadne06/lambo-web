@@ -3955,3 +3955,50 @@ class BHWDashboardView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def get_resident_list(request):
+    # Extract query parameters (if any)
+    p_query = request.GET.get('query', None)
+    p_sex = request.GET.get('sex', None)
+    p_status_id = request.GET.get('status_id', None)
+    p_min_age = request.GET.get('min_age', None)
+    p_max_age = request.GET.get('max_age', None)
+    p_limit = request.GET.get('limit', 50)
+    p_offset = request.GET.get('offset', 0)
+
+    # Call the PostgreSQL function using raw SQL
+    with connection.cursor() as cursor:
+        cursor.callproc(
+            'view_all_resident',  # Function name
+            [
+                p_query, p_sex, p_status_id, p_min_age, p_max_age, p_limit, p_offset
+            ]
+        )
+        rows = cursor.fetchall()  # Fetch all results
+
+    # Format the response as a list of dictionaries
+    residents = [
+        {
+            'resident_id': row[0],
+            'resident_code': row[1],
+            'full_name': row[2],
+            'sex': row[3],
+            'dob': row[4],
+            'age': row[5],
+            'status_id': row[6],
+            'status_name': row[7],
+            'full_address': row[8],
+            'educational_attainment': row[9],
+            'religion': row[10],
+            'civil_status': row[11],
+            'household_id': row[12],
+            'household_number': row[13],
+            'family_id': row[14],
+            'family_code': row[15],
+        }
+        for row in rows
+    ]
+
+    return JsonResponse({'residents': residents})
+
