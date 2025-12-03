@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 import django.contrib.admin as admin
-from .views import TestTypeListView
+from .views import DiseaseTypeListView, TestTypeListView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -211,6 +211,9 @@ path(
      path('maternal-health-records/<int:maternal_health_id>/disease-surveillance/add/', 
           views.DiseaseScreenCreateView.as_view(), 
           name='disease-surveillance-add'),
+
+          path("disease-types/", DiseaseTypeListView.as_view()),
+
      
      # ========================================
      # LABORATORY SCREENING
