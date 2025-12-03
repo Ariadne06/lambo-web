@@ -35,6 +35,7 @@ urlpatterns = [
     path('applications/<int:application_id>/print/', views.print_application, name='print_application'),
     path('applications/<int:application_id>/print/pdf/', views.print_application_pdf, name='print_application_pdf'),
     path('announcement/', views.announcement, name="announcement"),
+    path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
     path('approval/', views.approval, name="approval"),
     path("approval/get-doc-url", views.get_doc_url, name="approval_get_doc_url"),
     path("approval/decide", views.approval_decide, name="approval_decide"),

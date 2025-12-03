@@ -245,6 +245,9 @@ SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY') #admin operations
 # Bucket for resident docs (from your Supabase screenshot)
 SUPABASE_BUCKET_DOCS = os.environ.get("SUPABASE_BUCKET_DOCS", "resident-documents")
 
+# Bucket for announcements
+SUPABASE_BUCKET_ANNOUNCEMENTS = os.environ.get("SUPABASE_BUCKET_ANNOUNCEMENTS", "announcements")
+
 # Public only in dev, private in production
 SUPABASE_BUCKET_DOCS_PUBLIC = os.environ.get(
     "SUPABASE_BUCKET_DOCS_PUBLIC",

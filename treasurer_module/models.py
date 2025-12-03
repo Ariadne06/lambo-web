@@ -1,5 +1,6 @@
 from django.db import models, connection
 from typing import Optional, List, Dict, Any
+from datetime import date
 
 
 class TreasurerRepo(models.Model):
@@ -170,6 +171,76 @@ class TreasurerRepo(models.Model):
 			cur.execute("SELECT get_total_or_issued_today()")
 			row = cur.fetchone()
 			return int(row[0] or 0)
+
+
+class AnnouncementRepo(models.Model):
+	"""SQL wrappers for announcements with audience support."""
+	class Meta:
+		managed = False
+		db_table = 'Announcement'
+
+	@staticmethod
+	def _dictfetchall(cur) -> List[Dict]:
+		cols = [c[0] for c in cur.description]
+		return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+	@staticmethod
+	def _norm_audience(val: Optional[str]) -> str:
+		v = (val or "").strip().lower()
+		if v in ("", "both", "everyone", "everybody", "all"): return "both"
+		if v in ("resident", "residents"): return "resident"
+		if v in ("personnel", "staff", "employee", "employees"): return "personnel"
+		return v
+
+	@staticmethod
+	def _postprocess(rows: List[Dict]) -> List[Dict]:
+		out = []
+		for a in rows or []:
+			a["audience"] = AnnouncementRepo._norm_audience(a.get("audience") or a.get("p_audience"))
+			a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
+			out.append(a)
+		return out
+
+	@staticmethod
+	def list_all(q: Optional[str] = None,
+				 date_from: Optional[date] = None,
+				 date_to: Optional[date] = None,
+				 created_by: Optional[int] = None,
+				 sort: str = 'date_desc',
+				 limit: int = 100, offset: int = 0,
+				 audience: Optional[str] = None) -> List[Dict]:
+		with connection.cursor() as cur:
+			try:
+				cur.execute(
+					"SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s,%s)",
+					[q, date_from, date_to, created_by, sort, limit, offset, audience]
+				)
+			except Exception:
+				cur.execute(
+					"SELECT * FROM get_all_announcement(%s,%s,%s,%s,%s,%s,%s)",
+					[q, date_from, date_to, created_by, sort, limit, offset]
+				)
+			rows = AnnouncementRepo._dictfetchall(cur)
+		return AnnouncementRepo._postprocess(rows)
+
+	@staticmethod
+	def latest_for_personnel(limit: int = 3) -> List[Dict]:
+		try:
+			with connection.cursor() as cur:
+				cur.execute("SELECT * FROM get_latest_announcements_for_personnel()")
+				rows = AnnouncementRepo._dictfetchall(cur)
+		except Exception:
+			rows = AnnouncementRepo.list_all(sort='date_desc', limit=50, audience=None)
+		rows = AnnouncementRepo._postprocess(rows)
+		out = [a for a in rows if a["audience"] in ("both", "personnel")]
+		return out[:limit]
+
+	@staticmethod
+	def get_one(announcement_id: int) -> Optional[Dict]:
+		with connection.cursor() as cur:
+			cur.execute("SELECT * FROM get_specific_announcement(%s)", [announcement_id])
+			rows = AnnouncementRepo._dictfetchall(cur)
+			return rows[0] if rows else None
 
 	@staticmethod
 	def get_financial_report(
