@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, Maternal, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
+from .models import Dashboard, AnnouncementRepo,MedicalConditionRow,SurgicalHistoryRow, ResidentList, Maternal, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -990,26 +990,24 @@ def _dictfetchall(cur):
 def childMedSurg(request, child_health_id: int):
     """
     JSON endpoint for Medical Conditions + Surgical History
-    Uses:
-      - view_specific_child_all_medical_condition(p_child_health_id INT)
-      - view_specific_child_all_surgical_history(p_child_health_id INT)
     Returns:
       { "medical": [...], "surgical": [...] }
     """
     try:
-        with connection.cursor() as cur:
-            # Medical conditions
-            cur.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
-            medical = _dictfetchall(cur)
+        # Fetch medical conditions with date_added
+        medical = MedicalConditionRow.fetch(child_health_id)
 
-            # Surgical history
-            cur.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
-            surgical = _dictfetchall(cur)
+        # Fetch surgical history with date_added
+        surgical = SurgicalHistoryRow.fetch(child_health_id)
 
+        # Return data as JSON
         return JsonResponse({"medical": medical, "surgical": surgical})
     except Exception as e:
-        # Optional: log e
+        # Return an error response if there's an exception
         return JsonResponse({"medical": [], "surgical": [], "error": str(e)}, status=500)
+
+
+
 
 @custom_login_required
 @role_required('Midwife')
@@ -1023,10 +1021,14 @@ def childSupplements(request, child_health_id: int):
         with connection.cursor() as cur:
             cur.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
             rows = _dictfetchall(cur)
+            if not rows:
+                print(f"No supplement records found for child_health_id: {child_health_id}")
         return JsonResponse({"rows": rows})
     except Exception as e:
-        # Optional: log e
+        print(f"Error fetching supplement records: {e}")
         return JsonResponse({"rows": [], "error": str(e)}, status=500)
+
+
 
 @custom_login_required
 @role_required('Midwife')
