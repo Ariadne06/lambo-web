@@ -572,6 +572,7 @@
                     <th class="px-4 py-3">1st Dose</th>
                     <th class="px-4 py-3">2nd Dose</th>
                     <th class="px-4 py-3">3rd Dose</th>
+                    <th class="px-4 py-3">Next Schedule</th>
                     <th class="px-4 py-3">Status</th>
                   </tr>
                 </thead>
@@ -608,6 +609,13 @@
                         {% endif %}
                       </td>
                       <td class="px-4 py-3">
+                        {% if immunization.next_recommended_date %}
+                          <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-[12px] text-amber-700">{{ immunization.next_recommended_date|date:"m/d/Y" }}</span>
+                        {% else %}
+                          <span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span>
+                        {% endif %}
+                      </td>
+                      <td class="px-4 py-3">
                         {% if immunization.status == 'Completed' %}
                           <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">Completed</span>
                         {% else %}
@@ -617,7 +625,7 @@
                     </tr>
                   {% empty %}
                     <tr>
-                      <td colspan="6" class="px-4 py-8 text-center text-gray-500 italic">
+                      <td colspan="7" class="px-4 py-8 text-center text-gray-500 italic">
                         No immunization records found
                       </td>
                     </tr>
