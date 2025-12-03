@@ -11,4 +11,5 @@ urlpatterns = [
      path('applications/<int:application_id>/', views.treasurer_application_detail, name='treasurer_application_detail'),
      path('applications/<int:application_id>/detail/', views.treasurer_application_detail_json, name='treasurer_application_detail_json'),
      path('applications/<int:application_id>/paid/', views.set_application_to_paid, name='set_application_to_paid'),
+     path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
 ]
