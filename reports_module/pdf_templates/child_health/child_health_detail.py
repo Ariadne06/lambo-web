@@ -366,7 +366,7 @@ class ChildHealthDetailPDF:
         elements.append(header_table)
         elements.append(Spacer(1, 4))
         
-        immun_data = [['Vaccine', 'At birth', '1st dose', '2nd dose', '3rd dose']]
+        immun_data = [['Vaccine', 'At Birth', '1st Dose', '2nd Dose', '3rd Dose']]
         
         # Define standard vaccines in order with their aliases
         standard_vaccines = [
@@ -393,7 +393,6 @@ class ChildHealthDetailPDF:
         if immunizations:
             # Group immunizations by vaccine name
             vaccine_dict = {}
-            processed_vaccines = set()
             
             for immun in immunizations:
                 db_vaccine_name = immun.get('vaccine_name', 'Unknown')
@@ -411,25 +410,14 @@ class ChildHealthDetailPDF:
                 # Use matched alias or original name
                 vaccine_name = matched_alias if matched_alias else db_vaccine_name
                 
+                # Store dates directly from the function
                 if vaccine_name not in vaccine_dict:
                     vaccine_dict[vaccine_name] = {
-                        'at_birth': '',
-                        'first': '',
-                        'second': '',
-                        'third': ''
+                        'at_birth': str(immun.get('at_birth_date', ''))[:10] if immun.get('at_birth_date') else '',
+                        'first': str(immun.get('first_dose_date', ''))[:10] if immun.get('first_dose_date') else '',
+                        'second': str(immun.get('second_dose_date', ''))[:10] if immun.get('second_dose_date') else '',
+                        'third': str(immun.get('third_dose_date', ''))[:10] if immun.get('third_dose_date') else ''
                     }
-                
-                # Check which dose is given
-                if immun.get('at_birth_given'):
-                    vaccine_dict[vaccine_name]['at_birth'] = '✓'
-                if immun.get('first_dose_given'):
-                    vaccine_dict[vaccine_name]['first'] = '✓'
-                if immun.get('second_dose_given'):
-                    vaccine_dict[vaccine_name]['second'] = '✓'
-                if immun.get('third_dose_given'):
-                    vaccine_dict[vaccine_name]['third'] = '✓'
-                
-                processed_vaccines.add(vaccine_name)
             
             # Add standard vaccines in order
             for vaccine in standard_vaccines:
@@ -468,16 +456,16 @@ class ChildHealthDetailPDF:
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F3F4F6')),
             ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
             ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1D5DB')),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ]))
         elements.append(immun_table)
         
@@ -571,6 +559,61 @@ class ChildHealthDetailPDF:
         
         elements.append(Spacer(1, 0.15*inch))
         
+        # === MEDICAL & SURGICAL HISTORY SECTION ===
+        header_table = Table([[Paragraph("MEDICAL & SURGICAL HISTORY", section_header_style)]], colWidths=[7.0*inch])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#991B1B')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0)
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 4))
+        
+        # Create combined table for medical and surgical history
+        history_header = [['Type', 'Condition/Procedure', 'Date']]
+        
+        # Add medical conditions
+        if medical_conditions:
+            for condition in medical_conditions[:8]:  # Limit to 8 entries
+                history_header.append([
+                    'Medical',
+                    condition.get('medical_history_name', ''),
+                    str(condition.get('created_at', ''))[:10] if condition.get('created_at') else ''
+                ])
+        
+        # Add surgical history
+        if surgical_history:
+            for surgery in surgical_history[:8]:  # Limit to 8 entries
+                history_header.append([
+                    'Surgical',
+                    surgery.get('surgical_history_name', ''),
+                    str(surgery.get('date_of_surgery', ''))[:10] if surgery.get('date_of_surgery') else ''
+                ])
+        
+        # Add empty rows to fill table (at least 3 rows total)
+        while len(history_header) < 4:
+            history_header.append(['', '', ''])
+        
+        history_table = Table(history_header, colWidths=[1.0*inch, 4.5*inch, 1.5*inch])
+        history_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F3F4F6')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1D5DB')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(history_table)
+        
+        elements.append(Spacer(1, 0.15*inch))
+        
         # === GROWTH MONITORING SECTION ===
         header_table = Table([[Paragraph("GROWTH MONITORING", section_header_style)]], colWidths=[7.0*inch])
         header_table.setStyle(TableStyle([
@@ -627,62 +670,6 @@ class ChildHealthDetailPDF:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ]))
         elements.append(growth_table)
-        
-        elements.append(Spacer(1, 0.15*inch))
-        
-        # === MEDICAL & SURGICAL HISTORY SECTION ===
-        header_table = Table([[Paragraph("MEDICAL & SURGICAL HISTORY", section_header_style)]], colWidths=[7.0*inch])
-        header_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#991B1B')),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0)
-        ]))
-        elements.append(header_table)
-        elements.append(Spacer(1, 4))
-        
-        # Create combined table for medical and surgical history
-        history_header = [['Type', 'Condition/Procedure', 'Date']]
-        
-        # Add medical conditions
-        if medical_conditions:
-            for condition in medical_conditions[:8]:  # Limit to 8 entries
-                history_header.append([
-                    'Medical',
-                    condition.get('medical_history_name', ''),
-                    str(condition.get('created_at', ''))[:10] if condition.get('created_at') else ''
-                ])
-        
-        # Add surgical history
-        if surgical_history:
-            for surgery in surgical_history[:8]:  # Limit to 8 entries
-                history_header.append([
-                    'Surgical',
-                    surgery.get('surgical_history_name', ''),
-                    str(surgery.get('date_of_surgery', ''))[:10] if surgery.get('date_of_surgery') else ''
-                ])
-        
-        # Add empty rows to fill table (at least 3 rows total)
-        while len(history_header) < 4:
-            history_header.append(['', '', ''])
-        
-        history_table = Table(history_header, colWidths=[1.0*inch, 4.5*inch, 1.5*inch])
-        history_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F3F4F6')),
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1D5DB')),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        elements.append(history_table)
-
         
         elements.append(Spacer(1, 0.2*inch))
         current_date = datetime.now().strftime("%B %d, %Y %I:%M %p")

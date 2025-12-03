@@ -6,6 +6,11 @@ from math import ceil
 from .models import TreasurerRepo
 from utils.db_message import _clean_db_error
 from django.views.decorators.http import require_http_methods, require_POST
+from django.db import connection
+from notifications.service import NotificationService
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 @custom_login_required
@@ -513,6 +518,59 @@ def set_application_to_paid(request, application_id: int):
             or 1
         )
         TreasurerRepo.set_paid(application_id, or_number, personnel_id)
+        
+        # Send notification to resident
+        try:
+            # Get application details to check if it's from a resident
+            app_data = TreasurerRepo.get_one(application_id)
+            resident_id = None
+            
+            if app_data:
+                # Priority 1: Extract applicant_id from total_amount_details JSON
+                details_json = app_data.get('total_amount_details')
+                if details_json:
+                    try:
+                        import json
+                        if isinstance(details_json, str):
+                            details_json = json.loads(details_json)
+                        if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                            resident_id = details_json['applicant_id']
+                            logger.info(f"Payment - Application {application_id}: Found applicant_id={resident_id} in total_amount_details")
+                    except Exception as e:
+                        logger.error(f"Payment - Application {application_id}: Error parsing total_amount_details: {e}")
+                
+                # Priority 2: For business applications, get the business owner
+                if not resident_id and app_data.get('business_id'):
+                    try:
+                        from secretary_module.models import Business
+                        business_data = Business.sp_get_business_detail(app_data['business_id'])
+                        if business_data and business_data.get('owner_id'):
+                            resident_id = business_data['owner_id']
+                            logger.info(f"Payment - Application {application_id}: Found owner_id={resident_id} from business")
+                    except Exception as e:
+                        logger.error(f"Failed to get business owner for business_id {app_data['business_id']}: {e}")
+                
+                # Priority 3: Fall back to requested_by_id (for resident-initiated applications)
+                if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                    resident_id = app_data['requested_by_id']
+                    logger.info(f"Payment - Application {application_id}: Using requested_by_id={resident_id}")
+            
+            if resident_id:
+                certificate_type = app_data.get('request', 'Certificate')
+                application_code = app_data.get('application_code', '')
+                
+                # Send notification
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Payment Confirmed",
+                    body=f"Your payment for {certificate_type} ({application_code}) has been confirmed. You can now proceed to the secretary for printing.",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Payment confirmation notification sent to resident_id {resident_id} for application {application_id}")
+        except Exception as notif_error:
+            # Log but don't fail the main operation
+            logger.error(f"Failed to send payment notification for application {application_id}: {notif_error}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Marked as Paid.'})
         messages.success(request, 'Application marked as Paid and Approved.')
