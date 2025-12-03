@@ -1,0 +1,122 @@
+{% extends "base_bhw.html" %}
+
+{% block content %}
+<div class="p-6 bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+      <span class="inline-block h-6 w-6 rounded-md bg-red-600"></span>
+      Child Immunization Schedule
+    </h1>
+  </div>
+
+  <!-- Filters -->
+  <div class="mb-6 flex items-center justify-between">
+    <form method="get" class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <label for="limit" class="text-sm font-medium text-gray-700">Show:</label>
+        <select name="limit" id="limit" class="border rounded px-3 py-2 bg-white text-sm auto-submit w-20">
+          {% for n in limit_options %}
+            <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="hidden" name="page" id="pageField" value="{{ page }}">
+    </form>
+  </div>
+
+  {% if message %}
+    <div id="messages" class="mb-4 px-4 py-3 rounded border
+        {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
+        {% elif message_level == 'error' %} bg-red-100 text-red-700 border border-red-400
+        {% else %} bg-gray-200 text-gray-800 border border-gray-400 {% endif %}">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <!-- Table -->
+  <div class="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200">
+    <table class="min-w-full text-sm text-gray-700">
+      <thead class="bg-red-600 text-white">
+        <tr>
+          <th class="py-3 px-4 text-left">Child Name</th>
+          <th class="py-3 px-4 text-left">Family Code</th>
+          <th class="py-3 px-4 text-left">Vaccine</th>
+          <th class="py-3 px-4 text-left">Next Dose</th>
+          <th class="py-3 px-4 text-left">Scheduled Date</th>
+          <th class="py-3 px-4 text-left">Days Until Due</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-200">
+        {% if results|length == 0 %}
+          <tr>
+            <td colspan="6" class="py-10 px-4 text-center text-gray-500">
+              No immunization schedules available.
+            </td>
+          </tr>
+        {% else %}
+          {% for schedule in results %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3">{{ schedule.child_full_name }}</td>
+              <td class="px-6 py-3">{{ schedule.family_code }}</td>
+              <td class="px-6 py-3">{{ schedule.vaccine_name }}</td>
+              <td class="px-6 py-3">{{ schedule.next_dose_name }}</td>
+              <td class="px-6 py-3">{{ schedule.scheduled_date|date:"M d, Y" }}</td>
+              <td class="px-6 py-3">
+                {% if schedule.days_until_due < 0 %}
+                  <span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs text-red-700">
+                    {% if schedule.days_until_due == -1 %}1{% else %}{{ schedule.days_until_due|add:1|add:-1 }}{% endif %} days overdue
+                  </span>
+                {% elif schedule.days_until_due == 0 %}
+                  <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-xs text-amber-700">
+                    Due today
+                  </span>
+                {% elif schedule.days_until_due <= 7 %}
+                  <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-xs text-amber-700">
+                    {{ schedule.days_until_due }} days
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-xs text-green-700">
+                    {{ schedule.days_until_due }} days
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <div class="text-gray-600">Page {{ page }}</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a href="{{ prev_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Prev</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Prev</span>
+      {% endif %}
+      {% if has_next %}
+        <a href="{{ next_url }}" class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+      {% else %}
+        <span class="px-3 py-1 border rounded opacity-50">Next</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <style>
+    .auto-submit { cursor: pointer; }
+  </style>
+
+  <script>
+    document.querySelectorAll('.auto-submit').forEach(el => {
+      el.addEventListener('change', () => {
+        document.getElementById('pageField').value = '1';
+        el.form.submit();
+      });
+    });
+  </script>
+</div>
+{% endblock %}

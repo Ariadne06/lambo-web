@@ -1719,7 +1719,133 @@ def householdVisit(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def residentList(request):
-    return render(request, 'bhw_module/residentList.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_status_id = request.GET.get('status_id')
+    
+    try:
+        status_id = int(raw_status_id) if raw_status_id not in (None, '', '0') else None
+    except ValueError:
+        status_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            # Request more results to account for potential filtering
+            cursor.callproc('view_all_resident', [
+                query or None,
+                sex,
+                status_id,
+                None,  # p_min_age
+                None,  # p_max_age
+                limit + 10,  # Request extra results to account for filtering
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            # Filter out resident_id = 1
+            all_results = [dict(zip(cols, row)) for row in rows if dict(zip(cols, row)).get('resident_id') != 1]
+            
+            # Take only what we need for this page plus one to check if there's a next page
+            results = all_results[:limit + 1]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+        results = []
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if sex is not None:
+        base_params["sex"] = sex
+    if status_id is not None:
+        base_params["status_id"] = status_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    # Get status options for filter dropdown
+    status_options = []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name")
+            status_options = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+    except Exception:
+        pass
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/residentList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "sex": sex,
+        "status_id": status_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        "status_options": status_options,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def updateResidentStatus(request):
+    resident_id = request.POST.get('resident_id')
+    new_status_id = request.POST.get('new_status_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:residentList')
+    
+    if not resident_id or not new_status_id:
+        set_flash(request, "Missing required fields.", "error")
+        return redirect('bhw_module:residentList')
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('update_resident_status', [
+                int(resident_id),
+                int(new_status_id),
+                pid
+            ])
+        set_flash(request, "Resident status updated successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect('bhw_module:residentList')
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2379,6 +2505,67 @@ def update_child_health_record(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def childScheduleList(request):
+    limit = None
+    offset = None
+    results = []
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('view_all_child_immunization_schedule', [
+                None,  # p_child_health_id
+                limit + 1,
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            results = [dict(zip(cols, row)) for row in rows]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {"limit": limit}
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/childScheduleList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -3414,6 +3601,24 @@ def add_checkup_record(request):
         if not pid:
             raise ValueError("Personnel ID is required")
         
+        # Validate AOG weeks against previous records
+        try:
+            existing_checkups = Maternal.sp_view_specific_maternal_all_checkup_records(maternal_health_id)
+            if existing_checkups:
+                # Sort by date to get the latest record
+                sorted_checkups = sorted(existing_checkups, key=lambda x: x.get('checkup_date', ''), reverse=True)
+                latest_checkup = sorted_checkups[0]
+                latest_aog_weeks = latest_checkup.get('aog_weeks')
+                
+                if latest_aog_weeks and aog_weeks <= latest_aog_weeks:
+                    raise ValueError(f"AOG weeks must be greater than {latest_aog_weeks} (from the latest checkup record)")
+        except Exception as validation_error:
+            # If it's our validation error, re-raise it
+            if "AOG weeks must be greater than" in str(validation_error):
+                raise validation_error
+            # Otherwise, continue (might be database connection issue, etc.)
+            pass
+        
         # Convert optional fields
         if bmi:
             bmi = float(bmi)
@@ -3562,6 +3767,12 @@ def add_delivery_outcome(request):
         other_attendant = request.POST.get('other_attendant', '').strip() or None
         time_of_delivery = request.POST.get('time_of_delivery', '').strip() or None
         
+        # New parameters for baby birthweight and sex
+        baby_birthweight_in_grams = request.POST.get('baby_birthweight_in_grams', '').strip()
+        baby_birthweight_in_grams = int(baby_birthweight_in_grams) if baby_birthweight_in_grams else None
+        
+        baby_sex = request.POST.get('baby_sex', '').strip() or None
+        
         if not date_terminated:
             raise ValueError("Date terminated is required")
         
@@ -3576,6 +3787,8 @@ def add_delivery_outcome(request):
             other_attendant=other_attendant,
             time_of_delivery=time_of_delivery,
             date_terminated=date_terminated,
+            baby_birthweight_in_grams=baby_birthweight_in_grams,
+            baby_sex=baby_sex,
             personnel_id=pid
         )
         set_flash(request, "Delivery outcome added successfully.", "success")
@@ -3636,3 +3849,35 @@ def add_postpartum_visit(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_maternal_status(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    record_status_id = request.POST.get('record_status_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not record_status_id:
+        set_flash(request, "Missing record status.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_maternal_health_record_status(%s, %s, %s)", 
+                         [int(maternal_health_id), int(record_status_id), pid])
+            result = cursor.fetchone()
+        
+        set_flash(request, "Maternal health record status updated successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect('bhw_module:maternalList')
