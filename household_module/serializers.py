@@ -1187,6 +1187,10 @@ class DeliveryOutcomeCreateSerializer(serializers.Serializer):
     time_of_delivery = serializers.TimeField(required=False, allow_null=True)
     date_terminated = serializers.DateField(required=True)
     personnel_id = serializers.IntegerField(required=True)
+
+    baby_birthweight_in_grams = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    baby_sex = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=10)
+    
     
     def validate(self, data):
         # Validate that ownership is provided if place is Health Facility
@@ -1221,6 +1225,15 @@ class DeliveryOutcomeCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError({
                     'birth_attendant_id': 'Invalid birth attendant'
                 })
+
+        if data.get('baby_sex'):
+            baby_sex = data['baby_sex'].strip().capitalize()
+            if baby_sex not in ['Male', 'Female', 'Other']:
+                raise serializers.ValidationError({
+                    'baby_sex': 'Baby sex must be Male, Female, or Other'
+                })
+            data['baby_sex'] = baby_sex
+        
         
         return data
 
@@ -1319,3 +1332,16 @@ class VaccineTypeUpdateSerializer(serializers.Serializer):
     def save(self, vaccine_type_id, personnel_id):
         from .utils.database_helpers import update_vaccine
         return update_vaccine(vaccine_type_id, self.validated_data, personnel_id)
+
+class ChildImmunizationScheduleSerializer(serializers.Serializer):
+    """Serializer for child immunization schedule"""
+    schedule_id = serializers.IntegerField()
+    child_health_id = serializers.IntegerField()
+    child_full_name = serializers.CharField()
+    family_code = serializers.CharField(allow_null=True)
+    vaccine_type_id = serializers.IntegerField()
+    vaccine_name = serializers.CharField()
+    next_dose_type_id = serializers.IntegerField()
+    next_dose_name = serializers.CharField()
+    scheduled_date = serializers.DateField()
+    days_until_due = serializers.IntegerField()

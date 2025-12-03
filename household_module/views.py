@@ -21,7 +21,7 @@ from .serializers import (
 )
 from .utils.database_helpers import (
     search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record,
-    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record
+    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record, view_all_child_immunization_schedule
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -4002,3 +4002,45 @@ def get_resident_list(request):
 
     return JsonResponse({'residents': residents})
 
+
+        
+
+class ChildImmunizationScheduleListView(APIView):
+    """
+    GET: List all upcoming child immunization schedules
+    Query params:
+        - q: search query (child name, family code, vaccine name)
+        - limit: pagination limit (default: 100, max: 500)
+        - offset: pagination offset (default: 0)
+    """
+    def get(self, request):
+        try:
+            query = request.GET.get('q', None)
+            limit = int(request.GET.get('limit', 100))
+            offset = int(request.GET.get('offset', 0))
+            
+            # Validate pagination
+            limit = min(max(limit, 1), 500)
+            offset = max(offset, 0)
+            
+            schedules = view_all_child_immunization_schedule(
+                query=query,
+                limit=limit,
+                offset=offset
+            )
+            
+            return Response({
+                'success': True,
+                'data': schedules,
+                'count': len(schedules),
+                'query': query,
+                'limit': limit,
+                'offset': offset
+            })
+            
+        except Exception as e:
+            print(f"❌ Error fetching immunization schedule: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
