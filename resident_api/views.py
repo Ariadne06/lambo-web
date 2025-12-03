@@ -25,7 +25,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .utils.ocr_processing import validate_document_header
 from rest_framework.permissions import AllowAny
-
+from rest_framework.decorators import api_view
 
 
 # Local imports
@@ -1050,3 +1050,7 @@ class OwnerBusinessesMobileView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+
+
