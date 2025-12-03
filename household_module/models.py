@@ -287,9 +287,9 @@ class ChildImmunizationRecord(models.Model):
     vaccine_type_id = models.IntegerField()
     dose_type_id = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
-        managed = False
+        managed = False  # uses existing DB table
         db_table = 'child_immunization_record'
 
 
@@ -344,6 +344,129 @@ class ChildGrowthMonitoring(models.Model):
     class Meta:
         managed = False
         db_table = 'child_growth_monitoring'
+
+# ========================================
+# MATERNAL HEALTH LOOKUP TABLES
+# ========================================
+
+class DiseaseType(models.Model):
+    disease_type_id = models.AutoField(primary_key=True)
+    disease_name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'disease_type'
+        managed = False
+
+
+class Trimester(models.Model):
+    trimester_id = models.AutoField(primary_key=True)
+    trimester_name = models.CharField(max_length=50, unique=True)
+    min_weeks = models.IntegerField(null=True, blank=True)
+    max_weeks = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'trimester'
+        managed = False
+
+
+class TestType(models.Model):
+    test_type_id = models.AutoField(primary_key=True)
+    test_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'test_type'
+        managed = False
+
+
+class SupplementType(models.Model):
+    supplement_type_id = models.AutoField(primary_key=True)
+    supplement_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'supplement_type'
+        managed = False
+
+
+class DewormingType(models.Model):
+    deworming_type_id = models.AutoField(primary_key=True)
+    deworming_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'deworming_type'
+        managed = False
+
+
+class OutcomeType(models.Model):
+    outcome_type_id = models.AutoField(primary_key=True)
+    outcome_type_description = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'outcome_type'
+        managed = False
+
+
+class DeliveryType(models.Model):
+    delivery_type_id = models.AutoField(primary_key=True)
+    delivery_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'delivery_type'
+        managed = False
+
+
+class PlaceDeliveryType(models.Model):
+    place_delivery_type_id = models.AutoField(primary_key=True)
+    place_delivery_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'place_delivery_type'
+        managed = False
+
+
+class OwnershipType(models.Model):
+    ownership_type_id = models.AutoField(primary_key=True)
+    ownership_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'ownership_type'
+        managed = False
+
+
+class BirthAttendant(models.Model):
+    birth_attendant_id = models.AutoField(primary_key=True)
+    birth_attendant_name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'birth_attendant'
+        managed = False
+
+
+class RecordStatus(models.Model):
+    record_status_id = models.AutoField(primary_key=True)
+    record_name = models.CharField(max_length=50, unique=True)
+    
+    class Meta:
+        db_table = 'record_status'
+        managed = False
+
+
+# ========================================
+# MATERNAL HEALTH CORE TABLES
+# ========================================
+
+class MaternalHealthRecord(models.Model):
+    maternal_health_id = models.AutoField(primary_key=True)
+    maternal_id = models.IntegerField()  # FK to Resident
+    address_landmark = models.CharField(max_length=200, null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    record_status_id = models.IntegerField()
+    created_by = models.IntegerField()
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'Maternal_Health_Record'
+        managed = False
 
 # Main tables 
 class Household(models.Model):
@@ -1158,3 +1281,48 @@ class Family(models.Model):
                 return [dict(zip(cols, row)) for row in rows]
         except Exception as e:
             raise e
+
+
+class BHWDashboard(models.Model):
+    # Basic totals
+    total_households = models.IntegerField()
+    total_families = models.IntegerField()
+
+    # Maternal
+    total_active_maternal = models.IntegerField()
+    total_active_maternal_by_bhw = models.IntegerField()
+
+    # Child immunization (upcoming)
+    total_children_upcoming_immun_5d = models.IntegerField()
+
+    # Visitations (BHW-specific)
+    households_visited_today_by_bhw = models.IntegerField()
+
+    # Demographics
+    total_male = models.IntegerField()
+    total_female = models.IntegerField()
+    age_group_0_5 = models.IntegerField()
+    age_group_6_12 = models.IntegerField()
+    age_group_13_17 = models.IntegerField()
+    age_group_18_59 = models.IntegerField()
+    age_group_60_plus = models.IntegerField()
+
+    # Household visitation progress
+    hh_visited_count = models.IntegerField()
+    hh_not_visited_count = models.IntegerField()
+    hh_visited_percent = models.DecimalField(max_digits=5, decimal_places=2)
+
+    # Family visitation progress
+    fam_visited_count = models.IntegerField()
+    fam_not_visited_count = models.IntegerField()
+    fam_visited_percent = models.DecimalField(max_digits=5, decimal_places=2)
+
+    # Households per Purok (JSONB)
+    households_per_purok = models.JSONField()
+
+    # Quarter
+    quarter_id = models.IntegerField()
+
+    class Meta:
+        managed = False  # This is NOT a real table, it comes from a DB function
+        # optional: db_table = "bhw_dashboard"

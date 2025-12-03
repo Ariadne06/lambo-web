@@ -102,6 +102,72 @@ class ResidentList(models.Model):
         return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
     @staticmethod
+    def sp_get_all_residents(
+        p_status_id: Optional[int] = None,
+        p_sitio_id: Optional[int] = None,
+        p_query: Optional[str] = None,
+        p_limit: Optional[int] = None,
+        p_offset: int = 0,
+        p_quarter_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Calls get_all_residents(p_status_id, p_sitio_id, p_query, p_limit, p_offset, p_quarter_id)
+        Returns list of dicts with keys: resident_id, resident_code, full_name, dob,
+                                         full_address, phone_number, email, resident_status, businesses
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_all_residents(%s, %s, %s, %s, %s, %s)",
+                [p_status_id, p_sitio_id, p_query, p_limit, p_offset, p_quarter_id]
+            )
+            return ResidentList._rows_to_dicts(cur)
+
+    @staticmethod
+    def sp_get_all_residents_count(
+        p_status_id: Optional[int] = None,
+        p_sitio_id: Optional[int] = None,
+        p_query: Optional[str] = None,
+        p_quarter_id: Optional[int] = None
+    ) -> int:
+        """
+        Gets total count of residents matching the filters (for pagination)
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*)::int FROM get_all_residents(%s, %s, %s, NULL, 0, %s)",
+                [p_status_id, p_sitio_id, p_query, p_quarter_id]
+            )
+            result = cur.fetchone()
+            return result[0] if result else 0
+
+    @staticmethod
+    def sp_get_specific_resident(p_resident_id: int, p_quarter_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Calls get_specific_resident(p_resident_id, p_quarter_id)
+        Returns a single dict or None if not found.
+        Keys: resident_id, resident_code, first_name, middle_name, last_name, suffix,
+              sex, dob, age, civil_status, educational_attainment, religion, occupation,
+              nationality, employment_status, household_number, family_code, businesses
+        """
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM get_specific_resident(%s, %s)",
+                [p_resident_id, p_quarter_id]
+            )
+            rows = ResidentList._rows_to_dicts(cur)
+            return rows[0] if rows else None
+
+    @staticmethod
+    def sp_get_all_quarters() -> List[Dict[str, Any]]:
+        """
+        Calls get_all_quarters() to retrieve available quarters for filtering
+        Returns list of dicts with keys: quarter_id, quarter_number, year, start_date, end_date, display_label
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_all_quarters()")
+            return ResidentList._rows_to_dicts(cur)
+
+    @staticmethod
     def search(
         p_query: Optional[str] = None,
         p_sex: Optional[str] = None,          # 'male'/'female'
@@ -211,10 +277,33 @@ class Business(models.Model):
             raise e
 
     @staticmethod
-    def sp_get_all_businesses(query=None, status=None, type_id=None, ownership_id=None, owner_id=None, limit=10, offset=0):
+    def sp_get_all_businesses(query=None, business_type_id=None, 
+                             business_clearance_cat_id=None, ownership_id=None, 
+                             business_status_id=None, limit=50, offset=0):
+        """
+        Calls get_all_businesses with filter parameters matching the SQL function signature.
+        
+        Parameters:
+        - query: TEXT - fuzzy search over business name, owner name, reg number
+        - business_type_id: INT - exact match on Business.business_type_id
+        - business_clearance_cat_id: INT - exact match on Business.clearance_category_id
+        - ownership_id: INT - exact match on Business.ownership_id
+        - business_status_id: INT - exact match on Business.business_status_id
+        - limit: INT - max rows to return (default 50)
+        - offset: INT - pagination offset (default 0)
+        
+        Returns list of dicts with keys:
+        - business_id, business_name, owner_id, owner_name, business_type_name,
+          ownership_name, business_status_name, clearance_category_name, 
+          total_gross_income, reg_number, clearance_date_issued, address_id, 
+          address, updated_at
+        """
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_all_businesses', [query, status, type_id, ownership_id, owner_id, limit, offset])
+                cursor.callproc('get_all_businesses', [
+                    query, business_type_id, business_clearance_cat_id, 
+                    ownership_id, business_status_id, limit, offset
+                ])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]
@@ -571,6 +660,29 @@ class BusinessTaxConfig(models.Model):
             )
             return cur.fetchone()[0]
         
+
+class CTCFeeConfig(models.Model):
+    """
+    Thin wrapper for Business Clearance Certified True Copy Fee configuration SQL functions.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_ctc_fee():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_ctc_fee()")
+            row = cursor.fetchone()
+            if row:
+                return dict(zip([col[0] for col in cursor.description], row))
+            return {'amount': None, 'updated_at': None, 'updated_by': None}
+
+    @staticmethod
+    def sp_update_ctc_fee(amount, updated_by=None):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_ctc_fee(%s, %s)", [amount, updated_by])
+            cursor.fetchone()
+
 
 class AnnouncementRepo(models.Model):
     """

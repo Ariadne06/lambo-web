@@ -3,149 +3,307 @@
 {% block title %}Business List{% endblock %}
 
 {% block content %}
-<div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
+<div class="px-6 py-6">
+  <h2 class="text-lg font-semibold text-red-700 mb-4">Business List</h2>
 
-  <!-- Header row -->
-  <div class="mb-5 flex items-center justify-between">
-    <div
-      class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5"
-      style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);">
-      <span class="inline-block h-2 w-2 rounded-full bg-white"></span>
-      Business List
-    </div>
-
-    <div class="flex items-center gap-2">
-      <!-- Add -->
-      <a href="{% url 'secretary_module:Addbusiness' %}"
-         class="btn-red inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6Z"/>
+  <!-- Search + Actions -->
+  <div class="mb-5 flex items-center gap-2">
+    <form method="get" class="flex items-center gap-2 grow">
+      <div class="relative w-full sm:w-[420px]">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search business name, owner, address" 
+               class="w-full rounded-xl border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-600 focus:border-rose-600" />
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z"/>
         </svg>
-        Add Business
-      </a>
-      <!-- Print -->
-      <button type="button" onclick="window.print()"
-         class="btn-dark inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 9V3h12v6h1.5A2.5 2.5 0 0 1 22 11.5v5A2.5 2.5 0 0 1 19.5 19H18v-4H6v4H4.5A2.5 2.5 0 0 1 2 16.5v-5A2.5 2.5 0 0 1 4.5 9H6Zm2 0h8V5H8v4Z"/>
+      </div>
+      {# preserve multi-selected filters as hidden inputs #}
+      {% for t in business_type_id_list %}
+        <input type="hidden" name="business_type_id" value="{{ t }}" />
+      {% endfor %}
+      {% for c in clearance_category_id_list %}
+        <input type="hidden" name="clearance_category_id" value="{{ c }}" />
+      {% endfor %}
+      {% for o in ownership_id_list %}
+        <input type="hidden" name="ownership_id" value="{{ o }}" />
+      {% endfor %}
+      {% for s in business_status_id_list %}
+        <input type="hidden" name="business_status_id" value="{{ s }}" />
+      {% endfor %}
+      <button class="rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-rose-700 inline-flex items-center gap-2 flex-shrink-0">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Z"/>
         </svg>
-        Print
+        Search
       </button>
-    </div>
+    </form>
+
+    <!-- Filters dropdown -->
+    <details class="relative flex-shrink-0">
+      <summary tabindex="0" role="button" class="inline-flex items-center gap-2 rounded-xl bg-white text-gray-700 px-4 py-2.5 text-sm font-semibold shadow border border-gray-300 hover:bg-gray-50 cursor-pointer select-none">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5h18v2H3V5Zm4 6h10v2H7v-2Zm3 6h4v2h-4v-2Z"/>
+        </svg>
+        Filters
+        {% if filter_count %}
+          <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-rose-600 text-white text-xs font-bold">{{ filter_count }}</span>
+        {% endif %}
+      </summary>
+      <div class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-10 p-4 max-h-[32rem] overflow-y-auto">
+        <form method="get" class="space-y-2">
+          <input type="hidden" name="q" value="{{ q }}" />
+          
+          <!-- Business Type Filter -->
+          <details class="border border-gray-200 rounded-lg">
+            <summary class="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center justify-between">
+              <span>Business Type</span>
+              <svg class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="max-h-40 overflow-y-auto space-y-1 px-2 pb-2 pt-1">
+              {% for type in business_types %}
+                <label class="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded cursor-pointer">
+                  <input type="checkbox" name="business_type_id" value="{{ type.id }}" 
+                         {% if type.id|stringformat:"s" in business_type_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-xs">{{ type.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </details>
+
+          <!-- Clearance Category Filter -->
+          <details class="border border-gray-200 rounded-lg">
+            <summary class="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center justify-between">
+              <span>Clearance Category</span>
+              <svg class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="max-h-40 overflow-y-auto space-y-1 px-2 pb-2 pt-1">
+              {% for cat in clearance_categories %}
+                <label class="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded cursor-pointer">
+                  <input type="checkbox" name="clearance_category_id" value="{{ cat.clearance_category_id }}" 
+                         {% if cat.clearance_category_id|stringformat:"s" in clearance_category_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-xs">{{ cat.category_name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </details>
+
+          <!-- Ownership Filter -->
+          <details class="border border-gray-200 rounded-lg">
+            <summary class="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center justify-between">
+              <span>Ownership</span>
+              <svg class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="max-h-40 overflow-y-auto space-y-1 px-2 pb-2 pt-1">
+              {% for own in ownerships %}
+                <label class="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded cursor-pointer">
+                  <input type="checkbox" name="ownership_id" value="{{ own.id }}" 
+                         {% if own.id|stringformat:"s" in ownership_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-xs">{{ own.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </details>
+
+          <!-- Business Status Filter -->
+          <details class="border border-gray-200 rounded-lg">
+            <summary class="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center justify-between">
+              <span>Status</span>
+              <svg class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="max-h-40 overflow-y-auto space-y-1 px-2 pb-2 pt-1">
+              {% for status in business_statuses %}
+                <label class="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded cursor-pointer">
+                  <input type="checkbox" name="business_status_id" value="{{ status.id }}" 
+                         {% if status.id|stringformat:"s" in business_status_id_list %}checked{% endif %}
+                         class="rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <span class="text-xs">{{ status.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </details>
+
+          <button type="submit" class="w-full rounded-lg bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700 mt-3">
+            Apply Filters
+          </button>
+        </form>
+      </div>
+    </details>
+
+    <a href="{% url 'secretary_module:Addbusiness' %}"
+       class="rounded-xl bg-red-600 text-white px-4 py-2.5 text-sm font-semibold shadow hover:bg-red-700 inline-flex items-center gap-2 flex-shrink-0">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 5v14m7-7H5"/>
+      </svg>
+      + Add Business
+    </a>
   </div>
 
-  <!-- Card -->
-  <div class="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
-    <!-- Top tools -->
-      <form class="flex items-center justify-between gap-3 border-b bg-gray-50 px-4 py-3" method="get">
-        <div class="relative w-full max-w-xs">
-          <input type="text" name="q" value="{{ q }}" placeholder="Search business…"
-                class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
-          <svg xmlns="http://www.w3.org/2000/svg"
-              class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm8.7 13.3 3 3-1.4 1.4-3-3 1.4-1.4Z"/>
+  <!-- Active filter chips -->
+  {% if business_type_chips or clearance_category_chips or ownership_chips or business_status_chips %}
+    <div class="mb-3 flex items-center gap-2 text-sm flex-wrap">
+      <span class="text-gray-600">Active:</span>
+      {% for chip in business_type_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
           </svg>
-        </div>
+        </a>
+      {% endfor %}
+      {% for chip in clearance_category_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </a>
+      {% endfor %}
+      {% for chip in ownership_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </a>
+      {% endfor %}
+      {% for chip in business_status_chips %}
+        <a href="{{ chip.url }}" class="chip chip-rose inline-flex items-center gap-1">
+          {{ chip.label }}
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </a>
+      {% endfor %}
+      <a href="{{ clear_all_url }}" class="ml-2 inline-flex items-center gap-1 text-gray-700 hover:text-rose-700">
+        <span class="text-xs">✕</span> Clear all
+      </a>
+    </div>
+  {% endif %}
 
-        <div class="text-[12px] text-gray-500 hidden sm:block">
-          Showing {{ rows|length }} of {{ total }}
-        </div>
-      </form>
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <!-- Generate PDF Button -->
+    <div class="mb-4 flex justify-end">
+      <a href="{% url 'reports_module:business_list' %}?q={{ q }}{% for t in business_type_id_list %}&business_type_id={{ t }}{% endfor %}{% for c in clearance_category_id_list %}&clearance_category_id={{ c }}{% endfor %}{% for o in ownership_id_list %}&ownership_id={{ o }}{% endfor %}{% for s in business_status_id_list %}&business_status_id={{ s }}{% endfor %}"
+         target="_blank"
+         class="inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-green-700 whitespace-nowrap transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Generate PDF
+      </a>
+    </div>
 
-    <!-- Table -->
     <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="sticky top-0 z-10 bg-rose-600 text-white">
-          <tr>
-            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Business ID</th>
-            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Business Name</th>
-            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Owners Name</th>
-            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Address</th>
-            <th class="px-4 py-4 text-left font-semibold whitespace-nowrap">Status</th>
-            <th class="px-4 py-4 text-center font-semibold whitespace-nowrap">Actions</th>
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-gray-700 font-medium">
+            <th class="px-4 py-2 border border-gray-200 text-left">Business Name</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Owner Name</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Type</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Clearance Category</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Ownership</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Address</th>
+            <th class="px-4 py-2 border border-gray-200 text-left">Status</th>
+            <th class="px-4 py-2 border border-gray-200 text-center w-24">Actions</th>
           </tr>
         </thead>
-       <tbody class="divide-y divide-gray-100">
-            {% for r in rows %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 font-medium text-gray-800">{{ r.business_id }}</td>
-              <td class="px-4 py-3">{{ r.business_name }}</td>
-              <td class="text-xs text-gray-500">Owner: {{ r.owner_name }}</td>
-              <td class="px-4 py-3">{{ r.address }}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-700">
-                  {{ r.status }}
-                </span>
-              </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-center gap-2">
+        <tbody class="divide-y divide-gray-100">
+          {% for r in rows %}
+          <tr class="hover:bg-gray-50/60" data-business-id="{{ r.business_id }}">
+            <td class="px-4 py-2 border border-gray-200 font-semibold">{{ r.business_name }}</td>
+            <td class="px-4 py-2 border border-gray-200">{{ r.owner_name }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.business_type_name|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.clearance_category_name|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.ownership_name|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.address }}</td>
+            <td class="px-4 py-2 border border-gray-200">
+              {% if r.business_status_name|lower == 'active' %}
+                <span class="status-chip chip-blue">Active</span>
+              {% elif r.business_status_name|lower == 'closed' %}
+                <span class="status-chip" style="background:#fef2f2;color:#991b1b;border-color:#fecaca;">Closed</span>
+              {% elif r.business_status_name|lower == 'inactive' %}
+                <span class="status-chip" style="background:#fefce8;color:#854d0e;border-color:#fef08a;">Inactive</span>
+              {% else %}
+                <span class="status-chip chip-blue">{{ r.business_status_name }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 border border-gray-200 text-center">
+              <div class="flex items-center justify-center gap-1">
+                {% if r.business_id %}
                 <a href="{% url 'secretary_module:business_detail_page' r.business_id %}"
                    onclick="return goToBusinessDetail(event, '{{ r.business_id }}', this.href)"
-                   class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 7c5 0 9 5 9 5s-4 5-9 5-9-5-9-5 4-5 9-5Zm0 2.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"/>
+                   class="btn-icon btn-icon-outline"
+                   title="View business details">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  View
                 </a>
                 <button type="button"
-                        class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5"
-                        onclick="UB.open('{{ r.business_id }}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/>
+                        class="btn-icon btn-icon-outline"
+                        onclick="UB.open('{{ r.business_id }}')"
+                        title="Edit business">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  Edit
                 </button>
-                    <button type="button"
-                      class="btn-gray inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow ring-1 ring-black/5 text-red-600"
-                      onclick="openClosureModal('{{ r.business_id }}','{{ r.status|lower }}')">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-                Close
-              </button>
-
+                <button type="button"
+                        class="btn-icon btn-icon-outline text-red-600 hover:bg-red-50 hover:border-red-300"
+                        onclick="openClosureModal('{{ r.business_id }}','{{ r.business_status_name|lower }}')"
+                        title="Close business">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                {% else %}
+                <span class="text-xs text-gray-400">No data</span>
+                {% endif %}
               </div>
             </td>
           </tr>
-
           {% empty %}
-          <tr><td colspan="5" class="px-4 py-3 text-center text-gray-500">No businesses found.</td></tr>
+          <tr>
+            <td colspan="8" class="px-4 py-8 text-center text-gray-500">No businesses found.</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
-      <div class="flex justify-center px-4 py-4 text-sm">
-        <nav class="flex items-center gap-1 text-gray-600">
-
-          {% if has_prev %}
-            <a href="?q={{ q }}&status={{ status }}&page={{ prev_page }}&per_page={{ per_page }}"
-              class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">Prev</a>
-          {% endif %}
-
-          {% for p in page_numbers %}
-            {% if forloop.first == false and p|add:'-1' != page_numbers|slice:'%d' %}{% endif %}
-            {% if p == page %}
-              <span class="rounded-md px-2 py-1 bg-gray-100 text-rose-600 font-semibold">{{ p }}</span>
-            {% else %}
-              {# show ellipsis around distant gaps #}
-              {% if forloop.counter0 > 0 and p > page_numbers|slice:":forloop.counter0"|last|add:1 %}
-                <span class="px-1">…</span>
-              {% endif %}
-              <a href="?q={{ q }}&status={{ status }}&page={{ p }}&per_page={{ per_page }}"
-                class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">{{ p }}</a>
-            {% endif %}
-          {% endfor %}
-
-          {% if has_next %}
-            <a href="?q={{ q }}&status={{ status }}&page={{ next_page }}&per_page={{ per_page }}"
-              class="rounded-md px-2 py-1 hover:bg-gray-100 hover:text-rose-600">Next</a>
-          {% endif %}
-
-        </nav>
+    {% if total > 0 %}
+    <div class="mt-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-sm text-gray-600">
+      <div>
+        Page {{ page }} of {{ total_pages }} — {{ total }} total
       </div>
+      <nav class="flex items-center gap-1">
+        {% if has_prev %}
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ prev_url }}">Prev</a>
+        {% endif %}
+        {% for it in page_items %}
+          {% if it.is_current %}
+            <span class="px-3 py-1.5 rounded-lg bg-rose-600 text-white border border-rose-600">{{ it.page }}</span>
+          {% else %}
+            <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ it.url }}">{{ it.page }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if has_next %}
+          <a class="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50" href="{{ next_url }}">Next</a>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -216,15 +374,6 @@
   
 </div>
 
-<!-- Action Result Modal -->
-
-
-<!-- Registration Preview Modal -->
-
-<!-- Reprint Preview Modal -->
-
-<!-- Payment History modal removed: no triggers on this page -->
-
 <!-- Update Business Modal -->
 <div id="updateBusinessModal"
      class="fixed inset-0 z-50 hidden bg-black/50 overflow-y-auto p-4">
@@ -238,6 +387,7 @@
       <!-- Form body -->
       <form id="updateBusinessForm" class="p-6 space-y-4 overflow-y-auto">
         <input type="hidden" name="business_id" id="ub_business_id">
+         <input type="hidden" name="old_clearance_category_id" id="ub_old_clearance_category_id">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Business ID (read-only) -->
@@ -392,6 +542,12 @@
 </div>
 
 <script>
+  function toIntOrNull(v) {
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function openModal(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -402,7 +558,7 @@
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('hidden');
-    // Improved: keep scroll locked while ANY dialog remains open
+    // keep scroll locked while ANY dialog remains open
     const anyOpen = document.querySelector('[role="dialog"]:not(.hidden), #updateBusinessModal:not(.hidden)');
     if (!anyOpen) document.documentElement.classList.remove('overflow-hidden');
   }
@@ -428,15 +584,12 @@
     }
   });
 
-  // Removed legacy View Business modal logic; detail now opens as a standalone page.
-
   // CSRF helper
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
-  // Unified CSRF token getter (cookie or hidden input fallback)
   function getCsrfToken(){
     let token = getCookie('csrftoken');
     if(!token){
@@ -505,7 +658,6 @@
         if (vEl) vEl.required = true;
         if (bEl) bEl.required = true;
         if (oEl) oEl.required = true;
-        // default to zeros if blank
         ensureZeroIfEmpty(vEl);
         ensureZeroIfEmpty(bEl);
         ensureZeroIfEmpty(oEl);
@@ -540,6 +692,10 @@
       if (ownerInput) ownerInput.value = '';
       toggleUnitsUI(false);
       toggleAmusementUI(false);
+
+      // also clear old clearance hidden in case
+      const oldClrInput = document.getElementById('ub_old_clearance_category_id');
+      if (oldClrInput) oldClrInput.value = '';
     }
 
     async function open(businessId) {
@@ -571,28 +727,36 @@
         }
         selectEl.value = v;
       };
+
       function restrictClearanceOptions(selectEl, currentId) {
         const note = document.getElementById('ub_clr_note');
         if (!selectEl) return;
 
-        ensureSelected(selectEl, currentId, CLEARANCE_CATEGORY_LABELS[String(currentId)]);
+        let cid = Number(currentId);
+        if (!Number.isFinite(cid) || cid <= 0) {
+          cid = Number(selectEl.value || 0);
+        }
+
+        ensureSelected(selectEl, cid, CLEARANCE_CATEGORY_LABELS[String(cid)]);
 
         const allow = new Set();
-        if (currentId === 3 || currentId === 4) {
-          ['3','4'].forEach(v => allow.add(v));
+
+        if (cid === 3 || cid === 4) {
+          ['3', '4'].forEach(v => allow.add(v));
           selectEl.disabled = false;
-          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          selectEl.classList.remove('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'Sole Proprietorship: you may switch only between categories 3 and 4.';
-        } else if (currentId >= 6 && currentId <= 10) {
-          for (let i=6;i<=10;i++) allow.add(String(i));
+        } else if (cid >= 6 && cid <= 10) {
+          for (let i = 6; i <= 10; i++) allow.add(String(i));
           selectEl.disabled = false;
-          selectEl.classList.remove('bg-gray-100','text-gray-600');
+          selectEl.classList.remove('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'Lessor: you may switch only among categories 6–10.';
         } else {
           selectEl.disabled = true;
-          selectEl.classList.add('bg-gray-100','text-gray-600');
+          selectEl.classList.add('bg-gray-100', 'text-gray-600');
           if (note) note.textContent = 'This clearance category cannot be changed.';
         }
+
         Array.from(selectEl.options).forEach(opt => {
           if (!opt.value) return;
           opt.hidden = (allow.size > 0) ? !allow.has(opt.value) : false;
@@ -660,19 +824,61 @@
         ensureSelected(ownSel,  ownId,  ownLabel);
 
         // Clearance category + rules
-        const clrSel   = document.getElementById('ub_clearance_category_id');
+        const clrSel = document.getElementById('ub_clearance_category_id');
         if (clrSel) {
-          const clrId    = Number(pick(d, ['clearance_category_id']));
-          const clrLabel = pick(d, ['clearance_category_name']) || CLEARANCE_CATEGORY_LABELS[String(clrId)];
-          ensureSelected(clrSel, clrId, clrLabel);
+          let clrId = toIntOrNull(
+            pick(d, [
+              'clearance_category_id',
+              'business_clearance_category_id',
+              'clearance_categoryid',
+              'clearance_cat_id',
+              'clr_category_id',
+            ])
+          );
+          let clrLabel = pick(d, [
+            'clearance_category_name',
+            'category_name',
+            'clearance_category',
+            'clearance',
+          ]);
+
+          // Fallback: derive id from label if possible
+          if (!clrId && clrLabel) {
+            const normalized = clrLabel.toLowerCase().trim();
+            for (const [id, label] of Object.entries(CLEARANCE_CATEGORY_LABELS)) {
+              const labNorm = label.toLowerCase().trim();
+              if (
+                labNorm === normalized ||
+                labNorm.startsWith(normalized) ||
+                normalized.startsWith(labNorm)
+              ) {
+                clrId = Number(id);
+                break;
+              }
+            }
+          }
+
+          if (!clrId) {
+            clrId = toIntOrNull(clrSel.value) || 0;
+          }
+
+          // NEW: store original category id in hidden input so backend knows "old"
+          const oldClrInput = document.getElementById('ub_old_clearance_category_id');
+          if (oldClrInput) {
+            oldClrInput.value = Number.isFinite(clrId) && clrId > 0 ? String(clrId) : '';
+          }
+
+          ensureSelected(
+            clrSel,
+            clrId,
+            clrLabel || CLEARANCE_CATEGORY_LABELS[String(clrId)] || `#${clrId}`
+          );
           restrictClearanceOptions(clrSel, clrId);
 
           // Units
           const currentUnits = pick(d, ['total_units','units','unit_count'], '');
           const inputUnits = document.getElementById('ub_total_units');
-          if (inputUnits !== null && inputUnits !== undefined) {
-            inputUnits.value = currentUnits ?? '';
-          }
+          if (inputUnits) inputUnits.value = currentUnits ?? '';
           const supportedFromDetail = pick(d, ['supported_units','units_supported','category_supports_units'], null);
           toggleUnitsUI(supportedFromDetail);
 
@@ -687,7 +893,9 @@
           if (bEl) bEl.value = (b === '' || b === null || b === undefined) ? '' : b;
           if (oEl) oEl.value = (o === '' || o === null || o === undefined) ? '' : o;
 
-          const isAmuseFromDetail = (String(clrId) === '12') || (String(clrLabel || '').toLowerCase() === 'amusement');
+          const isAmuseFromDetail =
+            String(clrId) === '12' ||
+            String((clrLabel || '')).toLowerCase() === 'amusement';
           toggleAmusementUI(isAmuseFromDetail);
 
           // Re-evaluate on change
@@ -775,7 +983,6 @@
     }
   }
 
-
   function parseBreakdown(raw, totalAmount){
     const humanize = (s) => {
       if (!s || typeof s !== 'string') return 'Item';
@@ -861,10 +1068,8 @@
   }
   function goToBusinessDetail(ev, businessId, url){
     if (ev) ev.preventDefault();
-    // Show immediate feedback
     showPageLoader('Opening business…');
 
-    // Best-effort prefetch to warm backend and keep UI engaged
     try {
       const tpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
       const detailUrl = tpl.replace('99999', String(businessId));
@@ -872,7 +1077,6 @@
       const delay = new Promise(r => setTimeout(r, 200));
       Promise.race([prefetch, delay]).finally(() => { window.location.href = url; });
     } catch (_) {
-      // Fallback: navigate right away
       window.location.href = url;
     }
     return false;
@@ -900,7 +1104,6 @@
     const createBtn = document.getElementById('cl_create_btn');
     const confirmBtn = document.getElementById('cl_confirm_btn');
 
-    // Reset UI
     if (alertEl) { alertEl.className = 'hidden'; alertEl.textContent = ''; }
     if (confirmBlk) confirmBlk.classList.add('hidden');
     if (previewWrap) previewWrap.classList.add('hidden');
@@ -914,7 +1117,6 @@
       if (previewWrap) previewWrap.classList.remove('hidden');
       if (loading) loading.classList.remove('hidden');
       if (createBtn) createBtn.classList.remove('hidden');
-      // Load preview
       loadClosurePreview(businessId);
     } else {
       if (title) title.textContent = 'Close Business';
@@ -993,11 +1195,9 @@
       if (res.ok && data && data.ok){
         showClAlert(true, 'Closure application created successfully.');
         const appId = data.application_id;
-        // Offer a quick link if route exists
         try{
           const t = "{% url 'secretary_module:application_detail' 0 %}"; const u = t.replace('/0/','/'+String(appId)+'/');
           showClAlert(true, `Closure application created. Application ID: ${appId}. You may now proceed to payment.\n`);
-          // Auto-navigate after short delay
           setTimeout(()=>{ window.location.href = u; }, 800);
         } catch(_){}
       } else {
@@ -1007,7 +1207,6 @@
       }
     } catch(err){ showClAlert(false, String(err && err.message ? err.message : err)); if (btn){ btn.disabled=false; btn.textContent='Create Closure Request'; } }
   }
-
 </script>
 
 <style>
@@ -1021,6 +1220,26 @@
   .btn-gray:hover{background:#e5e7eb}
   .loader-spinner{width:2.25rem;height:2.25rem;border-radius:9999px;border:3px solid #e5e7eb;border-top-color:#ef4444;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  /* (Removed) no in-page renewal breakdown toggle on list */
+
+  /* Match resident list styles */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-width:84px; padding:.5rem .875rem; border-radius:.75rem; font-weight:600; font-size:.875rem; line-height:1; border:1px solid transparent; transition:all .15s ease; }
+  .btn svg{ width:1rem; height:1rem; }
+  .btn-outline{ background:#fff; color:#374151; border-color:#d1d5db; }
+  .btn-outline:hover{ background:#f9fafb; border-color:#cbd5e1; }
+
+  .status-chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid; }
+  .chip-blue{ background:#eff6ff; color:#1e3a8a; border-color:#bfdbfe; }
+
+  .chip{ display:inline-flex; align-items:center; padding:.25rem .5rem; border-radius:9999px; font-weight:700; font-size:.75rem; line-height:1; border:1px solid #fecaca; color:#991b1b; background:#fef2f2; }
+  .chip-rose{ border-color:#fecaca; background:#fff1f2; color:#9f1239; }
+
+  /* Icon-only buttons */
+  .btn-icon{ display:inline-flex; align-items:center; justify-content:center; padding:.5rem; border-radius:.5rem; border:1px solid transparent; transition:all .15s ease; cursor:pointer; }
+  .btn-icon svg{ width:1rem; height:1rem; }
+  .btn-icon-outline{ background:#fff; color:#374151; border-color:#d1d5db; }
+  .btn-icon-outline:hover{ background:#f9fafb; border-color:#cbd5e1; }
+
+  details[open] > summary { background:#f9fafb; }
+  details > summary::-webkit-details-marker { display:none; }
 </style>
 {% endblock %}

@@ -87,6 +87,42 @@ class Dashboard(models.Model):
             return json.loads(val)
         return []
     
+    @staticmethod
+    def bhw_dashboard(personnel_id: int, quarter_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Wrapper for:
+
+            SELECT * FROM bhw_dashboard(%s, %s);
+
+        See BHW_DASHBOARD.sql for the full list of returned columns.
+        """
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM bhw_dashboard(%s, %s);", [personnel_id, quarter_id])
+            row = cur.fetchone()
+            if not row:
+                return {}
+
+            cols = [c[0] for c in cur.description]
+            result = dict(zip(cols, row))
+
+        # Normalize households_per_purok JSONB -> Python list[dict]
+        val = result.get("households_per_purok")
+        if val is None:
+            result["households_per_purok"] = []
+        elif isinstance(val, list):
+            # already decoded
+            pass
+        elif isinstance(val, (bytes, bytearray)):
+            result["households_per_purok"] = json.loads(val.decode("utf-8"))
+        elif hasattr(val, "tobytes"):
+            result["households_per_purok"] = json.loads(val.tobytes().decode("utf-8"))
+        elif isinstance(val, str):
+            result["households_per_purok"] = json.loads(val)
+        else:
+            result["households_per_purok"] = []
+
+        return result
+
 class AnnouncementRepo(models.Model):
     """
     SQL wrappers for announcements with audience support.
@@ -165,6 +201,7 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+    
     
 
 class ResidentList(models.Model):
@@ -481,10 +518,6 @@ class SurgicalHistoryRow(models.Model):
 
 
 class MaternalHealthListRow(models.Model):
-    """
-    Unmanaged model backed by the SQL set-returning function View_all_maternal_record().
-    We only use the static fetch()/count() helpers; Django never touches db_table.
-    """
     maternal_health_id = models.IntegerField(primary_key=True)
     maternal_id = models.IntegerField()
     maternal_full_name = models.TextField()
@@ -494,22 +527,15 @@ class MaternalHealthListRow(models.Model):
 
     class Meta:
         managed = False
-        db_table = "view_all_maternal_record_row"  # label only – not an actual table
+        db_table = "view_all_maternal_record_row"
 
     @staticmethod
     def fetch(
-        name_query: Optional[str] = None,
-        family_code: Optional[str] = None,
-        record_status: Optional[str] = None,
-        date_from: Optional[date] = None,
-        date_to: Optional[date] = None,
+        query: Optional[str] = None,
+        record_status_id: Optional[int] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[Dict[str, Any]]:
-        """
-        SELECT ... FROM View_all_maternal_record(%s, %s, %s, %s, %s)
-        with ORDER BY + LIMIT/OFFSET for pagination.
-        """
+    ):
         try:
             with connection.cursor() as cur:
                 cur.execute(
@@ -521,41 +547,33 @@ class MaternalHealthListRow(models.Model):
                       dob,
                       record_status,
                       date_created
-                    FROM View_all_maternal_record(%s, %s, %s, %s, %s)
-                    ORDER BY date_created DESC
-                    LIMIT %s OFFSET %s
+                    FROM View_all_maternal_record(%s, %s, %s, %s)
                     """,
-                    [name_query, family_code, record_status, date_from, date_to, limit, offset],
+                    [query, record_status_id, limit, offset],
                 )
                 cols = [c[0] for c in cur.description]
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
-        except (ProgrammingError, PGUndefinedFunction):
-            # Function not found or still being created
+        except:
             return []
 
     @staticmethod
     def count(
-        name_query: Optional[str] = None,
-        family_code: Optional[str] = None,
-        record_status: Optional[str] = None,
-        date_from: Optional[date] = None,
-        date_to: Optional[date] = None,
-    ) -> int:
-        """
-        Exact total using the same View_all_maternal_record() function.
-        """
+        query: Optional[str] = None,
+        record_status_id: Optional[int] = None,
+    ):
         try:
             with connection.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT COUNT(*) FROM View_all_maternal_record(%s, %s, %s, %s, %s) AS t
+                    SELECT COUNT(*)
+                    FROM View_all_maternal_record(%s, %s, NULL, NULL)
                     """,
-                    [name_query, family_code, record_status, date_from, date_to],
+                    [query, record_status_id],
                 )
                 return cur.fetchone()[0]
-        except (ProgrammingError, PGUndefinedFunction):
+        except:
             return 0
-        
+
 
 class MaternalHealthDetailRow(models.Model):
     """
@@ -1187,3 +1205,23 @@ class TestTypeRow(models.Model):
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
         except ProgrammingError:
             return []
+
+
+class VaccineType(models.Model):
+    vaccine_type_id = models.AutoField(primary_key=True)
+    vaccine_name = models.CharField(max_length=100, unique=True)
+    at_birth = models.BooleanField(default=False)
+    first_dose = models.BooleanField(default=False)
+    second_dose = models.BooleanField(default=False)
+    third_dose = models.BooleanField(default=False)
+    interval_between_doses = models.DurationField(null=True, blank=True)
+    date_added = models.DateTimeField()
+    updated_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        managed = False       # Table + functions are created via SQL
+        db_table = 'vaccine_type'
+
+    def __str__(self):
+        return self.vaccine_name

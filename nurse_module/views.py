@@ -16,6 +16,7 @@ import json
 import math
 from django.db import DatabaseError
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -49,40 +50,64 @@ MAX_PAGE_SIZE = 200
 @custom_login_required
 @role_required('Midwife')
 def nurse_dashboard(request):
-    # ---- KPIs ----
-    try:
-        totals = Dashboard.sp_dashboard_totals(barangay=None, city=None)
-    except Exception as e:
-        messages.error(request, f"Failed loading totals: {e}")
-        totals = {
-            "total_resident": 0, "total_non_resident": 0, "total_pending": 0,
-            "total_male": 0, "total_female": 0
-        }
+    # ---- Core BHW/Nurse dashboard metrics ----
+    # Fallback to 0 if personnel_id is not set; this still returns barangay-wide totals.
+    personnel_id = getattr(request.user, "personnel_id", 0) or 0
 
-    # ---- Bar (per sitio) ----
-    try:
-        per_sitio_rows   = Dashboard.sp_residents_per_sitio_json()
-        per_sitio_labels = [str(r.get("sitio_name", "Unknown")) for r in per_sitio_rows]
-        per_sitio_data   = [int(r.get("resident_count") or 0)   for r in per_sitio_rows]
-    except Exception as e:
-        messages.error(request, f"Failed loading per-sitio data: {e}")
-        per_sitio_labels, per_sitio_data = [], []
+    # Safe defaults for all expected keys
+    default_dash = {
+        "total_households": 0,
+        "total_families": 0,
+        "total_active_maternal": 0,
+        "total_active_maternal_by_bhw": 0,
+        "total_children_upcoming_immun_5d": 0,
+        "households_visited_today_by_bhw": 0,
+        "total_male": 0,
+        "total_female": 0,
+        "age_group_0_5": 0,
+        "age_group_6_12": 0,
+        "age_group_13_17": 0,
+        "age_group_18_59": 0,
+        "age_group_60_plus": 0,
+        "hh_visited_count": 0,
+        "hh_not_visited_count": 0,
+        "hh_visited_percent": 0,
+        "fam_visited_count": 0,
+        "fam_not_visited_count": 0,
+        "fam_visited_percent": 0,
+        "households_per_purok": [],
+        "quarter_id": None,
+    }
 
-    # ---- Pie (age) ----
     try:
-        age_rows = Dashboard.sp_age_bracket_distribution()
-        cleaned = []
-        for item in age_rows or []:
-            cleaned.append(item.get("jsonb_build_object", item))
-        age_labels = [str(r.get("bracket", "Unknown")) for r in cleaned]
-        age_data   = [int(r.get("count") or 0) for r in cleaned]
-        total = sum(age_data) or 1
-        age_labels_pct = [f"{lbl} ({round((cnt/total)*100)}%)" for lbl, cnt in zip(age_labels, age_data)]
+        raw_dash = Dashboard.bhw_dashboard(personnel_id=personnel_id, quarter_id=None)
     except Exception as e:
-        messages.error(request, f"Failed loading age distribution: {e}")
-        age_labels, age_data, age_labels_pct = [], [], []
+        messages.error(request, f"Failed loading dashboard metrics: {e}")
+        raw_dash = {}
 
-    # === Recent announcements (use list_all so we surely have 'audience') ===
+    dash = {**default_dash, **(raw_dash or {})}
+
+    # ---- Households per Purok (bar chart) ----
+    hh_per_purok = dash.get("households_per_purok") or []
+    per_sitio_labels = [str(r.get("sitio_name") or "Unassigned") for r in hh_per_purok]
+    per_sitio_data = [int(r.get("total_households") or 0) for r in hh_per_purok]
+
+    # ---- Age distribution (pie chart) ----
+    age_labels = ["0–5 yrs", "6–12 yrs", "13–17 yrs", "18–59 yrs", "60+ yrs"]
+    age_data = [
+        int(dash.get("age_group_0_5") or 0),
+        int(dash.get("age_group_6_12") or 0),
+        int(dash.get("age_group_13_17") or 0),
+        int(dash.get("age_group_18_59") or 0),
+        int(dash.get("age_group_60_plus") or 0),
+    ]
+    total_age = sum(age_data) or 1
+    age_labels_pct = [
+        f"{lbl} ({round((cnt / total_age) * 100)}%)"
+        for lbl, cnt in zip(age_labels, age_data)
+    ]
+
+    # === Recent announcements (unchanged) ===
     try:
         raw_latest = AnnouncementRepo.list_all(sort='date_desc', limit=20, audience=None)
         latest_announcements = []
@@ -90,7 +115,7 @@ def nurse_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):     # BHW sees Personnel + Everyone
+            if aud in ("personnel", "both"):     # Midwife sees Personnel + Everyone
                 latest_announcements.append(a)
             if len(latest_announcements) >= 3:
                 break
@@ -125,14 +150,14 @@ def nurse_dashboard(request):
             aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
             a["audience"] = aud
             a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):   # enforce BHW scope
+            if aud in ("personnel", "both"):   # enforce personnel scope
                 announcements_all.append(a)
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
 
     ctx = {
-        "totals": totals,
+        "dash": dash,
         "per_sitio_labels": per_sitio_labels,
         "per_sitio_data": per_sitio_data,
         "age_labels": age_labels,
@@ -150,6 +175,171 @@ def nurse_dashboard(request):
     }
     return render(request, "nurse_module/nurse_dashboard.html", ctx)
 
+@custom_login_required
+@role_required('Midwife')
+@require_http_methods(["GET", "POST"])
+def vaccine_list(request):
+    """
+    GET  -> show table of all vaccines + add-new form
+    POST -> create new vaccine via insert_vaccine()
+    """
+    personnel_id = request.session.get("personnel_id")
+
+    if request.method == "POST":
+        if not personnel_id:
+            messages.error(request, "Missing personnel id in session.")
+            return redirect("nurse_module:vaccine_list")
+
+        name = request.POST.get("vaccine_name", "").strip()
+        at_birth = bool(request.POST.get("at_birth"))
+        first_dose = bool(request.POST.get("first_dose"))
+        second_dose = bool(request.POST.get("second_dose"))
+        third_dose = bool(request.POST.get("third_dose"))
+        interval_str = request.POST.get("interval_between_doses") or None
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT insert_vaccine(%s, %s, %s, %s, %s, %s, %s);",
+                    [
+                        name,
+                        at_birth,
+                        first_dose,
+                        second_dose,
+                        third_dose,
+                        interval_str,     # e.g. "4 weeks" or NULL
+                        personnel_id,
+                    ],
+                )
+                new_id = cursor.fetchone()[0]
+
+            messages.success(request, f"Vaccine “{name}” added (ID {new_id}).")
+            return redirect("nurse_module:vaccine_list")
+
+        except Exception as e:
+            # You can parse e.__cause__ / e.args[0] for custom P45xx codes if you like
+            messages.error(request, f"Unable to add vaccine: {e}")
+
+    vaccines = _fetch_all_vaccines()
+    context = {
+        "vaccines": vaccines,
+    }
+    return render(request, "nurse_module/addVaccine.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def vaccine_edit(request, vaccine_type_id: int):
+    """
+    GET  -> show edit form pre-filled using view_specific_vaccine()
+    POST -> update via update_vaccine()
+    """
+    personnel_id = request.session.get("personnel_id")
+
+    vaccine = _fetch_vaccine(vaccine_type_id)
+    if not vaccine:
+        messages.error(request, "Vaccine not found.")
+        return redirect("nurse_module:vaccine_list")
+
+    if request.method == "POST":
+        if not personnel_id:
+            messages.error(request, "Missing personnel id in session.")
+            return redirect("nurse_module:vaccine_list")
+
+        name = request.POST.get("vaccine_name", "").strip() or None
+        at_birth = request.POST.get("at_birth")
+        first_dose = request.POST.get("first_dose")
+        second_dose = request.POST.get("second_dose")
+        third_dose = request.POST.get("third_dose")
+        interval_str = request.POST.get("interval_between_doses") or None
+
+        # Convert checkbox values: if checkbox is not present, we pass None (keep current)
+        def cb_to_bool(value):
+            if value is None:
+                return None   # don’t change
+            return value == "on"
+
+        at_birth_bool = cb_to_bool(at_birth)
+        first_bool = cb_to_bool(first_dose)
+        second_bool = cb_to_bool(second_dose)
+        third_bool = cb_to_bool(third_dose)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT update_vaccine(
+                      %s, %s, %s, %s, %s, %s, %s, %s
+                    );
+                    """,
+                    [
+                        vaccine_type_id,
+                        name,            # NULL => keep old name
+                        at_birth_bool,   # NULL => keep old flag
+                        first_bool,
+                        second_bool,
+                        third_bool,
+                        interval_str,    # NULL => keep old interval
+                        personnel_id,
+                    ],
+                )
+                updated_id = cursor.fetchone()[0]
+
+            messages.success(request, "Vaccine updated successfully.")
+            return redirect("nurse_module:vaccine_list")
+
+        except Exception as e:
+            messages.error(request, f"Unable to update vaccine: {e}")
+
+    context = {
+        "vaccine": vaccine,
+    }
+    return render(request, "nurse_module/vaccine_edit.html", context)
+
+
+def _fetch_all_vaccines():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM view_all_vaccine();")
+        columns = [col[0] for col in cursor.description]
+        rows = cursor.fetchall()
+
+    vaccines = []
+    for row in rows:
+        data = dict(zip(columns, row))
+        # nice label for interval
+        interval = data.get("interval_between_doses")
+        if interval:
+            days = interval.days
+            weeks = days // 7
+            if weeks >= 1:
+                data["interval_label"] = f"Every {weeks} week(s)"
+            else:
+                data["interval_label"] = f"{days} day(s)"
+        else:
+            data["interval_label"] = "—"
+        vaccines.append(data)
+    return vaccines
+
+
+# Helper to fetch a specific vaccine via view_specific_vaccine()
+def _fetch_vaccine(vaccine_type_id: int):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM view_specific_vaccine(%s);", [vaccine_type_id])
+        columns = [col[0] for col in cursor.description]
+        row = cursor.fetchone()
+    if not row:
+        return None
+    data = dict(zip(columns, row))
+    interval = data.get("interval_between_doses")
+    if interval:
+        days = interval.days
+        weeks = days // 7
+        if weeks >= 1:
+            data["interval_label"] = f"Every {weeks} week(s)"
+        else:
+            data["interval_label"] = f"{days} day(s)"
+    else:
+        data["interval_label"] = ""
+    return data
 
 @custom_login_required
 @role_required('Midwife')
@@ -682,83 +872,54 @@ def moreChildRecord(request, child_health_id: int):
 @role_required('Midwife')
 @require_POST
 def child_immunization_add_api(request, child_health_id: int):
-    """
-    POST (JSON or form):
-      - vaccine_type_id
-      - dose_type_id
 
-    Calls: add_immunization(p_child_health_id, p_vaccine_type_id, p_dose_type_id, p_personnel_id)
-    Returns JSON:
-      { "ok": true, "immunization_id": <int>, "message": "..." }
-      or
-      { "ok": false, "error": "..." }
-    """
-    # 1) Parse input (support JSON or regular POST)
+    # Parse JSON or form
     if request.headers.get('Content-Type', '').startswith('application/json'):
         try:
             payload = json.loads(request.body or '{}')
         except json.JSONDecodeError:
-            return JsonResponse(
-                {"ok": False, "error": "Invalid JSON payload."},
-                status=400,
-            )
+            return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
         vaccine_type_id = payload.get('vaccine_type_id')
         dose_type_id = payload.get('dose_type_id')
+        date_given = payload.get('date_given')
     else:
         vaccine_type_id = request.POST.get('vaccine_type_id')
         dose_type_id = request.POST.get('dose_type_id')
+        date_given = request.POST.get('date_given')
 
-    # 2) Basic validation and casting
+    # Validate inputs
+    if not vaccine_type_id or not dose_type_id or not date_given:
+        return JsonResponse({"ok": False, "error": "Vaccine, dose, and date are required."}, status=400)
+
     try:
         vaccine_type_id = int(vaccine_type_id)
         dose_type_id = int(dose_type_id)
-    except (TypeError, ValueError):
-        return JsonResponse(
-            {"ok": False, "error": "Vaccine and dose are required."},
-            status=400,
-        )
+    except:
+        return JsonResponse({"ok": False, "error": "Invalid vaccine or dose."}, status=400)
 
-    # 3) Resolve current personnel_id from logged-in user / session
+    # Resolve personnel
     personnel_id = _resolve_personnel_id(request)
     if personnel_id is None:
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "Unable to resolve current personnel_id from your session. Please log out and log in again, or contact the system administrator.",
-            },
-            status=400,
-        )
+        return JsonResponse({"ok": False, "error": "Invalid personnel session."}, status=400)
 
-    # 4) Call the PostgreSQL function add_immunization(...)
+    # SQL call (updated with date)
     try:
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT add_immunization(%s, %s, %s, %s)",
-                [child_health_id, vaccine_type_id, dose_type_id, personnel_id],
+                "SELECT add_immunization(%s, %s, %s, %s, %s)",
+                [child_health_id, vaccine_type_id, dose_type_id, date_given, personnel_id],
             )
             row = cur.fetchone()
             new_id = row[0] if row else None
 
-        return JsonResponse(
-            {
-                "ok": True,
-                "immunization_id": new_id,
-                "message": "Immunization successfully recorded.",
-            }
-        )
+        return JsonResponse({"ok": True, "immunization_id": new_id, "message": "Immunization recorded."})
 
     except DatabaseError as e:
-        # 🔴 This will capture your custom P4603–P4606 errors
         friendly = _pg_error_message(e)
-        return JsonResponse(
-            {"ok": False, "error": friendly},
-            status=400,
-        )
+        return JsonResponse({"ok": False, "error": friendly}, status=400)
+
     except Exception as e:
-        return JsonResponse(
-            {"ok": False, "error": str(e)},
-            status=500,
-        )
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
 
 
 def _resolve_personnel_id(request):
@@ -870,71 +1031,64 @@ def childSupplements(request, child_health_id: int):
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
-    # ---- Filters from GET ----
-    q = request.GET.get("q") or None  # name / resident_id search
-    family_code = request.GET.get("family_code") or None
-    record_status = request.GET.get("record_status") or None
 
-    date_from_str = request.GET.get("date_from") or ""
-    date_to_str = request.GET.get("date_to") or ""
+    # ---- Filters ----
+    q = request.GET.get("q") or None
+    record_status_text = request.GET.get("record_status") or None
 
-    date_from = _parse_date(date_from_str)
-    date_to = _parse_date(date_to_str)
+    # Map text → record_status_id
+    status_map = {
+        "Ongoing": 1,
+        "Completed": 2,
+        "Incomplete": 3,
+    }
+    record_status_id = status_map.get(record_status_text)
 
     # ---- Pagination ----
     try:
         page = int(request.GET.get("page", "1"))
     except ValueError:
         page = 1
-    if page < 1:
-        page = 1
 
     per_page = 10
     offset = (page - 1) * per_page
 
+    # ---- Fetch data ----
     total_count = MaternalHealthListRow.count(
-        name_query=q,
-        family_code=family_code,
-        record_status=record_status,
-        date_from=date_from,
-        date_to=date_to,
+        query=q,
+        record_status_id=record_status_id,
     )
+
     maternal_records = MaternalHealthListRow.fetch(
-        name_query=q,
-        family_code=family_code,
-        record_status=record_status,
-        date_from=date_from,
-        date_to=date_to,
+        query=q,
+        record_status_id=record_status_id,
         limit=per_page,
         offset=offset,
     )
 
-    total_pages = max(1, math.ceil(total_count / per_page)) if total_count else 1
-    if page > total_pages:
-        page = total_pages
+    # ---- Pagination building ----
+    total_pages = max(1, math.ceil(total_count / per_page))
+    page = min(page, total_pages)
 
-    # Simple window around current page (e.g., 1 2 [3] 4 5)
     window = 2
     start_page = max(1, page - window)
     end_page = min(total_pages, page + window)
-    page_range = list(range(start_page, end_page + 1))
+    page_range = range(start_page, end_page + 1)
 
-    # Build base query string for pagination links (keep filters, change page)
+    # Build base_query (keep filters)
     qs_params = {}
-    for key in ["q", "family_code", "record_status", "date_from", "date_to"]:
+    for key in ["q", "record_status"]:
         val = request.GET.get(key)
         if val:
             qs_params[key] = val
+
     base_query = urlencode(qs_params)
 
-    context = {
+    return render(request, "nurse_module/maternalrecord.html", {
         "maternal_records": maternal_records,
         "filters": {
             "q": q or "",
-            "family_code": family_code or "",
-            "record_status": record_status or "",
-            "date_from": date_from_str,
-            "date_to": date_to_str,
+            "record_status": record_status_text or "",
         },
         "pagination": {
             "page": page,
@@ -948,8 +1102,7 @@ def maternalrecord(request):
             "page_range": page_range,
         },
         "base_query": base_query,
-    }
-    return render(request, 'nurse_module/maternalrecord.html', context)
+    })
 
 
 def _parse_date(value):

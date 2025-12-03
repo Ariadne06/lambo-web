@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 import django.contrib.admin as admin
+from .views import DiseaseTypeListView, TestTypeListView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -26,7 +27,17 @@ router.register(r'tt-statuses', views.TTStatusViewSet)
 router.register(r'vaccine-types', views.VaccineTypeViewSet)
 router.register(r'dose-types', views.DoseTypeViewSet)
 router.register(r'supplements', views.SupplementsViewSet)
-
+router.register(r'disease-types', views.DiseaseTypeViewSet)
+router.register(r'trimesters', views.TrimesterViewSet)
+router.register(r'test-types', views.TestTypeViewSet)
+router.register(r'supplement-types', views.SupplementTypeViewSet)
+router.register(r'deworming-types', views.DewormingTypeViewSet)
+router.register(r'outcome-types', views.OutcomeTypeViewSet)
+router.register(r'delivery-types', views.DeliveryTypeViewSet)
+router.register(r'place-delivery-types', views.PlaceDeliveryTypeViewSet)
+router.register(r'ownership-types', views.OwnershipTypeViewSet)
+router.register(r'birth-attendants', views.BirthAttendantViewSet)
+router.register(r'record-statuses', views.RecordStatusViewSet)
 
 app_name = 'household_module'
 
@@ -64,13 +75,20 @@ urlpatterns = [
     path('child-health-records/<int:child_health_id>/', views.ChildHealthRecordDetailView.as_view(), name='child-health-record-detail'),
     path('child-health-records/<int:child_health_id>/update/', views.ChildHealthRecordUpdateView.as_view(), name='update-child-health-record'),
 
+
+path("bhw-dashboard/", views.bhw_dashboard_view, name="bhw-dashboard"),
+
     # CHILD HEALTH - IMMUNIZATION
-    path('child-health-records/<int:child_health_id>/immunizations/', 
-         views.ChildImmunizationListView.as_view(), 
-         name='child-immunizations-list'),
-    path('child-health-records/<int:child_health_id>/immunizations/add/', 
-         views.ChildImmunizationCreateView.as_view(), 
-         name='child-immunizations-add'),
+    path(
+    'child-health-records/<int:child_health_id>/immunizations/',
+    views.ChildImmunizationListView.as_view(),
+    name='child-immunizations-list',
+),
+path(
+    'child-health-records/<int:child_health_id>/immunizations/add/',
+    views.ChildImmunizationCreateView.as_view(),
+    name='child-immunizations-add',
+),
     
     # CHILD HEALTH - SUPPLEMENTS
     path('child-health-records/<int:child_health_id>/supplements/', 
@@ -116,4 +134,168 @@ urlpatterns = [
      path('months/', 
           views.MonthsListView.as_view(), 
           name='months-list'),
+
+     # GENERAL HEALTH
+     path('general-health/', 
+         views.GeneralHealthListView.as_view(), 
+         name='general-health-list'),
+     path('general-health/<int:family_member_id>/', 
+         views.GeneralHealthDetailView.as_view(), 
+         name='general-health-detail'),
+     
+     # ========================================
+     # MATERNAL HEALTH - SEARCH & CRUD
+     # ========================================
+     path('search-mother/', views.SearchMotherView.as_view(), name='search-mother'),
+     path('maternal-health-records/', views.MaternalHealthRecordListView.as_view(), name='maternal-health-records-list'),
+     path('maternal-health-records/create/', views.MaternalHealthRecordCreateView.as_view(), name='maternal-health-records-create'),
+     path('maternal-health-records/<int:maternal_health_id>/', views.MaternalHealthRecordDetailView.as_view(), name='maternal-health-record-detail'),
+     
+     path('maternal-health-records/<int:maternal_health_id>/update/', 
+     views.MaternalHealthRecordUpdateView.as_view(), 
+     name='maternal-health-record-update'),
+
+
+     path('maternal-health-records/<int:maternal_health_id>/update-status/', 
+     views.MaternalHealthRecordStatusUpdateView.as_view(), 
+     name='maternal-health-record-status-update'),
+
+     # MATERNAL HEALTH - OBSTETRICAL HISTORY
+     path(
+          'maternal-health-records/<int:maternal_health_id>/obstetrical-history/',
+          views.MaternalObstetricalHistoryListView.as_view(),
+          name='maternal-obstetrical-history-list'
+     ),
+     path(
+        'maternal-health-records/<int:maternal_health_id>/obstetrical-history/create/',
+        views.ObstetricalHistoryCreateView.as_view(),
+        name='obstetrical-history-create'
+    ),
+     
+     # ========================================
+     # MEDICAL/SURGICAL HISTORY
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/medical-conditions/', 
+          views.MaternalMedicalConditionListView.as_view(), 
+          name='maternal-medical-conditions-list'),
+     path('maternal-health-records/<int:maternal_health_id>/medical-conditions/add/', 
+          views.MaternalMedicalConditionCreateView.as_view(), 
+          name='maternal-medical-conditions-add'),
+     
+     path('maternal-health-records/<int:maternal_health_id>/surgical-history/', 
+          views.MaternalSurgicalHistoryListView.as_view(), 
+          name='maternal-surgical-history-list'),
+     path('maternal-health-records/<int:maternal_health_id>/surgical-history/add/', 
+          views.MaternalSurgicalHistoryCreateView.as_view(), 
+          name='maternal-surgical-history-add'),
+     
+     # ========================================
+     # IMMUNIZATION
+     # ========================================
+     path(
+        'maternal-health-records/<int:maternal_health_id>/immunization/track/',
+        views.MaternalImmunizationTrackView.as_view(),
+        name='maternal-immunization-track'),
+     path(
+        'maternal-health-records/<int:maternal_health_id>/immunization/add/',
+        views.MaternalImmunizationCreateView.as_view(),
+        name='maternal-immunization-create'
+     ),
+     
+     # ========================================
+     # DISEASE SURVEILLANCE
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/disease-surveillance/', 
+          views.DiseaseScreenListView.as_view(), 
+          name='disease-surveillance-list'),
+     path('maternal-health-records/<int:maternal_health_id>/disease-surveillance/add/', 
+          views.DiseaseScreenCreateView.as_view(), 
+          name='disease-surveillance-add'),
+
+          path("disease-types/", DiseaseTypeListView.as_view()),
+
+     
+     # ========================================
+     # LABORATORY SCREENING
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/laboratory-screening/', 
+         views.LabScreeningListView.as_view(), 
+         name='maternal-lab-screening-list'),
+     path('maternal-health-records/<int:maternal_health_id>/lab-screening/add/', 
+          views.LabScreeningCreateView.as_view(), 
+          name='lab-screening-add'),
+
+    path("test-types/", TestTypeListView.as_view()),
+
+
+     
+     # ========================================
+     # CHECKUP RECORDS
+     # ========================================
+      path(
+        'maternal-health-records/<int:maternal_health_id>/checkups/', 
+        views.CheckupRecordListView.as_view(), 
+        name='checkups-list'
+     ),
+     path(
+          'maternal-health-records/<int:maternal_health_id>/checkups/add/', 
+          views.CheckupRecordCreateView.as_view(), 
+          name='checkups-add'
+     ),
+     path(
+          'maternal-health-records/<int:maternal_health_id>/checkups/track/', 
+          views.CheckupRecordTrackView.as_view(), 
+          name='checkups-track'
+     ),
+
+     path('maternal-health-records/<int:maternal_health_id>/checkups/<int:checkup_id>/update/', 
+     views.CheckupRecordUpdateView.as_view(), 
+     name='maternal_checkup_update'),
+
+     # ========================================
+     # SUPPLEMENTS
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/supplements/', 
+          views.MaternalSupplementListView.as_view(), 
+          name='maternal-supplements-list'),
+     path('maternal-health-records/<int:maternal_health_id>/supplements/add/', 
+          views.MaternalSupplementCreateView.as_view(), 
+          name='maternal-supplements-add'),
+     
+     # ========================================
+     # DEWORMING
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/deworming/', 
+          views.DewormingListView.as_view(), 
+          name='maternal-deworming-list'),
+     path('maternal-health-records/<int:maternal_health_id>/deworming/add/', 
+          views.DewormingCreateView.as_view(), 
+          name='maternal-deworming-add'),
+     
+     # ========================================
+     # PREGNANCY OUTCOME
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/delivery-outcome/', 
+         views.DeliveryOutcomeView.as_view(), 
+         name='delivery-outcome'),
+     path('maternal-health-records/<int:maternal_health_id>/delivery-outcome/add/', 
+         views.DeliveryOutcomeCreateView.as_view(), 
+         name='delivery-outcome-add'),
+     
+     # ========================================
+     # POSTPARTUM
+     # ========================================
+     path('maternal-health-records/<int:maternal_health_id>/postpartum/', 
+         views.PostpartumVisitListView.as_view(), 
+         name='postpartum-list'),
+     path('maternal-health-records/<int:maternal_health_id>/postpartum/add/', 
+         views.PostpartumVisitCreateView.as_view(), 
+         name='postpartum-add'),
+     
+     # ========================================
+     # BHW DASHBOARD
+     # ========================================
+     path('bhw/dashboard/', 
+          views.BHWDashboardView.as_view(), 
+          name='bhw-dashboard'),
 ]

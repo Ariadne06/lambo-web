@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Remix Icon CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
   <title>{% block title %}Treasurer{% endblock %}</title>
   {% tailwind_css %}
 </head>
@@ -19,57 +21,41 @@
 
     <!-- Nav links -->
     <div class="flex-1 overflow-y-auto px-3 py-6 space-y-1">
-            <!-- Dashboard -->
-          <a href="{% url 'treasurer_module:treasurer_dashboard' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
+      <!-- Dashboard -->
+      <a href="{% url 'treasurer_module:treasurer_dashboard' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'treasurer_dashboard' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'treasurer_dashboard' %}ri-dashboard-fill{% else %}ri-dashboard-line{% endif %} text-lg"></i>
+        <span>Dashboard</span>
+      </a>
 
-          <span>Dashboard</span>
-        </a>
+      <!-- Transactions -->
+      <a href="{% url 'treasurer_module:payments' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'payments' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'payments' %}ri-bill-fill{% else %}ri-bill-line{% endif %} text-lg"></i>
+        <span>Transactions</span>
+      </a>
 
-        <a href="{% url 'treasurer_module:payments' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'payments' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'payments' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Transactions</span>
-        </a>
-
-        <a href="{% url 'treasurer_module:summary' %}"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
-                  {% if request.resolver_match.url_name == 'summary' %}
-                      bg-white text-red-700 font-semibold shadow-sm
-                  {% else %}
-                      hover:bg-red-800/80
-                  {% endif %}">
-          <img 
-            src="{% static 'images/dashboard.svg' %}" 
-            alt="Dashboard Icon" class="h-5 w-5"
-            {% if request.resolver_match.url_name == 'summary' %}
-              src="{% static 'images/dashboard-red.svg' %}"
-            {% endif %}>
-
-          <span>Reports</span>
-        </a>
+      <!-- Reports -->
+      <a href="{% url 'treasurer_module:summary' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'summary' %}
+                    bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                    hover:bg-red-800/80
+                {% endif %}">
+        <i class="{% if request.resolver_match.url_name == 'summary' %}ri-bar-chart-2-fill{% else %}ri-bar-chart-2-line{% endif %} text-lg"></i>
+        <span>Reports</span>
+      </a>
 
     </div>
 
@@ -81,13 +67,13 @@
           <p class="text-xs text-red-200 truncate">{{ request.session.role_name }}</p>
         </div>
         <form method="POST" action="{% url 'authentication:logout' %}" class="inline">
-         {% csrf_token %}
-         <button type="submit" id="logout-link"
-                 class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
+          {% csrf_token %}
+          <button type="submit" id="logout-link"
+                  class="ml-3 flex items-center gap-2 px-3 py-2 rounded-md bg-red-900 text-white font-medium
                          hover:bg-red-800 ring-1 ring-white/20 transition">
-           <img src="{% static 'images/logout-white.svg' %}" alt="Logout" class="h-4 w-4">
-           <span class="text-xs">Logout</span>
-         </button>
+            <i class="ri-logout-box-r-line text-sm"></i>
+            <span class="text-xs">Logout</span>
+          </button>
         </form>
       </div>
     </div>
@@ -163,11 +149,22 @@ ACCORDION.forEach((item) => {
 
   // --- Manual logout suppression ---
   let suppressClosePing = false;
+  let formSubmitting = false;
   try { sessionStorage.removeItem('skipSilent'); } catch(_) {}
+  
   document.getElementById('logout-link')?.addEventListener('click', () => {
     suppressClosePing = true;
-    // Don't call markNavigation() - let server handle logout time recording
-    try { sessionStorage.setItem('skipSilent', '1'); } catch(_) {}
+  });
+  
+  // Detect form submissions to prevent logout during form operations
+  document.addEventListener('submit', () => {
+    formSubmitting = true;
+    clearTimeout(timer); // Clear idle timer during form submission
+    setTimeout(() => {
+      formSubmitting = false;
+      last = Date.now(); // Reset idle timer
+      arm(); // Restart idle detection
+    }, 10000); // Reset after 10 seconds
   });
 
   async function pingSilentLogout(token) {
@@ -186,84 +183,39 @@ ACCORDION.forEach((item) => {
     } catch (_) { /* ignore */ }
   }
 
-  // First load in this tab? Clean foreign leftover token (but not our own)
-  if (!sessionStorage.getItem(TAB_FLAG)) {
-    sessionStorage.setItem(TAB_FLAG, '1');
-    const closedToken = localStorage.getItem(CLOSED_KEY);
-    if (closedToken && closedToken !== SESSION_TOKEN) {
-      // Only clean up an older/different tab's token
-      pingSilentLogout(closedToken);
-    }
-    try { localStorage.removeItem(CLOSED_KEY); } catch (_) {}
-  }
-
-  // Comprehensive navigation detection
-  let isNavigating = false;
-  let navigationTimer = null;
-  
-  function markNavigation() {
-    isNavigating = true;
-    clearTimeout(navigationTimer);
-    navigationTimer = setTimeout(() => isNavigating = false, 100);
-  }
-  
-  // Track navigation types (exclude logout button)
-  document.addEventListener('click', (e) => {
-    const target = e.target.closest('a, button[type="submit"], input[type="submit"]');
-    if (target && target.id !== 'logout-link') {
-      markNavigation();
-    }
-  });
-  
-  // Track form submissions (exclude logout form)
-  document.addEventListener('submit', (e) => {
-    if (!e.target.querySelector('#logout-link')) {
-      markNavigation();
-    }
-  });
-  
-  // Track browser navigation (back/forward)
-  addEventListener('popstate', () => markNavigation());
-  
-  // Browser/tab close detection - single event listener
-  addEventListener('beforeunload', (e) => {
-    console.log('beforeunload triggered:', {
-      suppressClosePing,
-      skipSilent: sessionStorage.getItem('skipSilent'),
-      isNavigating,
-      SESSION_TOKEN: SESSION_TOKEN ? 'present' : 'missing'
-    });
-    
-    // Check if this is a page refresh
-    if (e.returnValue !== undefined || performance.navigation?.type === 1) {
-      markNavigation();
-    }
-    
-    // Record logout time for browser/tab close (not navigation)
-    if (!suppressClosePing && sessionStorage.getItem('skipSilent') !== '1' && !isNavigating) {
-      console.log('Sending beacon for logout');
-      const formData = new FormData();
-      formData.append('session_token', SESSION_TOKEN);
-      navigator.sendBeacon(TAB_CLOSE_URL, formData);
-    } else {
-      console.log('Beacon blocked by conditions');
-    }
-  });
-
   // Idle detection -> call silent logout then redirect
   let last = Date.now(), timer;
+  console.log('Idle detection initialized with', IDLE_LIMIT_MS / 1000, 'second timeout');
   function arm() {
-    clearTimeout(timer);
-    if (document.visibilityState !== 'visible') return;
+    console.log('arm() called, formSubmitting:', formSubmitting, 'timer ID:', timer);
+    if (timer) {
+      clearTimeout(timer);
+      console.log('Cleared existing timer:', timer);
+    }
+    timer = null;
+    if (formSubmitting) {
+      console.log('Skipping timer setup - form submitting');
+      return; // Don't set timer during form submission
+    }
+    console.log('Setting idle timer for', IDLE_LIMIT_MS + 100, 'ms');
     timer = setTimeout(() => {
-      if (document.visibilityState === 'visible' && Date.now() - last >= IDLE_LIMIT_MS) {
+      console.log('Timer fired! Timer ID:', timer, 'Time since last activity:', Date.now() - last, 'ms');
+      if (Date.now() - last >= IDLE_LIMIT_MS && !formSubmitting) {
+        console.log('Triggering logout due to idle timeout');
         // Record logout time via silent_logout before redirecting
         pingSilentLogout(SESSION_TOKEN);
         window.location.replace(LOGOUT_URL + '?force=1');
+      } else {
+        console.log('Logout cancelled - recent activity or form submitting');
       }
     }, IDLE_LIMIT_MS + 100);
+    console.log('New timer set with ID:', timer);
   }
-  function bump(){ last = Date.now(); arm(); }
+  function bump(){ 
+    console.log('Activity detected at:', new Date().toLocaleTimeString());
+    last = Date.now(); 
+    arm(); // Always restart timer on any activity
+  }
   ['mousemove','keydown','click','wheel','scroll','touchstart'].forEach(evt =>
     addEventListener(evt, bump, { passive: true })
   );

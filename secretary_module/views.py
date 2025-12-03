@@ -6,7 +6,7 @@ from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from .models import (
     Secretary, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType,
-    BusinessTaxConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
+    BusinessTaxConfig, CTCFeeConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
 )
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
@@ -26,6 +26,10 @@ from urllib.parse import urlencode
 from household_module.models import Household, Family
 import json
 from django.views.decorators.http import require_GET
+from notifications.service import NotificationService
+import logging
+
+logger = logging.getLogger(__name__)
 
 # PDF generation (HTML -> PDF)
 import io, os
@@ -184,91 +188,285 @@ def secretary_dashboard(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def resident_list(request):
     q = request.GET.get("q") or None
-    sex = request.GET.get("sex") or None            # 'male'/'female'
-    status_id = request.GET.get("status_id") or None
-    min_age = request.GET.get("min_age") or None
-    max_age = request.GET.get("max_age") or None
+    # Support multiple status and sitio filters
+    status_id_list = request.GET.getlist("status_id")
+    sitio_id_list = request.GET.getlist("sitio_id")
+    quarter_id = request.GET.get("quarter_id") or None
     page = int(request.GET.get("page") or 1)
     page_size = int(request.GET.get("page_size") or 50)
 
-    # Coerce ints
-    try:
-        status_id = int(status_id) if status_id not in (None, "",) else None
-    except ValueError:
+    # Convert to integers and filter out invalid values
+    status_id_list = [int(s) for s in status_id_list if s and s.isdigit()]
+    sitio_id_list = [int(s) for s in sitio_id_list if s and s.isdigit()]
+    
+    # Parse quarter_id
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    # Ensure page is at least 1
+    page = max(1, page)
+    page_size = max(1, min(page_size, 200))  # Cap at 200 to prevent huge queries
+    
+    # Calculate offset
+    offset = (page - 1) * page_size
+
+    # If multiple filters selected, we need to fetch and filter in Python
+    # since the DB function only accepts single values
+    if len(status_id_list) > 1 or len(sitio_id_list) > 1:
+        # Fetch all matching residents (no limit) and filter in Python
+        all_residents = []
+        
+        # If we have multiple statuses, fetch for each
+        if len(status_id_list) > 1:
+            for status_id in status_id_list:
+                sitio_id = sitio_id_list[0] if sitio_id_list else None
+                residents_batch = ResidentList.sp_get_all_residents(
+                    p_status_id=status_id,
+                    p_sitio_id=sitio_id,
+                    p_query=q,
+                    p_limit=None,
+                    p_offset=0,
+                    p_quarter_id=quarter_id
+                )
+                all_residents.extend(residents_batch)
+        # If we have multiple sitios but single status
+        elif len(sitio_id_list) > 1:
+            status_id = status_id_list[0] if status_id_list else None
+            for sitio_id in sitio_id_list:
+                residents_batch = ResidentList.sp_get_all_residents(
+                    p_status_id=status_id,
+                    p_sitio_id=sitio_id,
+                    p_query=q,
+                    p_limit=None,
+                    p_offset=0,
+                    p_quarter_id=quarter_id
+                )
+                all_residents.extend(residents_batch)
+        
+        # Remove duplicates based on resident_id
+        seen_ids = set()
+        unique_residents = []
+        for r in all_residents:
+            if r.get('resident_id') not in seen_ids:
+                seen_ids.add(r.get('resident_id'))
+                unique_residents.append(r)
+        
+        # Calculate totals and pagination
+        total = len(unique_residents)
+        total_pages = max(1, ceil(total / page_size)) if page_size else 1
+        
+        # Apply manual pagination
+        start_idx = offset
+        end_idx = offset + page_size
+        residents = unique_residents[start_idx:end_idx]
+        
+        # Set single values to None for context (not used when multiple filters)
         status_id = None
-    try:
-        min_age = int(min_age) if min_age not in (None, "",) else None
-    except ValueError:
-        min_age = None
-    try:
-        max_age = int(max_age) if max_age not in (None, "",) else None
-    except ValueError:
-        max_age = None
+        sitio_id = None
+    else:
+        # Single or no filters - use DB function directly (more efficient)
+        status_id = status_id_list[0] if status_id_list else None
+        sitio_id = sitio_id_list[0] if sitio_id_list else None
+        
+        # Get total count for pagination
+        total = ResidentList.sp_get_all_residents_count(
+            p_status_id=status_id,
+            p_sitio_id=sitio_id,
+            p_query=q,
+            p_quarter_id=quarter_id
+        )
 
-    result = ResidentList.search(
-        p_query=q,
-        p_sex=sex,
-        p_status_id=status_id,
-        p_min_age=min_age,
-        p_max_age=max_age,
-        page=page,
-        page_size=page_size,
-    )
+        # Get paginated residents
+        residents = ResidentList.sp_get_all_residents(
+            p_status_id=status_id,
+            p_sitio_id=sitio_id,
+            p_query=q,
+            p_limit=page_size,
+            p_offset=offset,
+            p_quarter_id=quarter_id
+        )
 
-    # Use the values returned by the search result
-    page  = result["page"]
-    pages = result["pages"]
-
-    # Base params for pagination
-    from django.utils.http import urlencode
-    base_params = {
-        "q": q or "",
-        "sex": sex or "",
-        "status_id": status_id if status_id is not None else "",
-        "min_age": min_age if min_age is not None else "",
-        "max_age": max_age if max_age is not None else "",
-        "page_size": page_size,
-    }
-    def page_url(p):
-        params = base_params.copy()
-        params["page"] = p
-        return f"?{urlencode(params)}"
-
-    # Precompute URLs so template doesn't call functions
-    prev_url  = page_url(page - 1) if page > 1 else None
-    next_url  = page_url(page + 1) if page < pages else None
-    curr_url  = page_url(page)
-
-    p1_num, p1_url = page, curr_url
-    p2_num, p2_url = (page + 1, page_url(page + 1)) if page < pages else (None, None)
-    p3_num, p3_url = (page + 2, page_url(page + 2)) if page + 1 < pages else (None, None)
-    last_num, last_url = (pages, page_url(pages)) if pages > 1 else (None, None)
-
-    showing_start = (result["offset"] + 1) if result["total"] > 0 else 0
-    showing_end = min(result["offset"] + len(result["rows"]), result["total"])
-
+        # Calculate pagination info
+        total_pages = max(1, ceil(total / page_size)) if page_size else 1
+    
+    # Get filter options
     with connection.cursor() as cur:
         cur.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name;")
-        status_options = cur.fetchall()  # list of tuples [(id, name), ...]
+        status_options = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+        
+        cur.execute("SELECT sitio_id, sitio_name FROM Sitio ORDER BY sitio_name;")
+        sitio_options = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    # Get quarters for dropdown
+    quarters = ResidentList.sp_get_all_quarters()
+
+    # Build URL helper
+    def build_url(**overrides):
+        params = {
+            "q": q or "",
+            "page": page,
+            "page_size": page_size,
+        }
+        
+        # Handle quarter_id
+        if "quarter_id" in overrides:
+            qid_override = overrides.pop("quarter_id")
+            if qid_override and qid_override != "":
+                params["quarter_id"] = qid_override
+        elif quarter_id:
+            params["quarter_id"] = quarter_id
+        
+        # Handle status_id - default to current list unless overridden
+        if "status_id" in overrides:
+            status_override = overrides.pop("status_id")
+            if status_override and status_override != "":
+                if isinstance(status_override, list):
+                    for s in status_override:
+                        params[f"status_id"] = s  # Will be handled by urlencode with doseq
+                else:
+                    params["status_id"] = status_override
+        else:
+            # Use current status_id_list
+            if status_id_list:
+                params["status_id"] = status_id_list
+        
+        # Handle sitio_id - default to current list unless overridden  
+        if "sitio_id" in overrides:
+            sitio_override = overrides.pop("sitio_id")
+            if sitio_override and sitio_override != "":
+                if isinstance(sitio_override, list):
+                    for s in sitio_override:
+                        params[f"sitio_id"] = s
+                else:
+                    params["sitio_id"] = sitio_override
+        else:
+            # Use current sitio_id_list
+            if sitio_id_list:
+                params["sitio_id"] = sitio_id_list
+        
+        params.update(overrides)
+        # Remove empty params
+        params = {k: v for k, v in params.items() if v not in (None, "", [])}
+        return f"?{urlencode(params, doseq=True)}"
+
+    # Pagination URLs
+    prev_url = build_url(page=page - 1) if page > 1 else None
+    next_url = build_url(page=page + 1) if page < total_pages else None
+    
+    # Page items for pagination display (show current, +/- 1, and last)
+    page_items = []
+    for p in range(max(1, page - 1), min(total_pages + 1, page + 2)):
+        page_items.append({
+            "num": p,
+            "url": build_url(page=p),
+            "current": p == page
+        })
+    
+    # Add ellipsis and last page if needed
+    if page + 2 < total_pages:
+        page_items.append({"ellipsis": True})
+        page_items.append({
+            "num": total_pages,
+            "url": build_url(page=total_pages),
+            "current": False
+        })
+
+    # Active filter chips
+    status_chips = []
+    sitio_chips = []
+    
+    # Build chips for each selected status
+    for sid in status_id_list:
+        status_name = next((s["name"] for s in status_options if s["id"] == sid), f"Status {sid}")
+        # Build URL that removes this specific status
+        other_statuses = [s for s in status_id_list if s != sid]
+        status_chips.append({
+            "label": status_name,
+            "url": build_url(status_id=other_statuses, page=1) if other_statuses else build_url(status_id="", page=1)
+        })
+    
+    # Build chips for each selected sitio
+    for sit in sitio_id_list:
+        sitio_name = next((s["name"] for s in sitio_options if s["id"] == sit), f"Sitio {sit}")
+        # Build URL that removes this specific sitio
+        other_sitios = [s for s in sitio_id_list if s != sit]
+        sitio_chips.append({
+            "label": f"Sitio {sitio_name}",
+            "url": build_url(sitio_id=other_sitios, page=1) if other_sitios else build_url(sitio_id="", page=1)
+        })
+
+    clear_all_url = build_url(q=q, status_id="", sitio_id="", page=1)
+    
+    # Calculate total filter count
+    filter_count = len(status_chips) + len(sitio_chips)
 
     context = {
-        "residents": result["rows"],
-        "total": result["total"],
+        "residents": residents,
+        "total": total,
         "page": page,
-        "pages": pages,
-        "page_size": result["limit"],
-        "showing_start": showing_start,
-        "showing_end": showing_end,
-        # pagination links/numbers
+        "total_pages": total_pages,
+        "page_size": page_size,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
         "prev_url": prev_url,
         "next_url": next_url,
-        "p1_num": p1_num, "p1_url": p1_url,
-        "p2_num": p2_num, "p2_url": p2_url,
-        "p3_num": p3_num, "p3_url": p3_url,
-        "last_num": last_num, "last_url": last_url,
+        "page_items": page_items,
+        "q": q or "",
+        "quarter_id": quarter_id,
+        "quarters": quarters,
+        "status_id": status_id,
+        "sitio_id": sitio_id,
         "status_options": status_options,
+        "sitio_options": sitio_options,
+        "status_id_list": status_id_list,
+        "sitio_id_list": sitio_id_list,
+        "status_chips": status_chips,
+        "sitio_chips": sitio_chips,
+        "filter_count": filter_count,
+        "clear_all_url": clear_all_url,
     }
     return render(request, 'secretary_module/resident_list.html', context)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def resident_detail_json(request, resident_id: int):
+    """AJAX endpoint to get specific resident details"""
+    try:
+        quarter_id = request.GET.get('quarter_id') or None
+        if quarter_id and quarter_id.isdigit():
+            quarter_id = int(quarter_id)
+        else:
+            quarter_id = None
+        
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
+        
+        if not resident:
+            return JsonResponse({"ok": False, "message": "Resident not found"}, status=404)
+        
+        # Convert date to string for JSON serialization
+        if resident.get('dob'):
+            from datetime import date
+            if isinstance(resident['dob'], date):
+                resident['dob'] = resident['dob'].isoformat()
+        
+        # Convert businesses JSONB to list if needed
+        if resident.get('businesses') and isinstance(resident['businesses'], str):
+            import json
+            try:
+                resident['businesses'] = json.loads(resident['businesses'])
+            except:
+                resident['businesses'] = []
+        
+        return JsonResponse({"ok": True, "resident": resident})
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] Exception in resident_detail_json:")
+        print(error_detail)
+        return JsonResponse({"ok": False, "message": f"Database error: {str(e)}"}, status=500)
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
@@ -353,6 +551,40 @@ def household_list(request):
     sitio = Household.sp_get_sitio()
     quarter = Household.sp_get_quarter()
     
+    # Calculate filter count and chips
+    filter_count = 0
+    status_chip = None
+    sitio_chip = None
+    
+    # Count active filters (excluding query and quarter)
+    if status and status != 'all':
+        filter_count += 1
+        # Create status chip with removal URL
+        status_label = status.capitalize()
+        remove_status_params = {k: v for k, v in base_params.items() if k != 'status'}
+        remove_status_params['status'] = 'all'
+        status_chip = {
+            'label': status_label,
+            'url': '?' + urlencode(remove_status_params)
+        }
+    
+    if sitio_id is not None:
+        filter_count += 1
+        # Find sitio name
+        sitio_name = next((s['sitio_name'] for s in sitio if s['sitio_id'] == sitio_id), f'Sitio {sitio_id}')
+        # Create sitio chip with removal URL
+        remove_sitio_params = {k: v for k, v in base_params.items() if k != 'sitio_id'}
+        sitio_chip = {
+            'label': f'Sitio {sitio_name}',
+            'url': '?' + urlencode(remove_sitio_params)
+        }
+    
+    # Clear all URL
+    clear_all_params = {'query': query}
+    if quarter_id is not None:
+        clear_all_params['quarter_id'] = quarter_id
+    clear_all_url = '?' + urlencode(clear_all_params)
+    
     flash = get_flash(request)
     return render(request, 'secretary_module/household_list.html',{
         "results": final_result,
@@ -373,6 +605,11 @@ def household_list(request):
         # ✅ expose these to the template
         'current_quarter_id': int(current_quarter_id) if current_quarter_id else None,
         'is_current_quarter': is_current_quarter,
+        # Filter badges and chips
+        'filter_count': filter_count,
+        'status_chip': status_chip,
+        'sitio_chip': sitio_chip,
+        'clear_all_url': clear_all_url,
         'message': flash['message'],
         'message_level': flash['message_level'],
     })
@@ -714,15 +951,77 @@ def Addbusiness(request):
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def business_list(request):
     q = (request.GET.get("q") or "").strip() or None
-    status = request.GET.get("status") or None
     page = max(int(request.GET.get("page", 1)), 1)
     per_page = max(min(int(request.GET.get("per_page", 10)), 100), 1)
     offset = (page - 1) * per_page
 
-    # ✅ Always use the business list SP so we have business_id in the rows.
-    rows  = Business.sp_get_all_businesses(q, status, None, None, None, per_page, offset)
-    total = _count_get_all_businesses(q, status)
+    # Parse multiple filter values
+    business_type_ids = _to_list(request.GET.getlist("business_type_id"))
+    clearance_category_ids = _to_list(request.GET.getlist("clearance_category_id"))
+    ownership_ids = _to_list(request.GET.getlist("ownership_id"))
+    business_status_ids = _to_list(request.GET.getlist("business_status_id"))
 
+    # Fetch filter options for dropdowns
+    with connection.cursor() as cur:
+        cur.execute("SELECT business_type_id, type_name FROM business_type ORDER BY type_name")
+        business_types = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+
+    with connection.cursor() as cur:
+        cur.execute("SELECT ownership_id, ownership_name FROM ownership ORDER BY ownership_name")
+        ownerships = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+    
+    with connection.cursor() as cur:
+        cur.execute("SELECT business_status_id, status_name FROM business_status ORDER BY status_name")
+        business_statuses = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
+
+    try:
+        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
+    except Exception:
+        clearance_categories = []
+
+    # Create lookup maps for filtering (ID -> Name)
+    business_type_map = {str(t['id']): t['name'] for t in business_types}
+    ownership_map = {str(o['id']): o['name'] for o in ownerships}
+    business_status_map = {str(s['id']): s['name'] for s in business_statuses}
+    clearance_category_map = {str(c.get('clearance_category_id')): c.get('category_name') for c in clearance_categories if c.get('clearance_category_id')}
+
+    # Get all businesses matching search query
+    # Since SQL function takes single filter values, we'll fetch all and filter in Python for multi-select
+    try:
+        rows = Business.sp_get_all_businesses(
+            query=q,
+            business_type_id=None,
+            business_clearance_cat_id=None,
+            ownership_id=None,
+            business_status_id=None,
+            limit=1000,  # Get all for filtering
+            offset=0
+        )
+    except Exception as e:
+        print(f"ERROR calling sp_get_all_businesses: {e}")
+        import traceback
+        traceback.print_exc()
+        rows = []
+    
+    # Apply filters in Python - match by name since the DB returns text fields
+    if business_type_ids:
+        selected_names = [business_type_map.get(id) for id in business_type_ids if id in business_type_map]
+        rows = [r for r in rows if r.get('business_type_name') in selected_names]
+    if clearance_category_ids:
+        selected_names = [clearance_category_map.get(id) for id in clearance_category_ids if id in clearance_category_map]
+        rows = [r for r in rows if r.get('clearance_category_name') in selected_names]
+    if ownership_ids:
+        selected_names = [ownership_map.get(id) for id in ownership_ids if id in ownership_map]
+        rows = [r for r in rows if r.get('ownership_name') in selected_names]
+    if business_status_ids:
+        selected_names = [business_status_map.get(id) for id in business_status_ids if id in business_status_map]
+        rows = [r for r in rows if r.get('business_status_name') in selected_names]
+    
+    total = len(rows)
+    
+    # Paginate
+    rows = rows[offset:offset + per_page]
+    
     total_pages = max(ceil(total / per_page), 1)
 
     def page_window(curr, last, radius=1):
@@ -737,40 +1036,106 @@ def business_list(request):
 
     page_numbers = page_window(page, total_pages)
 
+    # Build filter chips (like resident list)
+    def build_remove_url(param_name, value_to_remove):
+        params = request.GET.copy()
+        vals = params.getlist(param_name)
+        vals = [v for v in vals if str(v) != str(value_to_remove)]
+        if vals:
+            params.setlist(param_name, vals)
+        else:
+            params.pop(param_name, None)
+        params['page'] = '1'
+        return f"?{params.urlencode()}"
+
+    business_type_chips = []
+    clearance_category_chips = []
+    ownership_chips = []
+    business_status_chips = []
+    
+    for type_id in business_type_ids:
+        type_name = next((t['name'] for t in business_types if str(t['id']) == str(type_id)), f"Type {type_id}")
+        business_type_chips.append({
+            'label': type_name,
+            'url': build_remove_url('business_type_id', type_id)
+        })
+    
+    for cat_id in clearance_category_ids:
+        cat_name = next((c.get('category_name', f"Category {cat_id}") for c in clearance_categories 
+                        if str(c.get('clearance_category_id')) == str(cat_id)), f"Category {cat_id}")
+        clearance_category_chips.append({
+            'label': cat_name,
+            'url': build_remove_url('clearance_category_id', cat_id)
+        })
+    
+    for own_id in ownership_ids:
+        own_name = next((o['name'] for o in ownerships if str(o['id']) == str(own_id)), f"Ownership {own_id}")
+        ownership_chips.append({
+            'label': own_name,
+            'url': build_remove_url('ownership_id', own_id)
+        })
+    
+    for status_id in business_status_ids:
+        status_name = next((s['name'] for s in business_statuses if str(s['id']) == str(status_id)), f"Status {status_id}")
+        business_status_chips.append({
+            'label': status_name,
+            'url': build_remove_url('business_status_id', status_id)
+        })
+
+    # Clear all filters URL
+    clear_all_params = {'q': q} if q else {}
+    clear_all_url = f"?{urlencode(clear_all_params)}" if clear_all_params else "?"
+
+    # Count active filters
+    filter_count = (len(business_type_ids) + len(clearance_category_ids) + 
+                   len(ownership_ids) + len(business_status_ids))
+
+    # Build prev/next URLs preserving filters
+    def build_page_url(p):
+        params = request.GET.copy()
+        params['page'] = str(p)
+        return f"?{params.urlencode()}"
+
+    prev_url = build_page_url(page - 1) if page > 1 else None
+    next_url = build_page_url(page + 1) if page < total_pages else None
+
+    # Build page items for pagination
+    page_items = []
+    for p in page_numbers:
+        page_items.append({
+            'page': p,
+            'url': build_page_url(p),
+            'is_current': p == page
+        })
+
     ctx = {
         "rows": rows,
         "q": q or "",
-        "status": status or "",
         "page": page,
         "per_page": per_page,
         "total": total,
         "total_pages": total_pages,
         "page_numbers": page_numbers,
+        "page_items": page_items,
         "has_prev": page > 1,
         "has_next": page < total_pages,
-        "prev_page": page - 1,
-        "next_page": page + 1,
-    }
-
-    with connection.cursor() as cur:
-        cur.execute("SELECT business_type_id, type_name FROM business_type ORDER BY type_name")
-        business_types = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
-
-    with connection.cursor() as cur:
-        cur.execute("SELECT ownership_id, ownership_name FROM ownership ORDER BY ownership_name")
-        ownerships = [{"id": row[0], "name": row[1]} for row in cur.fetchall()]
-    
-    # NEW: clearance categories (includes supported_units from SQL)
-    try:
-        clearance_categories = Business.sp_get_business_clearance_categories_for_select()
-    except Exception:
-        clearance_categories = []
-
-    ctx.update({
+        "prev_url": prev_url,
+        "next_url": next_url,
         "business_types": business_types,
         "ownerships": ownerships,
+        "business_statuses": business_statuses,
         "clearance_categories": clearance_categories,
-    })
+        "business_type_id_list": business_type_ids,
+        "clearance_category_id_list": clearance_category_ids,
+        "ownership_id_list": ownership_ids,
+        "business_status_id_list": business_status_ids,
+        "business_type_chips": business_type_chips,
+        "clearance_category_chips": clearance_category_chips,
+        "ownership_chips": ownership_chips,
+        "business_status_chips": business_status_chips,
+        "clear_all_url": clear_all_url,
+        "filter_count": filter_count,
+    }
     return render(request, "secretary_module/manageBusiness.html", ctx)
 
 def business_detail_json(request, business_id: int):
@@ -999,50 +1364,108 @@ def business_update(request, business_id: int):
         if not personnel_id:
             return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
 
+        # -----------------------------
         # Current state (for rule checks)
+        # -----------------------------
         current = Business.sp_get_business_detail(business_id) or {}
-        curr_own = int(current.get('ownership_id') or 0)
-        curr_cat = int(current.get('clearance_category_id') or 0)
 
-        # Optional owner transfer via name (uses your resolver)
+        # Ownership
+        curr_own = _to_int_or_none(current.get('ownership_id')) or 0
+
+        # Try to read old clearance category:
+        # 1) (optional) from POST hidden field, if you later add it
+        curr_cat = _to_int_or_none(request.POST.get("old_clearance_category_id"))
+        # 2) from the DB result if POST didn’t provide it
+        if not curr_cat:
+            curr_cat = _extract_clearance_cat(current)
+
+        # -----------------------------
+        # Optional owner transfer via name
+        # -----------------------------
         resident_name = (request.POST.get("resident_name") or "").strip()
         resident_id = None
         if resident_name:
             # Owner change only if NOT sole proprietorship (id=1)
             if curr_own == 1:
-                return JsonResponse({"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."}, status=400)
+                return JsonResponse(
+                    {"ok": False, "message": "Owner cannot be changed for Sole Proprietorship."},
+                    status=400
+                )
             resident_id = _find_resident_id_by_name(resident_name)
 
-        # New (requested) clearance category
-        new_cat = _to_int_or_none(request.POST.get("clearance_category_id"))
+        # -----------------------------
+        # Clearance Category rules
+        # -----------------------------
+        raw_new_cat = request.POST.get("clearance_category_id")
+        new_cat = _to_int_or_none(raw_new_cat)
 
-        # Rule: Clearance Category can change only:
-        # - Sole Prop (3/4): within {3,4}
-        # - Lessor (6..10): within 6..10
-        # - Others: cannot change
+        # Only run rules if there is a requested change
         if new_cat is not None and new_cat != curr_cat:
-            if curr_cat in (3, 4):
-                if new_cat not in (3, 4):
-                    return JsonResponse({"ok": False, "message": "Sole Proprietorship may switch only between categories 3 and 4."}, status=400)
-            elif 6 <= curr_cat <= 10:
-                if not (6 <= new_cat <= 10):
-                    return JsonResponse({"ok": False, "message": "Lessor categories may switch only within 6–10."}, status=400)
-            else:
-                return JsonResponse({"ok": False, "message": "This clearance category cannot be changed."}, status=400)
 
-        # Parse units and amusement device counts (zeros are valid)
+            # 1) Validate that the new category exists
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM business_clearance_category "
+                    "WHERE clearance_category_id = %s",
+                    [new_cat],
+                )
+                if cur.fetchone() is None:
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": f"Unknown clearance_category_id {new_cat}."
+                        },
+                        status=400,
+                    )
+
+            # 2) Transition rules
+            if curr_cat in (3, 4):
+                # Sole Proprietorship: can switch only between 3 and 4
+                if new_cat not in (3, 4):
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": "Sole Proprietorship category can switch only between 3 and 4."
+                        },
+                        status=400,
+                    )
+
+            elif 6 <= curr_cat <= 10:
+                # Lessor: can switch only within 6–10
+                if not (6 <= new_cat <= 10):
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "message": "Lessor category can switch only within 6–10."
+                        },
+                        status=400,
+                    )
+
+            else:
+                # All other categories cannot change
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "message": f"This clearance category cannot be updated "
+                                   f"(old={curr_cat}, new={new_cat})."
+                    },
+                    status=400,
+                )
+
+        # -----------------------------
+        #  Rest of update logic
+        # -----------------------------
         total_units        = _to_int_or_none(request.POST.get("total_units"))
         videoke_count      = _to_int_or_none(request.POST.get("videoke_count"))
         billiard_count     = _to_int_or_none(request.POST.get("billiard_count"))
         other_device_count = _to_int_or_none(request.POST.get("other_device_count"))
 
-        # Build payload (leave non-editables as None so proc won’t touch them)
         payload = {
             "business_name":          _none_if_blank(request.POST.get("business_name")),
             "business_type_id":       None,  # not editable
             "nature_of_business":     _none_if_blank(request.POST.get("nature_of_business")),
             "ownership_id":           None,  # not editable
-            "resident_id":            resident_id,  # only when provided and allowed
+            "resident_id":            resident_id,
             "house_number":           _none_if_blank(request.POST.get("house_number")),
             "street":                 _none_if_blank(request.POST.get("street")),
             "barangay":               _none_if_blank(request.POST.get("barangay")),
@@ -1050,12 +1473,12 @@ def business_update(request, business_id: int):
             "city_municipality":      _none_if_blank(request.POST.get("city_municipality")),
             "country":                _none_if_blank(request.POST.get("country")),
             "total_gross_income":     _to_decimal_or_none(request.POST.get("total_gross_income")),
-            "clearance_category_id":  new_cat,   # may be None if unchanged or not allowed
+            "clearance_category_id":  new_cat,   # may be None or same as old
             "dti_sec_cda_reg_number": None,      # not editable
             "total_units":            total_units,
-            "videoke_count":          videoke_count,       # <-- NEW
-            "billiard_count":         billiard_count,      # <-- NEW
-            "other_device_count":     other_device_count,  # <-- NEW
+            "videoke_count":          videoke_count,
+            "billiard_count":         billiard_count,
+            "other_device_count":     other_device_count,
         }
 
         result = Business.sp_update_business(
@@ -1070,7 +1493,41 @@ def business_update(request, business_id: int):
         return JsonResponse({"ok": False, "message": str(ve)}, status=400)
     except Exception as e:
         return JsonResponse({"ok": False, "message": _clean_db_error(e)}, status=400)
-        
+
+
+def _extract_clearance_cat(current: dict) -> int:
+    """
+    Try to find the current clearance category ID from the dict returned
+    by sp_get_business_detail, regardless of the exact column name.
+    """
+    if not current:
+        return 0
+
+    # 1) Look for any key that clearly looks like a clearance category id
+    for key, val in current.items():
+        if not key:
+            continue
+        lk = str(key).lower()
+        # match things like 'clearance_category_id', 'business_clearance_category_id', etc.
+        if 'clearance' in lk and 'category' in lk and 'id' in lk:
+            v = _to_int_or_none(val)
+            if v is not None:
+                return v
+
+    # 2) Fallback to some common explicit names
+    for k in [
+        'clearance_category_id',
+        'business_clearance_category_id',
+        'clearance_categoryid',
+        'clearance_cat_id',
+    ]:
+        v = _to_int_or_none(current.get(k))
+        if v is not None:
+            return v
+
+    # 3) Give up
+    return 0
+
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 @require_POST
@@ -1385,7 +1842,58 @@ def set_application_to_completed(request, application_id: int):
         if not personnel_id:
             raise ValueError('Missing personnel_id for completion.')
 
+        # Get application details before updating status
+        app_data = SecretaryHelpers.get_specific_application(application_id)
+        
         SecretaryHelpers.set_application_to_completed(application_id, personnel_id)
+        
+        # Send notification to resident
+        resident_id = None
+        if app_data:
+            # Priority 1: Extract applicant_id from total_amount_details JSON
+            details_json = app_data.get('total_amount_details')
+            if details_json:
+                try:
+                    if isinstance(details_json, str):
+                        details_json = json.loads(details_json)
+                    if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                        resident_id = details_json['applicant_id']
+                        logger.info(f"Completion - Application {application_id}: Found applicant_id={resident_id} in total_amount_details")
+                except Exception as e:
+                    logger.error(f"Completion - Application {application_id}: Error parsing total_amount_details: {e}")
+            
+            # Priority 2: For business applications, get the business owner
+            if not resident_id and app_data.get('business_id'):
+                try:
+                    business_data = Business.sp_get_business_detail(app_data['business_id'])
+                    if business_data and business_data.get('owner_id'):
+                        resident_id = business_data['owner_id']
+                        logger.info(f"Completion - Application {application_id}: Found owner_id={resident_id} from business")
+                except Exception as e:
+                    logger.error(f"Failed to get business owner for business_id {app_data['business_id']}: {e}")
+            
+            # Priority 3: Fall back to requested_by_id (for resident-initiated applications)
+            if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                resident_id = app_data['requested_by_id']
+                logger.info(f"Completion - Application {application_id}: Using requested_by_id={resident_id}")
+        
+        if resident_id:
+            certificate_type = app_data.get('request', 'Certificate')
+            application_code = app_data.get('application_code', '')
+            
+            # Send notification
+            try:
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Certificate Issued",
+                    body=f"Your {certificate_type} ({application_code}) has been successfully generated and issued. Thank you for using our services!",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Completion notification sent to resident_id {resident_id} for application {application_id}")
+            except Exception as notif_error:
+                # Log but don't fail the main operation
+                logger.error(f"Failed to send completion notification for application {application_id}: {notif_error}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Application marked as Completed.'})
         set_flash(request, 'Application marked as Completed.', 'success')
@@ -1426,7 +1934,62 @@ def application_detail_json(request, application_id: int):
 def set_application_to_for_payment(request, application_id: int):
     """Move a Pending application to For Payment using set_application_to_for_payment()."""
     try:
+        # Get application details before updating status
+        app_data = SecretaryHelpers.get_specific_application(application_id)
+        
+        # Update status to For Payment
         SecretaryHelpers.set_application_to_for_payment(application_id)
+        
+        # Send notification to resident
+        resident_id = None
+        if app_data:
+            # Priority 1: Extract applicant_id from total_amount_details JSON
+            details_json = app_data.get('total_amount_details')
+            if details_json:
+                try:
+                    if isinstance(details_json, str):
+                        details_json = json.loads(details_json)
+                    if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                        resident_id = details_json['applicant_id']
+                        logger.info(f"Application {application_id}: Found applicant_id={resident_id} in total_amount_details")
+                except Exception as e:
+                    logger.error(f"Application {application_id}: Error parsing total_amount_details: {e}")
+            
+            # Priority 2: For business applications, get the business owner
+            if not resident_id and app_data.get('business_id'):
+                try:
+                    business_data = Business.sp_get_business_detail(app_data['business_id'])
+                    if business_data and business_data.get('owner_id'):
+                        resident_id = business_data['owner_id']
+                        logger.info(f"Application {application_id}: Found owner_id={resident_id} from business")
+                except Exception as e:
+                    logger.error(f"Failed to get business owner for business_id {app_data['business_id']}: {e}")
+            
+            # Priority 3: Fall back to requested_by_id (for resident-initiated applications)
+            if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                resident_id = app_data['requested_by_id']
+                logger.info(f"Application {application_id}: Using requested_by_id={resident_id}")
+            
+            if not resident_id:
+                logger.warning(f"Could not determine resident_id for application {application_id}")
+        
+        if resident_id:
+            certificate_type = app_data.get('request', 'Certificate')
+            application_code = app_data.get('application_code', '')
+            
+            # Send notification
+            try:
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Certificate Ready for Payment",
+                    body=f"Your {certificate_type} request ({application_code}) has been approved! Please visit the barangay office to complete your payment.",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Notification sent to resident_id {resident_id} for application {application_id}")
+            except Exception as notif_error:
+                # Log but don't fail the main operation
+                logger.error(f"Failed to send notification for application {application_id}: {notif_error}")
+        
         # AJAX vs normal POST
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Moved to For Payment'})
@@ -1834,6 +2397,50 @@ def tax_penalties_update(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def ctc_fee(request):
+    ctc_config = CTCFeeConfig.sp_get_ctc_fee()
+    flash = get_flash(request)
+    return render(request, 'secretary_module/ctcFee.html', {
+        'ctc_config': ctc_config,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def ctc_fee_update(request):
+    try:
+        pid = _get_personnel_id(request)
+        amount = request.POST.get('amount', '').strip()
+        
+        if not amount:
+            return JsonResponse({'ok': False, 'error': 'Amount is required'}, status=400)
+        
+        try:
+            amount_decimal = Decimal(amount)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid amount format'}, status=400)
+        
+        if amount_decimal < 0:
+            return JsonResponse({'ok': False, 'error': 'Amount must be non-negative'}, status=400)
+
+        CTCFeeConfig.sp_update_ctc_fee(amount=amount_decimal, updated_by=pid)
+        
+        new_row = CTCFeeConfig.sp_get_ctc_fee()
+        return JsonResponse({
+            'ok': True,
+            'row': {
+                'amount': float(new_row.get('amount')) if new_row.get('amount') else None,
+                'updated_at': new_row.get('updated_at').isoformat() if new_row.get('updated_at') else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
     
 
 def _acting_personnel_id(request) -> int:
@@ -1999,6 +2606,51 @@ def cancel_application(request, application_id: int):
             raise ValueError('Missing personnel_id for cancellation.')
 
         message = SecretaryHelpers.secretary_cancel_application(application_id, personnel_id, reason)
+        
+        # Send notification to resident about cancellation
+        try:
+            app_data = SecretaryHelpers.get_specific_application(application_id)
+            resident_id = None
+            
+            if app_data:
+                # Extract applicant_id from total_amount_details JSON
+                details_json = app_data.get('total_amount_details')
+                if details_json:
+                    try:
+                        if isinstance(details_json, str):
+                            details_json = json.loads(details_json)
+                        if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                            resident_id = details_json['applicant_id']
+                    except Exception:
+                        pass
+                
+                # Fallback: business owner_id
+                if not resident_id and app_data.get('business_id'):
+                    try:
+                        business_data = Business.sp_get_business_detail(app_data['business_id'])
+                        if business_data and business_data.get('owner_id'):
+                            resident_id = business_data['owner_id']
+                    except Exception:
+                        pass
+                
+                # Fallback: requested_by_id (only if requested_by == 'resident')
+                if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                    resident_id = app_data['requested_by_id']
+            
+            if resident_id:
+                certificate_type = app_data.get('request', 'Certificate')
+                application_code = app_data.get('application_code', '')
+                
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Application Cancelled",
+                    body=f"Your {certificate_type} application ({application_code}) has been cancelled.{' Reason: ' + reason if reason else ''}",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Cancellation notification sent to resident {resident_id} for application {application_id}")
+        except Exception as e:
+            logger.error(f"Failed to send cancellation notification for application {application_id}: {e}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': message})
         set_flash(request, message or 'Application cancelled.', 'success')
@@ -2150,6 +2802,8 @@ def application_search(request):
                 'full_name': r.get('full_name'),
                 'dob': r.get('dob'),
                 'complete_address': r.get('complete_address'),
+                # Include status field returned by the function so UI can show Pending/Resident
+                'resident_status_name': r.get('resident_status_name') or r.get('resident_status') or None,
             } for r in rows]
             return JsonResponse(payload, safe=False)
         else:
@@ -2645,6 +3299,20 @@ def submit_barangay_clearance_application(request):
         )
         if not application_id:
             raise RuntimeError('No application id returned from database function.')
+        
+        # Send notification to resident
+        try:
+            NotificationService.send_to_resident(
+                resident_id=resident_id,
+                title="Application Created",
+                body="A barangay clearance application has been created for you. Please wait for the Barangay Secretary to review and approve your request.",
+                deep_link=f"/(tabs)/documents/{application_id}"
+            )
+            logger.info(f"Application creation notification sent to resident_id {resident_id} for application {application_id}")
+        except Exception as notif_error:
+            # Log but don't fail the main operation
+            logger.error(f"Failed to send application creation notification for application {application_id}: {notif_error}")
+            
     except Exception as e:
         # Prefer cleaned DB error message, fallback to str(e)
         cleaned = _clean_db_error(e) if callable(_clean_db_error) else None
@@ -2660,36 +3328,333 @@ def submit_barangay_clearance_application(request):
 
     messages.success(request, success_msg)
     return redirect('secretary_module:applications')
-    """Create a barangay clearance application for a selected resident and purpose.
-    The form posts `applicant_id` (resident) and `purpose` (which holds other_clearance_id).
-    """
-    resident_id = request.POST.get('applicant_id')
-    other_clearance_id = request.POST.get('purpose')  # value is other_clearance_id
-    # Support AJAX (fetch) submissions: return JSON instead of redirect/messages
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
-    if not resident_id or not other_clearance_id:
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': 'Resident and purpose are required.'}, status=400)
-        messages.error(request, 'Resident and purpose are required.')
-        return redirect('secretary_module:create_application')
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def reports(request):
+    """Reports page - shows available reports"""
+    return render(request, 'secretary_module/Reports.html')
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_resident_list_pdf(request):
+    """Generate PDF report for resident list with applied filters"""
+    from reports_module.pdf_templates.resident.resident_list_filtered import generate_resident_list_pdf
+    
+    # Get filters from request
+    q = request.GET.get('q', '').strip()
+    status_id_list = request.GET.getlist('status_id')
+    sitio_id_list = request.GET.getlist('sitio_id')
+    quarter_id = request.GET.get('quarter_id') or None
+    
+    # Convert to integers
+    status_id_list = [int(sid) for sid in status_id_list if sid.isdigit()]
+    sitio_id_list = [int(sid) for sid in sitio_id_list if sid.isdigit()]
+    
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
     try:
-        personnel_id = _acting_personnel_id(request)
-        app_id = SecretaryHelpers.create_application_barangay_clearance(
-            personnel_id=personnel_id,
-            resident_id=int(resident_id),
-            other_clearance_id=int(other_clearance_id)
-        )
-        if app_id:
-            if is_ajax:
-                return JsonResponse({'ok': True, 'application_id': app_id, 'message': f'Barangay clearance application #{app_id} created.'})
-            messages.success(request, f'Barangay clearance application #{app_id} created.')
-            return redirect('secretary_module:application_detail', application_id=app_id)
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': 'Failed to create application.'}, status=500)
-        messages.error(request, 'Failed to create application.')
+        # If multiple filters selected, fetch and merge results
+        if len(status_id_list) > 1 or len(sitio_id_list) > 1:
+            all_residents = []
+            
+            # If we have multiple statuses, fetch for each
+            if len(status_id_list) > 1:
+                for status_id in status_id_list:
+                    sitio_id = sitio_id_list[0] if sitio_id_list else None
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            # If we have multiple sitios but single status
+            elif len(sitio_id_list) > 1:
+                status_id = status_id_list[0] if status_id_list else None
+                for sitio_id in sitio_id_list:
+                    residents_batch = ResidentList.sp_get_all_residents(
+                        p_status_id=status_id,
+                        p_sitio_id=sitio_id,
+                        p_query=q or None,
+                        p_limit=None,
+                        p_offset=0,
+                        p_quarter_id=quarter_id
+                    )
+                    all_residents.extend(residents_batch)
+            
+            # Remove duplicates
+            seen_ids = set()
+            residents = []
+            for r in all_residents:
+                if r.get('resident_id') not in seen_ids:
+                    seen_ids.add(r.get('resident_id'))
+                    residents.append(r)
+            
+            total_count = len(residents)
+        else:
+            # Single or no filters
+            status_id = status_id_list[0] if status_id_list else None
+            sitio_id = sitio_id_list[0] if sitio_id_list else None
+            
+            # Fetch all residents (without pagination for complete report)
+            residents = ResidentList.sp_get_all_residents(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_limit=None,  # Get all
+                p_offset=0,
+                p_quarter_id=quarter_id
+            )
+            
+            # Get total count
+            total_count = ResidentList.sp_get_all_residents_count(
+                p_status_id=status_id,
+                p_sitio_id=sitio_id,
+                p_query=q or None,
+                p_quarter_id=quarter_id
+            )
+        
+        # Build filter description with actual names
+        filters_applied = {}
+        if quarter_id:
+            # Get quarter display label (simplified format: Q# YYYY)
+            quarters = ResidentList.sp_get_all_quarters()
+            quarter = next((q for q in quarters if q['quarter_id'] == quarter_id), None)
+            if quarter:
+                filters_applied['quarter'] = f"Q{quarter['quarter_number']} {quarter['year']}"
+            else:
+                filters_applied['quarter'] = f'Quarter ID: {quarter_id}'
+        else:
+            filters_applied['quarter'] = 'Current Quarter'
+        if q:
+            filters_applied['search_query'] = q
+        if status_id_list:
+            # Get status names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT status_name FROM Resident_Status WHERE status_id = ANY(%s) ORDER BY status_name",
+                    [status_id_list]
+                )
+                status_names = [row[0] for row in cur.fetchall()]
+                filters_applied['status'] = status_names
+        if sitio_id_list:
+            # Get sitio names from database
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT sitio_name FROM Sitio WHERE sitio_id = ANY(%s) ORDER BY sitio_name",
+                    [sitio_id_list]
+                )
+                sitio_names = [row[0] for row in cur.fetchall()]
+                filters_applied['sitio'] = sitio_names
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_list_pdf(residents, filters_applied, total_count)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Resident_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
     except Exception as e:
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': f'Error creating application: {coerce_message(e)}'}, status=400)
-        messages.error(request, f'Error creating application: {e}')
-    return redirect('secretary_module:create_application')
+        import traceback
+        print(f"[ERROR] Failed to generate resident list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_resident_detail_pdf(request, resident_id: int):
+    """Generate PDF report for specific resident details"""
+    from reports_module.pdf_templates.resident.resident_detail import generate_resident_detail_pdf
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Fetch resident details using the same function as the modal
+        resident = ResidentList.sp_get_specific_resident(resident_id, quarter_id)
+        
+        if not resident:
+            return HttpResponse("Resident not found", status=404)
+        
+        # Generate PDF
+        pdf_buffer = generate_resident_detail_pdf(resident)
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        resident_name = resident.get('full_name', f'Resident_{resident_id}').replace(' ', '_')
+        filename = f"{resident_name}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate resident detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_list_pdf(request):
+    """Generate PDF report for household list with applied filters"""
+    from reports_module.pdf_templates.household.household_list_filtered import HouseholdListFilteredPDF
+    
+    # Get filters from request
+    query = request.GET.get('query', '').strip() or None
+    status = request.GET.get('status', 'all').strip()
+    sitio_id = request.GET.get('sitio_id', '').strip() or None
+    quarter_id = request.GET.get('quarter_id', '').strip() or None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdListFilteredPDF(
+            query=query,
+            status=status,
+            sitio_id=sitio_id,
+            quarter_id=quarter_id
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_List_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household list PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def generate_household_detail_pdf(request, household_id: int):
+    """Generate PDF report for specific household details"""
+    from reports_module.pdf_templates.household.household_detail import HouseholdDetailPDF
+    
+    quarter_id = request.GET.get('quarter_id') or None
+    if quarter_id and quarter_id.isdigit():
+        quarter_id = int(quarter_id)
+    else:
+        quarter_id = None
+    
+    try:
+        # Generate PDF
+        pdf_generator = HouseholdDetailPDF(household_id=household_id, quarter_id=quarter_id)
+        pdf_buffer = pdf_generator.generate()
+        
+        # Return PDF response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        filename = f"Household_{household_id}_Profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@require_POST
+def cron_renew_businesses(request):
+    """
+    Endpoint for Supabase cron job to trigger annual business renewal.
+    This should be called via HTTP POST from Supabase cron using pg_net.
+    
+    Expected to run on January 1st each year at midnight.
+    
+    Security: Add authentication token in production (e.g., check header or secret key)
+    """
+    # Optional: Add simple token-based auth for security
+    auth_token = request.headers.get('X-Cron-Token')
+    expected_token = getattr(settings, 'CRON_SECRET_TOKEN', None)
+    
+    if expected_token and auth_token != expected_token:
+        logger.warning(f"Unauthorized cron attempt from {request.META.get('REMOTE_ADDR')}")
+        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
+    
+    try:
+        with connection.cursor() as cursor:
+            # Call the SQL function to update statuses
+            cursor.execute("SELECT set_all_business_to_for_renewal()")
+            updated_count = cursor.fetchone()[0]
+            
+            logger.info(f"Business renewal cron: {updated_count} businesses set to For Renewal")
+            
+            if updated_count == 0:
+                return JsonResponse({
+                    'ok': True,
+                    'message': 'No active businesses found to renew',
+                    'updated_count': 0,
+                    'notification_count': 0
+                })
+            
+            # Fetch all businesses that were just set to "For Renewal"
+            cursor.execute("""
+                SELECT 
+                    b.business_id,
+                    b.business_name,
+                    b.resident_id AS owner_id,
+                    r.first_name || ' ' || COALESCE(r.middle_name || ' ', '') || r.last_name AS owner_name
+                FROM Business b
+                JOIN Resident r ON r.resident_id = b.resident_id
+                JOIN Business_Status bs ON bs.business_status_id = b.business_status_id
+                WHERE LOWER(bs.status_name) = 'for renewal'
+            """)
+            
+            businesses = cursor.fetchall()
+            notification_count = 0
+            failed_count = 0
+            
+            current_year = datetime.now().year
+            
+            # Send notification to each business owner
+            for business_id, business_name, owner_id, owner_name in businesses:
+                try:
+                    NotificationService.send_to_resident(
+                        resident_id=owner_id,
+                        title="🔄 Business Renewal Required",
+                        body=f'Your business "{business_name}" is now due for renewal. Please complete the renewal process before March 31, {current_year}. Failure to renew may result in penalties or business closure.',
+                        deep_link="/(tabs)/business"
+                    )
+                    notification_count += 1
+                    logger.info(f"Notification sent to {owner_name} (ID: {owner_id}) for business '{business_name}' (ID: {business_id})")
+                    
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to send notification for business_id {business_id} to resident_id {owner_id}: {e}")
+            
+            logger.info(f"Business renewal cron completed: {updated_count} businesses updated, {notification_count} notifications sent, {failed_count} failed")
+            
+            return JsonResponse({
+                'ok': True,
+                'message': 'Business renewal process completed',
+                'updated_count': updated_count,
+                'notification_count': notification_count,
+                'failed_count': failed_count
+            })
+            
+    except Exception as e:
+        logger.error(f"Business renewal cron job failed: {e}")
+        return JsonResponse({
+            'ok': False,
+            'error': str(e)
+        }, status=500)
 
