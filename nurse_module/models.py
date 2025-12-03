@@ -491,8 +491,14 @@ class MedicalConditionRow(models.Model):
                     [child_health_id],
                 )
                 cols = [c[0] for c in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
-        except ProgrammingError:
+                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                if not rows:
+                    # Log the empty result (optional)
+                    print(f"No medical conditions found for child_health_id: {child_health_id}")
+                return rows
+        except ProgrammingError as e:
+            # Log the error
+            print(f"Error fetching medical conditions: {e}")
             return []
 
 
@@ -511,13 +517,46 @@ class SurgicalHistoryRow(models.Model):
                     [child_health_id],
                 )
                 cols = [c[0] for c in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
-        except ProgrammingError:
+                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                if not rows:
+                    # Log the empty result (optional)
+                    print(f"No surgical history found for child_health_id: {child_health_id}")
+                return rows
+        except ProgrammingError as e:
+            # Log the error
+            print(f"Error fetching surgical history: {e}")
             return []
-        
+
+class SupplementRow(models.Model):
+    """Row from view_all_child_supplements(p_child_health_id INT)."""
+    class Meta:
+        managed = False
+        db_table = "view_all_child_supplements_row"  # label only
+
+    @staticmethod
+    def fetch(child_health_id: int) -> List[Dict[str, Any]]:
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM view_all_child_supplements(%s::INT)",
+                    [child_health_id],
+                )
+                cols = [c[0] for c in cur.description]
+                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                if not rows:
+                    print(f"No supplement records found for child_health_id: {child_health_id}")
+                return rows
+        except ProgrammingError as e:
+            print(f"Error fetching supplement records: {e}")
+            return []
+
 
 
 class MaternalHealthListRow(models.Model):
+    """
+    Unmanaged model backed by the SQL set-returning function View_all_maternal_record().
+    We only use the static fetch()/count() helpers; Django never touches db_table.
+    """
     maternal_health_id = models.IntegerField(primary_key=True)
     maternal_id = models.IntegerField()
     maternal_full_name = models.TextField()
@@ -527,15 +566,22 @@ class MaternalHealthListRow(models.Model):
 
     class Meta:
         managed = False
-        db_table = "view_all_maternal_record_row"
+        db_table = "view_all_maternal_record_row"  # label only – not an actual table
 
     @staticmethod
     def fetch(
-        query: Optional[str] = None,
-        record_status_id: Optional[int] = None,
+        name_query: Optional[str] = None,
+        family_code: Optional[str] = None,
+        record_status: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
         limit: int = 50,
         offset: int = 0,
-    ):
+    ) -> List[Dict[str, Any]]:
+        """
+        SELECT ... FROM View_all_maternal_record(%s, %s, %s, %s, %s)
+        with ORDER BY + LIMIT/OFFSET for pagination.
+        """
         try:
             with connection.cursor() as cur:
                 cur.execute(
@@ -547,33 +593,41 @@ class MaternalHealthListRow(models.Model):
                       dob,
                       record_status,
                       date_created
-                    FROM View_all_maternal_record(%s, %s, %s, %s)
+                    FROM View_all_maternal_record(%s, %s, %s, %s, %s)
+                    ORDER BY date_created DESC
+                    LIMIT %s OFFSET %s
                     """,
-                    [query, record_status_id, limit, offset],
+                    [name_query, family_code, record_status, date_from, date_to, limit, offset],
                 )
                 cols = [c[0] for c in cur.description]
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
-        except:
+        except (ProgrammingError, PGUndefinedFunction):
+            # Function not found or still being created
             return []
 
     @staticmethod
     def count(
-        query: Optional[str] = None,
-        record_status_id: Optional[int] = None,
-    ):
+        name_query: Optional[str] = None,
+        family_code: Optional[str] = None,
+        record_status: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+    ) -> int:
+        """
+        Exact total using the same View_all_maternal_record() function.
+        """
         try:
             with connection.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT COUNT(*)
-                    FROM View_all_maternal_record(%s, %s, NULL, NULL)
+                    SELECT COUNT(*) FROM View_all_maternal_record(%s, %s, %s, %s, %s) AS t
                     """,
-                    [query, record_status_id],
+                    [name_query, family_code, record_status, date_from, date_to],
                 )
                 return cur.fetchone()[0]
-        except:
+        except (ProgrammingError, PGUndefinedFunction):
             return 0
-
+        
 
 class MaternalHealthDetailRow(models.Model):
     """

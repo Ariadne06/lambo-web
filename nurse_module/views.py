@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
+from .models import Dashboard, AnnouncementRepo, MedicalConditionRow, SurgicalHistoryRow, ResidentList, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -990,26 +990,24 @@ def _dictfetchall(cur):
 def childMedSurg(request, child_health_id: int):
     """
     JSON endpoint for Medical Conditions + Surgical History
-    Uses:
-      - view_specific_child_all_medical_condition(p_child_health_id INT)
-      - view_specific_child_all_surgical_history(p_child_health_id INT)
     Returns:
       { "medical": [...], "surgical": [...] }
     """
     try:
-        with connection.cursor() as cur:
-            # Medical conditions
-            cur.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
-            medical = _dictfetchall(cur)
+        # Fetch medical conditions with date_added
+        medical = MedicalConditionRow.fetch(child_health_id)
 
-            # Surgical history
-            cur.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
-            surgical = _dictfetchall(cur)
+        # Fetch surgical history with date_added
+        surgical = SurgicalHistoryRow.fetch(child_health_id)
 
+        # Return data as JSON
         return JsonResponse({"medical": medical, "surgical": surgical})
     except Exception as e:
-        # Optional: log e
+        # Return an error response if there's an exception
         return JsonResponse({"medical": [], "surgical": [], "error": str(e)}, status=500)
+
+
+
 
 @custom_login_required
 @role_required('Midwife')
@@ -1023,72 +1021,83 @@ def childSupplements(request, child_health_id: int):
         with connection.cursor() as cur:
             cur.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
             rows = _dictfetchall(cur)
+            if not rows:
+                print(f"No supplement records found for child_health_id: {child_health_id}")
         return JsonResponse({"rows": rows})
     except Exception as e:
-        # Optional: log e
+        print(f"Error fetching supplement records: {e}")
         return JsonResponse({"rows": [], "error": str(e)}, status=500)
+
+
 
 @custom_login_required
 @role_required('Midwife')
 def maternalrecord(request):
+    # ---- Filters from GET ----
+    q = request.GET.get("q") or None  # name / resident_id search
+    family_code = request.GET.get("family_code") or None
+    record_status = request.GET.get("record_status") or None
 
-    # ---- Filters ----
-    q = request.GET.get("q") or None
-    record_status_text = request.GET.get("record_status") or None
+    date_from_str = request.GET.get("date_from") or ""
+    date_to_str = request.GET.get("date_to") or ""
 
-    # Map text → record_status_id
-    status_map = {
-        "Ongoing": 1,
-        "Completed": 2,
-        "Incomplete": 3,
-    }
-    record_status_id = status_map.get(record_status_text)
+    date_from = _parse_date(date_from_str)
+    date_to = _parse_date(date_to_str)
 
     # ---- Pagination ----
     try:
         page = int(request.GET.get("page", "1"))
     except ValueError:
         page = 1
+    if page < 1:
+        page = 1
 
     per_page = 10
     offset = (page - 1) * per_page
 
-    # ---- Fetch data ----
     total_count = MaternalHealthListRow.count(
-        query=q,
-        record_status_id=record_status_id,
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
     )
-
     maternal_records = MaternalHealthListRow.fetch(
-        query=q,
-        record_status_id=record_status_id,
+        name_query=q,
+        family_code=family_code,
+        record_status=record_status,
+        date_from=date_from,
+        date_to=date_to,
         limit=per_page,
         offset=offset,
     )
 
-    # ---- Pagination building ----
-    total_pages = max(1, math.ceil(total_count / per_page))
-    page = min(page, total_pages)
+    total_pages = max(1, math.ceil(total_count / per_page)) if total_count else 1
+    if page > total_pages:
+        page = total_pages
 
+    # Simple window around current page (e.g., 1 2 [3] 4 5)
     window = 2
     start_page = max(1, page - window)
     end_page = min(total_pages, page + window)
-    page_range = range(start_page, end_page + 1)
+    page_range = list(range(start_page, end_page + 1))
 
-    # Build base_query (keep filters)
+    # Build base query string for pagination links (keep filters, change page)
     qs_params = {}
-    for key in ["q", "record_status"]:
+    for key in ["q", "family_code", "record_status", "date_from", "date_to"]:
         val = request.GET.get(key)
         if val:
             qs_params[key] = val
-
     base_query = urlencode(qs_params)
 
-    return render(request, "nurse_module/maternalrecord.html", {
+    context = {
         "maternal_records": maternal_records,
         "filters": {
             "q": q or "",
-            "record_status": record_status_text or "",
+            "family_code": family_code or "",
+            "record_status": record_status or "",
+            "date_from": date_from_str,
+            "date_to": date_to_str,
         },
         "pagination": {
             "page": page,
@@ -1102,7 +1111,8 @@ def maternalrecord(request):
             "page_range": page_range,
         },
         "base_query": base_query,
-    })
+    }
+    return render(request, 'nurse_module/maternalrecord.html', context)
 
 
 def _parse_date(value):
