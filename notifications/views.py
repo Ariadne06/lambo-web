@@ -1,16 +1,21 @@
 """
 API views for notification endpoints.
 """
+import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .repo import (
     register_push_device,
     get_user_notifications,
     get_unread_count,
     mark_notification_read,
-    mark_all_notifications_read
+    mark_all_notifications_read,
+    get_user_push_tokens
 )
+from .service import NotificationService
 
 
 class RegisterPushTokenView(APIView):
@@ -189,3 +194,117 @@ class MarkAllNotificationsReadView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SendPushNotificationWebhookView(APIView):
+    """
+    Webhook endpoint for Supabase triggers to send push notifications.
+    
+    POST /notifications_api/send-push/
+    Headers: X-Cron-Secret: <secret-token>
+    {
+        "notification_id": 123,
+        "user_type_id": 1,
+        "user_id": 456,
+        "title": "Notification Title",
+        "body": "Notification body text",
+        "deep_link": "/(tabs)/documents/123"
+    }
+    """
+    def post(self, request):
+        try:
+            # Verify secret token
+            secret_token = request.headers.get('X-Cron-Secret')
+            expected_token = os.environ.get('CRON_SECRET_TOKEN', 'your-secret-token-here')
+            
+            if secret_token != expected_token:
+                return Response({
+                    'success': False,
+                    'error': 'Unauthorized'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Extract data from webhook
+            user_type_id = request.data.get('user_type_id')
+            user_id = request.data.get('user_id')
+            title = request.data.get('title')
+            body = request.data.get('body')
+            deep_link = request.data.get('deep_link')
+            
+            if not all([user_type_id, user_id, title, body]):
+                return Response({
+                    'success': False,
+                    'error': 'Missing required fields'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Determine user type name from ID
+            from .repo import get_db_connection
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "SELECT type_name FROM user_type WHERE user_type_id = %s",
+                (user_type_id,)
+            )
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not result:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid user_type_id'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user_type = result[0].upper()
+            
+            # Get push tokens for the user
+            tokens = get_user_push_tokens(
+                user_type=user_type,
+                resident_id=user_id if user_type == 'RESIDENT' else None,
+                personnel_id=user_id if user_type == 'PERSONNEL' else None
+            )
+            
+            if not tokens:
+                return Response({
+                    'success': True,
+                    'message': 'No push tokens found for user',
+                    'tokens_sent': 0
+                })
+            
+            # Send push notifications
+            from exponent_server_sdk import PushClient, PushMessage
+            
+            push_client = PushClient()
+            messages = []
+            
+            for token_data in tokens:
+                token = token_data['expo_push_token']
+                
+                message = PushMessage(
+                    to=token,
+                    title=title,
+                    body=body,
+                    data={'deep_link': deep_link} if deep_link else None,
+                    sound='default',
+                    priority='high'
+                )
+                messages.append(message)
+            
+            # Send in batches
+            response = push_client.publish_multiple(messages)
+            
+            return Response({
+                'success': True,
+                'message': f'Push notifications sent to {len(tokens)} device(s)',
+                'tokens_sent': len(tokens)
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

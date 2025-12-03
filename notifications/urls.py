@@ -26,4 +26,9 @@ urlpatterns = [
     path('mark-all-read/', 
          views.MarkAllNotificationsReadView.as_view(), 
          name='mark-all-notifications-read'),
+    
+    # Webhook for Supabase triggers to send push notifications
+    path('send-push/', 
+         views.SendPushNotificationWebhookView.as_view(), 
+         name='send-push-webhook'),
 ]
