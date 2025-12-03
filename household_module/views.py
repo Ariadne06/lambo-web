@@ -17,7 +17,7 @@ from .serializers import (
     VaccineTypeSerializer, DoseTypeSerializer, SupplementsSerializer,
     ChildHealthRecordCreateSerializer, ChildHealthRecordUpdateSerializer, ChildGrowthMonitoringCreateSerializer, ChildImmunizationCreateSerializer, ChildMedicalConditionCreateSerializer, ChildSurgicalHistoryCreateSerializer, ChildSupplementCreateSerializer, ExclusiveBreastfeedCreateSerializer, DiseaseTypeSerializer, TrimesterSerializer, TestTypeSerializer, SupplementTypeSerializer, DewormingTypeSerializer, OutcomeTypeSerializer, DeliveryTypeSerializer, PlaceDeliveryTypeSerializer, OwnershipTypeSerializer, BirthAttendantSerializer, RecordStatusSerializer, MaternalSupplementCreateSerializer, DewormingCreateSerializer, DeliveryOutcomeCreateSerializer, PostpartumVisitCreateSerializer,
     MaternalHealthCreateSerializer, ObstetricalHistoryCreateSerializer, MaternalMedicalConditionCreateSerializer, MaternalSurgicalHistoryCreateSerializer, MaternalImmunizationCreateSerializer, DiseaseScreenCreateSerializer, LabScreeningCreateSerializer, CheckupRecordCreateSerializer,
-    MaternalHealthUpdateSerializer, MaternalHealthStatusUpdateSerializer
+    MaternalHealthUpdateSerializer, MaternalHealthStatusUpdateSerializer, CheckupRecordUpdateSerializer
 )
 from .utils.database_helpers import (
     search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record,
@@ -3420,30 +3420,124 @@ class CheckupRecordTrackView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# class MaternalCheckupCreateView(APIView):
-#     """Add prenatal checkup (auto-determines trimester from AOG)"""
-#     def post(self, request, maternal_health_id):
-#         serializer = CheckupRecordCreateSerializer(data=request.data)
-#         if not serializer.is_valid():
-#             return Response({'success': False, 'error': 'Validation failed', 'details': serializer.errors}, status=400)
-        
-#         try:
-#             result = add_checkup_record(
-#                 p_maternal_health_id=maternal_health_id,
-#                 p_aog_weeks=serializer.validated_data['aog_weeks'],
-#                 p_weight_kg=serializer.validated_data['weight_kg'],
-#                 p_height_cm=serializer.validated_data['height_cm'],
-#                 p_bmi=serializer.validated_data.get('bmi'),
-#                 p_blood_pressure=serializer.validated_data.get('blood_pressure'),
-#                 p_fetal_heart_rate=serializer.validated_data.get('fetal_heart_rate'),
-#                 p_laboratory_results=serializer.validated_data.get('laboratory_results'),
-#                 p_notes=serializer.validated_data.get('notes'),
-#                 p_personnel_id=serializer.validated_data['personnel_id']
-#             )
-#             return Response({'success': True, 'checkup_id': result, 'message': 'Checkup added'}, status=201)
-#         except Exception as e:
-#             return Response({'success': False, 'error': str(e)}, status=400)
+class CheckupRecordUpdateView(APIView):
 
+    def put(self, request, maternal_health_id, checkup_id):
+        try:
+            # Validate request data
+            serializer = CheckupRecordUpdateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'error': 'Invalid data provided',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            validated_data = serializer.validated_data
+            personnel_id = validated_data['personnel_id']
+
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        weight_kg,
+                        height_cm,
+                        bmi,
+                        blood_pressure,
+                        fetal_heart_rate,
+                        laboratory_results,
+                        notes
+                    FROM Trimester_Checkup_Record
+                    WHERE checkup_id = %s AND maternal_health_id = %s
+                """, [checkup_id, maternal_health_id])
+                
+                current_record = cursor.fetchone()
+                
+                if not current_record:
+                    return Response({
+                        'success': False,
+                        'error': 'Checkup record not found'
+                    }, status=status.HTTP_404_NOT_FOUND)
+
+                #  STEP 2: Preserve BHW values, only update midwife fields
+                (current_weight, current_height, current_bmi, current_bp,
+                 current_fhr, current_lab, current_notes) = current_record
+
+                #  STEP 3: Call SQL function with PRESERVED BHW values + UPDATED midwife fields
+                cursor.execute("""
+                    SELECT update_specific_maternal_checkup_record(
+                        p_checkup_id := %s,
+                        p_weight_kg := %s,             
+                        p_height_cm := %s,             
+                        p_bmi := %s,                   
+                        p_blood_pressure := %s,         
+                        p_fetal_heart_rate := %s,       
+                        p_laboratory_results := %s,     
+                        p_notes := %s,                 
+                        p_personnel_id := %s
+                    )
+                """, [
+                    checkup_id,
+                    current_weight,  
+                    current_height,  
+                    current_bmi,     
+                    current_bp,      
+                    validated_data.get('fetal_heart_rate') or current_fhr,  
+                    validated_data.get('laboratory_results') or current_lab,
+                    validated_data.get('notes') or current_notes,           
+                    personnel_id
+                ])
+                
+                result = cursor.fetchone()
+                updated_checkup_id = result[0] if result else None
+
+            if updated_checkup_id is None:
+                return Response({
+                    'success': False,
+                    'error': 'No changes were made to the checkup record'
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                'success': True,
+                'message': 'Checkup record updated successfully',
+                'checkup_id': updated_checkup_id
+            }, status=status.HTTP_200_OK)
+
+        except DatabaseError as e:
+            error_msg = str(e)
+            
+            # User-friendly error messages
+            if 'M4804' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Checkup record not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            if 'M4809' in error_msg:
+                return Response({
+                    'success': False,
+                    'error': 'Cannot update checkup. The maternal record is not in "Ongoing" status.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'personnel_cannot_write' in error_msg.lower():
+                return Response({
+                    'success': False,
+                    'error': 'You do not have permission to update this record'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Generic database error
+            print(f"❌ Database error: {error_msg}")
+            return Response({
+                'success': False,
+                'error': 'Failed to update checkup record. Please try again.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            print(f"❌ CheckupRecordUpdateView error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': 'An unexpected error occurred. Please contact support.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 # ========================================
 # SUPPLEMENTS
 # ========================================
