@@ -227,6 +227,9 @@ path(
 
     path("test-types/", TestTypeListView.as_view()),
 
+    path('residents/', views.get_resident_list, name='get_residents'),
+  
+
 
      
      # ========================================
