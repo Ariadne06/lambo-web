@@ -930,14 +930,16 @@ class Maternal:
             other_attendant,
             time_of_delivery,
             date_terminated,
+            baby_birthweight_in_grams,
+            baby_sex,
             personnel_id
             ):
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT add_delivery_outcome(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
+                cursor.execute("SELECT add_delivery_outcome(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
                              [maternal_health_id, outcome_type_id, delivery_type_id, place_delivery_type_id, 
                               ownership_type_id, others_description, birth_attendant_id, other_attendant, 
-                              time_of_delivery, date_terminated, personnel_id])
+                              time_of_delivery, date_terminated, baby_birthweight_in_grams, baby_sex, personnel_id])
                 result = cursor.fetchone()
                 return result[0] if result else None
         except Exception as e:
