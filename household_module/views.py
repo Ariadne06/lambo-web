@@ -3308,6 +3308,17 @@ class DiseaseScreenListView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class DiseaseTypeListView(APIView):
+    def get(self, request):
+        types = DiseaseType.objects.filter(is_active=True).values(
+            "disease_type_id",
+            "disease_name"
+        )
+        return Response({
+            "success": True,
+            "data": list(types)
+        })
+
 
 # ========================================
 # LABORATORY SCREENING
