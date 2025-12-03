@@ -227,6 +227,9 @@ path(
 
     path("test-types/", TestTypeListView.as_view()),
 
+    path('residents/', views.get_resident_list, name='get_residents'),
+  
+
 
      
      # ========================================
@@ -298,4 +301,11 @@ path(
      path('bhw/dashboard/', 
           views.BHWDashboardView.as_view(), 
           name='bhw-dashboard'),
+
+     # Immunization Schedule
+     path(
+        'child-immunization-schedule/',
+        views.ChildImmunizationScheduleListView.as_view(),
+        name='child-immunization-schedule-list'
+    ),
 ]

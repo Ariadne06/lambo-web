@@ -1,8 +1,8 @@
-{% extends "base_bhw.html" %}
+{% extends "base_admin.html" %}
 
 {% block content %}
 <div class="p-6">
-  <h1 class="text-2xl font-bold text-red-700">Resident List</h1>
+  <h1 class="text-2xl font-bold text-red-700">Account Recovery</h1>
 
   <!-- Top Controls -->
   <div class="flex justify-between items-center mb-4">
@@ -88,7 +88,7 @@
           <th class="py-3 px-4 text-left">Sex</th>
           <th class="py-3 px-4 text-left">Age</th>
           <th class="py-3 px-4 text-left">Status</th>
-          <th class="py-3 px-4 text-left">Family Code</th>
+          <th class="py-3 px-4 text-left">Date of Birth</th>
           <th class="py-3 px-4 text-left">Address</th>
           <th class="py-3 px-4 text-center">Actions</th>
         </tr>
@@ -133,8 +133,8 @@
                 </span>
               </td>
               <td class="px-4 py-3">
-                {% if resident.family_code %}
-                  <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ resident.family_code }}</span>
+                {% if resident.dob %}
+                  <span class="text-sm">{{ resident.dob|date:"M d, Y" }}</span>
                 {% else %}
                   <span class="text-gray-400">N/A</span>
                 {% endif %}
@@ -144,11 +144,11 @@
               </td>
               <td class="px-4 py-3 text-center">
                 <button type="button"
-                        onclick="openStatusModal({{ resident.resident_id }}, '{{ resident.full_name }}', {{ resident.status_id }})"
+                        onclick="openEmailModal({{ resident.resident_id }}, '{{ resident.full_name }}')"
                         style="background-color: #2563eb; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer;"
                         onmouseover="this.style.backgroundColor='#1d4ed8'"
                         onmouseout="this.style.backgroundColor='#2563eb'">
-                  Update Status
+                  Update Email
                 </button>
               </td>
             </tr>
@@ -215,51 +215,80 @@
     }
   }
 
-  function openStatusModal(residentId, residentName, currentStatusId) {
+  function openEmailModal(residentId, residentName) {
     document.getElementById('modalResidentId').value = residentId;
     document.getElementById('modalResidentName').textContent = residentName;
-    document.getElementById('modalStatusSelect').value = '';
-    toggleModal('statusModal');
+    document.getElementById('modalEmailInput').value = '';
+    document.getElementById('modalCurrentEmail').textContent = 'Loading...';
+    document.getElementById('modalCurrentUsername').textContent = 'Loading...';
+    
+    // Fetch current profile data
+    fetch(`/admin_module/get-resident-profile/${residentId}/`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('modalCurrentEmail').textContent = data.email || 'N/A';
+        document.getElementById('modalCurrentUsername').textContent = data.username || 'N/A';
+        document.getElementById('modalEmailInput').value = data.email || '';
+      })
+      .catch(error => {
+        document.getElementById('modalCurrentEmail').textContent = 'Error loading';
+        document.getElementById('modalCurrentUsername').textContent = 'Error loading';
+      });
+    
+    toggleModal('emailModal');
   }
 
   // Close on ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const modal = document.getElementById('statusModal');
+      const modal = document.getElementById('emailModal');
       if (modal && !modal.classList.contains('hidden')) {
-        toggleModal('statusModal');
+        toggleModal('emailModal');
       }
     }
   });
 
-  function confirmStatusUpdate() {
+  function showConfirmationModal() {
     const residentName = document.getElementById('modalResidentName').textContent;
-    const statusSelect = document.getElementById('modalStatusSelect');
-    const selectedStatus = statusSelect.options[statusSelect.selectedIndex].text;
+    const email = document.getElementById('modalEmailInput').value;
     
-    return confirm(`Are you sure you want to update ${residentName}'s status to "${selectedStatus}"?`);
+    document.getElementById('confirmResidentName').textContent = residentName;
+    document.getElementById('confirmEmail').textContent = email;
+    
+    toggleModal('emailModal');
+    toggleModal('confirmationModal');
+    return false;
+  }
+
+  function proceedWithUpdate() {
+    document.getElementById('emailUpdateForm').submit();
+  }
+
+  function cancelUpdate() {
+    toggleModal('confirmationModal');
+    toggleModal('emailModal');
   }
 </script>
 
-<!-- Status Update Modal -->
-<div id="statusModal" class="hidden fixed inset-0 z-50">
+<!-- Email Update Modal -->
+<div id="emailModal" class="hidden fixed inset-0 z-50">
   <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/50" onclick="toggleModal('statusModal')"></div>
+  <div class="absolute inset-0 bg-black/50" onclick="toggleModal('emailModal')"></div>
   
   <!-- Modal container -->
   <div class="relative mx-auto my-8 w-[95%] max-w-md">
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
       <!-- Header -->
       <div class="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 flex items-center justify-between">
-        <h2 class="text-lg font-semibold tracking-wide">Update Resident Status</h2>
-        <button type="button" onclick="toggleModal('statusModal')" class="text-white/90 hover:text-white text-xl leading-none font-bold">
+        <h2 class="text-lg font-semibold tracking-wide">Update Resident Email</h2>
+        <button type="button" onclick="toggleModal('emailModal')" class="text-white/90 hover:text-white text-xl leading-none font-bold">
           &times;
         </button>
       </div>
       
       <!-- Body -->
       <div class="p-6">
-        <form method="POST" action="{% url 'bhw_module:updateResidentStatus' %}" onsubmit="return confirmStatusUpdate()">
+        <form id="emailUpdateForm" method="POST" action="" onsubmit="return showConfirmationModal()">
           {% csrf_token %}
           <input type="hidden" id="modalResidentId" name="resident_id">
           
@@ -268,31 +297,75 @@
             <p id="modalResidentName" class="text-gray-900 font-medium"></p>
           </div>
           
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Current Email:</label>
+            <p id="modalCurrentEmail" class="text-gray-600">Loading...</p>
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Username:</label>
+            <p id="modalCurrentUsername" class="text-gray-600">Loading...</p>
+          </div>
+          
           <div class="mb-6">
-            <label for="modalStatusSelect" class="block text-sm font-medium text-gray-700 mb-2">New Status:</label>
-            <select id="modalStatusSelect" name="new_status_id" required
-                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
-              <option value="" disabled selected>— Select Status —</option>
-              {% for status in status_options %}
-                {% if status.status_name == 'Deceased' or status.status_name == 'Relocated' %}
-                  <option value="{{ status.status_id }}">{{ status.status_name }}</option>
-                {% endif %}
-              {% endfor %}
-            </select>
+            <label for="modalEmailInput" class="block text-sm font-medium text-gray-700 mb-2">New Email:</label>
+            <input type="email" id="modalEmailInput" name="email" required
+                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                   placeholder="Enter new email address">
           </div>
           
           <div class="flex justify-end gap-3">
             <button type="button"
                     class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition"
-                    onclick="toggleModal('statusModal')">
+                    onclick="toggleModal('emailModal')">
               Cancel
             </button>
             <button type="submit"
                     class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">
-              Update Status
+              Update Email
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="hidden fixed inset-0 z-60">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50"></div>
+  
+  <!-- Modal container -->
+  <div class="relative mx-auto my-8 w-[95%] max-w-md">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-amber-600 to-amber-500 text-white px-6 py-3 flex items-center justify-between">
+        <h2 class="text-lg font-semibold tracking-wide">Confirm Email Update</h2>
+      </div>
+      
+      <!-- Body -->
+      <div class="p-6">
+        <div class="mb-6">
+          <p class="text-gray-700 mb-4">Are you sure you want to update the email for:</p>
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="font-medium text-gray-900" id="confirmResidentName"></p>
+            <p class="text-sm text-gray-600 mt-1">New email: <span class="font-medium" id="confirmEmail"></span></p>
+          </div>
+        </div>
+        
+        <div class="flex justify-end gap-3">
+          <button type="button"
+                  class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition"
+                  onclick="cancelUpdate()">
+            Cancel
+          </button>
+          <button type="button"
+                  class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                  onclick="proceedWithUpdate()">
+            Confirm Update
+          </button>
+        </div>
       </div>
     </div>
   </div>

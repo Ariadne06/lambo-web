@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from authentication.decorators import custom_login_required, role_required
 from django.contrib import messages
 from django.db import connection
-from .models import Dashboard, AnnouncementRepo, ResidentList, Maternal, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
+from .models import Dashboard, AnnouncementRepo,MedicalConditionRow,SurgicalHistoryRow, ResidentList, Maternal, ChildHealthListRow, ChildHealthDetailRow, GrowthMonitoringRow, ImmunizationRow, MaternalHealthListRow, MaternalHealthDetailRow, ObstetricalHistoryRow, MaternalMedicalConditionRow, MaternalSurgicalHistoryRow, MaternalImmunizationStatusTrackRow, MaternalDiseaseSurveillanceRow, MaternalLaboratoryScreeningRow, MaternalCheckupRow, MaternalSupplementRow, MaternalDeliveryOutcomeRow, MaternalPostpartumVisitRow, DiseaseType,  DiseaseTypeRow, TestTypeRow
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.http import urlencode
@@ -17,6 +17,7 @@ import math
 from django.db import DatabaseError
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 
 
 _UI_TO_SQL_AUDIENCE = {
@@ -990,26 +991,24 @@ def _dictfetchall(cur):
 def childMedSurg(request, child_health_id: int):
     """
     JSON endpoint for Medical Conditions + Surgical History
-    Uses:
-      - view_specific_child_all_medical_condition(p_child_health_id INT)
-      - view_specific_child_all_surgical_history(p_child_health_id INT)
     Returns:
       { "medical": [...], "surgical": [...] }
     """
     try:
-        with connection.cursor() as cur:
-            # Medical conditions
-            cur.execute("SELECT * FROM view_specific_child_all_medical_condition(%s)", [child_health_id])
-            medical = _dictfetchall(cur)
+        # Fetch medical conditions with date_added
+        medical = MedicalConditionRow.fetch(child_health_id)
 
-            # Surgical history
-            cur.execute("SELECT * FROM view_specific_child_all_surgical_history(%s)", [child_health_id])
-            surgical = _dictfetchall(cur)
+        # Fetch surgical history with date_added
+        surgical = SurgicalHistoryRow.fetch(child_health_id)
 
+        # Return data as JSON
         return JsonResponse({"medical": medical, "surgical": surgical})
     except Exception as e:
-        # Optional: log e
+        # Return an error response if there's an exception
         return JsonResponse({"medical": [], "surgical": [], "error": str(e)}, status=500)
+
+
+
 
 @custom_login_required
 @role_required('Midwife')
@@ -1023,10 +1022,14 @@ def childSupplements(request, child_health_id: int):
         with connection.cursor() as cur:
             cur.execute("SELECT * FROM view_all_child_supplements(%s)", [child_health_id])
             rows = _dictfetchall(cur)
+            if not rows:
+                print(f"No supplement records found for child_health_id: {child_health_id}")
         return JsonResponse({"rows": rows})
     except Exception as e:
-        # Optional: log e
+        print(f"Error fetching supplement records: {e}")
         return JsonResponse({"rows": [], "error": str(e)}, status=500)
+
+
 
 @custom_login_required
 @role_required('Midwife')
@@ -1357,6 +1360,60 @@ def _parse_date(value):
         return datetime.strptime(value, "%Y-%m-%d").date()
     except ValueError:
         return None
+
+def _public_url(request, path: str | None):
+    """
+    Normalize DB-stored image paths so the template always gets a usable URL.
+    - absolute http(s): return as-is
+    - root-relative (starts with /): build absolute (so it works in emails or iframes)
+    - plain relative like 'announcements/x.jpg': prefix MEDIA_URL and build absolute
+    """
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    # For relative paths, construct the media URL
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    media_path = base + path.lstrip('/')
+    return request.build_absolute_uri(media_path)
+
+@custom_login_required
+@role_required('Midwife')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details using get_specific_announcement function"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        # Normalize image URL for display
+        if announcement.get('announcement_image_path'):
+            image_path = announcement.get('announcement_image_path')
+            if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+                announcement['image_url'] = image_path  # Already a full URL from Supabase
+            else:
+                announcement['image_url'] = _public_url(request, image_path)  # Fallback for local files
+        
+        # Normalize audience display
+        if announcement.get('audience'):
+            announcement['audience'] = _SQL_TO_UI_AUDIENCE.get(announcement['audience'], 'EVERYONE')
+        
+        # Compatibility aliases
+        if 'created_date' in announcement and 'date' not in announcement:
+            announcement['date'] = announcement['created_date']
+        
+        return render(request, 'nurse_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('nurse_module:nurse_dashboard')
     
 
 @custom_login_required

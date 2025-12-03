@@ -37,22 +37,22 @@
       <!-- Manage submenu -->
       <button id="submenu-toggle"
               class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-                     {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}
+                     {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list residentList' %}
                          bg-white text-red-700 font-semibold shadow-sm
                      {% else %}
                          hover:bg-red-800/80
                      {% endif %}">
-        <i class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %}ri-team-fill{% else %}ri-team-line{% endif %} text-lg"></i>
+        <i class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list residentList' %}ri-team-fill{% else %}ri-team-line{% endif %} text-lg"></i>
         <span>Manage</span>
         <svg id="submenu-arrow" xmlns="http://www.w3.org/2000/svg"
              class="h-5 w-5 ml-auto transition-transform duration-300
-                    {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} rotate-180 {% endif %}"
+                    {% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list residentList' %} rotate-180 {% endif %}"
              fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+      <div id="submenu" class="{% if request.resolver_match.url_name in 'admin_Addpersonnel password_request personnel_list residentList' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
         <a href="{% url 'admin_module:admin_Addpersonnel' %}"
            class="block px-3 py-2 rounded-md transition
                   {% if request.resolver_match.url_name == 'admin_Addpersonnel' %}
@@ -79,6 +79,15 @@
                       hover:bg-red-800/60
                   {% endif %}">
           View Personnels
+        </a>
+        <a href="{% url 'admin_module:residentList' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name == 'residentList' %}
+                      bg-white text-red-700 font-semibold shadow-sm
+                  {% else %}
+                      hover:bg-red-800/60
+                  {% endif %}">
+          Resident List
         </a>
       </div>
 
@@ -119,7 +128,7 @@
                   {% endif %}">
           Authentication Logs
         </a>
-        <a href="{% url 'admin_module:residentlog' %}"
+        {% comment %} <a href="{% url 'admin_module:residentlog' %}"
            class="block px-3 py-2 rounded-md transition
                   {% if request.resolver_match.url_name == 'residentlog' %}
                       bg-white text-red-700 font-semibold shadow-sm
@@ -136,7 +145,7 @@
                       hover:bg-red-800/60
                   {% endif %}">
           Document Logs
-        </a>
+        </a> {% endcomment %}
       </div>
     </div>
 

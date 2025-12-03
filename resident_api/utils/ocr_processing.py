@@ -1,3 +1,4 @@
+from io import BytesIO
 import re
 import cv2
 import io
@@ -15,9 +16,79 @@ VOTER_KEYWORDS = ["VOTER'S CERTIFICATE", "VOTERS CERTIFICATE", "COMMISSION ON EL
 BIRTH_KEYWORDS = ["CERTIFICATE OF LIVE BIRTH", "BIRTH CERTIFICATE", "PHILIPPINE STATISTICS AUTHORITY", "PSA"]
 
 DOCUMENT_TYPE_KEYWORDS = {
-    "birth certificate": BIRTH_KEYWORDS,
-    "voter's certificate": VOTER_KEYWORDS,
-    "voters certificate": VOTER_KEYWORDS,  # alternate
+    # "birth certificate": BIRTH_KEYWORDS,
+    # "voter's certificate": VOTER_KEYWORDS,
+    # "voters certificate": VOTER_KEYWORDS,  # alternate
+     "birth certificate": [
+        "CERTIFICATE OF LIVE BIRTH",
+        "BIRTH CERTIFICATE",
+        "PHILIPPINE STATISTICS AUTHORITY",
+        "PSA",
+        "NATIONAL STATISTICS OFFICE",
+        "NSO"
+    ],
+    "voter's certificate": [
+        "VOTER'S CERTIFICATE",
+        "VOTERS CERTIFICATE",
+        "COMMISSION ON ELECTIONS",
+        "COMELEC",
+        "CERTIFICATION OF REGISTRATION"
+    ],
+    "voters certificate": [  # Alternative spelling
+        "VOTER'S CERTIFICATE",
+        "VOTERS CERTIFICATE",
+        "COMMISSION ON ELECTIONS",
+        "COMELEC"
+    ],
+    
+    # ✅ NEW: ID Documents
+    "philippine national id": [
+        "PHILIPPINE IDENTIFICATION SYSTEM",
+        "PhilSys",
+        "PHILSYS",
+        "PHILIPPINE IDENTIFICATION",
+        "PHILIPPINE IDENTIFICATION CARD",
+        "PILIPINAS",
+        "NATIONAL ID"
+        "PAMBANSANG PAGKAKAKILANLAN"
+        "Philippine Identification Card"
+    ],
+    "driver's license": [
+        "DRIVER'S LICENSE",
+        "DRIVER LICENSE",
+        "LAND TRANSPORTATION OFFICE",
+        "LTO",
+        'DEPARTMENT OF TRANSPORTATION LAND TRANSPORTATION OFFICE',
+        "DEPARTMENT OF TRANSPORTATION",
+        "LAND TRANSPORTATION OFFICE"
+    ],
+    "drivers license": [  # Alternative spelling
+        "DRIVER'S LICENSE",
+        "DRIVER LICENSE",
+        "LAND TRANSPORTATION OFFICE",
+        "LTO"
+    ],
+    "voter's id": [
+        "VOTER'S ID",
+        "VOTERS ID",
+        "COMELEC",
+        "COMMISSION ON ELECTIONS"
+    ],
+    "voters id": [  # Alternative spelling
+        "VOTER'S ID",
+        "VOTERS ID",
+        "COMELEC",
+        "COMMISSION ON ELECTIONS"
+    ],
+    "umid": [
+        "UNIFIED MULTI-PURPOSE ID",
+        "UMID",
+        "SSS",
+        "SOCIAL SECURITY SYSTEM",
+        "GSIS",
+        "PAGIBIG",
+        "PHILHEALTH"
+    ]
 }
 
 def preprocess_image_for_ocr(pil_image):
@@ -745,6 +816,46 @@ def _match_keywords(text, keywords):
     T = _normalize(text)
     return any(k in T for k in keywords)
 
+# def validate_document_header(file_obj, expected_type):
+#     """
+#     Extracts text and checks if it contains the header keywords for the chosen document_type.
+#     Returns True if keywords found, else False.
+#     """
+#     if not getattr(settings, 'ENABLE_OCR_VALIDATION', True):
+#         print("[OCR] Validation disabled in settings.")
+#         return True
+
+#     try:
+#         file_obj.seek(0)
+#         img = Image.open(io.BytesIO(file_obj.read()))
+#         img = img.convert('L')
+#         text = pytesseract.image_to_string(img, lang='eng') or ''
+#         file_obj.seek(0)
+#     except Exception as e:
+#         print(f"[OCR] Exception during OCR: {e}")
+#         return False
+
+#     print(f"[OCR] Extracted text for '{expected_type}':")
+#     print("----- OCR TEXT START -----")
+#     print(text)
+#     print("----- OCR TEXT END -----")
+
+#     doc_key = (expected_type or '').strip().lower()
+#     keywords = DOCUMENT_TYPE_KEYWORDS.get(doc_key)
+#     if not keywords:
+#         if 'voter' in doc_key:
+#             keywords = VOTER_KEYWORDS
+#         elif 'birth' in doc_key:
+#             keywords = BIRTH_KEYWORDS
+
+#     if not keywords:
+#         print(f"[OCR] No keywords setup for document type: '{doc_key}'. Skipping OCR validation.")
+#         return True
+
+#     found = _match_keywords(text, keywords)
+#     print(f"[OCR] Header keywords for '{doc_key}' found: {found}")
+#     return found
+
 def validate_document_header(file_obj, expected_type):
     """
     Extracts text and checks if it contains the header keywords for the chosen document_type.
@@ -758,7 +869,10 @@ def validate_document_header(file_obj, expected_type):
         file_obj.seek(0)
         img = Image.open(io.BytesIO(file_obj.read()))
         img = img.convert('L')
-        text = pytesseract.image_to_string(img, lang='eng') or ''
+        
+        # Use high-quality OCR settings for header detection
+        custom_config = r'--oem 3 --psm 6'
+        text = pytesseract.image_to_string(img, lang='eng', config=custom_config) or ''
         file_obj.seek(0)
     except Exception as e:
         print(f"[OCR] Exception during OCR: {e}")
@@ -769,18 +883,40 @@ def validate_document_header(file_obj, expected_type):
     print(text)
     print("----- OCR TEXT END -----")
 
-    doc_key = (expected_type or '').strip().lower()
-    keywords = DOCUMENT_TYPE_KEYWORDS.get(doc_key)
-    if not keywords:
-        if 'voter' in doc_key:
-            keywords = VOTER_KEYWORDS
-        elif 'birth' in doc_key:
-            keywords = BIRTH_KEYWORDS
+    # Normalize the text for comparison
+    normalized_text = text.upper().replace('\n', ' ').replace('  ', ' ')
+    normalized_type = expected_type.lower().strip()
 
+    # Get keywords for this document type
+    keywords = DOCUMENT_TYPE_KEYWORDS.get(normalized_type, [])
+    
     if not keywords:
-        print(f"[OCR] No keywords setup for document type: '{doc_key}'. Skipping OCR validation.")
-        return True
+        print(f"[OCR] No keywords defined for document type: '{expected_type}'")
+        return False
 
-    found = _match_keywords(text, keywords)
-    print(f"[OCR] Header keywords for '{doc_key}' found: {found}")
-    return found
+    # Check if any keyword is found in the text
+    found_keywords = []
+    for keyword in keywords:
+        # Case-insensitive search with some flexibility
+        keyword_upper = keyword.upper()
+        
+        # Direct match
+        if keyword_upper in normalized_text:
+            found_keywords.append(keyword)
+            continue
+            
+        # Check with spaces removed (for multi-word keywords)
+        if keyword_upper.replace(' ', '') in normalized_text.replace(' ', ''):
+            found_keywords.append(keyword)
+            continue
+            
+        # Check individual words for multi-word keywords
+        keyword_words = keyword_upper.split()
+        if len(keyword_words) > 1:
+            if all(word in normalized_text for word in keyword_words):
+                found_keywords.append(keyword)
+
+    print(f"[OCR] Header keywords for '{normalized_type}' found: {len(found_keywords) > 0}")
+    print(f"[OCR] Found keywords: {found_keywords}")
+
+    return len(found_keywords) > 0

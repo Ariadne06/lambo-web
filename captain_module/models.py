@@ -176,6 +176,13 @@ class AnnouncementRepo(models.Model):
         rows = AnnouncementRepo._postprocess(rows)
         out = [a for a in rows if a["audience"] in ("both", "resident")]
         return out[:limit]
+
+    @staticmethod
+    def get_one(announcement_id: int) -> Optional[Dict]:
+        with connection.cursor() as cur:
+            cur.execute("SELECT * FROM get_specific_announcement(%s)", [announcement_id])
+            rows = AnnouncementRepo._dictfetchall(cur)
+            return rows[0] if rows else None
     
 
 class ResidentList(models.Model):

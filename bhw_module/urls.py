@@ -26,12 +26,14 @@ urlpatterns = [
      path('family/update/general-health/', views.update_general_health, name='updateGeneralHealth'),
      path("general-health", views.general_health_get_api, name="generalHealthGetApi"),
      path('api/child/search/', views.child_search_api, name='child_search_api'),
-     path('residentList/', views.residentList),
+     path('residentList/', views.residentList, name='residentList'),
+     path('resident/update-status/', views.updateResidentStatus, name='updateResidentStatus'),
      path('residentAdd1/', views.residentAdd1),
      path('residentAdd2/', views.residentAdd2),
      path('residentAdd3/', views.residentAdd3),
      path('residentAdd4/', views.residentAdd4),
      path('childList/', views.childList, name='childList'),
+     path('childScheduleList/', views.childScheduleList, name='childScheduleList'),
      path('addchild1/', views.addchild1, name='addchild1'),
      path('addchild2/', views.addchild2, name='addchild2'),
      path('addchild3/', views.addchild3, name='addchild3'),
@@ -65,5 +67,7 @@ urlpatterns = [
      # PDF Generation endpoints
      path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
      path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
+     # Announcement detail
+     path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
 ]
 

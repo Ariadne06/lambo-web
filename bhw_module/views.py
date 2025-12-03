@@ -16,6 +16,9 @@ import re
 from datetime import datetime, date
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponseRedirect
+from django.http import Http404
+from django.contrib import messages
+from django.conf import settings
 
 _UI_TO_SQL_AUDIENCE = {
     'EVERYONE': 'both',
@@ -28,6 +31,26 @@ _SQL_TO_UI_AUDIENCE = {
     'personnel': 'PERSONNEL',
     'resident': 'RESIDENTS',
 }
+
+def _public_url(request, path: str | None):
+    """
+    Normalize DB-stored image paths so the template always gets a usable URL.
+    - absolute http(s): return as-is
+    - root-relative (starts with /): build absolute (so it works in emails or iframes)
+    - plain relative like 'announcements/x.jpg': prefix MEDIA_URL and build absolute
+    """
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    # For relative paths, construct the media URL
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    media_path = base + path.lstrip('/')
+    return request.build_absolute_uri(media_path)
 
 
 @custom_login_required
@@ -106,9 +129,14 @@ def bhw_dashboard(request):
         messages.error(request, f"Failed loading recent announcements: {e}")
         latest_announcements = []
 
-    # ---- Modal filters ----
+    # ===========================
+    # Announcements (BHW sees personnel + both)
+    # ===========================
+    ALLOWED = {"personnel", "both"}
+
+    # Modal filters (GET -> ann_*)
     ann_q        = (request.GET.get('ann_q') or '').strip() or None
-    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None
+    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None  # '', resident, personnel, both
     ann_from_str = (request.GET.get('ann_from') or '').strip()
     ann_to_str   = (request.GET.get('ann_to') or '').strip()
 
@@ -121,23 +149,26 @@ def bhw_dashboard(request):
     except ValueError:
         messages.warning(request, 'Invalid date filter for announcements.')
 
-    # ---- Full list for modal (restricted to personnel scope) ----
+    # Full list for the modal (server filter + enforce BHW scope)
     try:
-        rows = AnnouncementRepo.list_all(
+        announcements_all = AnnouncementRepo.list_all(
             q=ann_q, date_from=ann_from, date_to=ann_to,
             created_by=None, sort='date_desc', limit=200, offset=0,
-            audience=ann_aud or None
+            audience=ann_aud or None   # None = DB shows all audiences
         )
-        announcements_all = []
-        for a in rows:
-            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
-            a["audience"] = aud
-            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):   # enforce personnel scope
-                announcements_all.append(a)
+        filtered = []
+        for a in announcements_all:
+            if 'created_date' in a and 'announcement_date' not in a:
+                a['announcement_date'] = a['created_date']
+            a['audience'] = (a.get('audience') or 'both').lower()
+            if a['audience'] in ALLOWED:
+                filtered.append(a)
+        announcements_all = filtered
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
+
+    ann_open = request.GET.get('ann_open') == '1'
 
     ctx = {
         "dash": dash,
@@ -150,11 +181,11 @@ def bhw_dashboard(request):
         "announcements_all": announcements_all,
         "ann_filters": {
             "q": ann_q or "",
-            "audience": ann_aud or "",
+            "audience": (ann_aud or ""),
             "from": ann_from_str,
             "to": ann_to_str,
         },
-        "ann_open": request.GET.get('ann_open') == '1',
+        "ann_open": ann_open,
     }
     return render(request, "bhw_module/bhw_dashboard.html", ctx)
 
@@ -1719,7 +1750,133 @@ def householdVisit(request):
 @custom_login_required
 @role_required('Barangay Health Worker')
 def residentList(request):
-    return render(request, 'bhw_module/residentList.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_status_id = request.GET.get('status_id')
+    
+    try:
+        status_id = int(raw_status_id) if raw_status_id not in (None, '', '0') else None
+    except ValueError:
+        status_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            # Request more results to account for potential filtering
+            cursor.callproc('view_all_resident', [
+                query or None,
+                sex,
+                status_id,
+                None,  # p_min_age
+                None,  # p_max_age
+                limit + 10,  # Request extra results to account for filtering
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            # Filter out resident_id = 1
+            all_results = [dict(zip(cols, row)) for row in rows if dict(zip(cols, row)).get('resident_id') != 1]
+            
+            # Take only what we need for this page plus one to check if there's a next page
+            results = all_results[:limit + 1]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+        results = []
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if sex is not None:
+        base_params["sex"] = sex
+    if status_id is not None:
+        base_params["status_id"] = status_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    # Get status options for filter dropdown
+    status_options = []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name")
+            status_options = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+    except Exception:
+        pass
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/residentList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "sex": sex,
+        "status_id": status_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        "status_options": status_options,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def updateResidentStatus(request):
+    resident_id = request.POST.get('resident_id')
+    new_status_id = request.POST.get('new_status_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:residentList')
+    
+    if not resident_id or not new_status_id:
+        set_flash(request, "Missing required fields.", "error")
+        return redirect('bhw_module:residentList')
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('update_resident_status', [
+                int(resident_id),
+                int(new_status_id),
+                pid
+            ])
+        set_flash(request, "Resident status updated successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect('bhw_module:residentList')
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -2379,6 +2536,67 @@ def update_child_health_record(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def childScheduleList(request):
+    limit = None
+    offset = None
+    results = []
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('view_all_child_immunization_schedule', [
+                None,  # p_child_health_id
+                limit + 1,
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            results = [dict(zip(cols, row)) for row in rows]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {"limit": limit}
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    flash = get_flash(request)
+    return render(request, 'bhw_module/childScheduleList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Barangay Health Worker')
@@ -3694,3 +3912,37 @@ def update_maternal_status(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect('bhw_module:maternalList')
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details using get_specific_announcement function"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        # Normalize image URL for display
+        if announcement.get('announcement_image_path'):
+            image_path = announcement.get('announcement_image_path')
+            if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+                announcement['image_url'] = image_path  # Already a full URL from Supabase
+            else:
+                announcement['image_url'] = _public_url(request, image_path)  # Fallback for local files
+        
+        # Normalize audience display
+        if announcement.get('audience'):
+            announcement['audience'] = _SQL_TO_UI_AUDIENCE.get(announcement['audience'], 'EVERYONE')
+        
+        # Compatibility aliases
+        if 'created_date' in announcement and 'date' not in announcement:
+            announcement['date'] = announcement['created_date']
+        
+        return render(request, 'bhw_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('bhw_module:bhw_dashboard')
