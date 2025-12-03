@@ -58,6 +58,30 @@
         <span>Child</span>
       </a>
 
+      <!-- Child Schedule -->
+      <a href="{% url 'bhw_module:childScheduleList' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'childScheduleList' %}
+                  bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                  hover:bg-red-800/80
+                {% endif %}">
+        <i class="ri-calendar-schedule-line text-lg"></i>
+        <span>Immunization Schedule</span>
+      </a>
+
+      <!-- Resident -->
+      <a href="{% url 'bhw_module:residentList' %}"
+         class="flex items-center gap-3 px-4 py-3 rounded-lg transition
+                {% if request.resolver_match.url_name == 'residentList' %}
+                  bg-white text-red-700 font-semibold shadow-sm
+                {% else %}
+                  hover:bg-red-800/80
+                {% endif %}">
+        <i class="ri-user-line text-lg"></i>
+        <span>Resident</span>
+      </a>
+
       <!-- Maternal -->
       <a href="{% url 'bhw_module:maternalList' %}"
          class="flex items-center gap-3 px-4 py-3 rounded-lg transition

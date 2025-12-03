@@ -1279,3 +1279,559 @@ class VaccineType(models.Model):
 
     def __str__(self):
         return self.vaccine_name
+    
+    
+class Maternal:
+    
+    class Meta:
+        managed = False
+        
+    @staticmethod
+    def sp_view_all_maternal_record(
+            name_query=None,
+            record_status_id=None,
+            limit=25,
+            offset=0
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc(
+                    "view_all_maternal_record", [
+                        name_query, 
+                        record_status_id, 
+                        limit, 
+                        offset
+                    ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_specific_maternal_health_record(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_health_record', [maternal_health_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_insert_maternal(
+            maternal_id,
+            address_landmark,
+            created_by
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('insert_maternal', [
+                    maternal_id,
+                    address_landmark,
+                    created_by
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_view_obstetrical_history(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_obstetrical_history', [maternal_health_id])
+                cols = [c[0] for c in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_add_obstetrical_history(
+            maternal_health_id,
+            gravida,
+            para,
+            aborption,
+            last_menstrual_period,
+            expected_date_of_delivery,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_obstetrical_history', [
+                    maternal_health_id,
+                    gravida,
+                    para,
+                    aborption,
+                    last_menstrual_period,
+                    expected_date_of_delivery,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_medical_condition(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_medical_condition', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_medical_condition(
+            maternal_health_id,
+            medical_condition_name,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_medical_condition', [
+                    maternal_health_id,
+                    medical_condition_name,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_surgical_history(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_surgical_history', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_surgical_history(
+            maternal_health_id,
+            surgical_history_name,
+            date_of_surgery,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_surgical_history', [
+                    maternal_health_id,
+                    surgical_history_name,
+                    date_of_surgery,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_last_completed_gravida(maternal_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT get_last_completed_gravida(%s)', [maternal_id])
+                result = cursor.fetchone()
+                return result[0] if result else 0
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_disease_surveillance(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_disease_surveillance', [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_disease_screen_record(
+            maternal_health_id,
+            disease_type_id,
+            screening_date,
+            result,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_disease_screen_record', [
+                    maternal_health_id,
+                    disease_type_id,
+                    screening_date,
+                    result,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_last_completed_abortion(maternal_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT get_last_completed_abortion(%s)', [maternal_id])
+                result = cursor.fetchone()
+                return result[0] if result else 0
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_immunization_status_track(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_immunization_status_track', [
+                    maternal_health_id
+                ])
+                cols = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_immunization(
+            maternal_health_id,
+            dose_number,
+            date_given,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_maternal_immunization', [
+                    maternal_health_id,
+                    dose_number,
+                    date_given,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_disease_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT disease_type_id, disease_name FROM Disease_Type ORDER BY disease_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_laboratory_screening(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_laboratory_screening', [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_lab_screening_record(
+            maternal_health_id,
+            test_type_id,
+            test_date,
+            result,
+            iron_tablet_given_date,
+            iron_tablet_quantity,
+            pid
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_lab_screening_record', [
+                    maternal_health_id,
+                    test_type_id,
+                    test_date,
+                    result,
+                    iron_tablet_given_date,
+                    iron_tablet_quantity,
+                    pid
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None 
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_test_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT test_type_id, test_name FROM Test_Type ORDER BY test_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_checkup_records(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM view_specific_maternal_all_checkup_record(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_supplements_record(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM view_specific_maternal_all_supplements_record(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_maternal_supplement_record(
+            maternal_health_id,
+            supplement_type_id,
+            date_given,
+            number_of_tablets,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT add_maternal_supplement_record(%s, %s, %s, %s, %s)", 
+                             [maternal_health_id, supplement_type_id, date_given, number_of_tablets, personnel_id])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_supplement_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT supplement_type_id, supplement_name FROM Supplement_Type ORDER BY supplement_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_checkup_record(
+            maternal_health_id,
+            aog_weeks,
+            weight_kg,
+            height_cm,
+            bmi,
+            blood_pressure,
+            fetal_heart_rate,
+            laboratory_results,
+            notes,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT add_checkup_record(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
+                             [maternal_health_id, aog_weeks, weight_kg, height_cm, bmi, blood_pressure, fetal_heart_rate, laboratory_results, notes, personnel_id])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    def sp_get_record_status():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT *
+                FROM RECORD_STATUS
+            """)
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_deworming_record(
+            maternal_health_id,
+            deworming_type_id,
+            number_of_tablets,
+            date_given,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('add_deworming_record', [
+                    maternal_health_id,
+                    deworming_type_id,
+                    number_of_tablets,
+                    date_given,
+                    personnel_id
+                ])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_deworming_record(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('view_specific_maternal_all_deworming_record', [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_deworming_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT deworming_type_id, deworming_name FROM Deworming_Type")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_delivery_outcome(
+            maternal_health_id,
+            outcome_type_id,
+            delivery_type_id,
+            place_delivery_type_id,
+            ownership_type_id,
+            others_description,
+            birth_attendant_id,
+            other_attendant,
+            time_of_delivery,
+            date_terminated,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT add_delivery_outcome(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
+                             [maternal_health_id, outcome_type_id, delivery_type_id, place_delivery_type_id, 
+                              ownership_type_id, others_description, birth_attendant_id, other_attendant, 
+                              time_of_delivery, date_terminated, personnel_id])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_delivery_outcome(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM view_specific_maternal_delivery_outcome(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(cols, row)) if row else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_outcome_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT outcome_type_id, outcome_type_description FROM Outcome_Type ORDER BY outcome_type_description")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_delivery_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT delivery_type_id, delivery_name FROM Delivery_Type ORDER BY delivery_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_place_delivery_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT place_delivery_type_id, place_delivery_name FROM Place_Delivery_Type ORDER BY place_delivery_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_ownership_types():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT ownership_type_id, ownership_name FROM Ownership_Type ORDER BY ownership_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_birth_attendants():
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT birth_attendant_id, birth_attendant_name FROM Birth_Attendant ORDER BY birth_attendant_name")
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_add_postpartum_visit(
+            maternal_health_id,
+            date_of_visit,
+            weight_kg,
+            height_cm,
+            blood_pressure,
+            notes,
+            laboratory_notes,
+            personnel_id
+            ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT add_postpartum_visit(%s, %s, %s, %s, %s, %s, %s, %s)", 
+                             [maternal_health_id, date_of_visit, weight_kg, height_cm, 
+                              blood_pressure, notes, laboratory_notes, personnel_id])
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_view_specific_maternal_all_postpartum_visit(maternal_health_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM view_specific_maternal_all_postpartum_visit(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
