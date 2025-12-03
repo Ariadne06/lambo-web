@@ -1355,3 +1355,101 @@ class OwnerBusinessesMobileView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class SpecificBusinessMobileView(APIView):
+    """
+    GET /api/mobile/businesses/<business_id>/?owner_id=<resident_id>
+
+    Uses get_specific_business_mobile_by_owner(p_owner_id, p_business_id)
+    and returns detailed information about a specific business owned by the resident.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, business_id, *args, **kwargs):
+        owner_id_raw = request.query_params.get("owner_id")
+        owner_id = _to_int(owner_id_raw)
+        business_id_int = _to_int(business_id)
+
+        if owner_id is None:
+            return Response(
+                {
+                    "error": "M9011",
+                    "message": "owner_id (resident_id) is required as a query parameter.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if business_id_int is None:
+            return Response(
+                {
+                    "error": "M9012",
+                    "message": "business_id is required.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM get_specific_business_mobile_by_owner(%s, %s);
+                    """,
+                    [owner_id, business_id_int],
+                )
+                rows = _dictfetchall(cursor)
+
+            if not rows:
+                return Response(
+                    {
+                        "error": "M9013",
+                        "message": f"Business {business_id_int} not found for owner {owner_id}.",
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            row = rows[0]
+            updated_at = row.get("updated_at")
+            clearance_date_issued = row.get("clearance_date_issued")
+
+            data = {
+                "business_id": row.get("business_id"),
+                "business_name": row.get("business_name"),
+                "nature_of_business": row.get("nature_of_business"),
+                "total_gross_income": row.get("total_gross_income"),
+                "reg_number": row.get("reg_number"),
+                "clearance_date_issued": clearance_date_issued.isoformat() if clearance_date_issued else None,
+                "status": row.get("status"),
+                "business_type": row.get("business_type"),
+                "ownership": row.get("ownership"),
+                "clearance_category": row.get("clearance_category"),
+                "owner_id": row.get("owner_id"),
+                "owner_name": row.get("owner_name"),
+                "address_id": row.get("address_id"),
+                "address": row.get("address"),
+                "updated_at": updated_at.isoformat() if updated_at else None,
+                "created_by": row.get("created_by"),
+            }
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            error_msg = str(e)
+            # Check if it's a database exception with our custom error code
+            if "M9013" in error_msg:
+                return Response(
+                    {
+                        "error": "M9013",
+                        "message": error_msg,
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(
+                {
+                    "error": "M9299",
+                    "message": "Failed to load business details.",
+                    "detail": error_msg,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

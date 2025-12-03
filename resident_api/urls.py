@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView, CheckUsernameAvailabilityView, LatestResidentAnnouncements, ResidentAnnouncementsList, OwnerBusinessesMobileView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView, CheckUsernameAvailabilityView, LatestResidentAnnouncements, ResidentAnnouncementsList, OwnerBusinessesMobileView, SpecificBusinessMobileView)
 
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -45,5 +45,10 @@ urlpatterns += [
         'mobile/businesses/',
         OwnerBusinessesMobileView.as_view(),
         name='mobile-businesses-by-owner',
+    ),
+    path(
+        'mobile/businesses/<int:business_id>/',
+        SpecificBusinessMobileView.as_view(),
+        name='mobile-specific-business',
     ),
 ]
