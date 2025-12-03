@@ -8,6 +8,8 @@ from utils.db_message import _clean_db_error, _clean_params
 from django.utils.timezone import localtime
 from django.utils.http import urlencode
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
+from django.db import connection
+from django.http import JsonResponse
 
 
 # Create your views here.
@@ -513,7 +515,86 @@ def activityLogs(request):
 @custom_login_required
 @role_required('Admin')
 def authenticationlog(request):
-    return render(request, 'admin_module/authenticationlog.html')
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    account_type = request.GET.get('account_type')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('view_authentication_logs', [
+                f'%{query}%' if query else None,
+                account_type if account_type else None,
+                start_date if start_date else None,
+                end_date if end_date else None,
+                limit + 1,
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            results = [dict(zip(cols, row)) for row in rows]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+        results = []
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if account_type:
+        base_params["account_type"] = account_type
+    if start_date:
+        base_params["start_date"] = start_date
+    if end_date:
+        base_params["end_date"] = end_date
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    flash = get_flash(request)
+    return render(request, 'admin_module/authenticationlog.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "account_type": account_type,
+        "start_date": start_date,
+        "end_date": end_date,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
 
 @custom_login_required
 @role_required('Admin')
@@ -524,3 +605,138 @@ def documentlog(request):
 @role_required('Admin')
 def residentlog(request):
     return render(request, 'admin_module/residentlog.html')
+
+@custom_login_required
+@role_required('Admin')
+def residentList(request):
+    if request.method == 'POST':
+        resident_id = request.POST.get('resident_id')
+        email = request.POST.get('email')
+        admin_personnel_id = request.session.get('personnel_id')
+        
+        if resident_id and email and admin_personnel_id:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE Resident SET email = %s WHERE resident_id = %s",
+                        [email, int(resident_id)]
+                    )
+                    set_flash(request, "Email updated successfully.", "success")
+            except Exception as e:
+                set_flash(request, _clean_db_error(e), "error")
+        else:
+            set_flash(request, "Missing required information for email update.", "error")
+        
+        return redirect('admin_module:residentList')
+    
+    limit = None
+    offset = None
+    results = []
+    
+    query = (request.GET.get('query') or '').strip()
+    raw_sex = request.GET.get('sex')
+    sex = raw_sex.strip() if raw_sex and raw_sex.strip() else None
+    raw_status_id = request.GET.get('status_id')
+    
+    try:
+        status_id = int(raw_status_id) if raw_status_id not in (None, '', '0') else None
+    except ValueError:
+        status_id = None
+    
+    try:
+        limit = int(request.GET.get("limit", 25))
+    except Exception:
+        limit = 25
+    if limit not in LIMIT_OPTIONS:
+        limit = 25
+
+    try:
+        page = int(request.GET.get("page", 1))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    
+    offset = (page - 1) * limit
+    
+    try:
+        with connection.cursor() as cursor:
+            # Request more results to account for potential filtering
+            cursor.callproc('view_all_resident', [
+                query or None,
+                sex,
+                status_id,
+                None,  # p_min_age
+                None,  # p_max_age
+                limit + 10,  # Request extra results to account for filtering
+                offset
+            ])
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            # Filter out resident_id = 1
+            all_results = [dict(zip(cols, row)) for row in rows if dict(zip(cols, row)).get('resident_id') != 1]
+            
+            # Take only what we need for this page plus one to check if there's a next page
+            results = all_results[:limit + 1]
+    except Exception as e:
+        msg = _clean_db_error(e)
+        set_flash(request, msg, "error")
+        results = []
+    
+    has_next = len(results) > limit
+    has_prev = page > 1
+    final_result = results[:limit]
+    
+    base_params = {
+        "limit": limit,
+        "query": query,
+    }
+    if sex is not None:
+        base_params["sex"] = sex
+    if status_id is not None:
+        base_params["status_id"] = status_id
+
+    prev_url = "?" + urlencode({**base_params, "page": page - 1}) if has_prev else ""
+    next_url = "?" + urlencode({**base_params, "page": page + 1}) if has_next else ""
+    limit_urls = {n: "?" + urlencode({**base_params, "limit": n, "page": 1}) for n in LIMIT_OPTIONS}
+    
+    # Get status options for filter dropdown
+    status_options = []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name")
+            status_options = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+    except Exception:
+        pass
+    
+    flash = get_flash(request)
+    return render(request, 'admin_module/residentList.html', {
+        "results": final_result,
+        "limit": limit,
+        "page": page,
+        "sex": sex,
+        "status_id": status_id,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": prev_url,
+        "next_url": next_url,
+        "limit_options": LIMIT_OPTIONS,
+        "limit_urls": limit_urls,
+        "status_options": status_options,
+        'query': query,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+@custom_login_required
+@role_required('Admin')
+def get_resident_profile(request, resident_id):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_resident_profile(%s)", [resident_id])
+            result = cursor.fetchone()
+            if result and result[0]:
+                return JsonResponse(result[0])
+            else:
+                return JsonResponse({'error': 'Resident not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
