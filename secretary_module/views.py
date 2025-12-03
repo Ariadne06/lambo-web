@@ -6,7 +6,7 @@ from utils.db_message import _clean_db_error, _clean_params, coerce_message
 from utils.constants import VALID_SORT_BY, VALID_SORT_DIR, LIMIT_OPTIONS
 from .models import (
     Secretary, Dashboard, BusinessFee, AmusementDeviceType, OtherClearanceType,
-    BusinessTaxConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
+    BusinessTaxConfig, CTCFeeConfig, AnnouncementRepo, Business, SecretaryHelpers,ResidentList
 )
 from utils.supa import url_for_doc
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
@@ -26,6 +26,10 @@ from urllib.parse import urlencode
 from household_module.models import Household, Family
 import json
 from django.views.decorators.http import require_GET
+from notifications.service import NotificationService
+import logging
+
+logger = logging.getLogger(__name__)
 
 # PDF generation (HTML -> PDF)
 import io, os
@@ -1838,7 +1842,58 @@ def set_application_to_completed(request, application_id: int):
         if not personnel_id:
             raise ValueError('Missing personnel_id for completion.')
 
+        # Get application details before updating status
+        app_data = SecretaryHelpers.get_specific_application(application_id)
+        
         SecretaryHelpers.set_application_to_completed(application_id, personnel_id)
+        
+        # Send notification to resident
+        resident_id = None
+        if app_data:
+            # Priority 1: Extract applicant_id from total_amount_details JSON
+            details_json = app_data.get('total_amount_details')
+            if details_json:
+                try:
+                    if isinstance(details_json, str):
+                        details_json = json.loads(details_json)
+                    if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                        resident_id = details_json['applicant_id']
+                        logger.info(f"Completion - Application {application_id}: Found applicant_id={resident_id} in total_amount_details")
+                except Exception as e:
+                    logger.error(f"Completion - Application {application_id}: Error parsing total_amount_details: {e}")
+            
+            # Priority 2: For business applications, get the business owner
+            if not resident_id and app_data.get('business_id'):
+                try:
+                    business_data = Business.sp_get_business_detail(app_data['business_id'])
+                    if business_data and business_data.get('owner_id'):
+                        resident_id = business_data['owner_id']
+                        logger.info(f"Completion - Application {application_id}: Found owner_id={resident_id} from business")
+                except Exception as e:
+                    logger.error(f"Failed to get business owner for business_id {app_data['business_id']}: {e}")
+            
+            # Priority 3: Fall back to requested_by_id (for resident-initiated applications)
+            if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                resident_id = app_data['requested_by_id']
+                logger.info(f"Completion - Application {application_id}: Using requested_by_id={resident_id}")
+        
+        if resident_id:
+            certificate_type = app_data.get('request', 'Certificate')
+            application_code = app_data.get('application_code', '')
+            
+            # Send notification
+            try:
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Certificate Issued",
+                    body=f"Your {certificate_type} ({application_code}) has been successfully generated and issued. Thank you for using our services!",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Completion notification sent to resident_id {resident_id} for application {application_id}")
+            except Exception as notif_error:
+                # Log but don't fail the main operation
+                logger.error(f"Failed to send completion notification for application {application_id}: {notif_error}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Application marked as Completed.'})
         set_flash(request, 'Application marked as Completed.', 'success')
@@ -1879,7 +1934,62 @@ def application_detail_json(request, application_id: int):
 def set_application_to_for_payment(request, application_id: int):
     """Move a Pending application to For Payment using set_application_to_for_payment()."""
     try:
+        # Get application details before updating status
+        app_data = SecretaryHelpers.get_specific_application(application_id)
+        
+        # Update status to For Payment
         SecretaryHelpers.set_application_to_for_payment(application_id)
+        
+        # Send notification to resident
+        resident_id = None
+        if app_data:
+            # Priority 1: Extract applicant_id from total_amount_details JSON
+            details_json = app_data.get('total_amount_details')
+            if details_json:
+                try:
+                    if isinstance(details_json, str):
+                        details_json = json.loads(details_json)
+                    if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                        resident_id = details_json['applicant_id']
+                        logger.info(f"Application {application_id}: Found applicant_id={resident_id} in total_amount_details")
+                except Exception as e:
+                    logger.error(f"Application {application_id}: Error parsing total_amount_details: {e}")
+            
+            # Priority 2: For business applications, get the business owner
+            if not resident_id and app_data.get('business_id'):
+                try:
+                    business_data = Business.sp_get_business_detail(app_data['business_id'])
+                    if business_data and business_data.get('owner_id'):
+                        resident_id = business_data['owner_id']
+                        logger.info(f"Application {application_id}: Found owner_id={resident_id} from business")
+                except Exception as e:
+                    logger.error(f"Failed to get business owner for business_id {app_data['business_id']}: {e}")
+            
+            # Priority 3: Fall back to requested_by_id (for resident-initiated applications)
+            if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                resident_id = app_data['requested_by_id']
+                logger.info(f"Application {application_id}: Using requested_by_id={resident_id}")
+            
+            if not resident_id:
+                logger.warning(f"Could not determine resident_id for application {application_id}")
+        
+        if resident_id:
+            certificate_type = app_data.get('request', 'Certificate')
+            application_code = app_data.get('application_code', '')
+            
+            # Send notification
+            try:
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Certificate Ready for Payment",
+                    body=f"Your {certificate_type} request ({application_code}) has been approved! Please visit the barangay office to complete your payment.",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Notification sent to resident_id {resident_id} for application {application_id}")
+            except Exception as notif_error:
+                # Log but don't fail the main operation
+                logger.error(f"Failed to send notification for application {application_id}: {notif_error}")
+        
         # AJAX vs normal POST
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Moved to For Payment'})
@@ -2287,6 +2397,50 @@ def tax_penalties_update(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def ctc_fee(request):
+    ctc_config = CTCFeeConfig.sp_get_ctc_fee()
+    flash = get_flash(request)
+    return render(request, 'secretary_module/ctcFee.html', {
+        'ctc_config': ctc_config,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def ctc_fee_update(request):
+    try:
+        pid = _get_personnel_id(request)
+        amount = request.POST.get('amount', '').strip()
+        
+        if not amount:
+            return JsonResponse({'ok': False, 'error': 'Amount is required'}, status=400)
+        
+        try:
+            amount_decimal = Decimal(amount)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid amount format'}, status=400)
+        
+        if amount_decimal < 0:
+            return JsonResponse({'ok': False, 'error': 'Amount must be non-negative'}, status=400)
+
+        CTCFeeConfig.sp_update_ctc_fee(amount=amount_decimal, updated_by=pid)
+        
+        new_row = CTCFeeConfig.sp_get_ctc_fee()
+        return JsonResponse({
+            'ok': True,
+            'row': {
+                'amount': float(new_row.get('amount')) if new_row.get('amount') else None,
+                'updated_at': new_row.get('updated_at').isoformat() if new_row.get('updated_at') else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
     
 
 def _acting_personnel_id(request) -> int:
@@ -2452,6 +2606,51 @@ def cancel_application(request, application_id: int):
             raise ValueError('Missing personnel_id for cancellation.')
 
         message = SecretaryHelpers.secretary_cancel_application(application_id, personnel_id, reason)
+        
+        # Send notification to resident about cancellation
+        try:
+            app_data = SecretaryHelpers.get_specific_application(application_id)
+            resident_id = None
+            
+            if app_data:
+                # Extract applicant_id from total_amount_details JSON
+                details_json = app_data.get('total_amount_details')
+                if details_json:
+                    try:
+                        if isinstance(details_json, str):
+                            details_json = json.loads(details_json)
+                        if isinstance(details_json, dict) and details_json.get('applicant_id'):
+                            resident_id = details_json['applicant_id']
+                    except Exception:
+                        pass
+                
+                # Fallback: business owner_id
+                if not resident_id and app_data.get('business_id'):
+                    try:
+                        business_data = Business.sp_get_business_detail(app_data['business_id'])
+                        if business_data and business_data.get('owner_id'):
+                            resident_id = business_data['owner_id']
+                    except Exception:
+                        pass
+                
+                # Fallback: requested_by_id (only if requested_by == 'resident')
+                if not resident_id and app_data.get('requested_by') == 'resident' and app_data.get('requested_by_id'):
+                    resident_id = app_data['requested_by_id']
+            
+            if resident_id:
+                certificate_type = app_data.get('request', 'Certificate')
+                application_code = app_data.get('application_code', '')
+                
+                NotificationService.send_to_resident(
+                    resident_id=resident_id,
+                    title="Application Cancelled",
+                    body=f"Your {certificate_type} application ({application_code}) has been cancelled.{' Reason: ' + reason if reason else ''}",
+                    deep_link=f"/(tabs)/documents/{application_id}"
+                )
+                logger.info(f"Cancellation notification sent to resident {resident_id} for application {application_id}")
+        except Exception as e:
+            logger.error(f"Failed to send cancellation notification for application {application_id}: {e}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': message})
         set_flash(request, message or 'Application cancelled.', 'success')
@@ -3100,6 +3299,20 @@ def submit_barangay_clearance_application(request):
         )
         if not application_id:
             raise RuntimeError('No application id returned from database function.')
+        
+        # Send notification to resident
+        try:
+            NotificationService.send_to_resident(
+                resident_id=resident_id,
+                title="Application Created",
+                body="A barangay clearance application has been created for you. Please wait for the Barangay Secretary to review and approve your request.",
+                deep_link=f"/(tabs)/documents/{application_id}"
+            )
+            logger.info(f"Application creation notification sent to resident_id {resident_id} for application {application_id}")
+        except Exception as notif_error:
+            # Log but don't fail the main operation
+            logger.error(f"Failed to send application creation notification for application {application_id}: {notif_error}")
+            
     except Exception as e:
         # Prefer cleaned DB error message, fallback to str(e)
         cleaned = _clean_db_error(e) if callable(_clean_db_error) else None
@@ -3115,38 +3328,6 @@ def submit_barangay_clearance_application(request):
 
     messages.success(request, success_msg)
     return redirect('secretary_module:applications')
-    """Create a barangay clearance application for a selected resident and purpose.
-    The form posts `applicant_id` (resident) and `purpose` (which holds other_clearance_id).
-    """
-    resident_id = request.POST.get('applicant_id')
-    other_clearance_id = request.POST.get('purpose')  # value is other_clearance_id
-    # Support AJAX (fetch) submissions: return JSON instead of redirect/messages
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
-    if not resident_id or not other_clearance_id:
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': 'Resident and purpose are required.'}, status=400)
-        messages.error(request, 'Resident and purpose are required.')
-        return redirect('secretary_module:create_application')
-    try:
-        personnel_id = _acting_personnel_id(request)
-        app_id = SecretaryHelpers.create_application_barangay_clearance(
-            personnel_id=personnel_id,
-            resident_id=int(resident_id),
-            other_clearance_id=int(other_clearance_id)
-        )
-        if app_id:
-            if is_ajax:
-                return JsonResponse({'ok': True, 'application_id': app_id, 'message': f'Barangay clearance application #{app_id} created.'})
-            messages.success(request, f'Barangay clearance application #{app_id} created.')
-            return redirect('secretary_module:application_detail', application_id=app_id)
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': 'Failed to create application.'}, status=500)
-        messages.error(request, 'Failed to create application.')
-    except Exception as e:
-        if is_ajax:
-            return JsonResponse({'ok': False, 'message': f'Error creating application: {coerce_message(e)}'}, status=400)
-        messages.error(request, f'Error creating application: {e}')
-    return redirect('secretary_module:create_application')
 
 
 @custom_login_required
@@ -3389,4 +3570,91 @@ def generate_household_detail_pdf(request, household_id: int):
         import traceback
         print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@require_POST
+def cron_renew_businesses(request):
+    """
+    Endpoint for Supabase cron job to trigger annual business renewal.
+    This should be called via HTTP POST from Supabase cron using pg_net.
+    
+    Expected to run on January 1st each year at midnight.
+    
+    Security: Add authentication token in production (e.g., check header or secret key)
+    """
+    # Optional: Add simple token-based auth for security
+    auth_token = request.headers.get('X-Cron-Token')
+    expected_token = getattr(settings, 'CRON_SECRET_TOKEN', None)
+    
+    if expected_token and auth_token != expected_token:
+        logger.warning(f"Unauthorized cron attempt from {request.META.get('REMOTE_ADDR')}")
+        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
+    
+    try:
+        with connection.cursor() as cursor:
+            # Call the SQL function to update statuses
+            cursor.execute("SELECT set_all_business_to_for_renewal()")
+            updated_count = cursor.fetchone()[0]
+            
+            logger.info(f"Business renewal cron: {updated_count} businesses set to For Renewal")
+            
+            if updated_count == 0:
+                return JsonResponse({
+                    'ok': True,
+                    'message': 'No active businesses found to renew',
+                    'updated_count': 0,
+                    'notification_count': 0
+                })
+            
+            # Fetch all businesses that were just set to "For Renewal"
+            cursor.execute("""
+                SELECT 
+                    b.business_id,
+                    b.business_name,
+                    b.resident_id AS owner_id,
+                    r.first_name || ' ' || COALESCE(r.middle_name || ' ', '') || r.last_name AS owner_name
+                FROM Business b
+                JOIN Resident r ON r.resident_id = b.resident_id
+                JOIN Business_Status bs ON bs.business_status_id = b.business_status_id
+                WHERE LOWER(bs.status_name) = 'for renewal'
+            """)
+            
+            businesses = cursor.fetchall()
+            notification_count = 0
+            failed_count = 0
+            
+            current_year = datetime.now().year
+            
+            # Send notification to each business owner
+            for business_id, business_name, owner_id, owner_name in businesses:
+                try:
+                    NotificationService.send_to_resident(
+                        resident_id=owner_id,
+                        title="🔄 Business Renewal Required",
+                        body=f'Your business "{business_name}" is now due for renewal. Please complete the renewal process before March 31, {current_year}. Failure to renew may result in penalties or business closure.',
+                        deep_link="/(tabs)/business"
+                    )
+                    notification_count += 1
+                    logger.info(f"Notification sent to {owner_name} (ID: {owner_id}) for business '{business_name}' (ID: {business_id})")
+                    
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to send notification for business_id {business_id} to resident_id {owner_id}: {e}")
+            
+            logger.info(f"Business renewal cron completed: {updated_count} businesses updated, {notification_count} notifications sent, {failed_count} failed")
+            
+            return JsonResponse({
+                'ok': True,
+                'message': 'Business renewal process completed',
+                'updated_count': updated_count,
+                'notification_count': notification_count,
+                'failed_count': failed_count
+            })
+            
+    except Exception as e:
+        logger.error(f"Business renewal cron job failed: {e}")
+        return JsonResponse({
+            'ok': False,
+            'error': str(e)
+        }, status=500)
 

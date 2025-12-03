@@ -47,6 +47,8 @@ urlpatterns = [
     path("otherClearances/update/", views.other_clearances_update, name="other_clearances_update"),
     path("taxPenalties/", views.tax_penalties, name="tax_penalties"),
     path("taxPenalties/update/", views.tax_penalties_update, name="tax_penalties_update"),
+    path("ctcFee/", views.ctc_fee, name="ctc_fee"),
+    path("ctcFee/update/", views.ctc_fee_update, name="ctc_fee_update"),
 
     # Dynamic AJAX endpoints for the Create Application (walk-in) UI
     path('applications/search/', views.application_search, name='application_search'),
