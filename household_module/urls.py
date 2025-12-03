@@ -240,6 +240,10 @@ path(
           name='checkups-track'
      ),
 
+     path('maternal-health-records/<int:maternal_health_id>/checkups/<int:checkup_id>/update/', 
+     views.CheckupRecordUpdateView.as_view(), 
+     name='maternal_checkup_update'),
+
      # ========================================
      # SUPPLEMENTS
      # ========================================
