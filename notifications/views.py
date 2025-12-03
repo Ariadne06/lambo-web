@@ -213,12 +213,21 @@ class SendPushNotificationWebhookView(APIView):
     }
     """
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
+            # Log that webhook was called
+            logger.info(f"Push notification webhook called with data: {request.data}")
+            
             # Verify secret token
             secret_token = request.headers.get('X-Cron-Secret')
             expected_token = os.environ.get('CRON_SECRET_TOKEN', 'your-secret-token-here')
             
+            logger.info(f"Secret token received: {secret_token[:10]}... (truncated)")
+            
             if secret_token != expected_token:
+                logger.warning(f"Unauthorized webhook attempt - invalid secret token")
                 return Response({
                     'success': False,
                     'error': 'Unauthorized'
@@ -238,17 +247,13 @@ class SendPushNotificationWebhookView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Determine user type name from ID
-            from .repo import get_db_connection
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                "SELECT type_name FROM user_type WHERE user_type_id = %s",
-                (user_type_id,)
-            )
-            result = cursor.fetchone()
-            cursor.close()
-            conn.close()
+            from django.db import connection as db_connection
+            with db_connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT type_name FROM user_type WHERE user_type_id = %s",
+                    (user_type_id,)
+                )
+                result = cursor.fetchone()
             
             if not result:
                 return Response({
@@ -294,6 +299,8 @@ class SendPushNotificationWebhookView(APIView):
             # Send in batches
             response = push_client.publish_multiple(messages)
             
+            logger.info(f"Successfully sent push notifications to {len(tokens)} device(s)")
+            
             return Response({
                 'success': True,
                 'message': f'Push notifications sent to {len(tokens)} device(s)',
@@ -302,6 +309,10 @@ class SendPushNotificationWebhookView(APIView):
             
         except Exception as e:
             import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in push notification webhook: {str(e)}")
+            logger.error(traceback.format_exc())
             traceback.print_exc()
             return Response({
                 'success': False,
