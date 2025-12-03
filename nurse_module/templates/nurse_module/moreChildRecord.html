@@ -297,7 +297,7 @@
                 <thead class="bg-gray-50 text-gray-800 border-b">
                   <tr>
                     <th class="px-6 py-3 font-semibold">Condition</th>
-                    <th class="px-6 py-3 font-semibold">Notes</th>
+                    <th class="px-6 py-3 font-semibold">Date Added</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100" id="med-conditions-rows">
@@ -315,7 +315,7 @@
                 <thead class="bg-gray-50 text-gray-800 border-b">
                   <tr>
                     <th class="px-6 py-3 font-semibold">Procedure</th>
-                    <th class="px-6 py-3 font-semibold">Notes</th>
+                    <th class="px-6 py-3 font-semibold">Date Added</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100" id="surg-rows">
@@ -336,6 +336,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- Immunization Modal -->
 <!-- Immunization Modal -->
@@ -873,8 +874,7 @@ function statusBadge(statusRaw){
   var closeMed = document.getElementById("closeMedicalModal");
   var closeMed2 = document.getElementById("closeMedicalModal2");
   var medBackdrop = document.getElementById("medicalBackdrop");
-
-  function loadMedSurgRows(){
+function loadMedSurgRows() {
     const mtbody = document.getElementById("med-conditions-rows");
     const stbody = document.getElementById("surg-rows");
 
@@ -882,45 +882,44 @@ function statusBadge(statusRaw){
     stbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center">Loading…</td></tr>`;
 
     fetch("{% url 'nurse_module:childMedSurg' record.child_health_id %}", {
-      headers:{ "X-Requested-With":"XMLHttpRequest" }
+        headers: { "X-Requested-With": "XMLHttpRequest" }
     })
-    .then(res => res.json())
-    .then(data => {
-      const medical = data.medical || [];
-      const surgical = data.surgical || [];
+        .then(res => res.json())
+        .then(data => {
+            const medical = data.medical || [];
+            const surgical = data.surgical || [];
 
-      /* MEDICAL */
-      if (medical.length === 0){
-        mtbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center">No medical conditions recorded.</td></tr>`;
-      } else {
-        let html = "";
-        medical.forEach(r => {
-          const cond = firstNonEmpty(r, ["condition_name","medical_condition","diagnosis"]);
-          const notes = firstNonEmpty(r, ["notes","remarks","description"]);
-          html += `<tr class="hover:bg-gray-50">${td(cond)}${td(notes)}</tr>`;
+            if (medical.length === 0) {
+                mtbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center">No medical conditions recorded.</td></tr>`;
+            } else {
+                let html = "";
+                medical.forEach(r => {
+                    const cond = r.medical_history_name || "—";
+                    const dateAdded = r.date_added ? fmtDate(r.date_added) : "—";  // Display Date Added
+                    html += `<tr class="hover:bg-gray-50">${td(cond)}${td(dateAdded)}</tr>`;
+                });
+                mtbody.innerHTML = html;
+            }
+
+            if (surgical.length === 0) {
+                stbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center">No surgical history recorded.</td></tr>`;
+            } else {
+                let html = "";
+                surgical.forEach(r => {
+                    const proc = r.surgical_history_name || "—";
+                    const dateAdded = r.date_added ? fmtDate(r.date_added) : "—";  // Display Date Added
+                    html += `<tr class="hover:bg-gray-50">${td(proc)}${td(dateAdded)}</tr>`;
+                });
+                stbody.innerHTML = html;
+            }
+        })
+        .catch(() => {
+            mtbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center text-red-600">Failed to load data.</td></tr>`;
+            stbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center text-red-600">Failed to load data.</td></tr>`;
         });
-        mtbody.innerHTML = html;
-      }
+}
 
-      /* SURGICAL */
-      if (surgical.length === 0){
-        stbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center">No surgical history recorded.</td></tr>`;
-      } else {
-        let html = "";
-        surgical.forEach(r => {
-          const proc = firstNonEmpty(r, ["procedure_name","procedure"]);
-          const notes = firstNonEmpty(r, ["notes","remarks","description"]);
-          html += `<tr class="hover:bg-gray-50">${td(proc)}${td(notes)}</tr>`;
-        });
-        stbody.innerHTML = html;
-      }
 
-    })
-    .catch(() => {
-      mtbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center text-red-600">Failed to load data.</td></tr>`;
-      stbody.innerHTML = `<tr><td colspan="2" class="px-6 py-6 text-center text-red-600">Failed to load data.</td></tr>`;
-    });
-  }
 
   if (openMed) openMed.addEventListener("click", ()=>{ open(medModal); loadMedSurgRows(); });
   if (closeMed) closeMed.addEventListener("click", ()=> close(medModal));
@@ -936,37 +935,37 @@ function statusBadge(statusRaw){
   var closeSupp2 = document.getElementById("closeSupplementsModal2");
   var suppBackdrop = document.getElementById("supplementsBackdrop");
 
-  function loadSuppRows(){
+function loadSuppRows() {
     const tbody = document.getElementById("supp-rows");
     tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-6 text-center">Loading…</td></tr>`;
 
     fetch("{% url 'nurse_module:childSupplements' record.child_health_id %}", {
-      headers:{ "X-Requested-With":"XMLHttpRequest" }
+        headers: { "X-Requested-With": "XMLHttpRequest" }
     })
-    .then(res => res.json())
-    .then(data => {
-      const rows = data.rows || [];
-      if (rows.length === 0){
-        tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-6 text-center">No supplements recorded.</td></tr>`;
-        return;
-      }
+        .then(res => res.json())
+        .then(data => {
+            const rows = data.rows || [];
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-6 text-center">No supplements recorded.</td></tr>`;
+                return;
+            }
 
-      let html = "";
-      rows.forEach(r => {
-        const type = firstNonEmpty(r, ["supplement_type","type","name"]);
-        const age  = firstNonEmpty(r, ["age_months","age"]);
-        const date = fmtDate(firstNonEmpty(r, ["date_given","given_date","date"]));
-        const giver = firstNonEmpty(r, ["given_by_name","personnel_full_name","given_by"]);
+            let html = "";
+            rows.forEach(r => {
+                const type = r.supplement_name || "—";  // Ensure supplement type is set here
+                const age = r.age_in_months || "—";
+                const date = r.date_given ? fmtDate(r.date_given) : "—";
+                const giver = r.given_by || "—";
+                html += `<tr class="hover:bg-gray-50">${td(type)}${td(age)}${td(date)}${td(giver)}</tr>`;
+            });
+            tbody.innerHTML = html;
+        })
+        .catch(() => {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-6 text-center text-red-600">Failed to load supplements.</td></tr>`;
+        });
+}
 
-        html += `<tr class="hover:bg-gray-50">${td(type)}${td(age)}${td(date)}${td(giver)}</tr>`;
-      });
 
-      tbody.innerHTML = html;
-    })
-    .catch(() => {
-      tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-6 text-center text-red-600">Failed to load supplements.</td></tr>`;
-    });
-  }
 
   if (openSupp) openSupp.addEventListener("click", ()=>{ open(suppModal); loadSuppRows(); });
   if (closeSupp) closeSupp.addEventListener("click", ()=> close(suppModal));

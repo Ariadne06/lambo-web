@@ -16,6 +16,9 @@ import re
 from datetime import datetime, date
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponseRedirect
+from django.http import Http404
+from django.contrib import messages
+from django.conf import settings
 
 _UI_TO_SQL_AUDIENCE = {
     'EVERYONE': 'both',
@@ -28,6 +31,26 @@ _SQL_TO_UI_AUDIENCE = {
     'personnel': 'PERSONNEL',
     'resident': 'RESIDENTS',
 }
+
+def _public_url(request, path: str | None):
+    """
+    Normalize DB-stored image paths so the template always gets a usable URL.
+    - absolute http(s): return as-is
+    - root-relative (starts with /): build absolute (so it works in emails or iframes)
+    - plain relative like 'announcements/x.jpg': prefix MEDIA_URL and build absolute
+    """
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    if path.startswith('/'):
+        return request.build_absolute_uri(path)
+    # For relative paths, construct the media URL
+    base = settings.MEDIA_URL or '/media/'
+    if not base.endswith('/'):
+        base += '/'
+    media_path = base + path.lstrip('/')
+    return request.build_absolute_uri(media_path)
 
 
 @custom_login_required
@@ -106,9 +129,14 @@ def bhw_dashboard(request):
         messages.error(request, f"Failed loading recent announcements: {e}")
         latest_announcements = []
 
-    # ---- Modal filters ----
+    # ===========================
+    # Announcements (BHW sees personnel + both)
+    # ===========================
+    ALLOWED = {"personnel", "both"}
+
+    # Modal filters (GET -> ann_*)
     ann_q        = (request.GET.get('ann_q') or '').strip() or None
-    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None
+    ann_aud      = (request.GET.get('ann_audience') or '').strip() or None  # '', resident, personnel, both
     ann_from_str = (request.GET.get('ann_from') or '').strip()
     ann_to_str   = (request.GET.get('ann_to') or '').strip()
 
@@ -121,23 +149,26 @@ def bhw_dashboard(request):
     except ValueError:
         messages.warning(request, 'Invalid date filter for announcements.')
 
-    # ---- Full list for modal (restricted to personnel scope) ----
+    # Full list for the modal (server filter + enforce BHW scope)
     try:
-        rows = AnnouncementRepo.list_all(
+        announcements_all = AnnouncementRepo.list_all(
             q=ann_q, date_from=ann_from, date_to=ann_to,
             created_by=None, sort='date_desc', limit=200, offset=0,
-            audience=ann_aud or None
+            audience=ann_aud or None   # None = DB shows all audiences
         )
-        announcements_all = []
-        for a in rows:
-            aud = ((a.get("audience") or a.get("p_audience") or "both").strip().lower())
-            a["audience"] = aud
-            a["announcement_date"] = a.get("announcement_date") or a.get("created_date")
-            if aud in ("personnel", "both"):   # enforce personnel scope
-                announcements_all.append(a)
+        filtered = []
+        for a in announcements_all:
+            if 'created_date' in a and 'announcement_date' not in a:
+                a['announcement_date'] = a['created_date']
+            a['audience'] = (a.get('audience') or 'both').lower()
+            if a['audience'] in ALLOWED:
+                filtered.append(a)
+        announcements_all = filtered
     except Exception as e:
         messages.error(request, f"Failed loading announcements list: {e}")
         announcements_all = []
+
+    ann_open = request.GET.get('ann_open') == '1'
 
     ctx = {
         "dash": dash,
@@ -150,11 +181,11 @@ def bhw_dashboard(request):
         "announcements_all": announcements_all,
         "ann_filters": {
             "q": ann_q or "",
-            "audience": ann_aud or "",
+            "audience": (ann_aud or ""),
             "from": ann_from_str,
             "to": ann_to_str,
         },
-        "ann_open": request.GET.get('ann_open') == '1',
+        "ann_open": ann_open,
     }
     return render(request, "bhw_module/bhw_dashboard.html", ctx)
 
@@ -3881,3 +3912,37 @@ def update_maternal_status(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect('bhw_module:maternalList')
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details using get_specific_announcement function"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        # Normalize image URL for display
+        if announcement.get('announcement_image_path'):
+            image_path = announcement.get('announcement_image_path')
+            if image_path and (image_path.startswith('http://') or image_path.startswith('https://')):
+                announcement['image_url'] = image_path  # Already a full URL from Supabase
+            else:
+                announcement['image_url'] = _public_url(request, image_path)  # Fallback for local files
+        
+        # Normalize audience display
+        if announcement.get('audience'):
+            announcement['audience'] = _SQL_TO_UI_AUDIENCE.get(announcement['audience'], 'EVERYONE')
+        
+        # Compatibility aliases
+        if 'created_date' in announcement and 'date' not in announcement:
+            announcement['date'] = announcement['created_date']
+        
+        return render(request, 'bhw_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('bhw_module:bhw_dashboard')
