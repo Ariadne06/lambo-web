@@ -3,7 +3,7 @@ from authentication.decorators import custom_login_required, role_required
 from django.http import JsonResponse, Http404
 from django.contrib import messages
 from math import ceil
-from .models import TreasurerRepo
+from .models import TreasurerRepo, AnnouncementRepo
 from utils.db_message import _clean_db_error
 from django.views.decorators.http import require_http_methods, require_POST
 from django.db import connection
@@ -65,6 +65,12 @@ def treasurer_dashboard(request):
     except Exception:
         recent = []
 
+    # Recent announcements for personnel
+    try:
+        latest_announcements = AnnouncementRepo.latest_for_personnel(limit=3)
+    except Exception:
+        latest_announcements = []
+
     ctx = {
         'year_choices': year_choices,
         'selected_year': sel_year,
@@ -74,6 +80,7 @@ def treasurer_dashboard(request):
         'kpi_or_today': kpi_or_today,
         'kpi_pending': kpi_pending,
         'recent': recent,
+        'latest_announcements': latest_announcements,
     }
     return render(request, 'treasurer_module/treasurer_dashboard.html', ctx)
 
@@ -580,3 +587,21 @@ def set_application_to_paid(request, application_id: int):
             return JsonResponse({'ok': False, 'message': _clean_db_error(e)}, status=400)
         messages.error(request, _clean_db_error(e))
         return redirect('treasurer_module:treasurer_application_detail', application_id=application_id)
+
+@custom_login_required
+@role_required('Barangay Treasurer')
+def announcement_detail(request, announcement_id: int):
+    """View specific announcement details"""
+    try:
+        announcement = AnnouncementRepo.get_one(announcement_id)
+        if not announcement:
+            raise Http404('Announcement not found')
+        
+        return render(request, 'treasurer_module/announcement_detail.html', {
+            'announcement': announcement
+        })
+    except Http404:
+        raise
+    except Exception as e:
+        messages.error(request, f"Failed to load announcement: {str(e)}")
+        return redirect('treasurer_module:treasurer_dashboard')
