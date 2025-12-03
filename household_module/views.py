@@ -1939,7 +1939,7 @@ class ChildHealthRecordUpdateView(APIView):
 class ChildImmunizationListView(APIView):
     """
     GET /child-health-records/<child_health_id>/immunizations/
-    Returns FULL immunization schedule with dose DATES
+    Returns FULL immunization schedule with REAL DATE VALUES
     """
     def get(self, request, child_health_id):
         try:
@@ -1983,25 +1983,40 @@ class ChildImmunizationListView(APIView):
                 immunizations = []
                 for row in rows:
                     record = dict(zip(columns, row))
-                    
-                    # ✅ Convert DATE columns to BOOLEAN for frontend
+
                     immunizations.append({
-                        'vaccine_type_id': record['vaccine_type_id'],
-                        'vaccine_name': record['vaccine_name'],
-                        'at_birth_given': record['at_birth_date'] is not None,
-                        'first_dose_given': record['first_dose_date'] is not None,
-                        'second_dose_given': record['second_dose_date'] is not None,
-                        'third_dose_given': record['third_dose_date'] is not None,
-                        'last_administered': (
-                            record['last_administered'].isoformat()
-                            if record['last_administered'] else None
+                        "vaccine_type_id": record["vaccine_type_id"],
+                        "vaccine_name": record["vaccine_name"],
+
+                        # RETURN REAL DATE VALUES
+                        "at_birth_date": (
+                            record["at_birth_date"].isoformat()
+                            if record["at_birth_date"] else None
                         ),
-                        'next_recommended_date': (
-                            record['next_recommended_date'].isoformat()
-                            if record['next_recommended_date'] else None
+                        "first_dose_date": (
+                            record["first_dose_date"].isoformat()
+                            if record["first_dose_date"] else None
+                        ),
+                        "second_dose_date": (
+                            record["second_dose_date"].isoformat()
+                            if record["second_dose_date"] else None
+                        ),
+                        "third_dose_date": (
+                            record["third_dose_date"].isoformat()
+                            if record["third_dose_date"] else None
                         ),
 
-                        'is_delayed': record['is_delayed'],
+                        "last_administered": (
+                            record["last_administered"].isoformat()
+                            if record["last_administered"] else None
+                        ),
+                        "next_recommended_date": (
+                            record["next_recommended_date"].isoformat()
+                            if record["next_recommended_date"] else None
+                        ),
+
+                        "status": record["status"],
+                        "is_delayed": record["is_delayed"],
                     })
 
             return Response({
@@ -2647,36 +2662,50 @@ class SearchMotherView(APIView):
 
 
 class MaternalHealthRecordListView(APIView):
+    """List maternal health records with search, status filter, and pagination"""
+
     def get(self, request):
         try:
-            # Extract query params
-            name_query = request.GET.get('name_query', None)
-            record_status_id = request.GET.get('record_status', None)
-            limit = int(request.GET.get('limit', 50))
-            offset = int(request.GET.get('offset', 0))
+            # NEW correct parameters (matching SQL function)
+            p_query = request.query_params.get("p_query", "").strip() or None
+            p_record_status_id = request.query_params.get("p_record_status_id", None)
+            p_limit = int(request.query_params.get("limit", 50))
+            p_offset = int(request.query_params.get("offset", 0))
 
-            # Convert record_status to int if provided
-            if record_status_id:
+            # Convert record_status_id to int when provided
+            if p_record_status_id is not None:
                 try:
-                    record_status_id = int(record_status_id)
+                    p_record_status_id = int(p_record_status_id)
                 except ValueError:
-                    record_status_id = None
+                    return Response({
+                        "success": False,
+                        "error": "Invalid p_record_status_id"
+                    }, status=400)
 
-            # Call helper (4 parameters only)
-            result = view_all_maternal_record(
-                name_query=name_query,
-                record_status=record_status_id,
-                limit=limit,
-                offset=offset
-            )
+            with connection.cursor() as cursor:
+                cursor.callproc("view_all_maternal_record", [
+                    p_query,
+                    p_record_status_id,
+                    p_limit,
+                    p_offset
+                ])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                results = [dict(zip(cols, row)) for row in rows]
 
-            return Response(result)
-        except Exception as e:
-            print(f"❌ List maternal records error: {e}")
             return Response({
-                'success': False,
-                'error': str(e)
+                "success": True,
+                "count": len(results),
+                "data": results   # data includes household_number + family_code
+            }, status=200)
+
+        except Exception as e:
+            print(f"❌ Error in View_all_maternal_record: {e}")
+            return Response({
+                "success": False,
+                "error": str(e)
             }, status=500)
+
 
 
 # ========================================
@@ -3279,10 +3308,37 @@ class DiseaseScreenListView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class DiseaseTypeListView(APIView):
+    def get(self, request):
+        types = DiseaseType.objects.filter(is_active=True).values(
+            "disease_type_id",
+            "disease_name"
+        )
+        return Response({
+            "success": True,
+            "data": list(types)
+        })
+
 
 # ========================================
 # LABORATORY SCREENING
 # ========================================
+class TestTypeListView(APIView):
+    def get(self, request):
+        try:
+            test_types = TestType.objects.all().values(
+                "test_type_id", "test_name"
+            )
+            return Response({
+                "success": True,
+                "data": list(test_types)
+            })
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
 
 class LabScreeningCreateView(APIView):
     """Add laboratory screening"""

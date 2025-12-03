@@ -580,29 +580,29 @@
                     <tr class="hover:bg-gray-50/50 {% if immunization.is_delayed %}bg-red-50{% endif %}">
                       <td class="px-4 py-3 font-medium text-gray-800">{{ immunization.vaccine_name }}</td>
                       <td class="px-4 py-3">
-                        {% if immunization.at_birth_given %}
-                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">✓</span>
+                        {% if immunization.at_birth_date %}
+                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">{{ immunization.at_birth_date|date:"m/d/Y" }}</span>
                         {% else %}
                           <span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span>
                         {% endif %}
                       </td>
                       <td class="px-4 py-3">
-                        {% if immunization.first_dose_given %}
-                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">✓</span>
+                        {% if immunization.first_dose_date %}
+                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">{{ immunization.first_dose_date|date:"m/d/Y" }}</span>
                         {% else %}
                           <span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span>
                         {% endif %}
                       </td>
                       <td class="px-4 py-3">
-                        {% if immunization.second_dose_given %}
-                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">✓</span>
+                        {% if immunization.second_dose_date %}
+                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">{{ immunization.second_dose_date|date:"m/d/Y" }}</span>
                         {% else %}
                           <span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span>
                         {% endif %}
                       </td>
                       <td class="px-4 py-3">
-                        {% if immunization.third_dose_given %}
-                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">✓</span>
+                        {% if immunization.third_dose_date %}
+                          <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[12px] text-green-700">{{ immunization.third_dose_date|date:"m/d/Y" }}</span>
                         {% else %}
                           <span class="inline-flex items-center rounded-md border border-dashed border-gray-300 px-2 py-1 text-[12px] text-gray-500">—</span>
                         {% endif %}
@@ -1452,152 +1452,77 @@
           <div class="relative">
             <select name="month_id" required class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
               <option value="">Select month to assess</option>
-              
-              {% now "Y-m" as current_month %}
-              
-              <option value="1" 
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 1 and bf.date_assessed and bf.date_assessed|date:"Y-m" == current_month %}
-                    disabled
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 1 %}
+                  {% if bf.date_assessed %}
+                    <option value="1" disabled>1st Month (Already assessed)</option>
+                  {% else %}
+                    <option value="1">1st Month</option>
                   {% endif %}
-                {% endfor %}>
-                1st Month
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 1 and bf.date_assessed and bf.date_assessed|date:"Y-m" == current_month %}
-                    (Already assessed this month)
-                  {% endif %}
-                {% endfor %}
-              </option>
-              
-              {% comment %}Month 2 - Check if Month 1 was ever assessed{% endcomment %}
-              {% with month1_found=False %}
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 1 and bf.date_assessed %}
-                    <option value="2" 
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 2 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          disabled
-                        {% endif %}
-                      {% endfor %}>
-                      2nd Month
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 2 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          (Already assessed this month)
-                        {% endif %}
-                      {% endfor %}
-                    </option>
-                    {% with month1_found=True %}
-                    {% endwith %}
-                  {% endif %}
-                {% endfor %}
-                {% if not month1_found %}
-                  <option value="2" disabled>2nd Month (Complete Month 1 first)</option>
                 {% endif %}
-              {% endwith %}
+              {% empty %}
+                <option value="1">1st Month</option>
+              {% endfor %}
               
-              {% comment %}Month 3 - Check if Month 2 was ever assessed{% endcomment %}
-              {% with month2_found=False %}
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 2 and bf.date_assessed %}
-                    <option value="3" 
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 3 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          disabled
-                        {% endif %}
-                      {% endfor %}>
-                      3rd Month
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 3 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          (Already assessed this month)
-                        {% endif %}
-                      {% endfor %}
-                    </option>
-                    {% with month2_found=True %}
-                    {% endwith %}
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 2 %}
+                  {% if bf.date_assessed %}
+                    <option value="2" disabled>2nd Month (Already assessed)</option>
+                  {% else %}
+                    <option value="2">2nd Month</option>
                   {% endif %}
-                {% endfor %}
-                {% if not month2_found %}
-                  <option value="3" disabled>3rd Month (Complete Month 2 first)</option>
                 {% endif %}
-              {% endwith %}
+              {% empty %}
+                <option value="2">2nd Month</option>
+              {% endfor %}
               
-              {% comment %}Month 4 - Check if Month 3 was ever assessed{% endcomment %}
-              {% with month3_found=False %}
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 3 and bf.date_assessed %}
-                    <option value="4" 
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 4 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          disabled
-                        {% endif %}
-                      {% endfor %}>
-                      4th Month
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 4 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          (Already assessed this month)
-                        {% endif %}
-                      {% endfor %}
-                    </option>
-                    {% with month3_found=True %}
-                    {% endwith %}
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 3 %}
+                  {% if bf.date_assessed %}
+                    <option value="3" disabled>3rd Month (Already assessed)</option>
+                  {% else %}
+                    <option value="3">3rd Month</option>
                   {% endif %}
-                {% endfor %}
-                {% if not month3_found %}
-                  <option value="4" disabled>4th Month (Complete Month 3 first)</option>
                 {% endif %}
-              {% endwith %}
+              {% empty %}
+                <option value="3">3rd Month</option>
+              {% endfor %}
               
-              {% comment %}Month 5 - Check if Month 4 was ever assessed{% endcomment %}
-              {% with month4_found=False %}
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 4 and bf.date_assessed %}
-                    <option value="5" 
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 5 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          disabled
-                        {% endif %}
-                      {% endfor %}>
-                      5th Month
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 5 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          (Already assessed this month)
-                        {% endif %}
-                      {% endfor %}
-                    </option>
-                    {% with month4_found=True %}
-                    {% endwith %}
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 4 %}
+                  {% if bf.date_assessed %}
+                    <option value="4" disabled>4th Month (Already assessed)</option>
+                  {% else %}
+                    <option value="4">4th Month</option>
                   {% endif %}
-                {% endfor %}
-                {% if not month4_found %}
-                  <option value="5" disabled>5th Month (Complete Month 4 first)</option>
                 {% endif %}
-              {% endwith %}
+              {% empty %}
+                <option value="4">4th Month</option>
+              {% endfor %}
               
-              {% comment %}Month 6 - Check if Month 5 was ever assessed{% endcomment %}
-              {% with month5_found=False %}
-                {% for bf in breastfeed_results %}
-                  {% if bf.month_number == 5 and bf.date_assessed %}
-                    <option value="6" 
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 6 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          disabled
-                        {% endif %}
-                      {% endfor %}>
-                      6th Month
-                      {% for bf2 in breastfeed_results %}
-                        {% if bf2.month_number == 6 and bf2.date_assessed and bf2.date_assessed|date:"Y-m" == current_month %}
-                          (Already assessed this month)
-                        {% endif %}
-                      {% endfor %}
-                    </option>
-                    {% with month5_found=True %}
-                    {% endwith %}
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 5 %}
+                  {% if bf.date_assessed %}
+                    <option value="5" disabled>5th Month (Already assessed)</option>
+                  {% else %}
+                    <option value="5">5th Month</option>
                   {% endif %}
-                {% endfor %}
-                {% if not month5_found %}
-                  <option value="6" disabled>6th Month (Complete Month 5 first)</option>
                 {% endif %}
-              {% endwith %}
+              {% empty %}
+                <option value="5">5th Month</option>
+              {% endfor %}
+              
+              {% for bf in breastfeed_results %}
+                {% if bf.month_number == 6 %}
+                  {% if bf.date_assessed %}
+                    <option value="6" disabled>6th Month (Already assessed)</option>
+                  {% else %}
+                    <option value="6">6th Month</option>
+                  {% endif %}
+                {% endif %}
+              {% empty %}
+                <option value="6">6th Month</option>
+              {% endfor %}
             </select>
             <span class="pointer-events-none absolute left-3 top-2.5 text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">

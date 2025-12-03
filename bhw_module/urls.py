@@ -57,6 +57,10 @@ urlpatterns = [
      path('maternal/add-disease-screening/', views.add_disease_screening, name='addDiseaseScreening'),
      path('maternal/add-lab-screening/', views.add_lab_screening, name='addLabScreening'),
      path('maternal/add-checkup-record/', views.add_checkup_record, name='addCheckupRecord'),
+     path('maternal/add-supplement/', views.add_maternal_supplement, name='addMaternalSupplement'),
+     path('maternal/add-deworming/', views.add_maternal_deworming, name='addMaternalDeworming'),
+     path('maternal/add-delivery-outcome/', views.add_delivery_outcome, name='addDeliveryOutcome'),
+     path('maternal/add-postpartum-visit/', views.add_postpartum_visit, name='addPostpartumVisit'),
      # PDF Generation endpoints
      path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
      path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
