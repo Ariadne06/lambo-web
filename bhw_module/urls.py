@@ -61,6 +61,7 @@ urlpatterns = [
      path('maternal/add-deworming/', views.add_maternal_deworming, name='addMaternalDeworming'),
      path('maternal/add-delivery-outcome/', views.add_delivery_outcome, name='addDeliveryOutcome'),
      path('maternal/add-postpartum-visit/', views.add_postpartum_visit, name='addPostpartumVisit'),
+     path('maternal/update-status/', views.update_maternal_status, name='updateMaternalStatus'),
      # PDF Generation endpoints
      path('household_list/pdf/', views.generate_household_list_pdf, name='generate_household_list_pdf'),
      path('household/<int:household_id>/pdf/', views.generate_household_detail_pdf, name='generate_household_detail_pdf'),
