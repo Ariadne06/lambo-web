@@ -301,4 +301,11 @@ path(
      path('bhw/dashboard/', 
           views.BHWDashboardView.as_view(), 
           name='bhw-dashboard'),
+
+     # Immunization Schedule
+     path(
+        'child-immunization-schedule/',
+        views.ChildImmunizationScheduleListView.as_view(),
+        name='child-immunization-schedule-list'
+    ),
 ]
