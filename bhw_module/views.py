@@ -3414,6 +3414,24 @@ def add_checkup_record(request):
         if not pid:
             raise ValueError("Personnel ID is required")
         
+        # Validate AOG weeks against previous records
+        try:
+            existing_checkups = Maternal.sp_view_specific_maternal_all_checkup_records(maternal_health_id)
+            if existing_checkups:
+                # Sort by date to get the latest record
+                sorted_checkups = sorted(existing_checkups, key=lambda x: x.get('checkup_date', ''), reverse=True)
+                latest_checkup = sorted_checkups[0]
+                latest_aog_weeks = latest_checkup.get('aog_weeks')
+                
+                if latest_aog_weeks and aog_weeks <= latest_aog_weeks:
+                    raise ValueError(f"AOG weeks must be greater than {latest_aog_weeks} (from the latest checkup record)")
+        except Exception as validation_error:
+            # If it's our validation error, re-raise it
+            if "AOG weeks must be greater than" in str(validation_error):
+                raise validation_error
+            # Otherwise, continue (might be database connection issue, etc.)
+            pass
+        
         # Convert optional fields
         if bmi:
             bmi = float(bmi)
@@ -3562,6 +3580,12 @@ def add_delivery_outcome(request):
         other_attendant = request.POST.get('other_attendant', '').strip() or None
         time_of_delivery = request.POST.get('time_of_delivery', '').strip() or None
         
+        # New parameters for baby birthweight and sex
+        baby_birthweight_in_grams = request.POST.get('baby_birthweight_in_grams', '').strip()
+        baby_birthweight_in_grams = int(baby_birthweight_in_grams) if baby_birthweight_in_grams else None
+        
+        baby_sex = request.POST.get('baby_sex', '').strip() or None
+        
         if not date_terminated:
             raise ValueError("Date terminated is required")
         
@@ -3576,6 +3600,8 @@ def add_delivery_outcome(request):
             other_attendant=other_attendant,
             time_of_delivery=time_of_delivery,
             date_terminated=date_terminated,
+            baby_birthweight_in_grams=baby_birthweight_in_grams,
+            baby_sex=baby_sex,
             personnel_id=pid
         )
         set_flash(request, "Delivery outcome added successfully.", "success")
@@ -3636,3 +3662,35 @@ def add_postpartum_visit(request):
         set_flash(request, _clean_db_error(e), "error")
     
     return redirect_to_view()
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+@require_POST
+def update_maternal_status(request):
+    maternal_health_id = request.POST.get('maternal_health_id')
+    record_status_id = request.POST.get('record_status_id')
+    pid = int(request.session.get('personnel_id') or 0)
+    
+    if not pid:
+        set_flash(request, "Missing personnel id.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not maternal_health_id:
+        set_flash(request, "Missing maternal health record ID.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    if not record_status_id:
+        set_flash(request, "Missing record status.", "error")
+        return redirect('bhw_module:maternalList')
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_maternal_health_record_status(%s, %s, %s)", 
+                         [int(maternal_health_id), int(record_status_id), pid])
+            result = cursor.fetchone()
+        
+        set_flash(request, "Maternal health record status updated successfully.", "success")
+    except Exception as e:
+        set_flash(request, _clean_db_error(e), "error")
+    
+    return redirect('bhw_module:maternalList')
