@@ -3571,3 +3571,90 @@ def generate_household_detail_pdf(request, household_id: int):
         print(f"[ERROR] Failed to generate household detail PDF: {traceback.format_exc()}")
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
 
+
+@require_POST
+def cron_renew_businesses(request):
+    """
+    Endpoint for Supabase cron job to trigger annual business renewal.
+    This should be called via HTTP POST from Supabase cron using pg_net.
+    
+    Expected to run on January 1st each year at midnight.
+    
+    Security: Add authentication token in production (e.g., check header or secret key)
+    """
+    # Optional: Add simple token-based auth for security
+    auth_token = request.headers.get('X-Cron-Token')
+    expected_token = getattr(settings, 'CRON_SECRET_TOKEN', None)
+    
+    if expected_token and auth_token != expected_token:
+        logger.warning(f"Unauthorized cron attempt from {request.META.get('REMOTE_ADDR')}")
+        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
+    
+    try:
+        with connection.cursor() as cursor:
+            # Call the SQL function to update statuses
+            cursor.execute("SELECT set_all_business_to_for_renewal()")
+            updated_count = cursor.fetchone()[0]
+            
+            logger.info(f"Business renewal cron: {updated_count} businesses set to For Renewal")
+            
+            if updated_count == 0:
+                return JsonResponse({
+                    'ok': True,
+                    'message': 'No active businesses found to renew',
+                    'updated_count': 0,
+                    'notification_count': 0
+                })
+            
+            # Fetch all businesses that were just set to "For Renewal"
+            cursor.execute("""
+                SELECT 
+                    b.business_id,
+                    b.business_name,
+                    b.resident_id AS owner_id,
+                    r.first_name || ' ' || COALESCE(r.middle_name || ' ', '') || r.last_name AS owner_name
+                FROM Business b
+                JOIN Resident r ON r.resident_id = b.resident_id
+                JOIN Business_Status bs ON bs.business_status_id = b.business_status_id
+                WHERE LOWER(bs.status_name) = 'for renewal'
+            """)
+            
+            businesses = cursor.fetchall()
+            notification_count = 0
+            failed_count = 0
+            
+            current_year = datetime.now().year
+            
+            # Send notification to each business owner
+            for business_id, business_name, owner_id, owner_name in businesses:
+                try:
+                    NotificationService.send_to_resident(
+                        resident_id=owner_id,
+                        title="🔄 Business Renewal Required",
+                        body=f'Your business "{business_name}" is now due for renewal. Please complete the renewal process before March 31, {current_year}. Failure to renew may result in penalties or business closure.',
+                        deep_link="/(tabs)/business"
+                    )
+                    notification_count += 1
+                    logger.info(f"Notification sent to {owner_name} (ID: {owner_id}) for business '{business_name}' (ID: {business_id})")
+                    
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to send notification for business_id {business_id} to resident_id {owner_id}: {e}")
+            
+            logger.info(f"Business renewal cron completed: {updated_count} businesses updated, {notification_count} notifications sent, {failed_count} failed")
+            
+            return JsonResponse({
+                'ok': True,
+                'message': 'Business renewal process completed',
+                'updated_count': updated_count,
+                'notification_count': notification_count,
+                'failed_count': failed_count
+            })
+            
+    except Exception as e:
+        logger.error(f"Business renewal cron job failed: {e}")
+        return JsonResponse({
+            'ok': False,
+            'error': str(e)
+        }, status=500)
+
