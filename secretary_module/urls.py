@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.secretary_dashboard, name='secretary_dashboard'),
     path('resident_list/', views.resident_list, name="resident_list"),
     path('resident/<int:resident_id>/detail/', views.resident_detail_json, name='resident_detail_json'),
+    path('api/search-residents/', views.search_residents_api, name='search_residents_api'),
     path('household_list/', views.household_list, name="household_list"),
     path('sec_householdView/', views.sec_householdView, name="sec_householdView"),
     path("api/general-health/", views.general_health_get_api, name="generalHealthGetApi"),

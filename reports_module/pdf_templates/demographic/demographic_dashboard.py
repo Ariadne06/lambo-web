@@ -144,7 +144,7 @@ class DemographicDashboardPDF:
         )
         
         # Title
-        elements.append(Paragraph("DEMOGRAPHIC DASHBOARD REPORT", title_style))
+        elements.append(Paragraph("DEMOGRAPHIC REPORT", title_style))
         generated_date = datetime.now().strftime('%B %d, %Y %I:%M %p')
         date_style = ParagraphStyle(
             'DateStyle',

@@ -6,7 +6,8 @@
 <div class="px-6 py-6 bg-gradient-to-br from-rose-50 to-white">
 
 <!-- Title chip --> <div class="mb-6 flex items-center justify-between"> <div class="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-white text-sm font-semibold shadow ring-1 ring-black/5" style="background-image:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%);"> <span class="inline-block h-2 w-2 rounded-full bg-white"></span> Maternal Profile </div>
-<a href="{% url 'bhw_module:maternalList' %}"
+<div class="flex gap-3">
+  <a href="{% url 'bhw_module:maternalList' %}"
    class="btn-gray inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
   <!-- back -->
   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -14,8 +15,11 @@
   </svg>
   Back
 </a>
+</div>
 
-</div> <!-- Card --> <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <form class="p-6 space-y-8">
+</div>
+
+<!-- Card --> <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"> <form class="p-6 space-y-8">
       {% if message %}
       <div id="messages" class="mb-4 px-4 py-3 rounded border
           {% if message_level == 'success' %}  bg-green-100 text-green-700 border border-green-400
@@ -154,6 +158,20 @@
   </div>
 </div>
 </form>
+</div>
+<!-- End of white card -->
+
+<!-- Generate PDF Button - Outside card, lower right -->
+<div class="mx-auto max-w-5xl flex justify-end mt-4">
+  <a href="{% url 'bhw_module:generate_maternal_detail_pdf' maternal_health_id=results.maternal_health_id %}"
+     target="_blank"
+     class="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-md ring-1 ring-black/5 bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-700 hover:to-red-600 transition-all">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+    </svg>
+    Generate PDF
+  </a>
+</div>
 
 <!-- Add Medical Condition - Form Modal -->
 <div id="medicalFormModal" class="hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-labelledby="medicalFormModal_title">

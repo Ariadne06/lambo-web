@@ -492,6 +492,96 @@ class Child(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+    
+    @staticmethod
+    def sp_get_all_children_records(start_date=None, end_date=None):
+        """Get all children records for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_all_children_records', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_child_immunization_summary(start_date=None, end_date=None):
+        """Get child immunization summary for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_child_immunization_summary', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_child_vaccination_schedule(start_date=None, end_date=None):
+        """Get child vaccination schedule for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_child_vaccination_schedule', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+
+class GeneralHealth(models.Model):
+    """Model for general health report functions."""
+    
+    class Meta:
+        managed = False
+    
+    @staticmethod
+    def sp_get_all_health_records(start_date=None, end_date=None):
+        """Get all health records for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_all_health_records', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_hypertension_cases(start_date=None, end_date=None):
+        """Get hypertension cases for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_hypertension_cases', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_diabetes_cases(start_date=None, end_date=None):
+        """Get diabetes cases for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_diabetes_cases', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_tb_cases(start_date=None, end_date=None):
+        """Get TB cases for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_tb_cases', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
 
 class Maternal:
     
@@ -1044,6 +1134,42 @@ class Maternal:
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT * FROM view_specific_maternal_all_postpartum_visit(%s)", [maternal_health_id])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_all_maternal_records(start_date=None, end_date=None):
+        """Get all maternal records for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_all_maternal_records', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_maternal_checkup_summary(start_date=None, end_date=None):
+        """Get maternal checkup summary for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_maternal_checkup_summary', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_maternal_immunization_summary(start_date=None, end_date=None):
+        """Get maternal immunization summary for report generation."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_maternal_immunization_summary', [start_date, end_date])
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]

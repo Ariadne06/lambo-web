@@ -75,8 +75,8 @@
       </div>
       <div class="p-4 space-y-3">
         {% for a in latest_announcements %}
-        <article class="rounded-xl border border-gray-200 p-4 hover:shadow-sm transition cursor-pointer" 
-                 onclick="window.location.href='{% url 'treasurer_module:announcement_detail' a.announcement_id %}'">
+        <article class="rounded-xl border border-gray-200 p-4 hover:shadow-sm transition cursor-pointer announcement-card" 
+                 data-url="{% url 'treasurer_module:announcement_detail' a.announcement_id %}">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <h4 class="font-semibold text-gray-900 line-clamp-2 hover:text-red-600 transition-colors">{{ a.header_title }}</h4>
@@ -181,6 +181,14 @@
       document.getElementById('yearFilterForm').submit();
     });
   }
+  
+  // Announcement card click handler
+  document.querySelectorAll('.announcement-card').forEach(card => {
+    card.addEventListener('click', () => {
+      window.location.href = card.dataset.url;
+    });
+  });
+  
   new Chart(document.getElementById('barAnnual'), {
     type: 'bar',
     data: {
