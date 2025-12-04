@@ -150,9 +150,15 @@ class NotificationService:
         deep_link: str = None,
         data: dict = None
     ) -> bool:
-        """Internal method to send notification using Expo Push Service."""
+        """Internal method to send notification.
+        
+        NOTE: This only creates the notification record in the database.
+        The actual push notification is sent by the database trigger (trigger_push_notification).
+        This prevents duplicate push notifications.
+        """
         try:
             # Create notification in database
+            # The database trigger will automatically send the push notification
             notification_id = create_notification(
                 user_type=user_type,
                 resident_id=resident_id,
@@ -166,60 +172,11 @@ class NotificationService:
                 logger.error("Failed to create notification in database")
                 return False
             
-            # Get user's push tokens
-            tokens = get_user_push_tokens(
-                user_type=user_type,
-                resident_id=resident_id,
-                personnel_id=personnel_id
-            )
-            
-            if not tokens:
-                logger.warning(f"No push tokens for {user_type} - resident_id:{resident_id} personnel_id:{personnel_id}")
-                # Still return True since notification was saved
-                return True
-            
-            # Send to all user's devices using Expo Push Service
-            sent_count = 0
-            for token_data in tokens:
-                notification_data = data or {}
-                notification_data.update({
-                    'deep_link': deep_link,
-                    'resident_id': resident_id,
-                    'personnel_id': personnel_id,
-                    'notification_id': notification_id
-                })
-                
-                try:
-                    response = push_client.publish(
-                        PushMessage(
-                            to=token_data['expo_push_token'],
-                            title=title,
-                            body=body,
-                            data=notification_data,
-                            sound='default',
-                            badge=1,
-                            channel_id='default'
-                        )
-                    )
-                    response.validate_response()
-                    sent_count += 1
-                    logger.info(f"Sent notification to {token_data['expo_push_token']}")
-                    
-                except DeviceNotRegisteredError:
-                    logger.warning(f"Removing invalid token: {token_data['expo_push_token']}")
-                    remove_push_token(token_data['expo_push_token'])
-                    
-                except PushTicketError as exc:
-                    logger.error(f"Push ticket error: {exc}")
-                    
-                except PushServerError as exc:
-                    logger.error(f"Push server error: {exc}")
-            
-            logger.info(f"Sent notification to {sent_count}/{len(tokens)} devices")
+            logger.info(f"Notification created with ID {notification_id} - trigger will send push")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
+            logger.error(f"Failed to create notification: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -291,4 +248,15 @@ def notify_household_visit_scheduled(personnel_id: int, household_number: str, s
         body=f"Visit scheduled for Household {household_number} on {scheduled_date}",
         deep_link="/(bhw)/household",
         data={'type': 'household_visit', 'household_number': household_number}
+    )
+
+
+def notify_business_renewal_required(resident_id: int, business_name: str, deadline: str = "March 31, 2025"):
+    """Send notification to business owner about renewal requirement."""
+    NotificationService.send_to_resident(
+        resident_id=resident_id,
+        title="Business Renewal Required 📋",
+        body=f'Your business "{business_name}" requires renewal. Please submit renewal requirements by {deadline}.',
+        deep_link="/(tabs)/business",
+        data={'type': 'business_renewal', 'business_name': business_name}
     )
