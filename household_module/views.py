@@ -21,7 +21,7 @@ from .serializers import (
 )
 from .utils.database_helpers import (
     search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record,
-    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record, view_all_child_immunization_schedule
+    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record, view_all_child_immunization_schedule, view_specific_resident_general_health_own
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -4040,6 +4040,66 @@ class ChildImmunizationScheduleListView(APIView):
             
         except Exception as e:
             print(f"❌ Error fetching immunization schedule: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResidentGeneralHealthView(APIView):
+    """
+    Get general health record for a specific resident (by resident_id)
+    """
+    def get(self, request, resident_id):
+        try:
+            quarter_id = request.query_params.get('quarter_id', None)
+            
+            print(f'📋 Fetching general health for resident_id: {resident_id}')
+            
+            # First find the family_member_id for this resident
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT family_member_id 
+                    FROM family_member 
+                    WHERE resident_id = %s 
+                    ORDER BY date_added DESC 
+                    LIMIT 1
+                """, [resident_id])
+                
+                result = cursor.fetchone()
+                
+                if not result:
+                    print(f'❌ No family member record found for resident_id: {resident_id}')
+                    return Response({
+                        'success': True,
+                        'data': None,
+                        'message': 'No family member record found for this resident'
+                    }, status=status.HTTP_200_OK)
+                
+                family_member_id = result[0]
+                print(f'✅ Found family_member_id: {family_member_id}')
+            
+            # Get the general health data
+            gh_data = view_specific_resident_general_health_own(family_member_id, quarter_id)
+            
+            if not gh_data:
+                print(f'❌ No general health record found for family_member_id: {family_member_id}')
+                return Response({
+                    'success': True,
+                    'data': None,
+                    'message': 'No general health record found for this resident in the current quarter'
+                }, status=status.HTTP_200_OK)
+            
+            print(f'✅ Successfully retrieved general health data')
+            return Response({
+                'success': True,
+                'data': gh_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f'❌ Error fetching resident general health: {e}')
+            import traceback
+            traceback.print_exc()
             return Response({
                 'success': False,
                 'error': str(e)

@@ -308,4 +308,7 @@ path(
         views.ChildImmunizationScheduleListView.as_view(),
         name='child-immunization-schedule-list'
     ),
+    path('residents/<int:resident_id>/general-health/', 
+         views.ResidentGeneralHealthView.as_view(), 
+         name='resident-general-health'),
 ]
