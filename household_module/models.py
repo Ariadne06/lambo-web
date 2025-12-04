@@ -485,17 +485,17 @@ class Household(models.Model):
     year = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    street = models.CharField(max_length=200, blank=True, null=True)
-    barangay = models.CharField(max_length=100, blank=True, null=True)  # Barangay name
-    city_municipality = models.CharField(max_length=100, blank=True, null=True)  # City/Municipality
-    country = models.CharField(max_length=100, blank=True, null=True)
+    # street = models.CharField(max_length=200, blank=True, null=True)
+    # barangay = models.CharField(max_length=100, blank=True, null=True)  # Barangay name
+    # city_municipality = models.CharField(max_length=100, blank=True, null=True)  # City/Municipality
+    # country = models.CharField(max_length=100, blank=True, null=True)
     
     class Meta:
         managed = False
         db_table = 'household'
         
-    def __str__(self):
-        return f"Household {self.household_number} - {self.street}, {self.city_municipality}"
+    # def __str__(self):
+    #     return f"Household {self.household_number} - {self.street}, {self.city_municipality}"
         
     @staticmethod
     def sp_insert_household(
@@ -749,7 +749,7 @@ class Household(models.Model):
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)
     family_code = models.CharField(max_length=20, unique=True)
-    # household_id = models.IntegerField()
+    household_id = models.IntegerField()
     household_type_id = models.IntegerField()
     family_head_id = models.IntegerField()  
     respondent_id = models.IntegerField()
@@ -766,14 +766,14 @@ class Family(models.Model):
     year = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    household = models.ForeignKey(Household, related_name='families', on_delete=models.CASCADE)
+    # household = models.ForeignKey(Household, related_name='families', on_delete=models.CASCADE)
     
     class Meta:
         managed = False
         db_table = 'family'
         
-    def __str__(self):
-        return f"Family {self.family_code} (Household: {self.household.household_number})"
+    # def __str__(self):
+    #     return f"Family {self.family_code} (Household: {self.household.household_number})"
         
     @staticmethod
     def sp_insert_family(
