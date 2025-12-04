@@ -1802,3 +1802,174 @@ def view_all_child_immunization_schedule(query=None, limit=100, offset=0):
     except Exception as e:
         print(f"❌ Failed to view immunization schedule: {str(e)}")
         raise Exception(f"Failed to view immunization schedule: {str(e)}")
+
+
+def view_specific_resident_general_health_own(family_member_id, quarter_id=None):
+    """
+    Get general health record for a specific family member
+    Returns dict or None
+    """
+    from django.db import connection
+    
+    with connection.cursor() as cursor:
+        # Get current quarter if not provided
+        if quarter_id is None:
+            cursor.execute("SELECT get_current_quarter_id()")
+            result = cursor.fetchone()
+            quarter_id = result[0] if result else None
+        
+        if quarter_id is None:
+            return None
+        
+        # First check if it's male or female
+        cursor.execute("""
+            SELECT r.sex
+            FROM family_member fm
+            JOIN resident r ON r.resident_id = fm.resident_id
+            WHERE fm.family_member_id = %s
+        """, [family_member_id])
+        
+        sex_result = cursor.fetchone()
+        if not sex_result:
+            return None
+        
+        sex = sex_result[0]
+        
+        # Query based on sex
+        if sex.lower() == 'male':
+            cursor.execute("""
+                SELECT 
+                    ghm.ghtm_id as record_id,
+                    ghm.family_member_id,
+                    r.resident_id,
+                    COALESCE(
+                        NULLIF(TRIM(CONCAT_WS(' ',
+                            COALESCE(r.first_name,''), 
+                            COALESCE(r.middle_name,''),
+                            COALESCE(r.last_name,''),  
+                            COALESCE(r.suffix,'')
+                        )), ''),
+                        r.resident_code
+                    ) as full_name,
+                    r.sex,
+                    CASE 
+                        WHEN r.dob IS NULL THEN NULL
+                        WHEN EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob)) >= 1 
+                            THEN EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob))::TEXT
+                        ELSE (
+                            (EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob))::INT * 12) +
+                            EXTRACT(MONTH FROM age(CURRENT_DATE, r.dob))::INT
+                        )::TEXT || ' months'
+                    END as age,
+                    f.family_code,
+                    cls.class_description,
+                    ghm.medical_history_ids,
+                    ghm.smoker,
+                    ghm.alcohol_drinker,
+                    ghm.sexually_active,
+                    q.quarter_name,
+                    ghm.created_at,
+                    ghm.updated_at
+                FROM general_health_male ghm
+                JOIN family_member fm ON fm.family_member_id = ghm.family_member_id
+                JOIN resident r ON r.resident_id = fm.resident_id
+                JOIN family f ON f.family_id = fm.family_id
+                LEFT JOIN class cls ON cls.class_id = ghm.class_id
+                LEFT JOIN quarter q ON q.quarter_id = ghm.quarter_id
+                WHERE ghm.family_member_id = %s 
+                AND ghm.quarter_id = %s
+                ORDER BY ghm.created_at DESC
+                LIMIT 1
+            """, [family_member_id, quarter_id])
+        else:  # female
+            cursor.execute("""
+                SELECT 
+                    ghf.ghtf_id as record_id,
+                    ghf.family_member_id,
+                    r.resident_id,
+                    COALESCE(
+                        NULLIF(TRIM(CONCAT_WS(' ',
+                            COALESCE(r.first_name,''), 
+                            COALESCE(r.middle_name,''),
+                            COALESCE(r.last_name,''),  
+                            COALESCE(r.suffix,'')
+                        )), ''),
+                        r.resident_code
+                    ) as full_name,
+                    r.sex,
+                    CASE 
+                        WHEN r.dob IS NULL THEN NULL
+                        WHEN EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob)) >= 1 
+                            THEN EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob))::TEXT
+                        ELSE (
+                            (EXTRACT(YEAR FROM age(CURRENT_DATE, r.dob))::INT * 12) +
+                            EXTRACT(MONTH FROM age(CURRENT_DATE, r.dob))::INT
+                        )::TEXT || ' months'
+                    END as age,
+                    f.family_code,
+                    cls.class_description,
+                    ghf.medical_history_ids,
+                    ghf.smoker,
+                    ghf.alcohol_drinker,
+                    ghf.sexually_active,
+                    ghf.last_menstrual_period,
+                    ghf.fp_method_yn,
+                    fpm.fp_method_name,
+                    fps.fp_status_name,
+                    ghf.age_of_menarche,
+                    q.quarter_name,
+                    ghf.created_at,
+                    ghf.updated_at
+                FROM general_health_female ghf
+                JOIN family_member fm ON fm.family_member_id = ghf.family_member_id
+                JOIN resident r ON r.resident_id = fm.resident_id
+                JOIN family f ON f.family_id = fm.family_id
+                LEFT JOIN class cls ON cls.class_id = ghf.class_id
+                LEFT JOIN fp_method fpm ON fpm.fp_method_id = ghf.fp_method_id
+                LEFT JOIN fp_status fps ON fps.fp_status_id = ghf.fp_status_id
+                LEFT JOIN quarter q ON q.quarter_id = ghf.quarter_id
+                WHERE ghf.family_member_id = %s 
+                AND ghf.quarter_id = %s
+                ORDER BY ghf.created_at DESC
+                LIMIT 1
+            """, [family_member_id, quarter_id])
+        
+        row = cursor.fetchone()
+        if not row:
+            return None
+        
+        # Build result dictionary based on sex
+        if sex.lower() == 'male':
+            columns = [
+                'record_id', 'family_member_id', 'resident_id', 'full_name', 'sex', 
+                'age', 'family_code', 'class_description', 'medical_history_ids',
+                'smoker', 'alcohol_drinker', 'sexually_active', 'quarter_name',
+                'created_at', 'updated_at'
+            ]
+        else:
+            columns = [
+                'record_id', 'family_member_id', 'resident_id', 'full_name', 'sex', 
+                'age', 'family_code', 'class_description', 'medical_history_ids',
+                'smoker', 'alcohol_drinker', 'sexually_active',
+                'last_menstrual_period', 'fp_method_yn', 'fp_method_name',
+                'fp_status_name', 'age_of_menarche', 'quarter_name',
+                'created_at', 'updated_at'
+            ]
+        
+        result = dict(zip(columns, row))
+        
+        # Convert medical_history_ids to medical_history for frontend compatibility
+        if result.get('medical_history_ids'):
+            result['medical_history'] = result['medical_history_ids']
+        else:
+            result['medical_history'] = []
+        
+        # Convert dates to ISO format
+        if result.get('created_at'):
+            result['created_at'] = result['created_at'].isoformat()
+        if result.get('updated_at'):
+            result['updated_at'] = result['updated_at'].isoformat()
+        if result.get('last_menstrual_period'):
+            result['last_menstrual_period'] = result['last_menstrual_period'].isoformat()
+        
+        return result
