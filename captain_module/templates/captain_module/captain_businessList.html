@@ -64,7 +64,7 @@
             <th class="px-4 py-3 text-left font-semibold">Business Name</th>
             <th class="px-4 py-3 text-left font-semibold">Owner</th>
             <th class="px-4 py-3 text-left font-semibold">Address</th>
-            <th class="px-4 py-3 text-left font-semibold">Status</th>
+            <!-- <th class="px-4 py-3 text-left font-semibold">Status</th> -->
             <th class="px-4 py-3 text-right font-semibold">Action</th>
           </tr>
         </thead>
@@ -75,16 +75,20 @@
               <td class="px-4 py-3">{{ r.business_name }}</td>
               <td class="px-4 py-3 text-xs text-gray-600">Owner: {{ r.owner_name }}</td>
               <td class="px-4 py-3">{{ r.address }}</td>
-              <td class="px-4 py-3">
+              <!-- <td class="px-4 py-3">
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold
-                             {% if r.status|lower == 'active' %}
-                               bg-emerald-100 text-emerald-700
-                             {% else %}
-                               bg-amber-100 text-amber-700
-                             {% endif %}">
+                  {% if r.status|lower == 'active' %}
+                    bg-emerald-100 text-emerald-700
+                  {% elif r.status|lower == 'inactive' %}
+                    bg-gray-100 text-gray-700
+                  {% elif r.status|lower == 'pending' %}
+                    bg-yellow-100 text-yellow-700
+                  {% else %}
+                    bg-gray-200 text-gray-600  Default color for unexpected status 
+                  {% endif %}">
                   {{ r.status }}
                 </span>
-              </td>
+              </td> -->
               <td class="px-4 py-3 text-right">
                 <button type="button"
                         class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:border-red-500 hover:text-red-600"
@@ -255,6 +259,9 @@
 </div>
 
 <script>
+  console.log("Business Status:", "{{ r.status }}");
+</script>
+<script>
   function openModal(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -268,136 +275,6 @@
     el.classList.add('hidden');
     document.documentElement.classList.remove('overflow-hidden');
   }
-
-  const CLEARANCE_CATEGORY_LABELS = {
-    "1": "Corporation",
-    "2": "Partnership",
-    "3": "Sole Proprietorship (≤ ₱30,000)",
-    "4": "Sole Proprietorship (> ₱30,000)",
-    "5": "Market Vendor / Stall Owner",
-    "6": "Lessor – Commercial / Subdivision",
-    "7": "Lessor – Apartment (Light Materials ≤ 5 units)",
-    "8": "Lessor – Apartment (Concrete ≤ 5 units)",
-    "9": "Lessor – Bed Spacer / Room Rentals",
-    "10": "Lessor – Lot Property",
-    "11": "Internet Café",
-    "12": "Amusement",
-  };
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeModal('modalBusinessView');
-    }
-  });
-
-  async function openBusinessView(businessId) {
-    const detailTpl = "{% url 'secretary_module:business_detail_json' 99999 %}";
-    const detailUrl = detailTpl.replace("99999", businessId);
-
-    const pick = (obj, keys, def = '') => {
-      for (const k of keys) {
-        if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
-      }
-      return def;
-    };
-
-    try {
-      const res = await fetch(detailUrl, {
-        method: 'GET',
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-      });
-
-      const ct = res.headers.get('content-type') || '';
-      const text = await res.text();
-      let d = {};
-
-      if (ct.includes('application/json')) {
-        try {
-          d = JSON.parse(text);
-        } catch (e) {
-          console.error('View parse error:', e, text.slice(0, 200));
-          alert('Error loading business details (could not parse).');
-          return;
-        }
-      } else {
-        console.error('View non-JSON response:', res.status, text.slice(0, 200));
-        alert('Error loading business details.');
-        return;
-      }
-
-      const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (el.tagName === 'INPUT') el.value = val ?? '';
-        else el.textContent = val ?? '';
-      };
-
-      setVal("mbv_business_id",        pick(d, ['business_id','id']));
-      setVal("mbv_owner_name",         pick(d, ['owner_name','resident_name','owner_full_name']));
-      setVal("mbv_business_name",      pick(d, ['business_name','biz_name']));
-      setVal("mbv_business_type",      pick(d, ['business_type','type_name','business_type_name']));
-
-      const catText = pick(d, ['clearance_category_name', 'clearance_category', 'category_name'], '');
-      let catId = pick(d, ['clearance_category_id', 'clearance_categoryid'], '');
-      catId = (catId !== '' && catId !== null && catId !== undefined) ? Number(catId) : null;
-
-      if (catText) setVal('mbv_clearance_category', catText);
-      else setVal('mbv_clearance_category', CLEARANCE_CATEGORY_LABELS[String(catId)] || '—');
-
-      setVal("mbv_business_status",    pick(d, ['status','business_status','business_status_name']));
-      setVal("mbv_total_gross_income", pick(d, ['total_gross_income','gross_income','income']));
-
-      // Units
-      const units = pick(d, ['total_units','units','unit_count'], null);
-      const unitsRow = document.getElementById('mbv_units_row');
-      if (unitsRow) {
-        if (units !== null && units !== undefined && units !== '') {
-          unitsRow.classList.remove('hidden');
-          setVal("mbv_total_units", units);
-        } else {
-          unitsRow.classList.add('hidden');
-          setVal("mbv_total_units", "");
-        }
-      }
-
-      // Amusement
-      const isAmusement = (String(catId) === '12') || (String(catText || '').toLowerCase() === 'amusement');
-      const amuseWrap = document.getElementById('mbv_amusement_wrap');
-      if (amuseWrap) {
-        if (isAmusement) {
-          amuseWrap.classList.remove('hidden');
-          setVal('mbv_videoke_count',      pick(d, ['videoke_count','videoke','videoke_units'], 0));
-          setVal('mbv_billiard_count',     pick(d, ['billiard_count','billiards','billiard_tables'], 0));
-          setVal('mbv_other_device_count', pick(d, ['other_device_count','other_devices'], 0));
-        } else {
-          amuseWrap.classList.add('hidden');
-          setVal('mbv_videoke_count', '');
-          setVal('mbv_billiard_count', '');
-          setVal('mbv_other_device_count', '');
-        }
-      }
-
-      setVal("mbv_address", pick(d, ['address','full_address','addr']));
-
-      const issuanceDate = pick(d, ['clearance_date','clearance_date_issued','issuance_date','date_issued'], '');
-      const rawStatus = String(pick(d, ['status','business_status'],'')).trim().toLowerCase();
-      const clearanceRow = document.getElementById("mbv_clearance_row");
-      if (clearanceRow) {
-        if (rawStatus === 'active' && issuanceDate) {
-          clearanceRow.classList.remove("hidden");
-          setVal("mbv_clearance_date", issuanceDate);
-        } else {
-          clearanceRow.classList.add("hidden");
-          setVal("mbv_clearance_date", "");
-        }
-      }
-
-      openModal("modalBusinessView");
-    } catch (err) {
-      console.error('View fetch error:', err);
-      alert("Network error while loading business details.");
-    }
-  }
 </script>
+
 {% endblock %}
