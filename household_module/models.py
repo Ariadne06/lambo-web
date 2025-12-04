@@ -738,6 +738,51 @@ class Household(models.Model):
                 return result[0] if result else None 
         except Exception as e:
             raise e
+    
+    @staticmethod
+    def sp_get_all_households_report(start_date=None, end_date=None):
+        """
+        Get all households for report generation.
+        Returns list of dicts with household details.
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_all_households_report', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_active_households_report(start_date=None, end_date=None):
+        """
+        Get active households for report generation.
+        Returns list of dicts with household details.
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_active_households_report', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def sp_get_visited_households_report(start_date=None, end_date=None):
+        """
+        Get recently visited households for report generation.
+        Returns list of dicts with household details.
+        """
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('bhw_get_visited_households_report', [start_date, end_date])
+                cols = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            raise e
 
 class Family(models.Model):
     family_id = models.AutoField(primary_key=True)

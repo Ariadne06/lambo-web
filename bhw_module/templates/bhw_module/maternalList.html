@@ -110,7 +110,7 @@
                 <span class="rounded-full px-3 py-1 text-xs font-bold
                   {% if 'completed' in person.record_status|lower %}bg-green-100 text-green-700
                   {% elif 'ongoing' in person.record_status|lower %}bg-yellow-100 text-yellow-700
-                  {% elif 'transfer' in person.record_status|lower %}" style="background-color: #dbeafe; color: #1d4ed8;
+                  {% elif 'transfer' in person.record_status|lower %}bg-blue-100 text-blue-700
                   {% elif 'incomplete' in person.record_status|lower %}bg-red-100 text-red-700
                   {% else %}bg-gray-100 text-gray-700{% endif %}">{{ person.record_status }}</span>
               </td>
@@ -131,8 +131,10 @@
                   </form>
                   <!-- Edit Status button -->
                   <button type="button"
-                          class="gh-blue inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow"
-                          onclick="openEditStatusModal({{ person.maternal_health_id }}, '{{ person.record_status }}', {{ person.record_status_id }})">
+                          class="gh-blue inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow edit-status-btn"
+                          data-maternal-id="{{ person.maternal_health_id }}"
+                          data-record-status="{{ person.record_status }}"
+                          data-status-id="{{ person.record_status_id }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
@@ -367,6 +369,16 @@
     const SEARCH_DEBOUNCE_MS = 1000;
     queryInput.addEventListener('input', debounce(() => { pageField.value = 1; form.requestSubmit(); }, SEARCH_DEBOUNCE_MS));
   }
+
+  // Edit Status button click handler
+  document.querySelectorAll('.edit-status-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const maternalId = this.getAttribute('data-maternal-id');
+      const recordStatus = this.getAttribute('data-record-status');
+      const statusId = this.getAttribute('data-status-id');
+      openEditStatusModal(maternalId, recordStatus, statusId);
+    });
+  });
 </script>
 
 

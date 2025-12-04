@@ -71,5 +71,13 @@ urlpatterns = [
      path('announcement/<int:announcement_id>/', views.announcement_detail, name='announcement_detail'),
      path('maternal_list/pdf/', views.generate_maternal_list_pdf, name='generate_maternal_list_pdf'),
      path('maternal/<int:maternal_health_id>/pdf/', views.generate_maternal_detail_pdf, name='generate_maternal_detail_pdf'),
+     # Dashboard PDF
+     path('dashboard/pdf/', views.generate_bhw_dashboard_pdf, name='generate_bhw_dashboard_pdf'),
+     # Reports
+     path('reports/', views.bhw_reports, name='bhw_reports'),
+     path('reports/household/pdf/', views.household_report_pdf, name='household_report_pdf'),
+     path('reports/maternal/pdf/', views.maternal_report_pdf, name='maternal_report_pdf'),
+     path('reports/child/pdf/', views.child_report_pdf, name='child_report_pdf'),
+     path('reports/general-health/pdf/', views.general_health_report_pdf, name='general_health_report_pdf'),
 ]
 

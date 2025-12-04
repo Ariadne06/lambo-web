@@ -4014,3 +4014,277 @@ def announcement_detail(request, announcement_id: int):
     except Exception as e:
         messages.error(request, f"Failed to load announcement: {str(e)}")
         return redirect('bhw_module:bhw_dashboard')
+
+
+# ==================== REPORTS ====================
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def bhw_reports(request):
+    """Display the BHW reports page with filter modals"""
+    return render(request, 'bhw_module/bhw_reports.html')
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def household_report_pdf(request):
+    """Generate PDF report for household/family data"""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.bhw.household_report import HouseholdReportPDF
+    from datetime import datetime
+    
+    try:
+        # Get parameters from request
+        report_type = request.GET.get('type', 'all')
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        # Parse dates
+        start_date = None
+        end_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        print(f"====== Generating Household Report PDF ======")
+        print(f"Report Type: {report_type}")
+        print(f"Start Date: {start_date}")
+        print(f"End Date: {end_date}")
+        
+        # Generate PDF
+        pdf_generator = HouseholdReportPDF(
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        type_label = {
+            'all': 'All_Households',
+            'active': 'Active_Households',
+            'visited': 'Visited_Households'
+        }.get(report_type, 'Households')
+        filename = f'{type_label}_Report_{timestamp}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        print(f"====== PDF Generated Successfully: {filename} ======")
+        return response
+        
+    except Exception as e:
+        print(f"====== Error generating household report PDF ======")
+        print(f"Error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def maternal_report_pdf(request):
+    """Generate PDF report for maternal health data"""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.bhw.maternal_report import MaternalHealthReportPDF
+    from datetime import datetime
+    
+    try:
+        # Get parameters
+        report_type = request.GET.get('type', 'all')
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        # Parse dates
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Generate PDF
+        pdf_generator = MaternalHealthReportPDF(
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'Maternal_{report_type.capitalize()}_Report_{timestamp}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def child_report_pdf(request):
+    """Generate PDF report for child health data"""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.bhw.child_report import ChildHealthReportPDF
+    from datetime import datetime
+    
+    try:
+        # Get parameters
+        report_type = request.GET.get('type', 'all')
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        # Parse dates
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Generate PDF
+        pdf_generator = ChildHealthReportPDF(
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'Child_{report_type.capitalize()}_Report_{timestamp}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def general_health_report_pdf(request):
+    """Generate PDF report for general health data"""
+    from django.http import HttpResponse
+    from reports_module.pdf_templates.bhw.general_health_report import GeneralHealthReportPDF
+    from datetime import datetime
+    
+    try:
+        # Get parameters
+        report_type = request.GET.get('type', 'all')
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        # Parse dates
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Generate PDF
+        pdf_generator = GeneralHealthReportPDF(
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+        pdf_buffer = pdf_generator.generate()
+        
+        # Create response
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'GeneralHealth_{report_type.capitalize()}_Report_{timestamp}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@custom_login_required
+@role_required('Barangay Health Worker')
+def generate_bhw_dashboard_pdf(request):
+    """Generate PDF report for BHW dashboard statistics"""
+    from django.http import HttpResponse
+    import traceback
+    
+    print("="*80)
+    print("STARTING PDF GENERATION")
+    print("="*80)
+    
+    try:
+        # Get personnel_id from logged-in user
+        personnel_id = getattr(request.user, "personnel_id", 0) or 0
+        quarter_id = request.GET.get('quarter_id')
+        
+        print(f"Personnel ID: {personnel_id}")
+        print(f"Quarter ID: {quarter_id}")
+        
+        # Import here to catch import errors
+        print("Attempting import...")
+        from reports_module.pdf_templates.bhw.bhw_dashboard_report import BHWDashboardReportPDF
+        print("Import successful!")
+        
+        # Generate PDF
+        print("Creating PDF generator instance...")
+        pdf_generator = BHWDashboardReportPDF(personnel_id=personnel_id, quarter_id=quarter_id)
+        print("PDF generator created!")
+        
+        print("Calling generate()...")
+        pdf_buffer = pdf_generator.generate()
+        print("PDF generated!")
+        
+        # Create response
+        print("Creating HTTP response...")
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        filename = f'bhw_dashboard_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        print("SUCCESS! Returning PDF response")
+        return response
+    except Exception as e:
+        print("="*80)
+        print("ERROR OCCURRED!")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print("-"*80)
+        print("Full traceback:")
+        print(traceback.format_exc())
+        print("="*80)
+        messages.error(request, f"Failed to generate dashboard report: {str(e)}")
+        return redirect('bhw_module:bhw_dashboard')

@@ -282,41 +282,41 @@ class MaternalHealthDetailPDF:
         elements.append(header_table)
         elements.append(Spacer(1, 4))
         
-        if obstetrical_history:
-            gravida = obstetrical_history.get('gravida', '___')
-            para = obstetrical_history.get('para', '___')
-            abortion = obstetrical_history.get('abortion', '___')
-            lmp = str(obstetrical_history.get('last_menstrual_period', ''))[:10] if obstetrical_history.get('last_menstrual_period') else '_______________'
-            edd = str(obstetrical_history.get('expected_date_of_delivery', ''))[:10] if obstetrical_history.get('expected_date_of_delivery') else '_______________'
-            
-            obs_info = [
-                [
-                    f"Gravida: {gravida}",
-                    f"Para: {para}",
-                    f"Abortion: {abortion}"
-                ],
-                [
-                    f"Last Menstrual Period: {lmp}",
-                    f"Expected Date of Delivery: {edd}",
-                    ''
-                ],
-            ]
-            
-            obs_table = Table(obs_info, colWidths=[2.8*inch, 2.2*inch, 2.0*inch])
-            obs_table.setStyle(TableStyle([
-                ('FONTNAME', (0, 0), (-1, -1), 'Times-Roman'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1D5DB')),
-            ]))
-            elements.append(obs_table)
-            elements.append(Spacer(1, 0.15*inch))
+        # Always show obstetrical history fields, with blank data if not available
+        gravida = obstetrical_history.get('gravida', '___') if obstetrical_history else '___'
+        para = obstetrical_history.get('para', '___') if obstetrical_history else '___'
+        abortion = obstetrical_history.get('abortion', '___') if obstetrical_history else '___'
+        lmp = str(obstetrical_history.get('last_menstrual_period', ''))[:10] if obstetrical_history and obstetrical_history.get('last_menstrual_period') else '_______________'
+        edd = str(obstetrical_history.get('expected_date_of_delivery', ''))[:10] if obstetrical_history and obstetrical_history.get('expected_date_of_delivery') else '_______________'
+        
+        obs_info = [
+            [
+                f"Gravida: {gravida}",
+                f"Para: {para}",
+                f"Abortion: {abortion}"
+            ],
+            [
+                f"Last Menstrual Period: {lmp}",
+                f"Expected Date of Delivery: {edd}",
+                ''
+            ],
+        ]
+        
+        obs_table = Table(obs_info, colWidths=[2.8*inch, 2.2*inch, 2.0*inch])
+        obs_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Times-Roman'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1D5DB')),
+        ]))
+        elements.append(obs_table)
+        elements.append(Spacer(1, 0.15*inch))
         
         # === MEDICAL & SURGICAL HISTORY SECTION ===
         header_table = Table([[Paragraph("MEDICAL & SURGICAL HISTORY", section_header_style)]], colWidths=[7.0*inch])
