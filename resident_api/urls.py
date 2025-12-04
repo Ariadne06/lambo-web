@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView, CheckUsernameAvailabilityView, LatestResidentAnnouncements, ResidentAnnouncementsList, OwnerBusinessesMobileView, SpecificBusinessMobileView)
-
+from . import views
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
 router.register(r'civil-statuses', CivilStatusViewSet)
