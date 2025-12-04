@@ -11,80 +11,71 @@
 
   <!-- Top tools -->
   <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center gap-2">
-      <button type="button"
-        class="gh-gray inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow ring-1 ring-black/5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 3v10l3-3 1.41 1.41L12 17.82l-4.41-4.41L9 10l3 3V3h0Z"/>
-          <path d="M5 19h14v2H5z"/>
-        </svg>
-        Export CSV
-      </button>
-    </div>
-
-    <form id="controlsForm" method="GET" class="flex items-center gap-3">
+    <form id="controlsForm" method="GET" class="flex items-center gap-3 w-full justify-between">
       <div class="flex items-center gap-3">
         <input type="text" placeholder="Search GenInfo" name="query" id="queryInput"
                value="{{ query|default:'' }}"
                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none">
       </div>
 
-      <label class="text-gray-600">Quarter: </label>
-      <select
-        name="quarter_id"
-        class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-        onchange="if(this.value) this.form.submit();"
-      >
-        <option value="" selected disabled>— Select Quarter —</option>
-        {% for q in quarter %}
-          <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
-            {{ q.quarter_name }}
-          </option>
-        {% endfor %}
-      </select>
+      <div class="flex items-center gap-3">
+        <label class="text-gray-600">Quarter: </label>
+        <select
+          name="quarter_id"
+          class="mt-1 rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+          onchange="if(this.value) this.form.submit();"
+        >
+          <option value="" selected disabled>— Select Quarter —</option>
+          {% for q in quarter %}
+            <option value="{{ q.quarter_id }}" {% if q.quarter_id == quarter_id %}selected{% endif %}>
+              {{ q.quarter_name }}
+            </option>
+          {% endfor %}
+        </select>
 
-      <div class="flex items-center gap-2 text-sm">
-        <label for="limit" class="text-gray-600">Rows per page:</label>
-        <div class="relative inline-block">
-          <select id="limit" name="limit"
-                  class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
-            {% for n in limit_options %}
-              <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="relative">
-        <button type="button"
-                onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
-                class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          Filters
-        </button>
-
-        <div id="filtersMenu"
-             class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
-          <div>
-            <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
-            <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
-              <option value="">— Select Sitio —</option>
-              {% for s in sitio %}
-                <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+        <div class="flex items-center gap-2 text-sm">
+          <label for="limit" class="text-gray-600">Rows per page:</label>
+          <div class="relative inline-block">
+            <select id="limit" name="limit"
+                    class="appearance-none border rounded py-1 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 auto-submit">
+              {% for n in limit_options %}
+                <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
               {% endfor %}
             </select>
           </div>
+        </div>
 
-          <div>
-            <label for="sex" class="block text-gray-600 mb-1">Sex</label>
-            <select id="sex" name="sex" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
-              <option value="">— Select Sex —</option>
-              <option value="Male"  {% if sex == "Male" %}selected{% endif %}>Male</option>
-              <option value="Female" {% if sex == "Female" %}selected{% endif %}>Female</option>
-            </select>
+        <div class="relative">
+          <button type="button"
+                  onclick="document.getElementById('filtersMenu').classList.toggle('hidden')"
+                  class="flex items-center gap-2 px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17V13.414L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            Filters
+          </button>
+
+          <div id="filtersMenu"
+               class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-lg p-4 space-y-4 text-sm hidden z-10">
+            <div>
+              <label for="sitio_id" class="block text-gray-600 mb-1">Sitio</label>
+              <select id="sitio_id" name="sitio_id" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+                <option value="">— Select Sitio —</option>
+                {% for s in sitio %}
+                  <option value="{{ s.sitio_id }}" {% if sitio_id == s.sitio_id %}selected{% endif %}>{{ s.sitio_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label for="sex" class="block text-gray-600 mb-1">Sex</label>
+              <select id="sex" name="sex" class="w-full border rounded px-3 py-2 bg-white text-sm auto-submit">
+                <option value="">— Select Sex —</option>
+                <option value="Male"  {% if sex == "Male" %}selected{% endif %}>Male</option>
+                <option value="Female" {% if sex == "Female" %}selected{% endif %}>Female</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

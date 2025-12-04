@@ -20,6 +20,14 @@
           {% endif %}
         </p>
       </div>
+      <div>
+        <a href="{% url 'bhw_module:generate_bhw_dashboard_pdf' %}{% if dash.quarter_id %}?quarter_id={{ dash.quarter_id }}{% endif %}"
+           target="_blank"
+           class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 transition">
+          <i class="ri-file-pdf-line"></i>
+          Generate PDF
+        </a>
+      </div>
     </header>
 
     <!-- KPIs: household, maternal, child health, daily visits -->
