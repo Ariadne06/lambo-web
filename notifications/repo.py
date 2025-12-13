@@ -101,7 +101,8 @@ def get_user_notifications(
         if user_type == 'RESIDENT':
             cursor.execute(
                 """
-                SELECT notification_id, title, body, deep_link, is_read, created_at
+                SELECT notification_id, title, body, deep_link, is_read, 
+                       created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila' as created_at
                 FROM notification
                 WHERE user_type_id = %s AND resident_id = %s
                 ORDER BY created_at DESC
@@ -112,7 +113,8 @@ def get_user_notifications(
         else:
             cursor.execute(
                 """
-                SELECT notification_id, title, body, deep_link, is_read, created_at
+                SELECT notification_id, title, body, deep_link, is_read, 
+                       created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila' as created_at
                 FROM notification
                 WHERE user_type_id = %s AND personnel_id = %s
                 ORDER BY created_at DESC
@@ -239,29 +241,50 @@ def create_notification(
     Returns:
         notification_id
     """
-    with connection.cursor() as cursor:
-        # Get user_type_id
-        cursor.execute(
-            "SELECT user_type_id FROM user_type WHERE type_name = %s",
-            [user_type]
-        )
-        result = cursor.fetchone()
-        if not result:
-            raise ValueError(f"Invalid user type: {user_type}")
-        
-        user_type_id = result[0]
-        
-        cursor.execute(
-            """
-            INSERT INTO notification (user_type_id, resident_id, personnel_id, title, body, deep_link, is_read, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, FALSE, NOW())
-            RETURNING notification_id
-            """,
-            [user_type_id, resident_id, personnel_id, title, body, deep_link]
-        )
-        
-        result = cursor.fetchone()
-        return result[0] if result else None
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        with connection.cursor() as cursor:
+            # Get user_type_id
+            cursor.execute(
+                "SELECT user_type_id FROM user_type WHERE type_name = %s",
+                [user_type]
+            )
+            result = cursor.fetchone()
+            if not result:
+                logger.error(f"Invalid user type: {user_type}")
+                raise ValueError(f"Invalid user type: {user_type}")
+            
+            user_type_id = result[0]
+            
+            logger.info(f"Creating notification: user_type={user_type}, user_type_id={user_type_id}, "
+                       f"resident_id={resident_id}, personnel_id={personnel_id}, title={title}")
+            
+            cursor.execute(
+                """
+                INSERT INTO notification (user_type_id, resident_id, personnel_id, title, body, deep_link, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE, NOW())
+                RETURNING notification_id
+                """,
+                [user_type_id, resident_id, personnel_id, title, body, deep_link]
+            )
+            
+            result = cursor.fetchone()
+            notification_id = result[0] if result else None
+            
+            if notification_id:
+                logger.info(f"✅ Notification created successfully with ID: {notification_id}")
+            else:
+                logger.error("❌ Failed to create notification - no ID returned")
+            
+            return notification_id
+            
+    except Exception as e:
+        logger.error(f"❌ Error creating notification: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
 
 
 def get_user_push_tokens(
