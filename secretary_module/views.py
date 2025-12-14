@@ -2543,6 +2543,80 @@ def ctc_fee_update(request):
         })
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def document_stamp_fee(request):
+    """Display document stamp fee configuration page."""
+    # Get Business Clearance Fee type ID (you may need to adjust this query)
+    from .models import DocumentStampFee
+    
+    # Default to Business Clearance Fee (fee_type_id = 1, adjust if needed)
+    fee_type_id = 1
+    
+    try:
+        fee_data = DocumentStampFee.sp_get_document_stamp_fee(fee_type_id)
+    except Exception:
+        fee_data = None
+    
+    flash = get_flash(request)
+    return render(request, 'secretary_module/documentStampFee.html', {
+        'fee_data': fee_data,
+        'fee_type_id': fee_type_id,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def document_stamp_fee_update(request):
+    """Update document stamp fee amount."""
+    from .models import DocumentStampFee
+    
+    try:
+        pid = _get_personnel_id(request)
+        fee_type_id = request.POST.get('fee_type_id', '').strip()
+        amount = request.POST.get('amount', '').strip()
+        
+        if not fee_type_id:
+            return JsonResponse({'ok': False, 'error': 'Fee type ID is required'}, status=400)
+        
+        if not amount:
+            return JsonResponse({'ok': False, 'error': 'Amount is required'}, status=400)
+        
+        try:
+            fee_type_id_int = int(fee_type_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid fee type ID'}, status=400)
+        
+        try:
+            amount_decimal = Decimal(amount)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid amount format'}, status=400)
+        
+        if amount_decimal < 0:
+            return JsonResponse({'ok': False, 'error': 'Amount must be non-negative'}, status=400)
+
+        message = DocumentStampFee.sp_update_document_stamp_fee(
+            fee_type_id=fee_type_id_int,
+            amount=amount_decimal,
+            updated_by=pid
+        )
+        
+        new_row = DocumentStampFee.sp_get_document_stamp_fee(fee_type_id_int)
+        return JsonResponse({
+            'ok': True,
+            'message': message,
+            'row': {
+                'amount': float(new_row.get('amount')) if new_row and new_row.get('amount') else None,
+                'updated_at': new_row.get('updated_at').isoformat() if new_row and new_row.get('updated_at') else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
     
 
 def _acting_personnel_id(request) -> int:
