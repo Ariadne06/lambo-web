@@ -191,22 +191,22 @@
       <!-- Price Update submenu -->
       <button id="price-toggle" type="button"
               class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-                     {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %}
+                     {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %}
                        bg-white text-red-700 font-semibold shadow-sm
                      {% else %}
                        hover:bg-red-800/80
                      {% endif %}">
-        <i class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %}ri-price-tag-3-fill{% else %}ri-price-tag-3-line{% endif %} text-lg"></i>
+        <i class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %}ri-price-tag-3-fill{% else %}ri-price-tag-3-line{% endif %} text-lg"></i>
         <span>Price Update</span>
         <svg id="price-arrow" xmlns="http://www.w3.org/2000/svg"
              class="h-5 w-5 ml-auto transition-transform duration-300
-                    {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %} rotate-180 {% endif %}"
+                    {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %} rotate-180 {% endif %}"
              fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div id="price-submenu" class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+      <div id="price-submenu" class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
         <a href="{% url 'secretary_module:business_fee' %}"
            class="block px-3 py-2 rounded-md transition
                   {% if request.resolver_match.url_name in 'business_fee business_fee_update' %}
@@ -242,6 +242,13 @@
                   {% else %}
                     hover:bg-red-800/60
                   {% endif %}">Certified True Copy Fee</a>
+        <a href="{% url 'secretary_module:document_stamp_fee' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name in 'document_stamp_fee document_stamp_fee_update' %}
+                    bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+                  {% else %}
+                    hover:bg-red-800/60
+                  {% endif %}">Document Stamp Fee</a>
       </div>
 
       <!-- Approval -->
