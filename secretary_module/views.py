@@ -2000,6 +2000,48 @@ def set_application_to_for_payment(request, application_id: int):
         # Update status to For Payment
         SecretaryHelpers.set_application_to_for_payment(application_id)
         
+        # Extract application details for notification
+        certificate_type = app_data.get('request', 'Certificate') if app_data else 'Certificate'
+        application_code = app_data.get('application_code', '') if app_data else ''
+        
+        # Send notification to ALL active treasurers about new application for payment
+        try:
+            logger.info(f"Attempting to send notification to treasurers for application {application_id}")
+            # Get ALL active treasurer personnel IDs
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pc.personnel_id, r.first_name, r.last_name
+                    FROM Personnel_Credentials pc
+                    JOIN Resident r ON pc.resident_id = r.resident_id
+                    JOIN User_Role ur ON pc.role_id = ur.role_id
+                    WHERE ur.role_name = 'Barangay Treasurer'
+                    AND pc.is_active = TRUE
+                """)
+                treasurers = cursor.fetchall()
+                
+                if treasurers:
+                    for treasurer in treasurers:
+                        treasurer_id = treasurer[0]
+                        treasurer_name = f"{treasurer[1]} {treasurer[2]}"
+                        
+                        result = NotificationService.send_to_personnel(
+                            personnel_id=treasurer_id,
+                            title="New Application for Payment",
+                            body=f"{certificate_type} ({application_code}) has been forwarded and is ready for payment processing.",
+                            deep_link=f"/treasurer_module/applications/{application_id}"
+                        )
+                        
+                        if result:
+                            logger.info(f"✅ Notification sent to treasurer {treasurer_name} (ID: {treasurer_id})")
+                        else:
+                            logger.error(f"❌ Failed to send notification to treasurer {treasurer_name} (ID: {treasurer_id})")
+                else:
+                    logger.warning(f"⚠️ No active treasurer found in database")
+        except Exception as notif_error:
+            logger.error(f"❌ Failed to send treasurer notification for application {application_id}: {notif_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         # Send notification to resident
         resident_id = None
         if app_data:
