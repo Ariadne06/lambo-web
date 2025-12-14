@@ -1153,3 +1153,92 @@ class SpecificBusinessMobileView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class BusinessTypesLookupView(APIView):
+    """API view for fetching business types for mobile dropdown."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT business_type_id, type_name FROM Business_Type ORDER BY type_name")
+                business_types = [
+                    {"business_type_id": row[0], "type_name": row[1]}
+                    for row in cursor.fetchall()
+                ]
+            return Response(business_types, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class OwnershipsLookupView(APIView):
+    """API view for fetching ownership types for mobile dropdown."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT ownership_id, ownership_name FROM Ownership ORDER BY ownership_name")
+                ownerships = [
+                    {"ownership_id": row[0], "ownership_name": row[1]}
+                    for row in cursor.fetchall()
+                ]
+            return Response(ownerships, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ClearanceCategoriesLookupView(APIView):
+    """API view for fetching clearance categories for mobile dropdown."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT clearance_category_id, category_name, supported_units, minimum_units
+                    FROM Business_Clearance_Category
+                    ORDER BY category_name
+                """)
+                categories = [
+                    {
+                        "clearance_category_id": row[0],
+                        "category_name": row[1],
+                        "supported_units": row[2],
+                        "minimum_units": row[3]
+                    }
+                    for row in cursor.fetchall()
+                ]
+            return Response(categories, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class SitiosLookupView(APIView):
+    """API view for fetching sitios for mobile dropdown."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT sitio_id, sitio_name FROM Sitio ORDER BY sitio_name")
+                sitios = [
+                    {"sitio_id": row[0], "sitio_name": row[1]}
+                    for row in cursor.fetchall()
+                ]
+            return Response(sitios, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
