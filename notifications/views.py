@@ -313,9 +313,198 @@ class SendPushNotificationWebhookView(APIView):
             logger = logging.getLogger(__name__)
             logger.error(f"Error in push notification webhook: {str(e)}")
             logger.error(traceback.format_exc())
-            traceback.print_exc()
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class PersonnelMarkNotificationReadView(APIView):
+    """
+    Mark a single personnel notification as read.
+    
+    POST /api/notifications/<notification_id>/mark-read/
+    """
+    def post(self, request, notification_id):
+        try:
+            # Verify user is logged in personnel
+            if not hasattr(request, 'session') or not request.session.get('personnel_id'):
+                return Response({
+                    'success': False,
+                    'error': 'Unauthorized'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            personnel_id = request.session.get('personnel_id')
+            
+            # Verify notification belongs to this personnel
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT personnel_id FROM notification 
+                    WHERE notification_id = %s
+                """, [notification_id])
+                result = cursor.fetchone()
+                
+                if not result:
+                    return Response({
+                        'success': False,
+                        'error': 'Notification not found'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                
+                if result[0] != personnel_id:
+                    return Response({
+                        'success': False,
+                        'error': 'Unauthorized'
+                    }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Mark as read
+            success = mark_notification_read(notification_id)
+            
+            if success:
+                return Response({
+                    'success': True,
+                    'message': 'Notification marked as read'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'Failed to update notification'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PersonnelMarkAllNotificationsReadView(APIView):
+    """
+    Mark all personnel notifications as read.
+    
+    POST /api/notifications/mark-all-read/
+    """
+    def post(self, request):
+        try:
+            # Verify user is logged in personnel
+            if not hasattr(request, 'session') or not request.session.get('personnel_id'):
+                return Response({
+                    'success': False,
+                    'error': 'Unauthorized'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            personnel_id = request.session.get('personnel_id')
+            
+            # Mark all as read
+            count = mark_all_notifications_read(
+                user_type='PERSONNEL',
+                personnel_id=personnel_id
+            )
+            
+            return Response({
+                'success': True,
+                'message': f'{count} notifications marked as read',
+                'count': count
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PersonnelCheckNewNotificationsView(APIView):
+    """
+    Check for new notifications (polling endpoint).
+    
+    GET /api/notifications/check-new/
+    
+    Returns the current unread count for logged-in personnel.
+    """
+    def get(self, request):
+        try:
+            # Verify user is logged in personnel
+            if not hasattr(request, 'session') or not request.session.get('personnel_id'):
+                return Response({
+                    'success': False,
+                    'error': 'Unauthorized'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            personnel_id = request.session.get('personnel_id')
+            
+            # Get unread count
+            unread_count = get_unread_count(
+                user_type='PERSONNEL',
+                personnel_id=personnel_id
+            )
+            
+            return Response({
+                'success': True,
+                'unread_count': unread_count
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PersonnelListNotificationsView(APIView):
+    """
+    Get list of notifications for personnel (for refreshing modal).
+    
+    GET /api/notifications/list/
+    
+    Returns formatted notification list with timesince for logged-in personnel.
+    """
+    def get(self, request):
+        try:
+            # Verify user is logged in personnel
+            if not hasattr(request, 'session') or not request.session.get('personnel_id'):
+                return Response({
+                    'success': False,
+                    'error': 'Unauthorized'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            personnel_id = request.session.get('personnel_id')
+            role_name = request.session.get('role_name', '')
+            
+            # Get recent notifications
+            notifications = get_user_notifications(
+                user_type='PERSONNEL',
+                personnel_id=personnel_id,
+                limit=10
+            )
+            
+            # Format notifications for template
+            from django.utils.timesince import timesince
+            formatted_notifications = []
+            for notif in notifications:
+                # Determine notification type from deep_link
+                notif_type = 'general'
+                if notif.get('deep_link'):
+                    if 'applications' in notif['deep_link']:
+                        notif_type = 'forwarded_to_treasurer' if 'Treasurer' in role_name else 'payment_received'
+                
+                formatted_notifications.append({
+                    'id': notif['notification_id'],
+                    'title': notif['title'],
+                    'message': notif['body'],
+                    'link': notif.get('deep_link', ''),
+                    'type': notif_type,
+                    'is_read': notif['is_read'],
+                    'created_at': timesince(notif['created_at']) + ' ago'
+                })
+            
+            return Response({
+                'success': True,
+                'notifications': formatted_notifications
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
