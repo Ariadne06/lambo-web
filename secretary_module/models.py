@@ -684,6 +684,33 @@ class CTCFeeConfig(models.Model):
             cursor.fetchone()
 
 
+class DocumentStampFee(models.Model):
+    """
+    Thin wrapper for Document Stamp Fee configuration SQL functions.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_document_stamp_fee(fee_type_id: int):
+        """Get document stamp fee for a specific fee type."""
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_document_stamp_fee(%s)", [fee_type_id])
+            row = cursor.fetchone()
+            if row:
+                return dict(zip([col[0] for col in cursor.description], row))
+            return None
+
+    @staticmethod
+    def sp_update_document_stamp_fee(fee_type_id: int, amount, updated_by: int):
+        """Update document stamp fee for a specific fee type."""
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_document_stamp_fee(%s, %s, %s)", 
+                         [fee_type_id, amount, updated_by])
+            result = cursor.fetchone()
+            return result[0] if result else "Updated successfully"
+
+
 class AnnouncementRepo(models.Model):
     """
     Thin wrapper around your SQL functions:
