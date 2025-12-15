@@ -21,7 +21,7 @@ from .serializers import (
 )
 from .utils.database_helpers import (
     search_child, view_specific_child_health_record, view_all_child_health_records, view_specific_child_all_surgical_history, view_specific_child_all_medical_condition, view_all_child_supplements, view_specific_child_exclusive_breastfeed_track, get_all_months, view_obstetrical_history, view_specific_maternal_health_record, add_maternal_medical_condition, add_maternal_surgical_history, view_maternal_all_medical_conditions, view_maternal_all_surgical_history, view_maternal_all_lab_screening, add_checkup_record,
-    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record, view_all_child_immunization_schedule, view_specific_resident_general_health_own
+    add_delivery_outcome, view_maternal_delivery_outcome, view_maternal_all_postpartum_visits, view_all_maternal_record, view_all_child_immunization_schedule, view_specific_resident_general_health_own, get_all_resident_maternal_records
 )
 from .services.household_service import HouseholdService
 from django.core.cache import cache
@@ -4098,6 +4098,82 @@ class ResidentGeneralHealthView(APIView):
             
         except Exception as e:
             print(f'❌ Error fetching resident general health: {e}')
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResidentMaternalRecordsView(APIView):
+    """Get all maternal health records for a specific resident"""
+    def get(self, request, resident_id):
+        try:
+            print(f'👩 Fetching maternal records for resident_id: {resident_id}')
+            
+            # Call the SQL function from database_helpers
+            records = get_all_resident_maternal_records(resident_id)
+            
+            print(f'✅ Found {len(records)} maternal records')
+            
+            # Convert dates to ISO format for JSON serialization
+            for record in records:
+                if record.get('date_created'):
+                    record['date_created'] = record['date_created'].isoformat()
+            
+            return Response({
+                'success': True,
+                'data': records
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f'❌ Error fetching maternal records: {e}')
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResidentChildrenView(APIView):
+    """
+    Get all children of a resident
+    """
+    def get(self, request, resident_id):
+        try:
+            print(f'👶 Fetching children for resident_id: {resident_id}')
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT * FROM get_all_children_of_resident(%s)
+                """, [resident_id])
+                
+                rows = cursor.fetchall()
+                
+                if not rows:
+                    return Response({
+                        'success': True,
+                        'data': [],
+                        'message': 'No children found'
+                    }, status=status.HTTP_200_OK)
+                
+                columns = ['child_resident_id', 'child_health_id', 'child_full_name', 'sex', 'dob', 'age']
+                children = []
+                
+                for row in rows:
+                    child = dict(zip(columns, row))
+                    # Convert date to ISO format
+                    if child.get('dob'):
+                        child['dob'] = child['dob'].isoformat()
+                    children.append(child)
+                
+                print(f'✅ Found {len(children)} children')
+                return Response({
+                    'success': True,
+                    'data': children
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            print(f'❌ Error fetching children: {e}')
             import traceback
             traceback.print_exc()
             return Response({
