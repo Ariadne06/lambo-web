@@ -140,6 +140,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'theme.context_processors.application_badges',
+                'utils.context_processors.personnel_notifications',
             ],
         },
     },

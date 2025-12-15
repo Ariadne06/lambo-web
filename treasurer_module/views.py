@@ -696,6 +696,51 @@ def set_application_to_paid(request, application_id: int):
         )
         TreasurerRepo.set_paid(application_id, or_number, personnel_id)
         
+        # Send notification to ALL active secretaries about payment confirmation
+        try:
+            logger.info(f"Attempting to send notification to secretaries for application {application_id}")
+            # Get ALL active secretary personnel IDs
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pc.personnel_id, r.first_name, r.last_name
+                    FROM Personnel_Credentials pc
+                    JOIN Resident r ON pc.resident_id = r.resident_id
+                    JOIN User_Role ur ON pc.role_id = ur.role_id
+                    WHERE ur.role_name IN ('Barangay Secretary', 'Barangay Assistant Secretary')
+                    AND pc.is_active = TRUE
+                """)
+                secretaries = cursor.fetchall()
+                
+                if secretaries:
+                    app_data = TreasurerRepo.get_one(application_id)
+                    if app_data:
+                        application_code = app_data.get('application_code', '')
+                        certificate_type = app_data.get('request', 'Certificate')
+                        
+                        logger.info(f"Found {len(secretaries)} active secretary/ies, sending notifications...")
+                        
+                        for secretary in secretaries:
+                            secretary_id = secretary[0]
+                            secretary_name = f"{secretary[1]} {secretary[2]}"
+                            
+                            result = NotificationService.send_to_personnel(
+                                personnel_id=secretary_id,
+                                title="Payment Confirmed",
+                                body=f"Payment received for {certificate_type} ({application_code}). OR# {or_number}. Ready for certificate printing.",
+                                deep_link=f"/secretary_module/applications/{application_id}"
+                            )
+                            
+                            if result:
+                                logger.info(f"✅ Notification sent to secretary {secretary_name} (ID: {secretary_id})")
+                            else:
+                                logger.error(f"❌ Failed to send notification to secretary {secretary_name} (ID: {secretary_id})")
+                else:
+                    logger.warning(f"⚠️ No active secretary found in database")
+        except Exception as notif_error:
+            logger.error(f"❌ Failed to send secretary notification for application {application_id}: {notif_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         # Send notification to resident
         try:
             # Get application details to check if it's from a resident

@@ -1066,16 +1066,16 @@ def business_list(request):
     # Apply filters in Python - match by name since the DB returns text fields
     if business_type_ids:
         selected_names = [business_type_map.get(id) for id in business_type_ids if id in business_type_map]
-        rows = [r for r in rows if r.get('business_type_name') in selected_names]
+        rows = [r for r in rows if r.get('business_type') in selected_names]
     if clearance_category_ids:
         selected_names = [clearance_category_map.get(id) for id in clearance_category_ids if id in clearance_category_map]
-        rows = [r for r in rows if r.get('clearance_category_name') in selected_names]
+        rows = [r for r in rows if r.get('clearance_category') in selected_names]
     if ownership_ids:
         selected_names = [ownership_map.get(id) for id in ownership_ids if id in ownership_map]
-        rows = [r for r in rows if r.get('ownership_name') in selected_names]
+        rows = [r for r in rows if r.get('ownership') in selected_names]
     if business_status_ids:
         selected_names = [business_status_map.get(id) for id in business_status_ids if id in business_status_map]
-        rows = [r for r in rows if r.get('business_status_name') in selected_names]
+        rows = [r for r in rows if r.get('status') in selected_names]
     
     total = len(rows)
     
@@ -2000,6 +2000,48 @@ def set_application_to_for_payment(request, application_id: int):
         # Update status to For Payment
         SecretaryHelpers.set_application_to_for_payment(application_id)
         
+        # Extract application details for notification
+        certificate_type = app_data.get('request', 'Certificate') if app_data else 'Certificate'
+        application_code = app_data.get('application_code', '') if app_data else ''
+        
+        # Send notification to ALL active treasurers about new application for payment
+        try:
+            logger.info(f"Attempting to send notification to treasurers for application {application_id}")
+            # Get ALL active treasurer personnel IDs
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pc.personnel_id, r.first_name, r.last_name
+                    FROM Personnel_Credentials pc
+                    JOIN Resident r ON pc.resident_id = r.resident_id
+                    JOIN User_Role ur ON pc.role_id = ur.role_id
+                    WHERE ur.role_name = 'Barangay Treasurer'
+                    AND pc.is_active = TRUE
+                """)
+                treasurers = cursor.fetchall()
+                
+                if treasurers:
+                    for treasurer in treasurers:
+                        treasurer_id = treasurer[0]
+                        treasurer_name = f"{treasurer[1]} {treasurer[2]}"
+                        
+                        result = NotificationService.send_to_personnel(
+                            personnel_id=treasurer_id,
+                            title="New Application for Payment",
+                            body=f"{certificate_type} ({application_code}) has been forwarded and is ready for payment processing.",
+                            deep_link=f"/treasurer_module/applications/{application_id}"
+                        )
+                        
+                        if result:
+                            logger.info(f"✅ Notification sent to treasurer {treasurer_name} (ID: {treasurer_id})")
+                        else:
+                            logger.error(f"❌ Failed to send notification to treasurer {treasurer_name} (ID: {treasurer_id})")
+                else:
+                    logger.warning(f"⚠️ No active treasurer found in database")
+        except Exception as notif_error:
+            logger.error(f"❌ Failed to send treasurer notification for application {application_id}: {notif_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         # Send notification to resident
         resident_id = None
         if app_data:
@@ -2497,6 +2539,80 @@ def ctc_fee_update(request):
             'row': {
                 'amount': float(new_row.get('amount')) if new_row.get('amount') else None,
                 'updated_at': new_row.get('updated_at').isoformat() if new_row.get('updated_at') else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+def document_stamp_fee(request):
+    """Display document stamp fee configuration page."""
+    # Get Business Clearance Fee type ID (you may need to adjust this query)
+    from .models import DocumentStampFee
+    
+    # Default to Business Clearance Fee (fee_type_id = 1, adjust if needed)
+    fee_type_id = 1
+    
+    try:
+        fee_data = DocumentStampFee.sp_get_document_stamp_fee(fee_type_id)
+    except Exception:
+        fee_data = None
+    
+    flash = get_flash(request)
+    return render(request, 'secretary_module/documentStampFee.html', {
+        'fee_data': fee_data,
+        'fee_type_id': fee_type_id,
+        'message': flash['message'],
+        'message_level': flash['message_level'],
+    })
+
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def document_stamp_fee_update(request):
+    """Update document stamp fee amount."""
+    from .models import DocumentStampFee
+    
+    try:
+        pid = _get_personnel_id(request)
+        fee_type_id = request.POST.get('fee_type_id', '').strip()
+        amount = request.POST.get('amount', '').strip()
+        
+        if not fee_type_id:
+            return JsonResponse({'ok': False, 'error': 'Fee type ID is required'}, status=400)
+        
+        if not amount:
+            return JsonResponse({'ok': False, 'error': 'Amount is required'}, status=400)
+        
+        try:
+            fee_type_id_int = int(fee_type_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid fee type ID'}, status=400)
+        
+        try:
+            amount_decimal = Decimal(amount)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid amount format'}, status=400)
+        
+        if amount_decimal < 0:
+            return JsonResponse({'ok': False, 'error': 'Amount must be non-negative'}, status=400)
+
+        message = DocumentStampFee.sp_update_document_stamp_fee(
+            fee_type_id=fee_type_id_int,
+            amount=amount_decimal,
+            updated_by=pid
+        )
+        
+        new_row = DocumentStampFee.sp_get_document_stamp_fee(fee_type_id_int)
+        return JsonResponse({
+            'ok': True,
+            'message': message,
+            'row': {
+                'amount': float(new_row.get('amount')) if new_row and new_row.get('amount') else None,
+                'updated_at': new_row.get('updated_at').isoformat() if new_row and new_row.get('updated_at') else None,
             }
         })
     except Exception as e:

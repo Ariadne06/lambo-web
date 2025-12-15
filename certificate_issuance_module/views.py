@@ -8,7 +8,8 @@ from .serializers import (
     BarangayClearanceResponseSerializer,
     ResidentApplicationListRequestSerializer,
     ResidentTransactionListRequestSerializer,
-    CancelClearanceSerializer
+    CancelClearanceSerializer,
+    RegisterBusinessResidentSerializer
 )
 from .utils.database_helpers import (
     create_barangay_clearance,
@@ -16,7 +17,8 @@ from .utils.database_helpers import (
     get_resident_application_detail,
     get_resident_transactions,
     get_resident_transaction_detail,
-    cancel_resident_clearance
+    cancel_resident_clearance,
+    register_business_resident
 )
 from notifications.service import NotificationService
 import logging
@@ -304,6 +306,93 @@ class CancelClearanceView(views.APIView):
                 return Response(
                     {'success': False, 'error': error_message},
                     status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            return Response(
+                {'success': False, 'error': error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RegisterBusinessResidentView(views.APIView):
+    """API view for residents to register their own business."""
+    
+    def post(self, request):
+        """
+        Register a new business for a resident.
+        
+        Expected payload:
+        {
+            "resident_id": 123,
+            "business_name": "Sample Business",
+            "business_type_id": 1,
+            "nature_of_business": "Retail",
+            "ownership_id": 1,
+            "sitio_id": 1,
+            "city_municipality": "Consolacion",
+            "total_gross_income": 50000.00,
+            "clearance_category_id": 1,
+            ...
+        }
+        """
+        serializer = RegisterBusinessResidentSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(
+                {'success': False, 'error': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            result_message = register_business_resident(
+                resident_id=serializer.validated_data['resident_id'],
+                business_name=serializer.validated_data['business_name'],
+                business_type_id=serializer.validated_data['business_type_id'],
+                nature_of_business=serializer.validated_data['nature_of_business'],
+                ownership_id=serializer.validated_data['ownership_id'],
+                house_number=serializer.validated_data.get('house_number'),
+                street=serializer.validated_data.get('street'),
+                barangay=serializer.validated_data.get('barangay'),
+                sitio_id=serializer.validated_data['sitio_id'],
+                city_municipality=serializer.validated_data['city_municipality'],
+                country=serializer.validated_data.get('country', 'Philippines'),
+                total_gross_income=serializer.validated_data['total_gross_income'],
+                dti_sec_cda_reg_number=serializer.validated_data.get('dti_sec_cda_reg_number'),
+                clearance_category_id=serializer.validated_data['clearance_category_id'],
+                total_units=serializer.validated_data.get('total_units'),
+                videoke_count=serializer.validated_data.get('videoke_count'),
+                billiard_count=serializer.validated_data.get('billiard_count'),
+                other_device_count=serializer.validated_data.get('other_device_count')
+            )
+            
+            if result_message:
+                logger.info(f"Business registration successful: {result_message}")
+                return Response({
+                    'success': True,
+                    'message': result_message
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response(
+                    {'success': False, 'error': 'Failed to register business'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+                
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"Business registration failed: {error_message}")
+            
+            # Handle specific error codes from the SQL function
+            if 'B5001' in error_message or 'B5004' in error_message or 'B5005' in error_message:
+                # Validation errors
+                return Response(
+                    {'success': False, 'error': error_message},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif 'B5002' in error_message:
+                # Inactive business with pending penalty
+                return Response(
+                    {'success': False, 'error': error_message},
+                    status=status.HTTP_403_FORBIDDEN
                 )
             
             return Response(

@@ -283,27 +283,31 @@ class Business(models.Model):
         """
         Calls get_all_businesses with filter parameters matching the SQL function signature.
         
-        Parameters:
-        - query: TEXT - fuzzy search over business name, owner name, reg number
-        - business_type_id: INT - exact match on Business.business_type_id
-        - business_clearance_cat_id: INT - exact match on Business.clearance_category_id
-        - ownership_id: INT - exact match on Business.ownership_id
-        - business_status_id: INT - exact match on Business.business_status_id
-        - limit: INT - max rows to return (default 50)
-        - offset: INT - pagination offset (default 0)
+        SQL Function signature:
+        get_all_businesses(
+          p_search TEXT,
+          p_status TEXT,
+          p_type_id INT,
+          p_ownership_id INT,
+          p_owner_id INT,
+          p_limit INT,
+          p_offset INT
+        )
         
         Returns list of dicts with keys:
-        - business_id, business_name, owner_id, owner_name, business_type_name,
-          ownership_name, business_status_name, clearance_category_name, 
-          total_gross_income, reg_number, clearance_date_issued, address_id, 
-          address, updated_at
+        - business_id, business_name, owner_id, owner_name, business_type,
+          ownership, status, clearance_category, total_units, videoke_count,
+          billiard_count, other_device_count, total_gross_income, reg_number,
+          clearance_date_issued, address_id, address, created_by_rolename, updated_at
         """
         try:
             with connection.cursor() as cursor:
-                cursor.callproc('get_all_businesses', [
-                    query, business_type_id, business_clearance_cat_id, 
-                    ownership_id, business_status_id, limit, offset
-                ])
+                # Map old parameter names to new SQL function signature
+                # get_all_businesses(p_search, p_status, p_type_id, p_ownership_id, p_owner_id, p_limit, p_offset)
+                cursor.execute(
+                    "SELECT * FROM get_all_businesses(%s, %s, %s, %s, %s, %s, %s)",
+                    [query, None, business_type_id, ownership_id, None, limit, offset]
+                )
                 cols = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(cols, row)) for row in rows]
@@ -682,6 +686,33 @@ class CTCFeeConfig(models.Model):
         with connection.cursor() as cursor:
             cursor.execute("SELECT update_ctc_fee(%s, %s)", [amount, updated_by])
             cursor.fetchone()
+
+
+class DocumentStampFee(models.Model):
+    """
+    Thin wrapper for Document Stamp Fee configuration SQL functions.
+    """
+    class Meta:
+        managed = False
+
+    @staticmethod
+    def sp_get_document_stamp_fee(fee_type_id: int):
+        """Get document stamp fee for a specific fee type."""
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM get_document_stamp_fee(%s)", [fee_type_id])
+            row = cursor.fetchone()
+            if row:
+                return dict(zip([col[0] for col in cursor.description], row))
+            return None
+
+    @staticmethod
+    def sp_update_document_stamp_fee(fee_type_id: int, amount, updated_by: int):
+        """Update document stamp fee for a specific fee type."""
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT update_document_stamp_fee(%s, %s, %s)", 
+                         [fee_type_id, amount, updated_by])
+            result = cursor.fetchone()
+            return result[0] if result else "Updated successfully"
 
 
 class AnnouncementRepo(models.Model):

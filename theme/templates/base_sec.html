@@ -191,22 +191,22 @@
       <!-- Price Update submenu -->
       <button id="price-toggle" type="button"
               class="flex items-center w-full gap-3 px-4 py-3 rounded-lg transition
-                     {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %}
+                     {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %}
                        bg-white text-red-700 font-semibold shadow-sm
                      {% else %}
                        hover:bg-red-800/80
                      {% endif %}">
-        <i class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %}ri-price-tag-3-fill{% else %}ri-price-tag-3-line{% endif %} text-lg"></i>
+        <i class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %}ri-price-tag-3-fill{% else %}ri-price-tag-3-line{% endif %} text-lg"></i>
         <span>Price Update</span>
         <svg id="price-arrow" xmlns="http://www.w3.org/2000/svg"
              class="h-5 w-5 ml-auto transition-transform duration-300
-                    {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %} rotate-180 {% endif %}"
+                    {% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %} rotate-180 {% endif %}"
              fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div id="price-submenu" class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
+      <div id="price-submenu" class="{% if request.resolver_match.url_name in 'business_fee amusement other_clearances tax_penalties ctc_fee document_stamp_fee business_fee_update amusement_update other_clearances_update tax_penalties_update ctc_fee_update document_stamp_fee_update' %} block {% else %} hidden {% endif %} ml-10 space-y-1">
         <a href="{% url 'secretary_module:business_fee' %}"
            class="block px-3 py-2 rounded-md transition
                   {% if request.resolver_match.url_name in 'business_fee business_fee_update' %}
@@ -242,6 +242,13 @@
                   {% else %}
                     hover:bg-red-800/60
                   {% endif %}">Certified True Copy Fee</a>
+        <a href="{% url 'secretary_module:document_stamp_fee' %}"
+           class="block px-3 py-2 rounded-md transition
+                  {% if request.resolver_match.url_name in 'document_stamp_fee document_stamp_fee_update' %}
+                    bg-white text-red-700 font-semibold shadow-sm ring-1 ring-white/50
+                  {% else %}
+                    hover:bg-red-800/60
+                  {% endif %}">Document Stamp Fee</a>
       </div>
 
       <!-- Approval -->
@@ -266,6 +273,17 @@
                 {% endif %}">
         <i class="{% if request.resolver_match.url_name == 'announcement' %}ri-megaphone-fill{% else %}ri-megaphone-line{% endif %} text-lg"></i>
         <span>Announcement</span>
+      </a>
+
+      <!-- Notifications -->
+      <a href="#" onclick="openNotificationModal(); return false;" class="flex items-center gap-3 px-4 py-3 rounded-lg transition hover:bg-red-800/80 relative">
+        <i class="ri-notification-3-line text-lg"></i>
+        <span>Notifications</span>
+        {% if unread_notifications_count > 0 %}
+        <span class="ml-auto inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-bold bg-amber-500 text-white shadow-lg animate-pulse">
+          {{ unread_notifications_count }}
+        </span>
+        {% endif %}
       </a>
 
     </div>
@@ -312,7 +330,437 @@
     </div>
   </div>
 
+  <!-- Notification Modal -->
+  <div id="notification-modal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200" onclick="closeNotificationModal()"></div>
+
+    <div class="relative mx-auto my-10 w-[96%] max-w-3xl">
+      <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-red-200/60 to-transparent blur-lg opacity-80 pointer-events-none"></div>
+
+      <div class="relative bg-white rounded-3xl border border-gray-200 shadow-2xl ring-1 ring-gray-100 overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="notification-modal-panel">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-red-700 to-red-600 text-white px-8 py-5 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold tracking-wide">Notifications</h2>
+            <p class="text-xs text-red-100 mt-0.5">Certificate request updates</p>
+          </div>
+          <button type="button" class="text-white/90 hover:text-white text-xl leading-none font-bold" onclick="closeNotificationModal()">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div class="px-8 py-6 max-h-[70vh] overflow-y-auto" style="overflow-y: auto !important;">
+          {% if recent_notifications %}
+            <div class="space-y-3">
+              {% for notification in recent_notifications %}
+              <div class="p-4 rounded-xl border border-gray-200 hover:bg-red-50/50 transition cursor-pointer {% if not notification.is_read %}bg-blue-50 border-blue-200{% endif %}" 
+                   data-notification-id="{{ notification.id }}" 
+                   data-notification-link="{{ notification.link|escapejs }}"
+                   onclick="markAsReadAndRedirect(this.dataset.notificationId, this.dataset.notificationLink)">
+                <div class="flex items-start gap-3">
+                  <div class="shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    {% if notification.type == 'forwarded_to_treasurer' %}
+                      <i class="ri-send-plane-fill text-red-600"></i>
+                    {% elif notification.type == 'payment_received' %}
+                      <i class="ri-money-dollar-circle-fill text-green-600"></i>
+                    {% else %}
+                      <i class="ri-notification-3-fill text-gray-600"></i>
+                    {% endif %}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 {% if not notification.is_read %}font-semibold{% endif %}">
+                      {{ notification.title }}
+                    </p>
+                    <p class="text-xs text-gray-600 mt-1">{{ notification.message }}</p>
+                    <p class="text-xs text-gray-400 mt-2">{{ notification.created_at|timesince }} ago</p>
+                  </div>
+                  {% if not notification.is_read %}
+                  <div class="shrink-0">
+                    <span class="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="p-8 text-center">
+              <i class="ri-notification-off-line text-4xl text-gray-300"></i>
+              <p class="text-sm text-gray-500 mt-2">No notifications yet</p>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+          <button id="mark-all-read-btn" onclick="markAllAsRead()" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-200 hover:shadow-md">
+            <i class="ri-check-double-line text-base"></i>
+            <span>Mark all as read</span>
+          </button>
+          <button onclick="closeNotificationModal()" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">
+            <span>Close</span>
+            <i class="ri-close-line text-base"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
+  // ===== NOTIFICATION FUNCTIONS =====
+  
+  // Get CSRF token from cookie
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function openNotificationModal() {
+    console.log('openNotificationModal called');
+    const modal = document.getElementById('notification-modal');
+    const panel = document.getElementById('notification-modal-panel');
+    const backdrop = modal?.querySelector('[onclick*="closeNotificationModal"]');
+    
+    console.log('Modal element:', modal);
+    console.log('Panel element:', panel);
+    console.log('Backdrop element:', backdrop);
+    
+    if (!modal) {
+      console.error('Modal element not found!');
+      return;
+    }
+    
+    modal.classList.remove('hidden');
+    modal.style.display = 'block';
+    console.log('Modal display set, classes:', modal.className);
+    
+    requestAnimationFrame(() => {
+      if (backdrop) backdrop.classList.add('opacity-100');
+      if (panel) {
+        panel.classList.remove('scale-95', 'opacity-0');
+        panel.classList.add('scale-100', 'opacity-100');
+      }
+      console.log('Animation frame applied');
+    });
+    
+    // Fetch latest notifications
+    refreshNotifications();
+  }
+
+  function refreshNotifications() {
+    const modalBody = document.querySelector('#notification-modal .px-8.py-6');
+    if (!modalBody) return;
+    
+    // Show loading state
+    modalBody.innerHTML = '<div class="p-8 text-center"><i class="ri-loader-4-line text-3xl text-gray-400 animate-spin"></i><p class="text-sm text-gray-500 mt-2">Loading notifications...</p></div>';
+    
+    fetch('/api/notifications/list/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.notifications) {
+        const notifications = data.notifications;
+        
+        if (notifications.length === 0) {
+          modalBody.innerHTML = '<div class="p-8 text-center"><i class="ri-notification-off-line text-4xl text-gray-300"></i><p class="text-sm text-gray-500 mt-2">No notifications yet</p></div>';
+          return;
+        }
+        
+        let html = '<div class="space-y-3">';
+        notifications.forEach(notif => {
+          const isUnread = !notif.is_read;
+          const bgClass = isUnread ? 'bg-blue-50 border-blue-200' : '';
+          
+          // Determine icon based on notification type
+          let iconHtml = '<i class="ri-notification-3-fill text-gray-600"></i>';
+          if (notif.type === 'forwarded_to_treasurer') {
+            iconHtml = '<i class="ri-send-plane-fill text-red-600"></i>';
+          } else if (notif.type === 'payment_received') {
+            iconHtml = '<i class="ri-money-dollar-circle-fill text-green-600"></i>';
+          }
+          
+          // Escape the link for onclick attribute
+          const escapedLink = (notif.link || '').replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+          
+          html += '<div class="p-4 rounded-xl border border-gray-200 hover:bg-red-50/50 transition cursor-pointer ' + bgClass + '" onclick="markAsReadAndRedirect(' + notif.id + ', \'' + escapedLink + '\')">';
+          html += '<div class="flex items-start gap-3">';
+          html += '<div class="shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">' + iconHtml + '</div>';
+          html += '<div class="flex-1 min-w-0">';
+          html += '<p class="text-sm font-medium text-gray-900 ' + (isUnread ? 'font-semibold' : '') + '">' + notif.title + '</p>';
+          html += '<p class="text-xs text-gray-600 mt-1">' + notif.message + '</p>';
+          html += '<p class="text-xs text-gray-400 mt-2">' + notif.created_at + '</p>';
+          html += '</div>';
+          if (isUnread) {
+            html += '<div class="shrink-0"><span class="inline-block w-2 h-2 bg-blue-500 rounded-full"></span></div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        
+        modalBody.innerHTML = html;
+      } else {
+        modalBody.innerHTML = '<div class="p-8 text-center"><i class="ri-error-warning-line text-4xl text-red-300"></i><p class="text-sm text-gray-500 mt-2">Failed to load notifications</p></div>';
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching notifications:', error);
+      modalBody.innerHTML = '<div class="p-8 text-center"><i class="ri-error-warning-line text-4xl text-red-300"></i><p class="text-sm text-gray-500 mt-2">Error loading notifications</p></div>';
+    });
+  }
+
+  function closeNotificationModal() {
+    const modal = document.getElementById('notification-modal');
+    const panel = document.getElementById('notification-modal-panel');
+    const backdrop = modal?.querySelector('[onclick*="closeNotificationModal"]');
+    if (!modal) return;
+    
+    if (backdrop) backdrop.classList.remove('opacity-100');
+    if (panel) {
+      panel.classList.add('scale-95', 'opacity-0');
+      panel.classList.remove('scale-100', 'opacity-100');
+    }
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }, 180);
+  }
+
+  function markAsReadAndRedirect(notificationId, redirectUrl) {
+    fetch(`/api/notifications/${notificationId}/mark-read/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && redirectUrl) {
+        window.location.href = redirectUrl;
+      } else if (data.success) {
+        closeNotifications();
+        location.reload();
+      }
+    })
+    .catch(error => console.error('Error marking notification as read:', error));
+  }
+
+  function markAllAsRead() {
+    const btn = document.getElementById('mark-all-read-btn');
+    if (!btn) return;
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ri-loader-4-line text-base animate-spin"></i><span>Marking all as read...</span>';
+    btn.classList.add('opacity-60', 'cursor-not-allowed');
+    
+    fetch('/api/notifications/mark-all-read/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success state
+        btn.innerHTML = '<i class="ri-check-line text-base"></i><span>All marked as read!</span>';
+        btn.classList.remove('opacity-60', 'cursor-not-allowed', 'bg-red-50', 'hover:bg-red-100', 'text-red-700', 'border-red-200');
+        btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+        
+        // Reload page after short delay
+        setTimeout(() => {
+          location.reload();
+        }, 800);
+      } else {
+        // Show error state
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-error-warning-line text-base"></i><span>Failed. Try again</span>';
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
+        setTimeout(() => {
+          btn.innerHTML = '<i class="ri-check-double-line text-base"></i><span>Mark all as read</span>';
+        }, 2000);
+      }
+    })
+    .catch(error => {
+      console.error('Error marking all notifications as read:', error);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-error-warning-line text-base"></i><span>Error. Try again</span>';
+      btn.classList.remove('opacity-60', 'cursor-not-allowed');
+      setTimeout(() => {
+        btn.innerHTML = '<i class="ri-check-double-line text-base"></i><span>Mark all as read</span>';
+      }, 2000);
+    });
+  }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('notification-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        closeNotificationModal();
+      }
+    }
+  });
+
+  // ===== REAL-TIME NOTIFICATION POLLING =====
+  let lastNotificationCount = Number('{{ unread_notifications_count|default:"0" }}');
+
+  async function checkForNewNotifications() {
+    try {
+      const response = await fetch('/api/notifications/check-new/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      
+      if (data.unread_count !== undefined) {
+        const newCount = data.unread_count;
+        
+        // Update badge in sidebar
+        const sidebarLink = document.querySelector('a[onclick*="openNotificationModal"]');
+        const badgeElement = sidebarLink?.querySelector('span.bg-amber-500');
+        
+        if (newCount > 0) {
+          if (badgeElement) {
+            badgeElement.textContent = newCount;
+          } else if (sidebarLink) {
+            const badge = document.createElement('span');
+            badge.className = 'ml-auto inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-bold bg-amber-500 text-white shadow-lg animate-pulse';
+            badge.textContent = newCount;
+            sidebarLink.appendChild(badge);
+          }
+        } else if (badgeElement) {
+          badgeElement.remove();
+        }
+
+        // Show alert if count increased
+        if (newCount > lastNotificationCount) {
+          showNewNotificationToast(newCount - lastNotificationCount);
+        }
+        
+        lastNotificationCount = newCount;
+      }
+    } catch (error) {
+      console.error('Error checking notifications:', error);
+    }
+  }
+
+  function showNewNotificationToast(count) {
+    // Remove any existing toast first
+    const existingToast = document.getElementById('notification-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.id = 'notification-toast';
+    
+    // Use inline styles to ensure visibility
+    toast.style.cssText = `
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9999;
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border: 1px solid #e5e7eb;
+      padding: 1.5rem;
+      width: 24rem;
+      animation: slide-in 0.3s ease-out;
+    `;
+    
+    toast.innerHTML = `
+      <div style="display: flex; align-items: flex-start; gap: 1rem;">
+        <div style="flex-shrink: 0; width: 3rem; height: 3rem; border-radius: 0.75rem; background: linear-gradient(to bottom right, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+          <i class="ri-notification-3-line" style="color: white; font-size: 1.5rem;"></i>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem;">New Notification${count > 1 ? 's' : ''}!</h3>
+          <p style="font-size: 0.875rem; color: #4b5563;">You have ${count} new notification${count > 1 ? 's' : ''} waiting</p>
+        </div>
+        <button onclick="this.closest('#notification-toast').remove()" style="flex-shrink: 0; color: #9ca3af; border: none; background: none; cursor: pointer; padding: 0; font-size: 1.25rem; line-height: 1;">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <button onclick="openNotificationModal(); this.closest('#notification-toast').remove();" style="margin-top: 1rem; width: 100%; padding: 0.5rem 1rem; background: #dc2626; color: white; font-size: 0.875rem; font-weight: 600; border-radius: 0.5rem; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+        View Notifications
+      </button>
+    `;
+    
+    document.body.appendChild(toast);
+    console.log('Toast notification created and appended to body');
+    console.log('Toast element:', toast);
+    console.log('Toast bounding rect:', toast.getBoundingClientRect());
+    
+    // Play notification sound
+    try {
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGS56+mnUxQKRp/g8r5sHwUrgc7y2Ik3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+bB8FK4HO8tmJNwgbab3w5JxODA5QqeLvtGIbBTuT2fXDcSUFKX7M8tqLOwoYZbnr66hTFApGn+DyvmwfBSuBzvLZiTcIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGW56+uoUxQKRp/g8r5sHwUrgs7y2Ik3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+bB8FK4LO8tmJNwgbab3w5JxODA5QqeLvtGIbBTuT2fXDcSUFKX7M8tqLOwoYZbnr66dTFApGn+DyvmwfBSuCzvLZiTcIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGW56+unUxQKRp/g8r5sHwUrgs7y2Yk3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+');
+      audio.volume = 0.3;
+      audio.play().catch(e => console.log('Audio play prevented:', e));
+    } catch (e) {
+      console.log('Audio error:', e);
+    }
+    
+    // Auto remove after 8 seconds
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 8000);
+    
+    // Play notification sound (optional)
+    try {
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGS56+mnUxQKRp/g8r5sHwUrgc7y2Ik3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+bB8FK4HO8tmJNwgbab3w5JxODA5QqeLvtGIbBTuT2fXDcSUFKX7M8tqLOwoYZbnr66hTFApGn+DyvmwfBSuBzvLZiTcIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGW56+uoUxQKRp/g8r5sHwUrgs7y2Ik3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+bB8FK4LO8tmJNwgbab3w5JxODA5QqeLvtGIbBTuT2fXDcSUFKX7M8tqLOwoYZbnr66dTFApGn+DyvmwfBSuCzvLZiTcIG2m98OScTgwOUKni77RiGwU7k9n1w3ElBSl+zPLaizsKGGW56+unUxQKRp/g8r5sHwUrgs7y2Yk3CBtpvfDknE4MDlCp4u+0YhsFO5PZ9cNxJQUpfszy2os7Chhluevrp1MUCkaf4PK+');
+      audio.volume = 0.3;
+      audio.play().catch(() => {});
+    } catch (e) {}
+    
+    // Auto remove after 8 seconds
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 8000);
+  }
+
+  // Poll every 10 seconds
+  setInterval(checkForNewNotifications, 10000);
+  setTimeout(checkForNewNotifications, 2000);
+
   // Simple accordion wiring (unchanged)
   const ACCORDION = [
     { btn: 'submenu-toggle', panel: 'submenu',       arrow: 'submenu-arrow', cluster: 'top'  },
@@ -447,5 +895,44 @@
     arm();
   })();
 </script>
+<style>
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s ease-out;
+  }
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+</style>
 </body>
 </html>
