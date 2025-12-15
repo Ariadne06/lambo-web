@@ -22,4 +22,7 @@ urlpatterns = [
     
     # Cancel clearance endpoint
     path('residents/<int:resident_id>/applications/<int:application_id>/cancel/', views.CancelClearanceView.as_view(), name='cancel-clearance'),
+    
+    # Register business endpoint
+    path('register-business/', views.RegisterBusinessResidentView.as_view(), name='register-business'),
 ]

@@ -198,3 +198,60 @@ def cancel_resident_clearance(application_id, resident_id, reason=None):
             "SELECT resident_cancel_clearance(%s, %s, %s)",
             [application_id, resident_id, reason]
         )
+
+
+def register_business_resident(
+    resident_id, business_name, business_type_id, nature_of_business, ownership_id,
+    house_number=None, street=None, barangay=None, sitio_id=None,
+    city_municipality=None, country='Philippines', total_gross_income=None,
+    dti_sec_cda_reg_number=None, clearance_category_id=None, total_units=None,
+    videoke_count=None, billiard_count=None, other_device_count=None
+):
+    """
+    Register a new business for a resident.
+    
+    Args:
+        resident_id: ID of the resident registering the business
+        business_name: Name of the business
+        business_type_id: ID of the business type
+        nature_of_business: Description of business nature
+        ownership_id: ID of the ownership type
+        house_number: House number (optional)
+        street: Street name (optional)
+        barangay: Barangay name (optional)
+        sitio_id: ID of the sitio (required)
+        city_municipality: City/Municipality name (required)
+        country: Country name (default: Philippines)
+        total_gross_income: Total gross income (required)
+        dti_sec_cda_reg_number: DTI/SEC/CDA registration number (optional)
+        clearance_category_id: ID of the clearance category (required)
+        total_units: Total units (required if category supports units)
+        videoke_count: Number of videoke devices (required if Amusement)
+        billiard_count: Number of billiard tables (required if Amusement)
+        other_device_count: Number of other devices (required if Amusement)
+    
+    Returns:
+        str: Success message from the database function
+    
+    Raises:
+        Exception: If registration fails
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT register_business_resident(
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s
+            )
+            """,
+            [
+                resident_id, business_name, business_type_id, nature_of_business, ownership_id,
+                house_number, street, barangay, sitio_id, city_municipality, country,
+                total_gross_income, dti_sec_cda_reg_number, clearance_category_id, total_units,
+                videoke_count, billiard_count, other_device_count
+            ]
+        )
+        result = cursor.fetchone()
+        return result[0] if result else None

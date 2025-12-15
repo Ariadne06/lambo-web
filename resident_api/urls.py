@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView, CheckUsernameAvailabilityView, LatestResidentAnnouncements, ResidentAnnouncementsList, OwnerBusinessesMobileView, SpecificBusinessMobileView)
+from .views import (ResidentViewSet, CivilStatusViewSet, EducationalAttainmentViewSet, SitioViewSet, ReligionViewSet, ResidentStatusViewSet, ReligionCategoryViewSet, ResidentRegistrationView, ResidentIdDocumentOCRView, UpdateResidentProfileView, VerifyIdFieldsView, IdentityDocTypeViewSet, VerifyGuardianView, VerifyGuardianIdFieldsView, MobileLoginView, ResidentProfileView, ChangePersonnelPasswordView, OccupationViewSet, NationalityViewSet, EmploymentStatusViewSet, ResubmitSupportingCertificateView, ReRegisterResidentView, CheckUsernameAvailabilityView, LatestResidentAnnouncements, ResidentAnnouncementsList, OwnerBusinessesMobileView, SpecificBusinessMobileView, BusinessTypesLookupView, OwnershipsLookupView, ClearanceCategoriesLookupView, SitiosLookupView)
 from . import views
 router = DefaultRouter()
 router.register(r'residents', ResidentViewSet)
@@ -50,5 +50,27 @@ urlpatterns += [
         'mobile/businesses/<int:business_id>/',
         SpecificBusinessMobileView.as_view(),
         name='mobile-specific-business',
+    ),
+    
+    # Lookup endpoints for business registration form
+    path(
+        'mobile/business-types/',
+        BusinessTypesLookupView.as_view(),
+        name='mobile-business-types',
+    ),
+    path(
+        'mobile/ownerships/',
+        OwnershipsLookupView.as_view(),
+        name='mobile-ownerships',
+    ),
+    path(
+        'mobile/clearance-categories/',
+        ClearanceCategoriesLookupView.as_view(),
+        name='mobile-clearance-categories',
+    ),
+    path(
+        'mobile/sitios/',
+        SitiosLookupView.as_view(),
+        name='mobile-sitios',
     ),
 ]
