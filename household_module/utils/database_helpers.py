@@ -1973,3 +1973,30 @@ def view_specific_resident_general_health_own(family_member_id, quarter_id=None)
             result['last_menstrual_period'] = result['last_menstrual_period'].isoformat()
         
         return result
+
+def get_all_resident_maternal_records(resident_id):
+    """
+    Get all maternal health records for a resident using SQL function
+    Returns: list of dicts with maternal_health_id, record_status, date_created
+    """
+    try:
+        with connection.cursor() as cursor:
+            # Call the SQL function
+            cursor.execute("""
+                SELECT * FROM get_all_resident_maternal_records(%s)
+            """, [resident_id])
+            
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            
+            # Convert to list of dicts
+            records = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                records.append(record)
+            
+            return records
+            
+    except Exception as e:
+        print(f'❌ Error in get_all_resident_maternal_records: {e}')
+        raise
