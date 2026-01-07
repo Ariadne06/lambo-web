@@ -88,6 +88,10 @@ local_settings.py
 .env
 db.sqlite3
 
+
+# Firebase / Google credentials
+firebase-credentials.json
+
 # Virtual environment
 .venv/
 venv/
