@@ -473,6 +473,143 @@ def resident_detail_json(request, resident_id: int):
 
 @custom_login_required
 @role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_POST
+def resident_update(request, resident_id: int):
+    """Update resident information - limited fields only"""
+    try:
+        personnel_id = int(request.session.get("personnel_id") or 0)
+        if not personnel_id:
+            return JsonResponse({"ok": False, "message": "No personnel ID in session."}, status=400)
+
+        # Get current resident data for comparison
+        try:
+            current_resident = ResidentList.sp_get_specific_resident(resident_id)
+            if not current_resident:
+                return JsonResponse({"ok": False, "message": "Resident not found."}, status=404)
+            
+            # Debug: Print all fields returned by the database
+            print(f"DEBUG - Current resident fields: {list(current_resident.keys())}")
+            print(f"DEBUG - Current resident data: {current_resident}")
+            
+        except Exception as e:
+            return JsonResponse({"ok": False, "message": f"Failed to fetch current resident data: {str(e)}"}, status=500)
+
+        # Extract form data
+        new_first_name = request.POST.get('first_name', '').strip()
+        new_middle_name = request.POST.get('middle_name', '').strip() or None
+        new_last_name = request.POST.get('last_name', '').strip()
+        new_suffix = request.POST.get('suffix', '').strip() or None
+        new_status_id = request.POST.get('resident_status_id', '').strip() or None
+        
+        # Validate required fields
+        if not new_last_name or not new_first_name:
+            return JsonResponse({"ok": False, "message": "First name and last name are required."}, status=400)
+
+        # Validate status_id if provided
+        if new_status_id:
+            try:
+                new_status_id = int(new_status_id)
+            except (ValueError, TypeError):
+                return JsonResponse({"ok": False, "message": "Invalid status ID."}, status=400)
+
+        # Get current values for comparison (normalize to handle None/empty)
+        def normalize_value(val):
+            if val is None or val == 'None':
+                return ''
+            return str(val).strip()
+        
+        curr_first_name = normalize_value(current_resident.get('first_name'))
+        curr_middle_name = normalize_value(current_resident.get('middle_name'))
+        curr_last_name = normalize_value(current_resident.get('last_name'))
+        curr_suffix = normalize_value(current_resident.get('suffix'))
+        curr_status_id = current_resident.get('status_id') or current_resident.get('resident_status_id')
+        
+        # If we don't have status_id, try to get it from status name
+        if curr_status_id is None and current_resident.get('resident_status'):
+            status_name = current_resident.get('resident_status')
+            # Look up the status_id from the database
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT status_id FROM Resident_Status WHERE status_name = %s", [status_name])
+                row = cursor.fetchone()
+                if row:
+                    curr_status_id = row[0]
+        
+        print(f"DEBUG - Final curr_status_id: {curr_status_id}")
+
+        # Normalize new values
+        new_first_name = normalize_value(new_first_name)
+        new_middle_name = normalize_value(new_middle_name or '')
+        new_last_name = normalize_value(new_last_name)
+        new_suffix = normalize_value(new_suffix or '')
+
+        # Compare changes
+        changed = []
+        
+        # Debug logging
+        print(f"DEBUG - Comparing values:")
+        print(f"  First name: '{new_first_name}' vs '{curr_first_name}' = {new_first_name != curr_first_name}")
+        print(f"  Middle name: '{new_middle_name}' vs '{curr_middle_name}' = {new_middle_name != curr_middle_name}")
+        print(f"  Last name: '{new_last_name}' vs '{curr_last_name}' = {new_last_name != curr_last_name}")
+        print(f"  Suffix: '{new_suffix}' vs '{curr_suffix}' = {new_suffix != curr_suffix}")
+        print(f"  Status ID: {new_status_id} vs {curr_status_id} = {new_status_id is not None and new_status_id != curr_status_id}")
+        
+        if new_first_name != curr_first_name: changed.append("First name")
+        if new_middle_name != curr_middle_name: changed.append("Middle name")
+        if new_last_name != curr_last_name: changed.append("Last name")
+        if new_suffix != curr_suffix: changed.append("Suffix")
+        if new_status_id is not None and new_status_id != curr_status_id: changed.append("Resident status")
+        
+        print(f"DEBUG - Changes detected: {changed}")
+
+        if not changed:
+            return JsonResponse({"ok": True, "message": "No changes detected — nothing to update."})
+
+        # Update resident information
+        with connection.cursor() as cursor:
+            if new_status_id is not None:
+                # Update both name fields and status
+                cursor.execute("""
+                    UPDATE Resident 
+                    SET first_name = %s, middle_name = %s, last_name = %s, suffix = %s, status_id = %s
+                    WHERE resident_id = %s
+                """, [new_first_name, new_middle_name, new_last_name, new_suffix, new_status_id, resident_id])
+            else:
+                # Update only name fields
+                cursor.execute("""
+                    UPDATE Resident 
+                    SET first_name = %s, middle_name = %s, last_name = %s, suffix = %s
+                    WHERE resident_id = %s
+                """, [new_first_name, new_middle_name, new_last_name, new_suffix, resident_id])
+
+        return JsonResponse({"ok": True, "message": f"Resident information updated successfully. Changed: {', '.join(changed)}."})
+
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] Exception in resident_update:")
+        print(error_detail)
+        return JsonResponse({"ok": False, "message": f"Database error: {str(e)}"}, status=500)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
+@require_GET
+def get_dropdown_options(request):
+    """Get dropdown options for resident update form"""
+    try:
+        with connection.cursor() as cursor:
+            # Get resident statuses only
+            cursor.execute("SELECT status_id, status_name FROM Resident_Status ORDER BY status_name")
+            resident_statuses = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+            
+            return JsonResponse({
+                'ok': True,
+                'resident_statuses': resident_statuses
+            })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'message': str(e)}, status=500)
+
+@custom_login_required
+@role_required('Barangay Secretary', 'Barangay Assistant Secretary')
 def household_list(request):
     limit = None
     offset = None

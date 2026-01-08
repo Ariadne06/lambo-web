@@ -70,7 +70,7 @@
         <span>View Business</span>
       </a>
 
-      <!-- Personnel Request -->
+      {% comment %} <!-- Personnel Request -->
       <a href="{% url 'captain_module:personnelRequest' %}"
          class="flex items-center gap-3 px-4 py-3 rounded-lg transition
                 {% if request.resolver_match.url_name == 'personnelRequest' %}
@@ -80,7 +80,7 @@
                 {% endif %}">
         <i class="{% if request.resolver_match.url_name == 'personnelRequest' %}ri-group-fill{% else %}ri-group-line{% endif %} text-lg"></i>
         <span>Personnel Request</span>
-      </a>
+      </a> {% endcomment %}
     </div>
 
     <!-- Footer -->
