@@ -311,4 +311,10 @@ path(
     path('residents/<int:resident_id>/general-health/', 
          views.ResidentGeneralHealthView.as_view(), 
          name='resident-general-health'),
+     path('residents/<int:resident_id>/maternal-records/', 
+         views.ResidentMaternalRecordsView.as_view(), 
+         name='resident-maternal-records'),
+    path('residents/<int:resident_id>/children/', 
+         views.ResidentChildrenView.as_view(), 
+         name='resident-children'),
 ]

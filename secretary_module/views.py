@@ -1203,16 +1203,16 @@ def business_list(request):
     # Apply filters in Python - match by name since the DB returns text fields
     if business_type_ids:
         selected_names = [business_type_map.get(id) for id in business_type_ids if id in business_type_map]
-        rows = [r for r in rows if r.get('business_type_name') in selected_names]
+        rows = [r for r in rows if r.get('business_type') in selected_names]
     if clearance_category_ids:
         selected_names = [clearance_category_map.get(id) for id in clearance_category_ids if id in clearance_category_map]
-        rows = [r for r in rows if r.get('clearance_category_name') in selected_names]
+        rows = [r for r in rows if r.get('clearance_category') in selected_names]
     if ownership_ids:
         selected_names = [ownership_map.get(id) for id in ownership_ids if id in ownership_map]
-        rows = [r for r in rows if r.get('ownership_name') in selected_names]
+        rows = [r for r in rows if r.get('ownership') in selected_names]
     if business_status_ids:
         selected_names = [business_status_map.get(id) for id in business_status_ids if id in business_status_map]
-        rows = [r for r in rows if r.get('business_status_name') in selected_names]
+        rows = [r for r in rows if r.get('status') in selected_names]
     
     total = len(rows)
     

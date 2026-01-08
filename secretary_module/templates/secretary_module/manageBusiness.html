@@ -223,19 +223,19 @@
           <tr class="hover:bg-gray-50/60" data-business-id="{{ r.business_id }}">
             <td class="px-4 py-2 border border-gray-200 font-semibold">{{ r.business_name }}</td>
             <td class="px-4 py-2 border border-gray-200">{{ r.owner_name }}</td>
-            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.business_type_name|default:"—" }}</td>
-            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.clearance_category_name|default:"—" }}</td>
-            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.ownership_name|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.business_type|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.clearance_category|default:"—" }}</td>
+            <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.ownership|default:"—" }}</td>
             <td class="px-4 py-2 border border-gray-200 text-xs text-gray-600">{{ r.address }}</td>
             <td class="px-4 py-2 border border-gray-200">
-              {% if r.business_status_name|lower == 'active' %}
+              {% if r.status|lower == 'active' %}
                 <span class="status-chip chip-blue">Active</span>
-              {% elif r.business_status_name|lower == 'closed' %}
+              {% elif r.status|lower == 'closed' %}
                 <span class="status-chip" style="background:#fef2f2;color:#991b1b;border-color:#fecaca;">Closed</span>
-              {% elif r.business_status_name|lower == 'inactive' %}
+              {% elif r.status|lower == 'inactive' %}
                 <span class="status-chip" style="background:#fefce8;color:#854d0e;border-color:#fef08a;">Inactive</span>
               {% else %}
-                <span class="status-chip chip-blue">{{ r.business_status_name }}</span>
+                <span class="status-chip chip-blue">{{ r.status }}</span>
               {% endif %}
             </td>
             <td class="px-4 py-2 border border-gray-200 text-center">
@@ -260,7 +260,7 @@
                 </button>
                 <button type="button"
                         class="btn-icon btn-icon-outline text-red-600 hover:bg-red-50 hover:border-red-300"
-                        onclick="openClosureModal('{{ r.business_id }}','{{ r.business_status_name|lower }}')"
+                        onclick="openClosureModal('{{ r.business_id }}','{{ r.status|lower }}')"
                         title="Close business">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
